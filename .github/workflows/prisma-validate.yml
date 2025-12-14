@@ -1,0 +1,141 @@
+name: Prisma Validate & Format
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  prisma-validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: Haypbooks/Backend
+
+      - name: Run prisma format
+        run: npx prisma format --schema prisma/schema.prisma
+        working-directory: Haypbooks/Backend
+
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema prisma/schema.prisma
+        working-directory: Haypbooks/Backend
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432; do sleep 1; done
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+
+      - name: Push schema to test DB (prisma db push)
+        run: |
+          npx prisma db push --schema prisma/schema.prisma --accept-data-loss
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Run seed for AP & Tax
+        run: |
+          npm run db:seed:ap
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+      - name: Run seed for Inventory
+        run: |
+          npm run db:seed:inventory
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Run global tenant seed (smoke)
+        run: |
+          npm run db:seed:dev
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Export seed snapshot (dev fixtures)
+        run: |
+          npm run db:seed:export
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Import seed snapshot (smoke)
+        run: |
+          npm run db:seed:import dev-fixtures/mock-db-snapshot.json || true
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+      - name: Run DB schema checks (smoke)
+        run: |
+          npm run check:schema
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Contact e2e smoke test
+        run: |
+          npm ci
+          npx jest --runInBand --config jest.e2e.config.js test/contacts.e2e-spec.ts
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Verify demo tenant present
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql "postgres://postgres:postgres@localhost:5432/test_db" -t -c "SELECT 1 FROM \"Tenant\" WHERE subdomain='demo' LIMIT 1;" | grep -q 1
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Verify RLS policies (quick check)
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql "$DATABASE_URL" -f "LOgic.documentation/Documentation/Grok/scripts/db/verify-rls.psql"
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Lint migrations for RLS
+        run: |
+          npm ci
+          npm run lint:migrations:rls
+        working-directory: Haypbooks/Backend
+
+      - name: RLS enforcement test (non-superuser)
+        run: |
+          npm ci
+          npm run test:rls-enforcement
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: Haypbooks/Backend
+
+      - name: Run DB ship checks
+        run: |
+          npm ci
+          npm run ci:db-ship-check
+        working-directory: Haypbooks/Backend
+
+      - name: Lint Prisma (optional)
+        run: npx prisma generate --schema prisma/schema.prisma || true
+        working-directory: Haypbooks/Backend

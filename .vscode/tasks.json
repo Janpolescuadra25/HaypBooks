@@ -1,0 +1,1817 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run focused CSV tests for AR reports",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/invoices-and-received-payments.export.test.ts",
+				"src/__tests__/open-invoices.export.test.ts"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Run aging summary export tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ar-ap-aging-summary.export.test.ts"
+			]
+		},
+		{
+			"label": "Re-run aging summary export tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ar-ap-aging-summary.export.test.ts"
+			]
+		},
+		{
+			"label": "Run AP vendor credits as-of test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ap-aging-summary.asof-vendor-credits.test.ts"
+			]
+		},
+		{
+			"label": "Re-run AP vendor credits as-of test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ap-aging-summary.asof-vendor-credits.test.ts"
+			]
+		},
+		{
+			"label": "Run frontend tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"-w",
+				"Haypbooks/frontend",
+				"performance-metrics.export.csv-version.test.ts"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend",
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "typecheck-frontend (adhoc)",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run customer payments API tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/customer-payments.post.api.test.ts"
+			]
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run payments API tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/customer-payments.post.api.test.ts",
+				"src/__tests__/customer-payments.void.api.test.ts"
+			]
+		},
+		{
+			"label": "Run write-offs tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"-w",
+				"Haypbooks/frontend",
+				"write-offs.api-and-export.test.ts"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Run focused finance charges tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/finance-charges.preview.apply.export.api.test.ts",
+				"src/__tests__/finance-charges.export.csv-version.test.ts"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run aging summary export tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ar-ap-aging-summary.export.test.ts"
+			]
+		},
+		{
+			"label": "Run AP vendor credits as-of test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ap-aging-summary.asof-vendor-credits.test.ts"
+			]
+		},
+		{
+			"label": "Run focused CSV tests for AR reports",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/invoices-and-received-payments.export.test.ts",
+				"src/__tests__/open-invoices.export.test.ts"
+			]
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run frontend tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"-w",
+				"Haypbooks/frontend",
+				"performance-metrics.export.csv-version.test.ts"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run aging summary export tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/refunds.customer-export.test.ts",
+				"src/__tests__/refunds.vendor-export.test.ts",
+				"src/__tests__/refunds.consolidated-export.test.ts"
+			]
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run focused new refunds/history tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/customers.id-refunds.api.test.ts",
+				"src/__tests__/vendors.id-refunds.api.test.ts",
+				"src/__tests__/payments.applications.history.test.ts",
+				"src/__tests__/statements.send.history.test.ts",
+				"src/__tests__/collections.reminder.history.test.ts",
+				"src/__tests__/refunds.customer-export.test.ts",
+				"src/__tests__/refunds.vendor-export.test.ts"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run focused bank feed match tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/bank-feeds.match-suggestions.api.test.ts"
+			]
+		},
+		{
+			"label": "Typecheck frontend after match additions",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			]
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run auto-apply credits test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ar-auto-apply-credits.test.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Re-run auto-apply credits test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ar-auto-apply-credits.test.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run AP auto-apply vendor credits test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ap-auto-apply-vendor-credits.test.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run new auto-apply dry-run/audit tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ar-auto-apply-credits.test.ts",
+				"src/__tests__/ap-auto-apply-vendor-credits.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run focused new UI test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/auto-apply-confirm.ui.test.tsx"
+			]
+		},
+		{
+			"label": "Run finance-charges tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/finance-charges.preview.apply.export.api.test.ts"
+			]
+		},
+		{
+			"label": "Run focused patches tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/finance-charges.preview.apply.export.api.test.ts",
+				"src/__tests__/bank-register.export.csv-version.test.ts"
+			]
+		},
+		{
+			"label": "Run focused new UI and API tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/finance-charges.confirm.ui.test.tsx",
+				"src/__tests__/finance-charges.preview.apply.export.api.test.ts",
+				"src/__tests__/invoices.put-closed-period.api.test.ts",
+				"src/__tests__/bills.closed-period.enforcement.smoke.test.ts"
+			]
+		},
+		{
+			"label": "Re-run focused new UI and API tests (diagnostic)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"--reporters=default",
+				"src/__tests__/finance-charges.confirm.ui.test.tsx",
+				"src/__tests__/finance-charges.preview.apply.export.api.test.ts",
+				"src/__tests__/invoices.put-closed-period.api.test.ts",
+				"src/__tests__/bills.closed-period.enforcement.smoke.test.ts"
+			]
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "Run refunds CSV version tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/refunds.csv-version.test.ts"
+			]
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "typecheck-frontend",
+			"type": "shell",
+			"command": "npm run -s typecheck --workspace=Haypbooks/frontend"
+		},
+		{
+			"label": "ui-tests: match flow",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/bank-transactions.match.ui.test.tsx"
+			],
+			"group": "build"
+		},
+		{
+			"label": "ui-tests: match flow (updated)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/bank-transactions.match.ui.test.tsx"
+			],
+			"group": "build"
+		},
+		{
+			"label": "ui-tests: match flow (updated)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/bank-transactions.match.ui.test.tsx"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run focused new tests: reconciliation math invariants",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/reconciliation.math.invariants.test.ts"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Re-run reconciliation math invariants tests (diagnostic)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"--reporters=default",
+				"src/__tests__/reconciliation.math.invariants.test.ts"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Re-run reconciliation math invariants tests after fix",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/reconciliation.math.invariants.test.ts"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc, width tweak)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc, center + responsive buttons)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc, remove add split + manual multi)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc, manual bundle API)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc, manual adjustment)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now (account tiles)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run CSV-Version tests for core statements",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/balance-sheet.export.csv-version.test.ts",
+				"src/__tests__/profit-loss.export.csv-version.test.ts",
+				"src/__tests__/general-ledger.export.csv-version.test.ts",
+				"src/__tests__/cash-flow.export.csv-version.test.ts"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now (post-fix)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend (ad-hoc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"typecheck",
+				"--workspace=Haypbooks/frontend"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run deposits CSV version test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/deposits.export.csv-version.test.ts"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "typecheck-frontend-now",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"-s",
+				"typecheck"
+			]
+		},
+		{
+			"label": "Run receipts conversion tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/receipts.convert.expense.test.ts"
+			]
+		},
+		{
+			"label": "Run receipts linked preview tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/receipts.linked.preview.api.test.ts",
+				"src/__tests__/receipts.linked.preview.ui.test.tsx"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run customers modal UI test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/customers.new.ui.test.tsx"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Backend: typecheck + build",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"Set-Location \"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\Backend\"; npm run -s prisma:generate; npm run -s typecheck; npm run -s build"
+			],
+			"isBackground": false,
+			"group": "build"
+		}
+	]
+}

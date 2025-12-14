@@ -1,0 +1,10 @@
+const { Client } = require('pg')
+;(async ()=>{
+  const c = new Client({ connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'})
+  await c.connect()
+  const txtColRes = await c.query("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'tenantId_txt'", ['Budget'])
+  console.log('txtColRes.rowCount=', txtColRes.rowCount)
+  const fkCheckRes = await c.query(`SELECT 1 FROM pg_constraint WHERE contype = 'f' AND conrelid::regclass::text = $1 AND pg_get_constraintdef(oid) ILIKE '%tenantId_txt%' AND confrelid = 'public."Tenant"'::regclass`, ['Budget'])
+  console.log('fkCheckRes.rowCount=', fkCheckRes.rowCount)
+  await c.end()
+})().catch(e=>{console.error(e); process.exit(1)})

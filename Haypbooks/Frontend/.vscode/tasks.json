@@ -1,0 +1,1064 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Install and dev-run HaypBooks frontend",
+			"type": "shell",
+			"command": "npm install && npm run dev",
+			"isBackground": true,
+			"group": "build"
+		},
+		{
+			"label": "build-frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run Jest tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent",
+				"--",
+				"journal-detail-export.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest - employees",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent",
+				"--",
+				"employee-contact"
+			]
+		},
+		{
+			"label": "run tests (employees)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent",
+				"--",
+				"employee-contact"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Jest API tests for unbilled reports",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"tests/api/unbilled-charges.api.test.ts",
+				"tests/api/unbilled-time.api.test.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run Jest tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run frontend tests",
+			"type": "shell",
+			"command": "npm test --silent",
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "run frontend tests",
+			"type": "shell",
+			"command": "npm test --silent",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Run focused tests for new RBAC + drilldown changes",
+			"type": "shell",
+			"command": "npm test --silent -- src/__tests__/core-statements.rbac-json.test.ts src/__tests__/transaction-detail-by-account.api.test.ts src/__tests__/profit-loss.test.ts",
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run tests",
+			"type": "shell",
+			"command": "npm test --silent",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck, lint, and tests",
+			"type": "shell",
+			"command": "pwsh -NoProfile -Command \"& { npm run typecheck; npm run lint; npm test }\"",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "frontend: test and typecheck",
+			"type": "shell",
+			"command": "pwsh.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$ErrorActionPreference='Stop'; if (Test-Path package.json) { if (Get-Command npm -ErrorAction SilentlyContinue) { npm test --silent; npm run -s typecheck } else { Write-Output 'npm not found'; exit 1 } } else { Set-Location Haypbooks/frontend; npm test --silent; npm run -s typecheck }"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run tests and typecheck",
+			"type": "shell",
+			"command": "npm test --silent && npm run -s typecheck",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "frontend:test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Typecheck and Build (no tests)",
+			"type": "shell",
+			"command": "npm run -s typecheck && npm run -s build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest-serial",
+			"type": "shell",
+			"command": "npm run test:serial",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "test:serial",
+			"type": "shell",
+			"command": "npm run test:serial",
+			"args": [],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Run focused jest tests for sales-by-customer/product",
+			"type": "shell",
+			"command": "npm run test:limited -- src/__tests__/sales-by-customer-summary.api.test.ts src/__tests__/sales-by-customer-detail.api.test.ts src/__tests__/sales-by-product-summary.api.test.ts src/__tests__/sales-by-product-detail.api.test.ts",
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "frontend: test after cleanup",
+			"type": "shell",
+			"command": "npm run test:limited --silent",
+			"group": "test"
+		},
+		{
+			"label": "Frontend - lint/typecheck/tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"lint&&",
+				"npm",
+				"run",
+				"typecheck&&",
+				"npm",
+				"run",
+				"test:limited"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run jest rbac exports gating",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent",
+				"--",
+				"--runTestsByPath",
+				"src/__tests__/rbac-exports-gating.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest standard-report-filters-aria-live",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:serial",
+				"--",
+				"standard-report-filters-aria-live.test.tsx"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run frontend tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"test",
+				"--",
+				"--maxWorkers=4"
+			]
+		},
+		{
+			"label": "run tests (limited workers)",
+			"type": "shell",
+			"command": "npm run test:limited",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "jest tests (limited workers)",
+			"type": "shell",
+			"command": "npm run test:limited",
+			"args": []
+		},
+		{
+			"label": "jest - search-ui",
+			"type": "shell",
+			"command": "node --max-old-space-size=4096 ./node_modules/jest/bin/jest.js --config jest.config.js src/__tests__/search-ui.test.tsx --runInBand",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "test"
+		},
+		{
+			"label": "lint-frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"lint"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest - new tests",
+			"type": "shell",
+			"command": "npm test --silent -- --coverage=false --runTestsByPath src/__tests__/books-review.render.test.tsx src/__tests__/reconciliation-progress-by-account.test.ts",
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "run jest focused tests",
+			"type": "shell",
+			"command": "npm test --silent -- --runTestsByPath src/__tests__/books-review.render.test.tsx src/__tests__/reconciliation-progress-by-account.test.ts",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run focused jest tests",
+			"type": "shell",
+			"command": "npm test --silent -- --runTestsByPath src/__tests__/books-review.render.test.tsx src/__tests__/reconciliation-progress-by-account.test.ts",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest: books-review & recon progress",
+			"type": "shell",
+			"command": "npx jest --runTestsByPath src/__tests__/books-review.render.test.tsx src/__tests__/reconciliation-progress-by-account.test.ts",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck frontend",
+			"type": "shell",
+			"command": "npm run typecheck --silent",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest-new-tests-limited",
+			"type": "shell",
+			"command": "npm run test:limited -- -i src/__tests__/reconciliation-sessions.api.test.ts src/__tests__/reconcile-workbench.finish.test.tsx",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck Frontend",
+			"type": "shell",
+			"command": "npm run typecheck",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "test - rules and rbac",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"bank-rules.ui.test.tsx",
+				"bank-feeds.rules.manage.api.test.ts",
+				"__tests__/rbac/bank-rules.rbac.test.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run jest targeted tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:limited",
+				"--",
+				"standard-report-header-alignment.test.tsx",
+				"--reporters=default",
+				"--reporters=jest-junit"
+			]
+		},
+		{
+			"label": "Run unit tests (targeted)",
+			"type": "shell",
+			"command": "npm run test -- --runTestsByPath src/__tests__/api.invoices.post.test.ts src/__tests__/open-invoices.date-format.test.ts src/__tests__/standard-report-date-format.test.ts --colors",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "Run targeted tests",
+			"type": "shell",
+			"command": "npm run test -- --runTestsByPath src/__tests__/api.invoices.post.test.ts src/__tests__/open-invoices.date-format.test.ts src/__tests__/standard-report-date-format.test.ts --colors",
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "Run targeted currency report tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:limited",
+				"--",
+				"src/__tests__/cash-flow.test.ts",
+				"src/__tests__/budget-vs-actual.export.test.ts",
+				"src/__tests__/retained-earnings.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted currency report tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"test:limited",
+				"--",
+				"src/__tests__/cash-flow.test.ts",
+				"src/__tests__/budget-vs-actual.compare.export.test.ts",
+				"src/__tests__/retained-earnings.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted API tests for deposits",
+			"type": "shell",
+			"command": "npx jest src/__tests__/deposit-detail.api.test.ts src/__tests__/deposit-detail.export.test.ts src/__tests__/ar-customer-payments-deposits.test.ts --runInBand --silent",
+			"args": [],
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run Jest (targeted deposits tests)",
+			"type": "shell",
+			"command": "npm test --silent -- src/__tests__/deposits.api.test.ts",
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run frontend tests",
+			"type": "shell",
+			"command": "pwsh.exe",
+			"args": [
+				"-NoLogo",
+				"-NoProfile",
+				"-Command",
+				"if (Test-Path .\\node_modules) { $env:CI='1'; npm test --silent } else { echo 'node_modules not found'; exit 1 }"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted jest tests (tax exports)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:limited",
+				"--",
+				"tax-(summary|liability|detail)\\.export\\.test\\.ts$"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted jest tests (tax exports)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:limited",
+				"--",
+				"tax-(summary|liability|detail)\\.export\\.test\\.ts$"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "jest: targeted reports tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"purchases-by-product-detail",
+				"purchases-by-vendor-detail",
+				"standard-report",
+				"open-po-detail",
+				"sales-by-customer-summary"
+			],
+			"problemMatcher": [
+				"$jest-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "run jest targeted",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test",
+				"--",
+				"purchases-by-product-detail",
+				"purchases-by-vendor-detail",
+				"standard-report",
+				"open-po-detail",
+				"sales-by-customer-summary"
+			],
+			"problemMatcher": [
+				"$jest-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Typecheck frontend",
+			"type": "shell",
+			"command": "npm run typecheck",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "run tests (jest)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"-w=1"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "frontend - run tests",
+			"type": "shell",
+			"command": "npm test --silent",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run tests (frontend)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "frontend-tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted print tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent",
+				"--",
+				"--findRelatedTests",
+				"src/__tests__/statements.print.render.test.tsx",
+				"src/__tests__/customer-vendor-invoice.print.render.test.tsx",
+				"src/__tests__/profit-loss.print.render.test.tsx",
+				"src/__tests__/balance-sheet.print.render.test.tsx"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted print tests",
+			"type": "shell",
+			"command": "npm test --silent -- --findRelatedTests src/__tests__/trial-balance.print.render.test.tsx src/__tests__/transaction-detail-by-account.print.render.test.tsx src/__tests__/profit-loss.print.render.test.tsx src/__tests__/balance-sheet.print.render.test.tsx src/__tests__/cash-flow.print.render.test.tsx src/__tests__/ap-aging-detail.print.render.test.tsx",
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run targeted print tests",
+			"type": "shell",
+			"command": "npm test --silent -- --findRelatedTests src/__tests__/general-ledger-list.print.render.test.tsx src/__tests__/transaction-list-by-date.print.render.test.tsx src/__tests__/profit-loss.print.render.test.tsx src/__tests__/balance-sheet.print.render.test.tsx src/__tests__/cash-flow.print.render.test.tsx",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted print tests",
+			"type": "shell",
+			"command": "npm test --silent -- --findRelatedTests src/__tests__/general-ledger-list.print.render.test.tsx src/__tests__/transaction-list-by-date.print.render.test.tsx src/__tests__/profit-loss.print.render.test.tsx src/__tests__/balance-sheet.print.render.test.tsx src/__tests__/cash-flow.print.render.test.tsx",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Build Next.js app for production",
+			"type": "shell",
+			"command": "npm run build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "frontend:test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"test"
+			],
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "run jest single test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"-i",
+				"src/__tests__/collections-report.export.test.ts"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "run jest accounting-process tests",
+			"type": "shell",
+			"command": "npm test --silent -- src/__tests__/accounting-process-*.test.ts*",
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run Jest tests (quick)",
+			"type": "shell",
+			"command": "npm run test:limited -- --findRelatedTests src/app/api/reports/ar-aging/export/route.ts src/app/api/reports/ap-aging/export/route.ts",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run aging tests (related)",
+			"type": "shell",
+			"command": "npm run test:limited -- --findRelatedTests src/app/api/reports/ar-aging/export/route.ts src/app/api/reports/ap-aging/export/route.ts",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Run focused CSV export tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"--runTestsByPath",
+				"src/__tests__/customer-balance-detail.export.test.ts",
+				"src/__tests__/vendor-balance-detail.export.test.ts",
+				"src/__tests__/unbilled-time.export.test.ts",
+				"src/__tests__/unbilled-charges.export.test.ts",
+				"src/__tests__/open-invoices.export.test.ts",
+				"src/__tests__/open-po-list-by-vendor.api.test.ts"
+			]
+		},
+		{
+			"label": "run-frontend-tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--",
+				"-i"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run targeted Jest tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:limited",
+				"--",
+				"frontend/src/__tests__/csv-caption-helper.guard.test.ts",
+				"frontend/src/__tests__/1099-contractor-balance-detail-us.export.test.ts",
+				"frontend/src/__tests__/1099-contractor-balance-summary-us.export.test.ts",
+				"frontend/src/__tests__/1099-transaction-detail-us.export.test.ts",
+				"frontend/src/__tests__/bill-payments-export.filename.test.ts",
+				"frontend/src/__tests__/bill-payment-list.export.test.ts",
+				"frontend/src/__tests__/standard-reports.export.api.test.ts"
+			]
+		},
+		{
+			"label": "jest guard tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test",
+				"--",
+				"csv-caption-helper.guard.test.ts",
+				"csv-filename-helper.guard.test.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest - edited exports",
+			"type": "shell",
+			"command": "npm test --silent -- -i check-detail.export.test.ts unbilled-charges.export.test.ts customer-balance-detail.export.test.ts deposit-detail.export.test.ts open-invoices.export.test.ts collections-report.export.test.ts invoices-and-received-payments.export.test.ts transaction-report.export.test.ts transactions-by-vendor.api.test.ts transactions-by-customer.api.test.ts 1099-transaction-detail-us.export.test.ts",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run focused jest tests (transactions by cust/vendor)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:serial",
+				"--",
+				"transactions-by-(customer|vendor).api.test.ts",
+				"transactions-by-(customer|vendor).api.test.ts"
+			]
+		},
+		{
+			"label": "Run focused jest tests (transactions by cust/vendor)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:serial",
+				"--",
+				"transactions-by-customer.api.test.ts",
+				"transactions-by-vendor.api.test.ts"
+			]
+		},
+		{
+			"label": "jest:focused-exports",
+			"type": "shell",
+			"command": "npm run test:serial -- transaction-detail-by-account transaction-list-with-splits journal account-ledger",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Typecheck frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"typecheck"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest aging tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/ar-aging.buckets.test.ts",
+				"src/__tests__/ar-aging-detail.api.test.ts",
+				"src/__tests__/ar-aging-detail.export.test.ts",
+				"src/__tests__/ar-aging.export.test.ts",
+				"src/__tests__/ar-aging.boundaries.test.ts",
+				"src/__tests__/ar-aging.credit-memo-asof.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "jest aging tests",
+			"type": "shell",
+			"command": "npm --prefix . run test:serial -- src/__tests__/ar-aging.buckets.test.ts src/__tests__/ar-aging-detail.api.test.ts src/__tests__/ar-aging-detail.export.test.ts src/__tests__/ar-aging.export.test.ts src/__tests__/ar-aging.boundaries.test.ts src/__tests__/ar-aging.credit-memo-asof.test.ts",
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "run jest focused nav tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:serial",
+				"--",
+				"src/__tests__/nav.expenses.1099-link.test.tsx",
+				"src/__tests__/nav.expenses.nested-active.test.tsx"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build frontend",
+			"type": "shell",
+			"command": "npm run build",
+			"args": [],
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build frontend",
+			"type": "shell",
+			"command": "npm run build",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "run jest tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run statement tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"test",
+				"--",
+				"src/__tests__/statements.print.render.test.tsx",
+				"src/__tests__/rbac-customer-statement.export.test.ts",
+				"src/__tests__/customer-statement.export.test.ts",
+				"src/__tests__/customer-statement.csv-version.test.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run frontend vendor statement tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test",
+				"--",
+				"-i",
+				"src/__tests__/vendor-statement.*.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc",
+				"$eslint - stylish"
+			]
+		},
+		{
+			"label": "Run metrics and collections CSV-Version tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"test:serial",
+				"--",
+				"src/__tests__/performance-metrics.export.csv-version.test.ts",
+				"src/__tests__/collections-overview.export.csv-version.test.ts"
+			],
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run focused tests: journal reversal and period lock",
+			"type": "shell",
+			"command": "npm run test -- src/__tests__/journal-reverse.api.test.ts src/__tests__/journal-period-lock.test.ts src/__tests__/reversal-open-period.defaulting.test.ts --reporters=default --silent",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "tests:journal-reversal",
+			"type": "shell",
+			"command": "npm run test -- src/__tests__/journal-reverse.api.test.ts src/__tests__/journal-period-lock.test.ts src/__tests__/reversal-open-period.defaulting.test.ts --reporters=default --silent",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck+lint quick",
+			"type": "shell",
+			"command": "npm run -s typecheck && npm run -s lint",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "jest-focused-collections-enhancements",
+			"type": "shell",
+			"command": "npm test --silent -- rbac-collections-report.*.test.ts collections-overview.*.test.ts",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck",
+			"type": "shell",
+			"command": "npm run typecheck",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "typecheck",
+			"type": "shell",
+			"command": "npm run typecheck",
+			"problemMatcher": [
+				"$tsc -p tsconfig.json"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run limited tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:limited"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		}
+	]
+}

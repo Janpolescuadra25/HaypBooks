@@ -1,0 +1,6 @@
+-- Phase 5 migration: add session auditing fields
+
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS ipaddress TEXT NULL;
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS useragent TEXT NULL;
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS revoked BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS lastusedat TIMESTAMP WITH TIME ZONE NULL;

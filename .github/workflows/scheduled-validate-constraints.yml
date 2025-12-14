@@ -1,0 +1,87 @@
+name: Scheduled Constraint Report
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: haypbooks_test
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install Backend deps
+        working-directory: Haypbooks/Backend
+        run: npm ci
+
+      - name: Set DATABASE_URL
+        working-directory: Haypbooks/Backend
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/haypbooks_test" >> $GITHUB_ENV
+
+      - name: Apply migrations
+        working-directory: Haypbooks/Backend
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      - name: Report unvalidated constraints
+        working-directory: Haypbooks/Backend
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: npx ts-node scripts/db/check-unvalidated-constraints.ts
+
+      - name: Dry-run batched validations (reporting)
+        working-directory: Haypbooks/Backend
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DRY_RUN: 'true'
+          MAX_VALIDATIONS: '20'
+        run: npx ts-node scripts/db/validate-not-valid-constraints-batched.ts
+
+      - name: Get unvalidated constraint list
+        working-directory: Haypbooks/Backend
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: node scripts/ci/unvalidated-constraints-list.js > unvalidated.json || true
+
+      - name: Create issue if unvalidated constraints exist
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs')
+            const content = fs.existsSync('unvalidated.json') ? fs.readFileSync('unvalidated.json','utf8') : '[]'
+            const rows = JSON.parse(content || '[]')
+            if (rows.length === 0) {
+              console.log('No unvalidated constraints found; no issue created')
+            } else {
+              const body = rows.map(r => `- table=${r.table_name} constraint=${r.constraint_name}`).join('\n')
+              const title = `Unvalidated DB constraints: ${rows.length} remaining`
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: `There are ${rows.length} unvalidated foreign-key constraints:\n\n${body}`
+              })
+            }

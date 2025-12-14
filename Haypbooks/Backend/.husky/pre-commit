@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run migration RLS lint, tenant type check, and quick unit tests before committing
+npm run lint:migrations:rls --prefix "Haypbooks/Backend" || exit 1
+npm run lint:db:tenant-coltypes --prefix "Haypbooks/Backend" || exit 1
+npm run test --prefix "Haypbooks/Backend" -- -t "payroll" || exit 1
