@@ -36,17 +36,17 @@ export default function AutoApplyCustomerCredits({ customerId, canManage = true 
   return (
     <div className="mt-4">
       <div className="flex items-center gap-2">
-        <button className="btn-secondary text-sm" disabled={!canManage || busy} onClick={() => run({ dryRun: true })}>
+        <button className="btn-secondary text-sm" disabled={!canManage || busy} onClick={async () => { await run({ dryRun: true }) }}>
           {busy ? 'Checking…' : 'Preview auto-apply'}
         </button>
         <button
           className="btn-primary text-sm"
           disabled={!canManage || busy || !preview || preview.allocations === 0}
-          onClick={() => {
+          onClick={async () => {
             if (!preview) return
             const ok = window.confirm(`Apply ${preview.allocations} allocation${preview.allocations===1?'':'s'} totaling ${formatCurrency(preview.totalApplied)}?`)
             if (!ok) return
-            run({ dryRun: false })
+            await run({ dryRun: false })
           }}
         >
           {busy ? 'Applying…' : 'Apply credits'}
