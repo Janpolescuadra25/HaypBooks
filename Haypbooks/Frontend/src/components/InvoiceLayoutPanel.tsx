@@ -384,7 +384,7 @@ export const InvoiceLayoutPanel: React.FC<{ initialTab?: 'design'|'content'|'pay
 
   return (
     <div className={`glass-card p-4 space-y-4 ${fontClass}`}>
-      <div className="sticky top-0 z-30 -mx-4 -mt-4 mb-4 px-4 pt-3 pb-3 bg-white/95 backdrop-blur border border-teal-300 rounded-2xl shadow-sm flex items-center flex-wrap gap-3">
+      <div className="sticky top-0 z-30 -mx-4 -mt-4 mb-4 px-4 pt-3 pb-3 bg-white/95 backdrop-blur border border-hb-primary-300 rounded-2xl shadow-sm flex items-center flex-wrap gap-3">
         {/* Heading removed per request; tab buttons form left cluster */}
         <div className="flex items-center gap-3">
           {['design','content','payment','emails'].map(t => (

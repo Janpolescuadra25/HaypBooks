@@ -927,6 +927,13 @@ table,
 .text-hb-primary { color: var(--hb-primary) !important; }
 .border-hb-primary { border-color: var(--hb-primary) !important; }
 .ring-hb-primary { box-shadow: 0 0 0 4px rgba(var(--hb-primary-400-rgb), 0.12) !important; }
+/* Tint and shade helpers */
+.bg-hb-primary-50 { background-color: rgba(var(--hb-primary-400-rgb), 0.06) !important; }
+.text-hb-primary-700 { color: var(--hb-primary-700) !important; }
+.border-hb-primary-200 { border-color: rgba(var(--hb-primary-400-rgb), 0.18) !important; }
+/* Divider helper */
+.divide-hb-primary-200 > * + * { border-left-width: 1px; border-left-style: solid; border-left-color: rgba(var(--hb-primary-400-rgb), 0.18) !important; }
+
 
 /* Button micro-interaction helpers */
 .btn-animate { transition: transform var(--hb-transition), box-shadow var(--hb-transition); }

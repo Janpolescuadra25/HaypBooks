@@ -65,7 +65,7 @@ export default function DevelopersApiExplorerPage() {
 
       {/* Mega bar header */}
       <section className={`mb-4 ${barWrapperCls}`}>
-        <div className="w-full rounded-[28px] border border-teal-200 bg-white shadow-lg shadow-teal-200/60">
+        <div className="w-full rounded-[28px] border border-hb-primary-200 bg-white shadow-lg">
           <div className={`${containerCls} py-4`}>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
@@ -94,7 +94,7 @@ export default function DevelopersApiExplorerPage() {
             </div>
             {tryAllowedByEnv ? (
               <button
-                className={`rounded-full border px-3 py-1 text-xs ${allowTry ? 'bg-teal-600 text-white' : 'bg-white text-slate-700'}`}
+                className={`rounded-full border px-3 py-1 text-xs ${allowTry ? 'bg-hb-primary text-white' : 'bg-white text-slate-700'}`}
                 onClick={() => setAllowTry((v) => !v)}
                 title="Toggle Try-It (mock mode)"
               >
