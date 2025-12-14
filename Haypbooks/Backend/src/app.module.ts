@@ -10,6 +10,7 @@ import { InventoryModule } from './inventory/inventory.module'
 import { MockRepositoriesModule } from './repositories/mock/mock-repositories.module'
 import { PrismaRepositoriesModule } from './repositories/prisma/prisma-repositories.module'
 import { PayrollModule } from './payroll/payroll.module'
+import { TasksModule } from './tasks/tasks.module'
 
 const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? MockRepositoriesModule : PrismaRepositoriesModule
 
@@ -23,6 +24,7 @@ const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? MockReposit
     PurchaseOrdersModule,
     InventoryModule,
     PayrollModule,
+    TasksModule,
   ],
   controllers: [TestController, HealthController],
 })
