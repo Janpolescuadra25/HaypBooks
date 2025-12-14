@@ -1,0 +1,21 @@
+Patch summary — human-readable
+
+Changes made (file paths):
+- Haypbooks/Backend/prisma/migrations-preview/20251215020000_convert_tenantid_to_uuid/migration.sql
+  - Rewrote conversion to use temporary uuid columns (id_new, tenantId_new), populate via cast or gen_random_uuid() fallback, set NOT NULL only when safe, rename/swap columns, and recreate PK.
+- Haypbooks/Backend/prisma/migrations/20251215020000_convert_tenantid_to_uuid/migration.sql (copied to active migrations)
+- Haypbooks/Backend/prisma/migrations/20251213202646_squashed_uuid/migration.sql
+  - Added CREATE TABLE IF NOT EXISTS for some tables and other idempotency fixes; guard script applied in guarded runs.
+- Haypbooks/Backend/scripts/db/squash-validate.js
+  - Fallback to migrations-preview for pre-conversion and prefer Backend/prisma; try executing pre-conversion SQL whole-file first then split as fallback; detect schema.prisma in both repo locations; pass --schema and invoke pinned prisma; run seeds using npm --prefix; improved logging and backup handling.
+- Haypbooks/Backend/scripts/db/guard-squashed-migration.js (existing, used by squash-validate when SQUASH_GUARD=1)
+- .github/workflows/squash-validate.yml
+  - Added matrix job to run both guarded and unguarded validation (SQUASH_GUARD: '1' and '0').
+
+Notes:
+- All changes tested locally against Postgres on localhost; validation and lints succeeded.
+- CI job updated to run both guarded and unguarded variants so we can safely remove guard after several green runs.
+
+If you want a literal unified diff (.patch) I can generate that next; let me know whether you'd rather:
+- (A) I initialize a git repo here and open a PR (I need your confirmation and remote), or
+- (B) I produce a .patch file you can apply locally and a suggested PR body (already added in PR_DESCRIPTION.md).

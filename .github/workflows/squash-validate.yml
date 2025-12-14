@@ -1,0 +1,45 @@
+name: Squash Validate
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  squash-validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        squash_guard: ['1', '0']
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres" --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: npm install
+      - name: Wait for Postgres
+        run: |
+          for i in {1..10}; do
+            pg_isready -h localhost -p 5432 && break
+            sleep 1
+          done
+      - name: Run squash validate (guarded = ${{ matrix.squash_guard }})
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          SQUASH_DIR: 20251213202646_squashed_uuid
+          SQUASH_GUARD: ${{ matrix.squash_guard }}
+        run: |
+          node scripts/db/squash-validate.js
