@@ -1,0 +1,211 @@
+# Haypbooks Backend (NestJS)
+
+A production-ready NestJS backend for Haypbooks accounting software.
+
+## Architecture
+
+- **Framework**: NestJS with TypeScript
+- **Authentication**: JWT with Passport
+- **Repository Pattern**: Mock repositories (ready for real DB migration)
+- **Validation**: class-validator DTOs
+- **Password Hashing**: bcrypt
+
+## Project Structure
+
+```
+src/
+├── main.ts                 # Application entry point
+├── app.module.ts           # Root module
+├── auth/                   # Authentication module
+│   ├── auth.controller.ts  # Login, signup, logout endpoints
+│   ├── auth.service.ts     # Auth business logic
+│   ├── auth.module.ts      # Auth module definition
+│   ├── dto/                # Data transfer objects
+│   ├── strategies/         # Passport JWT strategy
+│   └── guards/             # JWT auth guard
+├── users/                  # User management module
+│   ├── users.controller.ts
+│   ├── users.service.ts
+│   └── users.module.ts
+├── onboarding/             # Onboarding flow module
+│   ├── onboarding.controller.ts
+│   ├── onboarding.service.ts
+│   ├── onboarding.module.ts
+│   └── dto/
+└── repositories/           # Data access layer
+    ├── interfaces/         # Repository contracts
+    │   ├── user.repository.interface.ts
+    │   └── onboarding.repository.interface.ts
+    └── mock/               # Mock implementations
+        ├── user.repository.mock.ts
+        ├── onboarding.repository.mock.ts
+        └── mock-repositories.module.ts
+```
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```powershell
+cd C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Backend
+npm install
+```
+
+### 2. Start Development Server
+
+```powershell
+npm run dev
+# or
+npm run start:dev
+```
+
+Server runs on `http://localhost:4000`
+
+### 3. Build for Production
+
+```powershell
+npm run build
+npm start
+```
+
+## API Endpoints
+
+### Authentication
+
+**POST /api/auth/signup**
+- Create new user account
+- Body: `{ email, name, password }`
+- Returns: `{ token, user }`
+- Sets cookies: `token`, `email`, `userId`, `role`
+
+**POST /api/auth/login**
+- Authenticate user
+- Body: `{ email, password }`
+- Returns: `{ token, user }`
+- Sets cookies: `token`, `email`, `userId`, `role`
+
+**POST /api/auth/logout**
+- Clear session cookies
+- Returns: `{ success: true }`
+
+### Users
+
+**GET /api/users/me** 🔒
+- Get current user profile
+- Requires: JWT token
+- Returns: User object (without password)
+
+### Onboarding
+
+**POST /api/onboarding/save** 🔒
+- Save onboarding step progress
+- Body: `{ step, data }`
+- Requires: JWT token
+- Returns: `{ success: true }`
+
+**GET /api/onboarding/save** 🔒
+- Load saved onboarding progress
+- Requires: JWT token
+- Returns: `{ steps: {...} }`
+
+**POST /api/onboarding/complete** 🔒
+- Mark onboarding as complete
+- Requires: JWT token
+- Sets cookie: `onboardingComplete=true`
+- Returns: `{ success: true }`
+
+🔒 = Requires JWT authentication (Bearer token or cookie)
+
+## Authentication Flow
+
+### Signup Flow
+1. POST `/api/auth/signup` with email, name, password
+2. Backend hashes password with bcrypt
+3. Creates user in repository
+4. Generates JWT token
+5. Sets cookies and returns token + user
+
+### Login Flow
+1. POST `/api/auth/login` with email, password
+2. Backend validates password with bcrypt
+3. Generates JWT token
+4. Sets cookies and returns token + user
+
+### Protected Routes
+- Include JWT in `Authorization: Bearer <token>` header
+- Or rely on httpOnly cookies (set automatically)
+
+## Repository Pattern
+
+The backend uses the repository pattern for data access:
+
+**Current**: Mock repositories (in-memory)
+**Future**: Real repositories (PostgreSQL + Prisma)
+
+### Switching to Real DB
+
+When ready to migrate to a real database:
+
+1. Install Prisma: `npm install prisma @prisma/client`
+2. Create `src/repositories/real/` directory
+3. Implement real repositories using Prisma
+4. Update `app.module.ts` to use RealRepositoriesModule
+5. Environment variable: `DB_TYPE=real`
+
+No code changes needed in controllers or services!
+
+## Environment Variables
+
+Create `.env` file:
+
+```bash
+# Server
+PORT=4000
+NODE_ENV=development
+
+# JWT
+JWT_SECRET=your-secret-key-change-in-production
+
+# Database (for Phase 5)
+DB_TYPE=mock
+DATABASE_URL=postgresql://user:password@localhost:5432/haypbooks
+```
+
+## Development Notes
+
+- **Password Storage**: Currently uses bcrypt hashing (production-ready)
+- **Mock DB**: In-memory storage, resets on restart
+- **CORS**: Enabled for frontend development
+- **Validation**: Automatic via class-validator DTOs
+- **Error Handling**: Global exception filters (built into NestJS)
+
+## Testing
+
+```powershell
+# Unit tests (coming soon)
+npm test
+
+# E2E tests (coming soon)
+npm run test:e2e
+```
+
+## Migration from Express
+
+The old `server.js` has been replaced with a full NestJS application:
+
+✅ Express → NestJS with TypeScript
+✅ Basic auth → JWT with Passport
+✅ No validation → class-validator DTOs
+✅ Direct DB access → Repository pattern
+✅ No password hashing → bcrypt
+✅ Basic error handling → NestJS exception filters
+
+## Next Steps
+
+1. Add real database with Prisma (Phase 5)
+2. Implement refresh token rotation
+3. Add rate limiting
+4. Add API documentation (Swagger)
+5. Add comprehensive tests
+6. Add logging (Winston/Pino)
+7. Add health check endpoint

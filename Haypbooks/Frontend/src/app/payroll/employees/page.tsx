@@ -1,0 +1,10 @@
+import PayrollNav from '@/components/PayrollNav'
+
+export default function EmployeesPage() {
+  return (
+    <div className="space-y-4">
+      <div className="glass-card print:hidden"><PayrollNav activeHref="/payroll/employees" /></div>
+      <div className="glass-card">Employees — Coming soon.</div>
+    </div>
+  )
+}

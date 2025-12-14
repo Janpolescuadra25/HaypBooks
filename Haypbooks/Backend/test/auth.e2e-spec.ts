@@ -1,0 +1,123 @@
+import { Test, TestingModule } from '@nestjs/testing'
+import { INestApplication } from '@nestjs/common'
+import request from 'supertest'
+import { AppModule } from '../src/app.module'
+import { PrismaClient } from '@prisma/client'
+import { execSync } from 'child_process'
+import * as path from 'path'
+
+const BACKEND_DIR = path.resolve(__dirname, '..')
+
+describe('Auth e2e', () => {
+  let app: INestApplication
+  let prisma: PrismaClient
+
+  beforeAll(async () => {
+    // Use test DB for e2e
+    process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+
+    // Ensure DB exists and run migrations then seed
+    execSync('node ./scripts/migrate/init-db.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
+    execSync('node ./scripts/migrate/run-sql.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
+    execSync('npm run db:seed:dev', { cwd: BACKEND_DIR, stdio: 'inherit' })
+
+    // Start Nest app
+    const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile()
+    app = moduleFixture.createNestApplication()
+    await app.init()
+
+    prisma = new PrismaClient()
+  }, 60000)
+
+  afterAll(async () => {
+    await app.close()
+    await prisma.$disconnect()
+  })
+
+  beforeEach(async () => {
+    // Clean records for determinism
+    await prisma.session.deleteMany({})
+    await prisma.otp.deleteMany({})
+    await prisma.user.deleteMany({ where: { email: { contains: 'e2e' } } }).catch(() => {})
+  })
+
+  it('signup -> login -> session creation', async () => {
+    const email = `e2e-${Date.now()}@haypbooks.test`
+    const password = 'e2e-password'
+
+    // Signup
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'E2E Test' }).expect(201)
+    expect(signup.body).toHaveProperty('token')
+    expect(signup.body.user.email).toBe(email)
+
+    // Check user saved in DB
+    const saved = await prisma.user.findUnique({ where: { email } })
+    expect(saved).toBeTruthy()
+
+    // Login
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body).toHaveProperty('token')
+    expect(login.body).toHaveProperty('refreshToken')
+
+    // Check session
+    const sessions = await prisma.session.findMany({ where: { userId: saved!.id } })
+    expect(sessions.length).toBeGreaterThan(0)
+  }, 20000)
+
+  it('signup -> verify email OTP -> user verified', async () => {
+    const email = `e2e-verify-${Date.now()}@haypbooks.test`
+    const password = 'verify-pass'
+
+    // Signup
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Verify E2E' }).expect(201)
+    expect(signup.body).toHaveProperty('token')
+
+    // Read verification OTP row
+    const otpRow = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
+    expect(otpRow).toBeTruthy()
+
+    // Verify OTP
+    const verify = await request(app.getHttpServer()).post('/api/auth/verify-otp').send({ email, otpCode: otpRow!.otpCode }).expect(200)
+    expect(verify.body.success).toBe(true)
+
+    // Check user flag
+    const user = await prisma.user.findUnique({ where: { email } })
+    expect(user).toBeTruthy()
+    expect((user as any).isEmailVerified).toBe(true)
+  }, 20000)
+
+  it('forgot -> verify -> reset flows', async () => {
+    const email = `e2e-reset-${Date.now()}@haypbooks.test`
+    const password = 'original-pass'
+
+    // Create user directly
+    const user = await prisma.user.create({ data: { email, password: await require('bcrypt').hash(password, 10), name: 'Reset E2E' } })
+
+    // Trigger forgot-password -> creates OTP
+    await request(app.getHttpServer()).post('/api/auth/forgot-password').send({ email }).expect(200)
+
+    // Read OTP from DB
+    const otpRow = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
+    expect(otpRow).toBeTruthy()
+
+    // Verify OTP
+    const verify = await request(app.getHttpServer()).post('/api/auth/verify-otp').send({ email, otpCode: otpRow!.otpCode }).expect(200)
+    expect(verify.body.success).toBe(true)
+
+    // For RESET purpose, verify-otp does not delete the OTP because the reset flow
+    // does a verification+consume at the final reset step. Confirm the row still exists.
+    const afterVerify = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
+    expect(afterVerify).toBeTruthy()
+
+    // Create a new OTP, then reset password using reset endpoint
+    await request(app.getHttpServer()).post('/api/auth/forgot-password').send({ email }).expect(200)
+    const otpRow2 = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
+    expect(otpRow2).toBeTruthy()
+
+    const newPassword = 'new-secure-pass'
+    await request(app.getHttpServer()).post('/api/auth/reset-password').send({ email, otpCode: otpRow2!.otpCode, password: newPassword }).expect(200)
+
+    // Verify new password works
+    await request(app.getHttpServer()).post('/api/auth/login').send({ email, password: newPassword }).expect(200)
+  }, 30000)
+})

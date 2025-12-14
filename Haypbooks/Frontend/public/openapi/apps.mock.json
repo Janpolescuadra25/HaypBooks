@@ -1,0 +1,123 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "HaypBooks Apps (Mock)",
+    "version": "0.1.0",
+    "description": "Mock endpoints for App Transactions. RBAC: reads require reports:read; writes (sync/post/ignore) require journal:write."
+  },
+  "servers": [
+    { "url": "/", "description": "Same-origin (Next.js dev)" }
+  ],
+  "paths": {
+    "/api/apps/connectors": {
+      "get": {
+        "summary": "List app connectors",
+        "description": "Returns connectors with status and last sync. Requires reports:read.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connectors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "name": { "type": "string" },
+                          "kind": { "type": "string" },
+                          "status": { "type": "string" },
+                          "lastSyncAt": { "type": ["string", "null"], "format": "date-time" },
+                          "lastSyncStatus": { "type": ["string", "null"] }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Forbidden (missing reports:read)" }
+        }
+      }
+    },
+    "/api/apps/connectors/{id}/sync": {
+      "post": {
+        "summary": "Trigger sync",
+        "description": "Starts a mock sync run; returns count of new postings. Requires journal:write.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": { "description": "Forbidden (missing journal:write)" },
+          "404": { "description": "Connector not found" }
+        }
+      }
+    },
+    "/api/apps/postings": {
+      "get": {
+        "summary": "List postings",
+        "description": "Returns staged postings for review. Requires reports:read.",
+        "parameters": [
+          { "name": "connectorId", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "posted", "ignored", "error"] } },
+          { "name": "start", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "end", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "403": { "description": "Forbidden (missing reports:read)" }
+        }
+      }
+    },
+    "/api/apps/postings/{id}/preview": {
+      "get": {
+        "summary": "Preview posting",
+        "description": "Derived DR/CR lines and normalized date. Non-posting. Requires reports:read.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "403": { "description": "Forbidden (missing reports:read)" },
+          "404": { "description": "Posting not found" }
+        }
+      }
+    },
+    "/api/apps/postings/{id}/post": {
+      "post": {
+        "summary": "Post a staging entry",
+        "description": "Posts a journal entry using mappings; audit recorded. Closed-period guard applies. Requires journal:write.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "400": { "description": "Validation error (e.g., period closed)" },
+          "403": { "description": "Forbidden (missing journal:write)" },
+          "404": { "description": "Posting not found" }
+        }
+      }
+    },
+    "/api/apps/postings/{id}/ignore": {
+      "post": {
+        "summary": "Ignore a staging entry",
+        "description": "Marks a posting as ignored with audit. Requires journal:write.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "403": { "description": "Forbidden (missing journal:write)" },
+          "404": { "description": "Posting not found" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+name: CI — RLS & e2e
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend-rls:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Ninetails45
+          POSTGRES_DB: haypbooks_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d haypbooks_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432; do sleep 1; done
+
+      - name: Run migrations
+        run: npm --prefix Haypbooks/Backend run migrate:init && npm --prefix Haypbooks/Backend run migrate:run
+
+      - name: Lint migrations for RLS
+        run: npm --prefix Haypbooks/Backend run lint:migrations:rls
+
+      - name: Tenant audit
+        run: npm --prefix Haypbooks/Backend run audit:tenant-fields
+
+      - name: Seed DB
+        run: npm --prefix Haypbooks/Backend run db:seed:dev
+
+      - name: Run RLS status check
+        run: npm --prefix Haypbooks/Backend run check-rls-status
+
+      - name: Run RLS audit test and e2e tests
+        run: npm --prefix Haypbooks/Backend run test:e2e

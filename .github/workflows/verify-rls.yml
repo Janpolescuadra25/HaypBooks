@@ -1,0 +1,54 @@
+name: Verify RLS Policies
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  verify-rls:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432; do sleep 1; done
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432; do sleep 1; done
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+
+      - name: Push schema into test DB (prisma db push)
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        run: |
+          npm ci && npx prisma db push --schema prisma/schema.prisma --accept-data-loss
+        working-directory: Haypbooks/Backend
+
+      # Run migrations BEFORE this step in your CI; this job only validates RLS presence
+      - name: Run RLS verification
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+        run: |
+          PGPASSWORD=postgres psql "$DATABASE_URL" -f "LOgic.documentation/Documentation/Grok/scripts/db/add-test-rls-policies.sql"
+          PGPASSWORD=postgres psql "$DATABASE_URL" -f "LOgic.documentation/Documentation/Grok/scripts/db/verify-rls.psql"
+
+      - name: Notify
+        run: echo "RLS verification passed (or job will fail above)."

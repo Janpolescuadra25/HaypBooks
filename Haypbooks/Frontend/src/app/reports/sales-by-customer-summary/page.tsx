@@ -1,0 +1,119 @@
+import { getBaseUrl } from '@/lib/server-url'
+import { ReportPeriodSelect } from '@/components/ReportPeriodSelect'
+import { ExportCsvButton, PrintButton, RefreshButton } from '@/components/ReportActions'
+import { BackButton } from '@/components/BackButton'
+import { formatAsOf, formatDateRange } from '@/lib/date'
+import { flags } from '@/lib/flags'
+import TagSelect from '@/components/TagSelect'
+import Amount from '@/components/Amount'
+import { formatNumber } from '@/lib/format'
+import { ColumnSettingsButton } from '@/components/ColumnSettingsButton'
+import { usePersistedColumns } from '@/hooks/usePersistedColumns'
+
+async function fetchData(params?: { period?: string; start?: string; end?: string; tag?: string }) {
+  const sp = new URLSearchParams()
+  if (params?.period) sp.set('period', params.period)
+  if (params?.start) sp.set('start', params.start)
+  if (params?.end) sp.set('end', params.end)
+  if (params?.tag) sp.set('tag', params.tag)
+  const qs = sp.toString() ? `?${sp.toString()}` : ''
+  const res = await fetch(`${getBaseUrl()}/api/reports/sales-by-customer-summary${qs}`, { cache: 'no-store' })
+  if (!res.ok) {
+    return (
+      <div className="space-y-4">
+        <div className="glass-card print:hidden">
+          <div className="flex items-center justify-between gap-2">
+            <BackButton ariaLabel="Back to Reports" />
+          </div>
+        </div>
+        <div className="glass-card">
+          <p className="text-slate-800">Access denied. You don’t have permission to view this report.</p>
+        </div>
+      </div>
+    )
+  }
+  return res.json()
+}
+
+export default async function SalesByCustomerSummaryPage({ searchParams }: { searchParams: { period?: string; start?: string; end?: string; tag?: string } }) {
+  const data = await fetchData({ period: searchParams?.period, start: searchParams?.start, end: searchParams?.end, tag: searchParams?.tag }) as any
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data as any
+  const asOfIso = (data?.asOf || (searchParams?.end ? new Date(searchParams.end + 'T00:00:00Z') : new Date()).toISOString()).slice(0,10)
+  const defaultVisible = ['customer','transactions','qty','amount']
+  // Build deterministic origin for drill-down back behavior
+  const fromUrl = new URL('https://app.local/reports/sales-by-customer-summary')
+  if (searchParams?.period) fromUrl.searchParams.set('period', searchParams.period)
+  if (searchParams?.start) fromUrl.searchParams.set('start', searchParams.start)
+  if (searchParams?.end) fromUrl.searchParams.set('end', searchParams.end)
+  if (searchParams?.tag) fromUrl.searchParams.set('tag', searchParams.tag)
+  const fromStr = `${fromUrl.pathname}${fromUrl.search ? fromUrl.search : ''}`
+  return (
+    <div className="space-y-4">
+      <div className="glass-card print:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <BackButton ariaLabel="Back to Reports" />
+          <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
+            <ReportPeriodSelect value={data.period} />
+            {flags.tags && <TagSelect />}
+            <RefreshButton />
+            <ExportCsvButton exportPath="/api/reports/sales-by-customer-summary/export" />
+            <PrintButton />
+            <ClientColumnSettings storageKey="report:sales-by-customer-summary:columns" options={[
+              { key: 'customer', label: 'Customer', required: true },
+              { key: 'transactions', label: 'Transactions', required: true },
+              { key: 'qty', label: 'Qty' },
+              { key: 'amount', label: 'Amount', required: true },
+            ]} defaultVisible={defaultVisible} />
+          </div>
+        </div>
+      </div>
+      <div className="glass-card overflow-x-auto">
+        <table className="min-w-full text-sm caption-top" aria-label="Sales by Customer Summary">
+          <caption className="text-center py-3">
+            <div className="text-base font-semibold text-slate-900">Sales by Customer Summary</div>
+            <div className="text-xs text-slate-600">{(searchParams?.start && searchParams?.end) ? formatDateRange(searchParams.start, searchParams.end) : formatAsOf(asOfIso)}</div>
+          </caption>
+          <thead className="sticky top-0 bg-white/70 backdrop-blur z-10 text-slate-600">
+            <tr>
+              <th className="px-3 py-2 text-left">Customer</th>
+              <th className="px-3 py-2 tabular-nums">Transactions</th>
+              <th className="px-3 py-2 tabular-nums">Qty</th>
+              <th className="px-3 py-2 tabular-nums">Amount</th>
+            </tr>
+          </thead>
+          <tbody className="text-slate-800">
+            {data.rows.map((r: any, idx: number) => (
+              <tr key={idx} className="border-top border-slate-200">
+                <td className="px-3 py-2 text-left">
+                  <a
+                    className="text-blue-700 hover:underline"
+                    href={`/reports/sales-by-customer-detail?customer=${encodeURIComponent(r.customer)}${searchParams?.period ? `&period=${encodeURIComponent(searchParams.period)}` : ''}${searchParams?.start ? `&start=${encodeURIComponent(searchParams.start)}` : ''}${searchParams?.end ? `&end=${encodeURIComponent(searchParams.end)}` : ''}${searchParams?.tag ? `&tag=${encodeURIComponent(searchParams.tag)}` : ''}&from=${encodeURIComponent(fromStr)}`}
+                  >
+                    {r.customer}
+                  </a>
+                </td>
+                <td className="px-3 py-2 tabular-nums">{r.transactions}</td>
+                <td className="px-3 py-2 tabular-nums">{r.qty}</td>
+                <td className="px-3 py-2 tabular-nums"><Amount value={Number(r.amount)} /></td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-slate-300 bg-white/60">
+              <td className="px-3 py-2 font-medium text-slate-900 text-left">Totals</td>
+              <td className="px-3 py-2 tabular-nums font-medium">{formatNumber(Number(data.totals.transactions || 0))}</td>
+              <td className="px-3 py-2 tabular-nums font-medium">{formatNumber(Number(data.totals.qty || 0))}</td>
+              <td className="px-3 py-2 tabular-nums font-medium"><Amount value={Number(data.totals.amount || 0)} /></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function ClientColumnSettings({ storageKey, options, defaultVisible }: { storageKey: string; options: { key: string; label: string; required?: boolean }[]; defaultVisible: string[] }) {
+  'use client'
+  const [visible, setVisible] = usePersistedColumns(storageKey, defaultVisible)
+  return <ColumnSettingsButton options={options} value={visible} onChange={setVisible} />
+}

@@ -1,0 +1,116 @@
+name: DB-persistence E2E (Playwright)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  db-persistence:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: haypbooks_ui_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache backend dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            Haypbooks/Backend/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-backend-node-${{ hashFiles('Haypbooks/Backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-node-
+
+      - name: Install backend deps
+        working-directory: ./Haypbooks/Backend
+        run: npm ci
+
+      - name: Run backend migrations & seed
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/haypbooks_ui_test
+        run: |
+          npm run migrate:init
+          node ./scripts/migrate/run-sql.js
+          npm run db:seed:dev
+
+      - name: Verify DB schema
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/haypbooks_ui_test
+        run: |
+          npm run migrate:check
+
+      - name: Build and start backend
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/haypbooks_ui_test
+          ALLOW_TEST_ENDPOINTS: 'true'
+          NODE_ENV: 'test'
+        run: |
+          npm run build
+          nohup npm start &
+
+      - name: Cache frontend dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            Haypbooks/Frontend/node_modules
+            ~/.npm
+            ~/.cache/ms-playwright
+            Haypbooks/Frontend/node_modules/.cache/ms-playwright
+          key: ${{ runner.os }}-frontend-node-${{ hashFiles('Haypbooks/Frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-node-
+
+      - name: Install frontend deps
+        working-directory: ./Haypbooks/Frontend
+        run: npm ci
+
+      - name: Build and start frontend
+        working-directory: ./Haypbooks/Frontend
+        env:
+          NEXT_PUBLIC_API_URL: 'http://localhost:4000'
+        run: |
+          npm run build
+          nohup npm start &
+
+      - name: Install Playwright browsers
+        working-directory: ./Haypbooks/Frontend
+        run: npx playwright install --with-deps
+
+      - name: Wait for services
+        run: |
+          n=0; until curl --silent --fail http://localhost:4000/api/auth/health || [ $n -ge 30 ]; do n=$((n+1)); echo 'waiting for backend...'; sleep 2; done
+          n=0; until curl --silent --fail http://localhost:3000/ || [ $n -ge 30 ]; do n=$((n+1)); echo 'waiting for frontend...'; sleep 2; done
+
+      - name: Run the DB-persistence Playwright test
+        working-directory: ./Haypbooks/Frontend
+        env:
+          ALLOW_TEST_ENDPOINTS: 'true'
+        run: npx playwright test e2e/db-persistence.spec.ts --project=chromium --reporter=list --timeout=120000
+
+      - name: Upload Playwright report (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-db-persistence
+          path: Haypbooks/Frontend/playwright-report

@@ -1,0 +1,1 @@
+ALTER POLICY tenant_isolation_Employee ON public."Employee" USING (("tenantId")::text = current_setting('hayp.tenant_id'::text)) WITH CHECK (("tenantId")::text = current_setting('hayp.tenant_id'::text));

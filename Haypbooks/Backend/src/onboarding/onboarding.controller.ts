@@ -1,0 +1,52 @@
+import { Controller, Post, Get, Body, UseGuards, Request, Res, HttpCode, HttpStatus } from '@nestjs/common'
+import { Response } from 'express'
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { OnboardingService } from './onboarding.service'
+import { SaveStepDto } from './dto/onboarding.dto'
+
+@Controller('api/onboarding')
+export class OnboardingController {
+  constructor(private readonly onboardingService: OnboardingService) {}
+
+  @Post('save')
+  @UseGuards(JwtAuthGuard)
+  async saveStep(@Request() req, @Body() saveStepDto: SaveStepDto) {
+    const userId = req.user.userId
+    return this.onboardingService.saveStep(userId, saveStepDto.step, saveStepDto.data)
+  }
+
+  @Get('save')
+  @UseGuards(JwtAuthGuard)
+  async loadProgress(@Request() req) {
+    const userId = req.user.userId
+    const steps = await this.onboardingService.loadProgress(userId)
+    return { steps }
+  }
+
+  @Post('complete')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async complete(@Request() req, @Res({ passthrough: true }) res: Response, @Body() body: { type?: 'quick' | 'full' }) {
+    const userId = req.user.userId
+    const type = body?.type || 'full'
+    await this.onboardingService.complete(userId, type)
+
+    // Set cookie
+    res.cookie('onboardingComplete', 'true', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    })
+
+    // Expose onboarding mode client-side so the frontend can act accordingly
+    res.cookie('onboardingMode', type, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
+
+    return { success: true }
+  }
+}

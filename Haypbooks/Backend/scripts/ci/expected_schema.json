@@ -1,0 +1,820 @@
+[
+  {
+    "name": "User",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Session",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Otp",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "UserSecurityEvent",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "OnboardingStep",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Tenant",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Company",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "FixedAssetCategory",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "FixedAsset",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "FixedAssetDepreciation",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TenantUser",
+    "tenantScoped": true,
+    "requiredColumns": [
+      "tenantId",
+      "userId"
+    ],
+    "expectsTenantIndex": true
+  },
+  {
+    "name": "TenantInvite",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Currency",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "code"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ExchangeRate",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "AccountSubType",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "AccountBalance",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "OpeningBalance",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Class",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Location",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Project",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Timesheet",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TimeEntry",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TimesheetApproval",
+    "tenantScoped": true,
+    "requiredColumns": [
+      "id",
+      "tenantId"
+    ],
+    "expectsTenantIndex": true
+  },
+  {
+    "name": "Budget",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BudgetLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "AccountingPeriod",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Reversal",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "FinancialStatementSnapshot",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BankReconciliation",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BankReconciliationLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ContactAddress",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ContactCustomField",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "AccountType",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Account",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "JournalEntry",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "JournalEntryLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Contact",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ContactEmail",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ContactPhone",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Customer",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "contactId"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Vendor",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "contactId"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Item",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "InventoryCostLayer",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "StockLocation",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Employee",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "PaySchedule",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "PayrollRun",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "PayrollRunEmployee",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Paycheck",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "PaycheckLine",
+    "tenantScoped": true,
+    "requiredColumns": [
+      "id",
+      "tenantId"
+    ],
+    "expectsTenantIndex": true
+  },
+  {
+    "name": "PaycheckTax",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "StockLevel",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "InventoryTransaction",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "InventoryTransactionLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TaxJurisdiction",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TaxRate",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TaxCode",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TaxCodeRate",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "LineTax",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TaxCodeAccount",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Role",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Permission",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "RolePermission",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "roleId",
+      "permissionId"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Approval",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Revaluation",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Attachment",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Invoice",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "RecurringInvoice",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "InvoiceLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "PaymentReceived",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "InvoicePaymentApplication",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BankAccount",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BankTransaction",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "Bill",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BillLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "PurchaseOrder",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "PurchaseOrderLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "VendorCredit",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "CustomerCredit",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "CustomerCreditLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "CustomerCreditApplication",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "VendorCreditLine",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BillPayment",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "BillPaymentApplication",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "VendorPaymentMethod",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "AuditLog",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "EventLog",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "JobAttempt",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "DeadLetter",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "SearchIndexingQueue",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "SearchIndexedDoc",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TenantBillingInvoice",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TenantBillingUsage",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "DsrExportRequest",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ConsentRecord",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "IdempotencyKey",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "OutboxEvent",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "SchemaMigration",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ApiRateLimit",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "ApiTokenRevocation",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  }
+]
