@@ -62,7 +62,11 @@ export default function OtpInput({ length = 6, value = '', onChange, ariaLabel }
   function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Backspace') {
       if (vals[idx]) {
-        setVals(prev => ({ ...prev, [idx]: '' } as any))
+        setVals(prev => {
+          const copy = [...prev]
+          copy[idx] = ''
+          return copy
+        })
       } else if (idx > 0) {
         focusIndex(idx - 1)
       }
@@ -83,10 +87,16 @@ export default function OtpInput({ length = 6, value = '', onChange, ariaLabel }
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
-          className="w-12 h-12 text-center rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold"
+          className="w-12 h-12 text-center rounded-xl border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-lg font-semibold transition-all bg-white/50 hover:bg-white hover:border-emerald-300"
           aria-label={`Digit ${i + 1}`}
         />
       ))}
+
+      <style jsx>{`
+        input:focus {
+          transform: scale(1.05);
+        }
+      `}</style>
     </div>
   )
 }

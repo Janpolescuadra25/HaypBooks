@@ -22,7 +22,13 @@ export class TasksService {
   }
 
   async updateTask(tenantId: string, id: string, payload: any) {
-    return this.prisma.task.updateMany({ where: { id, tenantId }, data: payload })
+    // Handle archived flag specially to set archivedAt timestamp
+    const data: any = { ...payload }
+    if (typeof payload.archived === 'boolean') {
+      data.archivedAt = payload.archived ? new Date() : null
+      delete data.archived
+    }
+    return this.prisma.task.updateMany({ where: { id, tenantId }, data })
   }
 
   async addComment(tenantId: string, taskId: string, userId: string, comment: string) {

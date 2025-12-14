@@ -94,6 +94,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
   const pathname = usePathname?.() || (typeof window !== 'undefined' ? window.location.pathname : '/')
   // Keep any public auth/marketing pages out of the app chrome
   const PUBLIC_PATHS = [
+    '/',
     '/landing',
     '/login',
     '/signup',
@@ -104,7 +105,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
     '/onboarding',
     '/onboarding/business'
   ]
-  const isPublic = PUBLIC_PATHS.some(p => pathname.startsWith(p))
+  const isPublic = pathname === '/' || PUBLIC_PATHS.some(p => p !== '/' && pathname.startsWith(p))
 
   return (
     <>

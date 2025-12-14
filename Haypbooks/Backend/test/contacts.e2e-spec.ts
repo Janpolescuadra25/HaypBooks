@@ -17,9 +17,7 @@ describe('Contacts e2e', () => {
     process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
     // Ensure DB exists and run migrations then seed
-    execSync('node ./scripts/migrate/init-db.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
-    execSync('node ./scripts/migrate/run-sql.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
-    execSync('npm run db:seed:dev', { cwd: BACKEND_DIR, stdio: 'inherit' })
+    execSync('node ./scripts/test/setup-test-db.js --recreate', { cwd: BACKEND_DIR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL } })
 
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleFixture.createNestApplication()

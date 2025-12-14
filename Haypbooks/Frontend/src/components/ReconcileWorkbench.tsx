@@ -354,7 +354,7 @@ export default function ReconcileWorkbench() {
                 </ul>
               </HelpPopover>
             </div>
-            <div className={`text-xl font-semibold ${Math.abs(difference) < 0.0001 ? 'text-emerald-600' : 'text-rose-600'}`}><Amount value={difference} /></div>
+            <div className={`text-xl font-semibold ${Math.abs(difference) < 0.0001 ? 'text-emerald-600' : 'text-rose-800'}`}><Amount value={difference} /></div>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">

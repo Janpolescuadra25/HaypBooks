@@ -17,9 +17,7 @@ describe('Auth e2e', () => {
     process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
     // Ensure DB exists and run migrations then seed
-    execSync('node ./scripts/migrate/init-db.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
-    execSync('node ./scripts/migrate/run-sql.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
-    execSync('npm run db:seed:dev', { cwd: BACKEND_DIR, stdio: 'inherit' })
+    execSync('node ./scripts/test/setup-test-db.js --recreate', { cwd: BACKEND_DIR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL } })
 
     // Start Nest app
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile()
@@ -114,10 +112,28 @@ describe('Auth e2e', () => {
     const otpRow2 = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
     expect(otpRow2).toBeTruthy()
 
-    const newPassword = 'new-secure-pass'
+    const newPassword = 'NewPass123'
     await request(app.getHttpServer()).post('/api/auth/reset-password').send({ email, otpCode: otpRow2!.otpCode, password: newPassword }).expect(200)
 
     // Verify new password works
     await request(app.getHttpServer()).post('/api/auth/login').send({ email, password: newPassword }).expect(200)
   }, 30000)
+
+  it('logs security events on signup/login and exposes them', async () => {
+    const email = `e2e-sechevents-${Date.now()}@haypbooks.test`
+    const password = 'Pass1234'
+
+    // signup
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'E2E Sec' }).expect(201)
+    // login
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    const token = login.body.token || login.body.accessToken || login.body.accessToken
+
+    // fetch security events
+    const resp = await request(app.getHttpServer()).get('/api/auth/security-events').set('Authorization', `Bearer ${token}`).expect(200)
+    expect(Array.isArray(resp.body)).toBe(true)
+    expect(resp.body.length).toBeGreaterThanOrEqual(1)
+    expect(resp.body[0]).toHaveProperty('createdAt')
+  }, 20000)
+
 })

@@ -70,7 +70,7 @@ export default async function RetainedEarningsPage({ searchParams }: { searchPar
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="px-3 py-2">Dividends/Draws</td>
-                <td className="px-3 py-2 text-right tabular-nums text-rose-600"><Amount value={Number(data.dividends || 0)} /></td>
+                <td className="px-3 py-2 text-right tabular-nums text-rose-800"><Amount value={Number(data.dividends || 0)} /></td>
               </tr>
               <tr>
                 <td className="px-3 py-2 font-medium">Ending Retained Earnings</td>

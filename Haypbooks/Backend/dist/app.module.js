@@ -19,6 +19,8 @@ const inventory_module_1 = require("./inventory/inventory.module");
 const mock_repositories_module_1 = require("./repositories/mock/mock-repositories.module");
 const prisma_repositories_module_1 = require("./repositories/prisma/prisma-repositories.module");
 const payroll_module_1 = require("./payroll/payroll.module");
+const tasks_module_1 = require("./tasks/tasks.module");
+const attachments_module_1 = require("./attachments/attachments.module");
 const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? mock_repositories_module_1.MockRepositoriesModule : prisma_repositories_module_1.PrismaRepositoriesModule;
 let AppModule = class AppModule {
 };
@@ -34,6 +36,8 @@ exports.AppModule = AppModule = __decorate([
             purchase_orders_module_1.PurchaseOrdersModule,
             inventory_module_1.InventoryModule,
             payroll_module_1.PayrollModule,
+            tasks_module_1.TasksModule,
+            attachments_module_1.AttachmentsModule,
         ],
         controllers: [test_controller_1.TestController, health_controller_1.HealthController],
     })

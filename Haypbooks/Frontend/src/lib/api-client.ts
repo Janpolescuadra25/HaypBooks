@@ -53,7 +53,16 @@ apiClient.interceptors.response.use(
       // Already retried or refresh isn't available — fail and redirect
       if (typeof window !== 'undefined') {
         localStorage.removeItem('user')
-        window.location.href = '/login'
+        // Preserve current path so user returns after re-login
+        const currentPath = window.location.pathname + window.location.search
+        const isPublicPath = currentPath.startsWith('/login') || 
+                            currentPath.startsWith('/signup') ||
+                            currentPath.startsWith('/landing')
+        if (isPublicPath) {
+          window.location.href = '/login'
+        } else {
+          window.location.href = `/login?next=${encodeURIComponent(currentPath)}`
+        }
       }
     }
 

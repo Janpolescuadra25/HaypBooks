@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation'
+import CinematicIntro from '@/components/CinematicIntro'
 
-export default function HomePage() {
-  // Redirect root to Dashboard
-  redirect('/dashboard')
+export default function Home() {
+  return <CinematicIntro />
 }

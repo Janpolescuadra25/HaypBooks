@@ -1061,7 +1061,8 @@ function AccountListSidebar({ selectedId, onSelect }: { selectedId: string; onSe
     const base = Math.max(...[bank, books, Math.abs(diff)].filter(v => isFinite(v)).map(v => Math.abs(v)), 1)
     const smallBand = Math.max(0.01 * base, 5)
     const smallish = !nearZero && isFinite(diff) && Math.abs(diff) <= smallBand
-    const diffBadge = nearZero ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : smallish ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'
+    // Stronger red variant for better legibility on small badges
+    const diffBadge = nearZero ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : smallish ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-100 text-red-800 border-red-200'
     const classBase = `w-full flex items-center justify-between gap-3 px-3 py-2 text-sm`
     const onRowMove = (e: React.MouseEvent<HTMLButtonElement>) => {
       if (opts?.variant === 'all') return // no hover effect for All accounts row

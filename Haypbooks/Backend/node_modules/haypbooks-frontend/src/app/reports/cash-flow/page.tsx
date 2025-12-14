@@ -93,20 +93,20 @@ export default async function CashFlowPage({ searchParams }: { searchParams: { p
                   <tr key={r.name} className="border-t border-slate-200">
                     <td className="px-3 py-2 text-center">{r.name}</td>
                     {/* Render selected subcolumns in order */}
-                    <td className={`px-3 py-2 text-center tabular-nums ${r.amount < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={r.amount} /></td>
+                    <td className={`px-3 py-2 text-center tabular-nums ${r.amount < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={r.amount} /></td>
                     {subcols.filter(s => s !== 'curr').map(key => {
                       const prevVal = Number(i===0?data.prev.sections.operations:i===1?data.prev.sections.investing:i===2?data.prev.sections.financing:data.prev.netChange)
                       const curVal = Number(r.amount ?? 0)
                       const delta = curVal - prevVal
                       const pct = prevVal !== 0 ? (delta / Math.abs(prevVal)) * 100 : 0
-                      if (key === 'prev') return (
-                        <td key="prev" className={`px-3 py-2 text-center tabular-nums ${prevVal < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={prevVal} /></td>
+                        if (key === 'prev') return (
+                        <td key="prev" className={`px-3 py-2 text-center tabular-nums ${prevVal < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={prevVal} /></td>
                       )
                       if (key === 'delta') return (
-                        <td key="delta" className={`px-3 py-2 text-center tabular-nums ${delta < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={delta} /></td>
+                        <td key="delta" className={`px-3 py-2 text-center tabular-nums ${delta < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={delta} /></td>
                       )
                       if (key === 'pct') return (
-                        <td key="pct" className={`px-3 py-2 text-center tabular-nums ${pct < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatPercentFromPct(pct)}</td>
+                        <td key="pct" className={`px-3 py-2 text-center tabular-nums ${pct < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>{formatPercentFromPct(pct)}</td>
                       )
                       return null
                     })}
@@ -128,7 +128,7 @@ export default async function CashFlowPage({ searchParams }: { searchParams: { p
             {rows.map((r) => (
               <div key={r.name} className="flex items-center justify-between py-2 text-slate-800">
                 <span>{r.name}</span>
-                <span className={`tabular-nums font-mono ${r.amount < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                <span className={`tabular-nums font-mono ${r.amount < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>
                   <Amount value={r.amount} />
                 </span>
               </div>

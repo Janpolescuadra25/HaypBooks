@@ -2,10 +2,11 @@ import { Controller, Post, Body, Res, HttpCode, HttpStatus, Inject, NotFoundExce
 import { Response } from 'express'
 import { PrismaAuthService } from './prisma-auth.service'
 import { VerifyOtpSchema, ResetPasswordSchema, ForgotPasswordSchema } from './schemas'
-import { USER_REPOSITORY, SESSION_REPOSITORY, OTP_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
+import { USER_REPOSITORY, SESSION_REPOSITORY, OTP_REPOSITORY, SECURITY_EVENT_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { LoginDto, SignupDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto/auth.dto'
+import { ISecurityEventRepository } from '../repositories/interfaces/security-event.repository.interface'
 
 @Controller('api/auth')
 export class AuthController {
@@ -14,6 +15,7 @@ export class AuthController {
     @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
     @Inject(SESSION_REPOSITORY) private readonly sessionRepo: any,
     @Inject(OTP_REPOSITORY) private readonly otpRepo: any,
+    @Inject(SECURITY_EVENT_REPOSITORY) private readonly securityEventRepo: ISecurityEventRepository,
   ) {}
 
   @Post('login')
@@ -243,10 +245,19 @@ export class AuthController {
     const parsed = ResetPasswordSchema.safeParse(body)
     if (!parsed.success) throw new NotFoundException('Invalid reset payload')
     const { email, otpCode, password, token } = parsed.data
+    
+    // Validate password strength
+    if (!password || password.length < 8) {
+      throw new NotFoundException('Password must be at least 8 characters')
+    }
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      throw new NotFoundException('Password must include uppercase letter and number')
+    }
+    
     // support token reset flow in future
     if (!token && (!email || !otpCode)) throw new NotFoundException('Missing token or email/otp')
     const user = await this.userRepository.findByEmail(email!)
-    if (!user) return { success: true }
+    if (!user) return { success: true } // Don't reveal user existence
 
     // verify and consume the OTP for password reset so it cannot be reused
     const valid = await this.authService.verifyOtp(email!, otpCode!, true)
@@ -256,5 +267,23 @@ export class AuthController {
     const hashed = await require('bcrypt').hash(password, 10)
     await this.userRepository.update(user.id, { password: hashed })
     return { success: true }
+  }
+
+  @Get('security-events')
+  @UseGuards(JwtAuthGuard)
+  async getSecurityEvents(@Req() req: any) {
+    const userId = req.user?.userId
+    if (!userId) throw new UnauthorizedException()
+    
+    const limit = parseInt(req.query?.limit) || 50
+    const events = await this.securityEventRepo.findByUserId(userId, limit)
+    
+    return events.map((e: any) => ({
+      id: e.id,
+      type: e.type,
+      ipAddress: e.ipAddress,
+      userAgent: e.userAgent,
+      createdAt: e.createdAt,
+    }))
   }
 }

@@ -13,9 +13,7 @@ describe('Bank Reconciliation invariants e2e', () => {
 
   beforeAll(async () => {
     process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
-    execSync('node ./scripts/migrate/init-db.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
-    execSync('node ./scripts/migrate/run-sql.js', { cwd: BACKEND_DIR, stdio: 'inherit' })
-    execSync('npm run db:seed:dev', { cwd: BACKEND_DIR, stdio: 'inherit' })
+    execSync('node ./scripts/test/setup-test-db.js --recreate', { cwd: BACKEND_DIR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL } })
 
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleFixture.createNestApplication()
@@ -33,8 +31,11 @@ describe('Bank Reconciliation invariants e2e', () => {
     const tenant = await prisma.tenant.findFirst({ where: { subdomain: 'demo' } })
     expect(tenant).toBeTruthy()
 
-    // Create an account type and an account (bank asset account) and bank account
-    const accountType = await prisma.accountType.create({ data: { name: 'BANK_ASSET' } })
+    // Create or find an account type and an account (bank asset account) and bank account
+    // Ensure an account type exists - use a high id to avoid autoincrement sequence collisions
+    await prisma.$executeRawUnsafe(`INSERT INTO "AccountType" (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, 1000000, 'BANK_ASSET')
+    const accountType = await prisma.accountType.findFirst({ where: { name: 'BANK_ASSET' } })
+    if (!accountType) throw new Error('Failed to ensure AccountType BANK_ASSET exists')
     const account = await prisma.account.create({ data: { tenantId: tenant!.id, code: '1010', name: 'Bank Test', typeId: accountType.id } })
     const bankAccount = await prisma.bankAccount.create({ data: { tenantId: tenant!.id, name: 'E2E BANK' } })
 
