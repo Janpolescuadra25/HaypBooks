@@ -107,8 +107,8 @@ export default function AccountingProcessPage() {
         <h1 className="text-2xl font-semibold">Accounting process</h1>
         <p className="text-sm text-gray-600">As of {data.asOf} • Period {data.period.start} → {data.period.end}</p>
         <nav className="mt-2 text-sm flex gap-3">
-          <Link className="text-teal-700 underline" href="/accountant/write-offs">Write-offs</Link>
-          <Link className="text-teal-700 underline" href="/accountant/finance-charges">Finance charges</Link>
+          <Link className="text-hb-primary-700 underline" href="/accountant/write-offs">Write-offs</Link>
+          <Link className="text-hb-primary-700 underline" href="/accountant/finance-charges">Finance charges</Link>
         </nav>
         <div className="mt-3 glass-card p-3 flex flex-col gap-2 max-w-xl">
           <div className="flex flex-wrap items-end gap-3">
@@ -254,17 +254,17 @@ export default function AccountingProcessPage() {
             )}
           </dl>
           <nav className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-            <Link className="text-teal-700 underline" href={"/invoices" as any}>Invoices</Link>
-            <Link className="text-teal-700 underline" href={"/sales/collections" as any}>Collections</Link>
-            <Link className="text-teal-700 underline" href={"/customers" as any}>Customers</Link>
-            <Link className="text-teal-700 underline" href={"/sales/customer-payments" as any}>Record payment</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ar-aging-detail?bucket=30&from=${encodeURIComponent('/accounting/process')}`}>Overdue detail</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ar-aging-detail?bucket=60&from=${encodeURIComponent('/accounting/process')}`}>60+</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ar-aging-detail?bucket=90&from=${encodeURIComponent('/accounting/process')}`}>90+</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ar-aging-detail?bucket=120&from=${encodeURIComponent('/accounting/process')}`}>120+</Link>
-            <Link className="text-teal-700 underline" href={"/receivables/payments/applications/history" as any}>Payment application history</Link>
-            <Link className="text-teal-700 underline" href={"/collections/reminders/history" as any}>Reminder history</Link>
-            <Link className="text-teal-700 underline" href={"/sales/statements/send/history" as any}>Statement send history</Link>
+            <Link className="text-hb-primary-700 underline" href={"/invoices" as any}>Invoices</Link>
+            <Link className="text-hb-primary-700 underline" href={"/sales/collections" as any}>Collections</Link>
+            <Link className="text-hb-primary-700 underline" href={"/customers" as any}>Customers</Link>
+            <Link className="text-hb-primary-700 underline" href={"/sales/customer-payments" as any}>Record payment</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ar-aging-detail?bucket=30&from=${encodeURIComponent('/accounting/process')}`}>Overdue detail</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ar-aging-detail?bucket=60&from=${encodeURIComponent('/accounting/process')}`}>60+</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ar-aging-detail?bucket=90&from=${encodeURIComponent('/accounting/process')}`}>90+</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ar-aging-detail?bucket=120&from=${encodeURIComponent('/accounting/process')}`}>120+</Link>
+            <Link className="text-hb-primary-700 underline" href={"/receivables/payments/applications/history" as any}>Payment application history</Link>
+            <Link className="text-hb-primary-700 underline" href={"/collections/reminders/history" as any}>Reminder history</Link>
+            <Link className="text-hb-primary-700 underline" href={"/sales/statements/send/history" as any}>Statement send history</Link>
           </nav>
         </div>
 
@@ -275,9 +275,9 @@ export default function AccountingProcessPage() {
             <div className="flex justify-between"><dt>Deposits (30d)</dt><dd>{data.receipts.deposits.last30.count} • {formatCurrency(data.receipts.deposits.last30.total)}</dd></div>
           </dl>
           <nav className="mt-3 flex gap-2 text-sm">
-            <Link className="text-teal-700 underline" href="/transactions">Banking</Link>
-            <Link className="text-teal-700 underline" href="/sales/deposits">Deposits</Link>
-            <Link className="text-teal-700 underline" href={`/sales/deposits?from=${encodeURIComponent('/accounting/process')}`}>Undeposited list</Link>
+            <Link className="text-hb-primary-700 underline" href="/transactions">Banking</Link>
+            <Link className="text-hb-primary-700 underline" href="/sales/deposits">Deposits</Link>
+            <Link className="text-hb-primary-700 underline" href={`/sales/deposits?from=${encodeURIComponent('/accounting/process')}`}>Undeposited list</Link>
           </nav>
         </div>
 
@@ -307,13 +307,13 @@ export default function AccountingProcessPage() {
             )}
           </dl>
           <nav className="mt-3 flex gap-2 text-sm">
-            <Link className="text-teal-700 underline" href={"/bills" as any}>Bills</Link>
-            <Link className="text-teal-700 underline" href={"/vendors" as any}>Vendors</Link>
-            <Link className="text-teal-700 underline" href={"/purchase-orders" as any}>POs</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ap-aging-detail?bucket=30&from=${encodeURIComponent('/accounting/process')}`}>Overdue detail</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ap-aging-detail?bucket=60&from=${encodeURIComponent('/accounting/process')}`}>60+</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ap-aging-detail?bucket=90&from=${encodeURIComponent('/accounting/process')}`}>90+</Link>
-            <Link className="text-teal-700 underline" href={`/reports/ap-aging-detail?bucket=120&from=${encodeURIComponent('/accounting/process')}`}>120+</Link>
+            <Link className="text-hb-primary-700 underline" href={"/bills" as any}>Bills</Link>
+            <Link className="text-hb-primary-700 underline" href={"/vendors" as any}>Vendors</Link>
+            <Link className="text-hb-primary-700 underline" href={"/purchase-orders" as any}>POs</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ap-aging-detail?bucket=30&from=${encodeURIComponent('/accounting/process')}`}>Overdue detail</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ap-aging-detail?bucket=60&from=${encodeURIComponent('/accounting/process')}`}>60+</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ap-aging-detail?bucket=90&from=${encodeURIComponent('/accounting/process')}`}>90+</Link>
+            <Link className="text-hb-primary-700 underline" href={`/reports/ap-aging-detail?bucket=120&from=${encodeURIComponent('/accounting/process')}`}>120+</Link>
           </nav>
         </div>
       </section>
@@ -327,11 +327,11 @@ export default function AccountingProcessPage() {
           <div>Close date: {data.settings.closeDate || 'Open'}</div>
         </div>
         <nav className="mt-3 flex gap-2 text-sm">
-          <Link className="text-teal-700 underline" href="/journal">Journal</Link>
-          <Link className="text-teal-700 underline" href="/reports">Reports</Link>
-          <Link className="text-teal-700 underline" href="/account-and-settings/company">Settings</Link>
-          <Link className="text-teal-700 underline" href="/reports/closing-date">Closing date</Link>
-          <Link className="text-teal-700 underline" href="/reports/invalid-journal-transactions">Invalid journals</Link>
+          <Link className="text-hb-primary-700 underline" href="/journal">Journal</Link>
+          <Link className="text-hb-primary-700 underline" href="/reports">Reports</Link>
+          <Link className="text-hb-primary-700 underline" href="/account-and-settings/company">Settings</Link>
+          <Link className="text-hb-primary-700 underline" href="/reports/closing-date">Closing date</Link>
+          <Link className="text-hb-primary-700 underline" href="/reports/invalid-journal-transactions">Invalid journals</Link>
         </nav>
       </section>
 

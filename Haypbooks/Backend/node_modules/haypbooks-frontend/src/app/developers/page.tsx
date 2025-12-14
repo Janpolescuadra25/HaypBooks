@@ -51,7 +51,7 @@ export default function DevelopersPortalPage() {
     <div id="top" className="min-h-screen">
       {/* Mega bar: hero + section tabs in one bar */}
       <section aria-label="Developer intro and sections" className={`mb-4 ${navContainerCls}`}>
-        <div className="w-full rounded-[28px] border border-teal-200 bg-white shadow-lg shadow-teal-200/60">
+        <div className="w-full rounded-[28px] border border-hb-primary-200 bg-white shadow-lg">
           <div className={`${containerCls} py-4 sm:py-5`}>
             <h1 className="text-2xl font-semibold tracking-tight">HaypDeveloper</h1>
             <p className="mt-1 text-sm text-slate-600">
@@ -65,7 +65,7 @@ export default function DevelopersPortalPage() {
             </div>
           </div>
           <div className={`${containerCls} pb-2 sm:pb-3`}>
-            <ul className="no-scrollbar flex flex-nowrap justify-between divide-x divide-teal-200 overflow-x-auto px-2 py-1 md:overflow-visible">
+            <ul className="no-scrollbar flex flex-nowrap justify-between divide-x divide-hb-primary-200 overflow-x-auto px-2 py-1 md:overflow-visible">
               {sections.map((s, i) => (
                 <li key={s.id} className="basis-40 flex-1 shrink-0">
                   <a

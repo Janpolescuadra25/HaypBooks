@@ -259,7 +259,7 @@ function BankTransactionsContent() {
               <button
                 key={t.key}
                 role="tab"
-                className={`rounded-lg px-3 py-1.5 text-sm border ${(effectiveBankStatus === t.key) ? 'bg-teal-50 border-teal-200 text-teal-700' : 'bg-white/80 border-slate-200 text-slate-700 hover:bg-white'}`}
+                className={`rounded-lg px-3 py-1.5 text-sm border ${(effectiveBankStatus === t.key) ? 'bg-hb-primary-50 border-hb-primary-200 text-hb-primary-700' : 'bg-white/80 border-slate-200 text-slate-700 hover:bg-white'}`}
                 onClick={() => changeTab(t.key)}
               >{t.label} <span className="text-xs text-slate-500">({counts[t.key] || 0})</span></button>
             ))}
@@ -1143,7 +1143,7 @@ function AccountListSidebar({ selectedId, onSelect }: { selectedId: string; onSe
   return (
     <div ref={containerRef} className="account-list overflow-x-hidden">
       {/* Title row with subtle caption to clarify chip meanings */}
-  <div className="flex items-center justify-between px-3 py-1 text-xs bg-gradient-to-r from-teal-500 via-emerald-500 to-emerald-600 text-white shadow">
+  <div className="flex items-center justify-between px-3 py-1 text-xs bg-gradient-to-r from-hb-primary to-hb-primary-600 text-white shadow">
         <div className="font-semibold text-white">Account</div>
         <div className="hidden sm:flex items-center gap-1.5 sm:gap-2" aria-hidden="true">
           <span aria-hidden="true" className="h-6 w-px bg-white/40"></span>
@@ -1189,7 +1189,7 @@ function AccountListSidebar({ selectedId, onSelect }: { selectedId: string; onSe
       )}
       {/* Bottom bar: when expanded, show totals; when collapsed, show minimal bar without labels */}
       {open ? (
-  <div className="mt-2 flex items-center justify-between px-3 py-1 text-xs bg-gradient-to-r from-teal-500 via-emerald-500 to-emerald-600 text-white shadow">
+  <div className="mt-2 flex items-center justify-between px-3 py-1 text-xs bg-gradient-to-r from-hb-primary to-hb-primary-600 text-white shadow">
           <div className="font-semibold text-white">Total</div>
           <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
             <span aria-hidden="true" className="h-6 w-px bg-white/40"></span>
@@ -1208,7 +1208,7 @@ function AccountListSidebar({ selectedId, onSelect }: { selectedId: string; onSe
           </div>
         </div>
       ) : (
-  <div className="mt-2 px-3 py-1 text-xs bg-gradient-to-r from-teal-500 via-emerald-500 to-emerald-600 text-white shadow" aria-hidden="true"></div>
+  <div className="mt-2 px-3 py-1 text-xs bg-gradient-to-r from-hb-primary to-hb-primary-600 text-white shadow" aria-hidden="true"></div>
       )}
     </div>
   )
@@ -1290,7 +1290,7 @@ function AccountTiles({ selectedId, onSelect }: { selectedId: string; onSelect: 
           <div key={a.id} className={`relative group ${active ? 'is-active' : ''}`}>
             <button
               onClick={() => onSelect(active ? '' : a.id)}
-              className={`bank-card ${active ? 'is-active' : ''} relative w-full text-sm rounded-xl px-3 py-2 transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300`}
+              className={`bank-card ${active ? 'is-active' : ''} relative w-full text-sm rounded-xl px-3 py-2 transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hb-primary-300`}
               onMouseMove={onTileMove}
               onMouseLeave={onTileLeave}
               aria-label={`Select account ${a.number}${a.name?` · ${a.name}`:''}`}
@@ -1298,7 +1298,7 @@ function AccountTiles({ selectedId, onSelect }: { selectedId: string; onSelect: 
               <div className="min-w-0 w-full pr-9">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-mono truncate text-slate-800 group-[.is-active]:text-teal-800 leading-tight tracking-wide font-semibold">{a.number}{a.name?` · ${a.name}`:''}</div>
+                    <div className="font-mono truncate text-slate-800 group-[.is-active]:text-hb-primary-800 leading-tight tracking-wide font-semibold">{a.number}{a.name?` · ${a.name}`:''}</div>
                   </div>
                 </div>
                 <div className="mt-1 pt-1 border-t border-slate-100/80">
@@ -1311,7 +1311,7 @@ function AccountTiles({ selectedId, onSelect }: { selectedId: string; onSelect: 
                       (() => {
                         const diff = Number(((summaries[a.id]?.bankBalance as number) - (summaries[a.id]?.booksBalance as number)).toFixed(2))
                         const nearZero = Math.abs(diff) <= 0.004
-                        const color = nearZero ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (diff < 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-teal-50 text-teal-700 border-teal-200')
+                        const color = nearZero ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (diff < 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-hb-primary-50 text-hb-primary-700 border-hb-primary-200')
                         return (
                           <>
                             <span className="text-slate-600">Diff</span>
@@ -1334,7 +1334,7 @@ function AccountTiles({ selectedId, onSelect }: { selectedId: string; onSelect: 
               </div>
               {active ? (
                 <span
-                  className="absolute top-2 right-2 inline-grid place-items-center w-7 h-7 rounded-full bg-teal-600 text-white text-[12px] shadow"
+                  className="absolute top-2 right-2 inline-grid place-items-center w-7 h-7 rounded-full bg-hb-primary text-white text-[12px] shadow"
                   role="img"
                   aria-label="Selected"
                   title="Selected"
