@@ -1189,19 +1189,19 @@ function AccountListSidebar({ selectedId, onSelect }: { selectedId: string; onSe
       )}
       {/* Bottom bar: when expanded, show totals; when collapsed, show minimal bar without labels */}
       {open ? (
-  <div className="mt-2 flex items-center justify-between px-3 py-1 text-xs bg-gradient-to-r from-hb-primary to-hb-primary-600 text-white shadow">
-          <div className="font-semibold text-white">Total</div>
+  <div className="mt-2 flex items-center justify-between px-3 py-1 text-xs bg-gradient-to-r from-hb-primary-700 via-hb-primary to-hb-primary-600 text-white shadow gradient-contrast">
+          <div className="font-semibold text-white contrast-gradient-text">Total</div>
           <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
             <span aria-hidden="true" className="h-6 w-px bg-white/40"></span>
-            <span className="inline-flex items-center justify-center rounded-full px-2 py-[1px] text-[11px] bg-white/10 text-white w-[20ch]" title="Total bank balance">
+            <span className="inline-flex items-center justify-center rounded-full px-2 py-[1px] text-[11px] bg-white-20 text-white w-[20ch]" title="Total bank balance">
               <span className="font-mono tabular-nums"><Amount value={totals.bank} /></span>
             </span>
             <span aria-hidden="true" className="h-6 w-px bg-white/40"></span>
-            <span className="inline-flex items-center justify-center rounded-full px-2 py-[1px] text-[11px] bg-white/10 text-white w-[20ch]" title="Total HaypBooks balance">
+            <span className="inline-flex items-center justify-center rounded-full px-2 py-[1px] text-[11px] bg-white-20 text-white w-[20ch]" title="Total HaypBooks balance">
               <span className="font-mono tabular-nums"><Amount value={totals.books} /></span>
             </span>
             <span aria-hidden="true" className="h-6 w-px bg-white/40"></span>
-            <span className="inline-flex items-center justify-center gap-1 rounded-full px-2 py-[1px] text-[11px] bg-white/10 text-white w-[20ch]" title="Total difference (Bank − HaypBooks)">
+            <span className="inline-flex items-center justify-center gap-1 rounded-full px-2 py-[1px] text-[11px] bg-white-20 text-white w-[20ch]" title="Total difference (Bank − HaypBooks)">
               <span className="font-mono tabular-nums"><Amount value={totals.diff} /></span>
             </span>
             <span aria-hidden="true" className="h-6 w-px bg-white/40"></span>
