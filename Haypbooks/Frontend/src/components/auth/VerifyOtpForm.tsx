@@ -51,11 +51,39 @@ export default function VerifyOtpForm({ email, flow = 'reset', initialCode = '',
       <div className="mb-4">
         <OtpInput value={code} onChange={setCode} />
       </div>
-      {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm mb-3">{error}</div>}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-3 animate-shake flex items-start gap-2">
+          <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
       <div className="flex gap-2">
-        <button disabled={loading || !/^\d{6}$/.test(code)} onClick={handleVerify} className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50">{loading ? 'Verifying…' : 'Verify code'}</button>
-        <button disabled={resendTimer > 0} onClick={handleResend} className="px-4 py-3 rounded-lg border text-sm disabled:opacity-50">{resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend'}</button>
+        <button disabled={loading || !/^\d{6}$/.test(code)} onClick={handleVerify} className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.98]">
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Verifying…
+            </span>
+          ) : 'Verify code'}
+        </button>
+        <button disabled={resendTimer > 0} onClick={handleResend} className="px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          {resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend'}
+        </button>
       </div>
+
+      <style jsx>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+        .animate-shake { animation: shake 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+      `}</style>
     </div>
   )
 }

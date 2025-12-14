@@ -6,4 +6,5 @@ export class UpdateTaskDto {
   assigneeId?: string | null
   status?: 'PENDING'|'IN_PROGRESS'|'DONE'|'BLOCKED'|'CANCELLED'
   priority?: 'LOW'|'MEDIUM'|'HIGH'|'URGENT'
+  archived?: boolean | null
 }

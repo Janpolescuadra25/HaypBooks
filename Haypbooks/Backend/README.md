@@ -189,6 +189,13 @@ npm test
 npm run test:e2e
 ```
 
+## Database CI
+
+- Workflow: `.github/workflows/db-validation.yml` runs DB validation and integration tests on `pull_request` to `main`.
+- **Drift detection**: A scheduled workflow `.github/workflows/db-drift.yml` runs daily and checks expected schema and RLS policies.
+- Enable branch protection and require the "DB Validation & Integration Tests" workflow for PRs that touch database or migrations.
+- To add a badge to this README, use the Actions badge URL for the `db-validation.yml` workflow in your GitHub repo.
+
 ## Migration from Express
 
 The old `server.js` has been replaced with a full NestJS application:

@@ -48,7 +48,7 @@ export default async function BalanceSheetPage({ searchParams }: { searchParams:
   const pctFmt = (p: number) => `${p.toFixed(1)}%`
   const pctClass = (p: number) => {
     const emph = Math.abs(p) >= 10 ? 'font-medium' : ''
-    return `${p < 0 ? 'text-rose-600' : 'text-emerald-700'} ${emph}`
+    return `${p < 0 ? 'text-rose-800' : 'text-emerald-700'} ${emph}`
   }
   const diff = Number(data.totals.assets - (data.totals.liabilities + data.totals.equity))
   const toTdbUrl = (accounts: string[]) => {
@@ -132,17 +132,17 @@ export default async function BalanceSheetPage({ searchParams }: { searchParams:
                     ) : a.name}
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <div className={`tabular-nums ${cur < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={fmt(cur)} /></div>
+                    <div className={`tabular-nums ${cur < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={fmt(cur)} /></div>
                     {compare && prev !== undefined && (
                       <div className="mt-1 space-y-0.5 text-xs">
                         <div className="flex items-baseline justify-between text-slate-600">
                           <span>Prev</span>
-                          <span className={`tabular-nums ${Number(prev) < 0 ? 'text-rose-500' : 'text-emerald-600'}`}><Amount value={Number(prev)} /></span>
+                          <span className={`tabular-nums ${Number(prev) < 0 ? 'text-rose-700' : 'text-emerald-600'}`}><Amount value={Number(prev)} /></span>
                         </div>
                         <div className="flex items-baseline justify-between">
                           <span className="text-slate-600">Δ / %</span>
                           <span className="tabular-nums flex items-baseline gap-2">
-                            <span className={`${delta < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={delta} /></span>
+                            <span className={`${delta < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={delta} /></span>
                             <span className={pctClass(pct)}>{pctFmt(pct)}</span>
                           </span>
                         </div>
@@ -199,17 +199,17 @@ export default async function BalanceSheetPage({ searchParams }: { searchParams:
                     ) : l.name}
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <div className={`tabular-nums ${cur < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={fmt(cur)} /></div>
+                    <div className={`tabular-nums ${cur < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={fmt(cur)} /></div>
                     {compare && prev !== undefined && (
                       <div className="mt-1 space-y-0.5 text-xs">
                         <div className="flex items-baseline justify-between text-slate-600">
                           <span>Prev</span>
-                          <span className={`tabular-nums ${Number(prev) < 0 ? 'text-rose-500' : 'text-emerald-600'}`}><Amount value={Number(prev)} /></span>
+                          <span className={`tabular-nums ${Number(prev) < 0 ? 'text-rose-700' : 'text-emerald-600'}`}><Amount value={Number(prev)} /></span>
                         </div>
                         <div className="flex items-baseline justify-between">
                           <span className="text-slate-600">Δ / %</span>
                           <span className="tabular-nums flex items-baseline gap-2">
-                            <span className={`${delta < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={delta} /></span>
+                            <span className={`${delta < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={delta} /></span>
                             <span className={pctClass(pct)}>{pctFmt(pct)}</span>
                           </span>
                         </div>
@@ -266,17 +266,17 @@ export default async function BalanceSheetPage({ searchParams }: { searchParams:
                     ) : e.name}
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <div className={`tabular-nums ${cur < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={fmt(cur)} /></div>
+                    <div className={`tabular-nums ${cur < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={fmt(cur)} /></div>
                     {compare && prev !== undefined && (
                       <div className="mt-1 space-y-0.5 text-xs">
                         <div className="flex items-baseline justify-between text-slate-600">
                           <span>Prev</span>
-                          <span className={`tabular-nums ${Number(prev) < 0 ? 'text-rose-500' : 'text-emerald-600'}`}><Amount value={Number(prev)} /></span>
+                          <span className={`tabular-nums ${Number(prev) < 0 ? 'text-rose-700' : 'text-emerald-600'}`}><Amount value={Number(prev)} /></span>
                         </div>
                         <div className="flex items-baseline justify-between">
                           <span className="text-slate-600">Δ / %</span>
                           <span className="tabular-nums flex items-baseline gap-2">
-                            <span className={`${delta < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={delta} /></span>
+                            <span className={`${delta < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={delta} /></span>
                             <span className={pctClass(pct)}>{pctFmt(pct)}</span>
                           </span>
                         </div>
@@ -306,7 +306,7 @@ export default async function BalanceSheetPage({ searchParams }: { searchParams:
                       <div className="flex items-baseline justify-between">
                         <span className="text-slate-600">∆ / %</span>
                         <span className="tabular-nums flex items-baseline gap-2">
-                          <span className={`${delta < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={delta} /></span>
+                          <span className={`${delta < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={delta} /></span>
                           <span className={pctClass(pct)}>{pctFmt(pct)}</span>
                         </span>
                       </div>

@@ -4,6 +4,13 @@ import dynamic from 'next/dynamic'
 const ClientRoot = dynamic(() => import('./client-root'), { ssr: false })
 import { ToastProvider } from '@/components/ToastProvider'
 import { CurrencyProvider } from '@/components/CurrencyProvider'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-inter',
+})
 
 export const metadata = {
   title: "HaypBooks",
@@ -14,7 +21,7 @@ export const metadata = {
 
 export default function RootLayout({ children, modal }: { children: ReactNode; modal: ReactNode }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className={`h-full ${inter.variable}`}>
       <body className="min-h-screen h-full text-slate-900 antialiased selection:bg-sky-200/60 selection:text-slate-900">
         <ToastProvider>
           <CurrencyProvider>

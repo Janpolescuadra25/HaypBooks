@@ -113,7 +113,8 @@ function Metric({ title, value, tone, detail }: { title: string; value: React.Re
     emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     slate: 'bg-slate-50 text-slate-700 ring-slate-200',
     sky: 'bg-sky-50 text-sky-700 ring-sky-200',
-    rose: 'bg-rose-50 text-rose-700 ring-rose-200'
+    // Use slightly stronger rose variant for better contrast in small badges
+    rose: 'bg-rose-100 text-rose-800 ring-rose-200'
   }
   return (
     <div className={`rounded-xl ring-1 ${toneMap[tone]} p-3 flex flex-col gap-1`}> 

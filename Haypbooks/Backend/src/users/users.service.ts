@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
-import { USER_REPOSITORY } from '../repositories/mock/mock-repositories.module'
+import { USER_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 
 @Injectable()
 export class UsersService {
@@ -15,7 +15,12 @@ export class UsersService {
       throw new NotFoundException('User not found')
     }
     const { password, ...result } = user
-    return result
+    // Ensure required fields for frontend are present
+    return {
+      ...result,
+      onboardingCompleted: result.onboardingComplete ?? false,
+      onboardingMode: result.onboardingMode || 'full',
+    }
   }
 
   async findByEmail(email: string) {

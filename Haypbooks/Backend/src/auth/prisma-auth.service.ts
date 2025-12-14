@@ -1,10 +1,11 @@
 import { Injectable, Inject, UnauthorizedException, ConflictException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
-import { USER_REPOSITORY, SESSION_REPOSITORY, OTP_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
+import { USER_REPOSITORY, SESSION_REPOSITORY, OTP_REPOSITORY, SECURITY_EVENT_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { ISessionRepository } from '../repositories/interfaces/session.repository.interface'
 import { IOtpRepository } from '../repositories/interfaces/otp.repository.interface'
+import { ISecurityEventRepository } from '../repositories/interfaces/security-event.repository.interface'
 
 @Injectable()
 export class PrismaAuthService {
@@ -12,25 +13,78 @@ export class PrismaAuthService {
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(SESSION_REPOSITORY) private readonly sessionRepo: ISessionRepository,
     @Inject(OTP_REPOSITORY) private readonly otpRepo: IOtpRepository,
+    @Inject(SECURITY_EVENT_REPOSITORY) private readonly securityEventRepo: ISecurityEventRepository,
     private readonly jwtService: JwtService,
   ) {}
 
   async signup(email: string, password: string, name?: string) {
     const existing = await this.userRepo.findByEmail(email)
-    if (existing) throw new ConflictException('Email already registered')
+    if (existing) {
+      // Log failed signup attempt
+      await this.logSecurityEvent({ email, type: 'SIGNUP_FAILED_DUPLICATE' })
+      throw new ConflictException('Email already registered')
+    }
 
     const hashed = await bcrypt.hash(password, 10)
     const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false })
 
+    // Log successful signup
+    await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })
+
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role })
-    return { token, user }
+    
+    // Return consistent user object structure
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      onboardingCompleted: user.onboardingComplete ?? false,
+      onboardingComplete: user.onboardingComplete ?? false,
+      onboardingMode: user.onboardingMode || 'full',
+      isEmailVerified: user.isEmailVerified ?? false,
+    }
+    
+    return { token, user: userResponse }
   }
 
   async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
     const user = await this.userRepo.findByEmail(email)
-    if (!user) throw new UnauthorizedException()
+    
+    // Check for rate limiting - max 5 failed attempts per email in 15 minutes
+    if (user) {
+      try {
+        const recentFailures = await this.securityEventRepo.countRecentByEmail(email, 15)
+        if (recentFailures >= 5) {
+          await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_RATE_LIMITED', ipAddress, userAgent })
+          throw new UnauthorizedException('Too many failed login attempts. Please try again later.')
+        }
+      } catch (e) {
+        // Continue if rate limit check fails
+      }
+    }
+
+    if (!user) {
+      // Log failed attempt for non-existent user
+      await this.logSecurityEvent({ email, type: 'LOGIN_FAILED_USER_NOT_FOUND', ipAddress, userAgent })
+      throw new UnauthorizedException('Invalid credentials')
+    }
+
     const ok = await bcrypt.compare(password, user.password)
-    if (!ok) throw new UnauthorizedException()
+    if (!ok) {
+      // Log failed password attempt
+      await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_FAILED_INVALID_PASSWORD', ipAddress, userAgent })
+      throw new UnauthorizedException('Invalid credentials')
+    }
+
+    // Check if email is verified (optional enforcement)
+    if (!user.isEmailVerified && process.env.ENFORCE_EMAIL_VERIFICATION === 'true') {
+      await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_FAILED_UNVERIFIED_EMAIL', ipAddress, userAgent })
+      throw new UnauthorizedException('Please verify your email before logging in')
+    }
+
+    // Log successful login
+    await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_SUCCESS', ipAddress, userAgent })
 
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
     // create refresh session (longer lived)
@@ -38,7 +92,19 @@ export class PrismaAuthService {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     await this.sessionRepo.create({ userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date() })
 
-    return { token, refreshToken, user }
+    // Return consistent user object structure for frontend
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      onboardingCompleted: user.onboardingComplete ?? false,
+      onboardingComplete: user.onboardingComplete ?? false, // Both formats for compatibility
+      onboardingMode: user.onboardingMode || 'full',
+      isEmailVerified: user.isEmailVerified ?? false,
+    }
+
+    return { token, refreshToken, user: userResponse }
   }
 
   async refresh(refreshToken: string) {
@@ -53,6 +119,7 @@ export class PrismaAuthService {
     // sign a fresh access token
     const user = await this.userRepo.findById(session.userId)
     if (!user) return null
+    
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
     // Optional: rotate refresh token
     const newRefresh = this.jwtService.sign({ sub: user.id }, { expiresIn: '7d' })
@@ -63,7 +130,19 @@ export class PrismaAuthService {
     } catch {}
     await this.sessionRepo.create({ userId: user.id, refreshToken: newRefresh, expiresAt, ipAddress: session.ipAddress, userAgent: session.userAgent, lastUsedAt: new Date() })
 
-    return { token, refreshToken: newRefresh, user }
+    // Return consistent user structure
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      onboardingCompleted: user.onboardingComplete ?? false,
+      onboardingComplete: user.onboardingComplete ?? false,
+      onboardingMode: user.onboardingMode || 'full',
+      isEmailVerified: user.isEmailVerified ?? false,
+    }
+
+    return { token, refreshToken: newRefresh, user: userResponse }
   }
 
   async startOtp(email: string, otpCode?: string, ttlMinutes = 5, purpose: string = 'RESET') {
@@ -106,5 +185,23 @@ export class PrismaAuthService {
     }
 
     return true
+  }
+
+  /**
+   * Log security events - non-blocking
+   */
+  private async logSecurityEvent(data: {
+    userId?: string
+    email?: string
+    type: string
+    ipAddress?: string
+    userAgent?: string
+  }) {
+    try {
+      await this.securityEventRepo.create(data)
+    } catch (e) {
+      // Log error but don't throw - security events shouldn't block auth flow
+      console.error('Failed to log security event:', e?.message)
+    }
   }
 }

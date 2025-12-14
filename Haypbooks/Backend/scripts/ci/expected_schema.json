@@ -99,6 +99,23 @@
     "expectsTenantIndex": false
   },
   {
+    "name": "Task",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
+    "name": "TaskComment",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id",
+      "createdAt"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
     "name": "Currency",
     "tenantScoped": false,
     "requiredColumns": [

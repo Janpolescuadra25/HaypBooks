@@ -23,13 +23,23 @@ async function main() {
   const client = new Client({ connectionString: adminUrl })
   await client.connect()
   try {
-    const res = await client.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [dbName])
-    if (res.rowCount === 0) {
-      console.log(`Database ${dbName} does not exist — creating`)
+    const recreate = process.argv.includes('--recreate') || process.env.FORCE_RESET_DB === '1'
+    if (recreate) {
+      console.log(`Recreating database ${dbName} (--recreate provided)`)
+      // Terminate active connections and drop database
+      await client.query(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, [dbName])
+      await client.query(`DROP DATABASE IF EXISTS ${dbName}`)
       await client.query(`CREATE DATABASE ${dbName}`)
-      console.log('Database created')
+      console.log('Database recreated')
     } else {
-      console.log(`Database ${dbName} already exists`)
+      const res = await client.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [dbName])
+      if (res.rowCount === 0) {
+        console.log(`Database ${dbName} does not exist — creating`)
+        await client.query(`CREATE DATABASE ${dbName}`)
+        console.log('Database created')
+      } else {
+        console.log(`Database ${dbName} already exists`)
+      }
     }
   } catch (err) {
     console.error('Failed to check/create database:', err)

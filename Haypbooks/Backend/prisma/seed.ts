@@ -103,6 +103,27 @@ async function main() {
     // If the Invoice table or status column isn't present yet, proceed without seeding invoices
     console.warn('Skipping invoice seed, table or column may not exist yet', e)
   }
+
+  // Seed sample Tasks if migrations applied
+  try {
+    const taskTableExists = await hasColumn('Task', 'id')
+    if (taskTableExists) {
+      const existing = await prisma.task.findFirst({ where: { tenantId: tenant.id } })
+      if (!existing) {
+        // Be defensive about companyId types: some legacy DBs use non-UUID company ids (e.g. 'company-...'),
+        // while Task.companyId column may be defined as UUID. If types mismatch, insert null for companyId.
+        const companyColumnIsUuid = (await prisma.$queryRaw`SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='Task' AND column_name='companyId'`) as any
+        let companyIdToInsert: string | null = null
+        if (demoCompany?.id) {
+          const isUuidColumn = companyColumnIsUuid && companyColumnIsUuid.length && (companyColumnIsUuid[0] as any).data_type === 'uuid'
+          const looksLikeUuid = /^[0-9a-fA-F-]{36}$/.test(demoCompany.id)
+          companyIdToInsert = isUuidColumn && !looksLikeUuid ? null : demoCompany.id
+        }
+        const t1 = await prisma.task.create({ data: { tenantId: tenant.id, companyId: companyIdToInsert, title: 'Welcome: get started', description: 'A sample task for your demo tenant', status: 'PENDING', priority: 'MEDIUM', createdById: user.id } })
+        await prisma.taskComment.create({ data: { taskId: t1.id, userId: user.id, comment: 'This is a demo comment' } })
+      }
+    }
+  } catch (e) { console.warn('Skipping task seed; Task table may not exist yet', e) }
   // Create a sample CustomerCredit for demo (if table exists)
   try {
     await prisma.customerCredit.create({ data: { tenantId: tenant.id, companyId: demoCompany.id, customerId: contact.id, creditNumber: 'CRED-1001', total: 100.00, balance: 100.00, status: 'ISSUED' } })
@@ -131,6 +152,10 @@ async function main() {
   let permission: any
   if (permissionHasKey) {
     permission = await prisma.permission.upsert({ where: { key: 'manage:all' }, update: {}, create: { key: 'manage:all', desc: 'Full access for admins' } }).catch(() => undefined as any)
+    // Add recommended permissions for tasks and attachments
+    await prisma.permission.upsert({ where: { key: 'tasks:read' }, update: {}, create: { key: 'tasks:read', desc: 'Read tasks' } }).catch(() => {})
+    await prisma.permission.upsert({ where: { key: 'tasks:write' }, update: {}, create: { key: 'tasks:write', desc: 'Create/update tasks' } }).catch(() => {})
+    await prisma.permission.upsert({ where: { key: 'attachments:upload' }, update: {}, create: { key: 'attachments:upload', desc: 'Upload attachments' } }).catch(() => {})
   } else {
     await prisma.$executeRaw`INSERT INTO public."Permission" ("key","desc") VALUES (${`manage:all`}, ${`Full access for admins`}) ON CONFLICT ("key") DO NOTHING;`
     const rows: any[] = await prisma.$queryRaw`SELECT key, desc FROM public."Permission" WHERE key = ${`manage:all`} LIMIT 1;`
@@ -139,6 +164,11 @@ async function main() {
   try {
     if (role && permission) {
       await prisma.rolePermission.create({ data: { roleId: role.id, permissionId: permission.id } }).catch(() => {})
+      // Attach recommended permissions to ADMIN role
+      const perms = await prisma.permission.findMany({ where: { key: { in: ['tasks:read','tasks:write','attachments:upload'] } } })
+      for (const p of perms) {
+        await prisma.rolePermission.create({ data: { roleId: role.id, permissionId: p.id } }).catch(() => {})
+      }
     }
   } catch (e) { /* ignore errors in case of duplicate or type mismatch */ }
 
@@ -265,8 +295,192 @@ async function main() {
   await prisma.fixedAssetDepreciation.createMany({ data: [ { tenantId: tenant.id, assetId: asset.id, periodStart: new Date(), periodEnd: new Date(Date.now() + 30*24*60*60*1000), amount: 68.89 } ] }).catch(() => {})
 
   console.log('Seeded fixed asset and depreciation')
+
+  // Seed default permissions for RBAC system
+  await seedPermissions()
+
+  // Seed default roles for demo tenant
+  await seedDefaultRolesForTenant(tenant.id)
 }
 
-main()
-  .catch(async (e) => { console.error(e); process.exitCode = 1; })
-  .finally(async () => { await prisma.$disconnect(); })
+// Seed global permissions (tenant-agnostic)
+async function seedPermissions() {
+  const permissions = [
+    // User management
+    { key: 'users.view', desc: 'View users' },
+    { key: 'users.create', desc: 'Create users' },
+    { key: 'users.edit', desc: 'Edit users' },
+    { key: 'users.delete', desc: 'Delete users' },
+    { key: 'users.invite', desc: 'Invite users to tenant' },
+
+    // Role management
+    { key: 'roles.view', desc: 'View roles' },
+    { key: 'roles.create', desc: 'Create roles' },
+    { key: 'roles.edit', desc: 'Edit roles' },
+    { key: 'roles.delete', desc: 'Delete roles' },
+
+    // Company management
+    { key: 'companies.view', desc: 'View companies' },
+    { key: 'companies.create', desc: 'Create companies' },
+    { key: 'companies.edit', desc: 'Edit companies' },
+    { key: 'companies.delete', desc: 'Delete companies' },
+
+    // Accounting - Invoices
+    { key: 'invoices.view', desc: 'View invoices' },
+    { key: 'invoices.create', desc: 'Create invoices' },
+    { key: 'invoices.edit', desc: 'Edit invoices' },
+    { key: 'invoices.delete', desc: 'Delete invoices' },
+    { key: 'invoices.approve', desc: 'Approve invoices' },
+    { key: 'invoices.send', desc: 'Send invoices' },
+
+    // Accounting - Bills
+    { key: 'bills.view', desc: 'View bills' },
+    { key: 'bills.create', desc: 'Create bills' },
+    { key: 'bills.edit', desc: 'Edit bills' },
+    { key: 'bills.delete', desc: 'Delete bills' },
+    { key: 'bills.approve', desc: 'Approve bills' },
+
+    // Accounting - Payments
+    { key: 'payments.view', desc: 'View payments' },
+    { key: 'payments.create', desc: 'Create payments' },
+    { key: 'payments.edit', desc: 'Edit payments' },
+    { key: 'payments.delete', desc: 'Delete payments' },
+
+    // Accounting - Journal Entries
+    { key: 'journal.view', desc: 'View journal entries' },
+    { key: 'journal.create', desc: 'Create journal entries' },
+    { key: 'journal.edit', desc: 'Edit journal entries' },
+    { key: 'journal.delete', desc: 'Delete journal entries' },
+
+    // Bank accounts
+    { key: 'bank.view', desc: 'View bank accounts' },
+    { key: 'bank.connect', desc: 'Connect bank accounts' },
+    { key: 'bank.reconcile', desc: 'Reconcile bank transactions' },
+
+    // Reports
+    { key: 'reports.view', desc: 'View reports' },
+    { key: 'reports.export', desc: 'Export reports' },
+    { key: 'reports.advanced', desc: 'Access advanced reports' },
+
+    // Settings
+    { key: 'settings.view', desc: 'View settings' },
+    { key: 'settings.edit', desc: 'Edit settings' },
+    { key: 'settings.tenant', desc: 'Manage tenant settings' },
+
+    // Audit logs
+    { key: 'audit.view', desc: 'View audit logs' },
+  ];
+
+  console.log('📝 Seeding permissions...');
+  for (const perm of permissions) {
+    await prisma.permission.upsert({
+      where: { key: perm.key },
+      update: { desc: perm.desc },
+      create: perm,
+    });
+  }
+  console.log(`✅ Created ${permissions.length} permissions`);
+}
+
+// Helper function to create default roles for a tenant
+export async function seedDefaultRolesForTenant(tenantId: string) {
+  const permissions = await prisma.permission.findMany();
+  const permissionMap = new Map(permissions.map((p) => [p.key, p.id]));
+
+  const roleTemplates = [
+    {
+      name: 'Owner',
+      permissionKeys: permissions.map((p) => p.key), // All permissions
+    },
+    {
+      name: 'Admin',
+      permissionKeys: permissions
+        .filter((p) => !p.key.startsWith('settings.tenant'))
+        .map((p) => p.key),
+    },
+    {
+      name: 'Bookkeeper',
+      permissionKeys: [
+        'companies.view',
+        'invoices.view',
+        'invoices.create',
+        'invoices.edit',
+        'invoices.send',
+        'bills.view',
+        'bills.create',
+        'bills.edit',
+        'payments.view',
+        'payments.create',
+        'payments.edit',
+        'journal.view',
+        'journal.create',
+        'journal.edit',
+        'bank.view',
+        'bank.reconcile',
+        'reports.view',
+        'reports.export',
+      ],
+    },
+    {
+      name: 'Viewer',
+      permissionKeys: [
+        'companies.view',
+        'invoices.view',
+        'bills.view',
+        'payments.view',
+        'journal.view',
+        'bank.view',
+        'reports.view',
+      ],
+    },
+  ];
+
+  console.log(`📋 Creating default roles for tenant ${tenantId}...`);
+  
+  for (const template of roleTemplates) {
+    // Check if role already exists
+    let role = await prisma.role.findFirst({
+      where: { tenantId, name: template.name }
+    });
+
+    if (!role) {
+      role = await prisma.role.create({
+        data: {
+          tenantId,
+          name: template.name,
+        },
+      });
+      console.log(`   ✓ Created role: ${template.name}`);
+    }
+
+    // Create role permissions
+    for (const permKey of template.permissionKeys) {
+      const permId = permissionMap.get(permKey);
+      if (permId) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: permId,
+            }
+          },
+          update: {},
+          create: {
+            roleId: role.id,
+            permissionId: permId,
+          },
+        }).catch(() => {
+          // Ignore duplicates
+        });
+      }
+    }
+  }
+
+  console.log(`✅ Default roles created for tenant ${tenantId}`);
+}
+
+if (require.main === module) {
+  main()
+    .catch(async (e) => { console.error(e); process.exitCode = 1; })
+    .finally(async () => { await prisma.$disconnect(); })
+}

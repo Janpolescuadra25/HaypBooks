@@ -86,7 +86,7 @@ export default async function TransactionReportPage({ searchParams }: { searchPa
                 <td className="px-3 py-2 text-left">{r.number}</td>
                 <td className="px-3 py-2 text-left">{r.name}</td>
                 <td className="px-3 py-2 text-left">{r.memo}</td>
-                <td className={`px-3 py-2 tabular-nums ${Number(r.amount) < 0 ? 'text-rose-600' : 'text-emerald-700'}`}><Amount value={Number(r.amount || 0)} /></td>
+                <td className={`px-3 py-2 tabular-nums ${Number(r.amount) < 0 ? 'text-rose-800' : 'text-emerald-700'}`}><Amount value={Number(r.amount || 0)} /></td>
               </tr>
             ))}
           </tbody>

@@ -69,16 +69,18 @@ class AuthService {
    * Logout user
    */
   async logout(): Promise<void> {
+    // Clear local data first for immediate UI update
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+    }
+    
     try {
+      // Then notify server (best effort)
       await apiClient.post('/api/auth/logout');
     } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Clear local storage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-      }
+      // Log but don't throw - user is already logged out on client
+      console.error('Server logout error:', error);
     }
   }
 
@@ -86,8 +88,17 @@ class AuthService {
    * Get current user
    */
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<User>('/api/users/me');
-    return response.data;
+    const response = await apiClient.get<User>('/api/users/me', {
+      timeout: 8000 // Faster timeout for session checks
+    });
+    
+    // Validate response structure
+    const user = response.data;
+    if (!user || !user.id || !user.email) {
+      throw new Error('Invalid user data received from server');
+    }
+    
+    return user;
   }
 
   /**
@@ -150,8 +161,19 @@ class AuthService {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         try {
-          return JSON.parse(userStr);
+          const parsed = JSON.parse(userStr);
+          // Validate the user object has required fields
+          if (parsed && typeof parsed === 'object' && 
+              parsed.id && parsed.email && 
+              typeof parsed.onboardingCompleted === 'boolean') {
+            return parsed as User;
+          }
+          // Invalid structure - clear corrupted data
+          localStorage.removeItem('user');
+          return null;
         } catch {
+          // Failed to parse - clear corrupted data
+          localStorage.removeItem('user');
           return null;
         }
       }
