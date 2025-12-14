@@ -1,0 +1,53 @@
+name: RLS PR Check
+
+on:
+  pull_request:
+    paths:
+      - 'Backend/**'
+      - 'scripts/db/**'
+      - 'scripts/test/**'
+      - '.github/workflows/**'
+
+jobs:
+  rls-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_DB: haypbooks_test
+          POSTGRES_PASSWORD: Ninetails45
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d haypbooks_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Backend deps
+        run: npm ci --prefix Backend
+
+      - name: Recreate test DB
+        run: |
+          cd Backend
+          node ./scripts/test/setup-test-db.js --recreate
+
+      - name: Apply Phase 2 RLS (idempotent)
+        run: |
+          cd Backend
+          node ./scripts/db/apply-rls-phase2.js
+
+      - name: Run RLS tests
+        run: |
+          cd Backend
+          npx jest --config=jest.e2e.config.js --testPathPattern=rls -i --runInBand --testTimeout=120000
