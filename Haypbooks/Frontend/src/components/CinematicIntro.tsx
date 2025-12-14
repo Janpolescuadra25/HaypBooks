@@ -237,12 +237,12 @@ export default function CinematicIntro() {
     // Allow paint to register the style before activating
     requestAnimationFrame(() => requestAnimationFrame(() => {
       setOverlayActive(true);
-      // cleanup and nav after quick exit (~250ms)
+      // cleanup and nav after slow exit (~700ms)
       const t = setTimeout(() => {
         timeoutsRef.current.forEach((t) => clearTimeout(t));
         if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
         router.push('/landing');
-      }, 250);
+      }, 700);
       timeoutsRef.current.push(t);
     }));
   };
@@ -266,7 +266,7 @@ export default function CinematicIntro() {
       {/* 3D Particles Canvas */}
       <canvas
         ref={canvasRef}
-        className={`absolute inset-0 pointer-events-none z-[1] transition-opacity duration-[250ms] canvas ${isExiting ? 'canvas-exit' : introStarted ? 'canvas-visible' : ''}` }
+        className={`absolute inset-0 pointer-events-none z-[1] transition-opacity duration-[700ms] canvas ${isExiting ? 'canvas-exit' : introStarted ? 'canvas-visible' : ''}` }
       />
 
       {/* Glow Ring */}
@@ -393,7 +393,7 @@ export default function CinematicIntro() {
           />
 
           {/* Dim the intro content while overlay/peek is active */}
-          <div className={`absolute z-10 inset-0 pointer-events-none transition-opacity duration-[250ms] ${overlayActive ? 'content-dim' : ''}`} />
+          <div className={`absolute z-10 inset-0 pointer-events-none transition-opacity duration-[700ms] ${overlayActive ? 'content-dim' : ''}`} />
           <p className={`mt-8 text-slate-400 text-sm cta-subtext ${currentStage === 4 ? 'active' : ''}`}>
             No credit card required • 30-day trial
           </p>
@@ -532,8 +532,8 @@ export default function CinematicIntro() {
           position: fixed;
           left: var(--exit-x);
           top: var(--exit-y);
-          width: 28px;
-          height: 28px;
+          width: 48px;
+          height: 48px;
           border-radius: 9999px;
           /* Darker teal/emerald mix matching the attached image */
           background: radial-gradient(circle at 30% 30%,
@@ -549,11 +549,11 @@ export default function CinematicIntro() {
           z-index: 9999;
           transform: translate(-50%, -50%) scale(0);
           opacity: 0;
-          transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease;
+          transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 700ms ease;
         }
 
         .exit-overlay.exit-active {
-          transform: translate(-50%, -50%) scale(80);
+          transform: translate(-50%, -50%) scale(140);
           opacity: 1;
         }
 
@@ -564,7 +564,7 @@ export default function CinematicIntro() {
           z-index: 48;
           pointer-events: none;
           opacity: 0;
-          transition: opacity 250ms ease, filter 250ms ease;
+          transition: opacity 700ms ease, filter 700ms ease;
           background-image: radial-gradient(ellipse at 20% 20%, rgba(6,46,43,0.95) 0%, rgba(9,81,73,0.85) 30%, rgba(12,100,90,0.75) 60%, rgba(8,75,66,0.6) 100%),
                             repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 48px);
           background-blend-mode: overlay, normal;
@@ -583,7 +583,7 @@ export default function CinematicIntro() {
           z-index: 49;
           pointer-events: none;
           opacity: 0;
-          transition: opacity 250ms ease;
+          transition: opacity 700ms ease;
           background: linear-gradient(180deg, rgba(6,46,43,0) 0%, rgba(6,46,43,0.85) 100%);
           mix-blend-mode: multiply;
           backdrop-filter: blur(2px);
@@ -597,7 +597,7 @@ export default function CinematicIntro() {
         .content-dim {
           opacity: 0.18 !important;
           transform: scale(0.998);
-          transition: opacity 250ms ease, transform 250ms ease;
+          transition: opacity 700ms ease, transform 700ms ease;
         }
 
         /* Root helper */
