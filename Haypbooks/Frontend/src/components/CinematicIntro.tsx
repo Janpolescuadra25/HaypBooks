@@ -226,6 +226,40 @@ export default function CinematicIntro() {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [overlayActive, setOverlayActive] = useState(false);
 
+  // Prevent page scrolling while intro is active to avoid showing a scrollbar
+  // that can appear briefly during initial render. Restore on exit to avoid
+  // interfering with the landing page. Also compensate for scrollbar width
+  // to prevent layout shift when hiding the scrollbar.
+  useEffect(() => {
+    const origHtmlOverflow = document.documentElement.style.overflow;
+    const origBodyOverflow = document.body.style.overflow;
+    const origBodyPaddingRight = document.body.style.paddingRight || '';
+
+    const lock = () => {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      if (scrollbarWidth > 0) {
+        const current = parseFloat(origBodyPaddingRight || '0') || 0;
+        document.body.style.paddingRight = `${current + scrollbarWidth}px`;
+      }
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    };
+
+    const unlock = () => {
+      document.documentElement.style.overflow = origHtmlOverflow;
+      document.body.style.overflow = origBodyOverflow;
+      document.body.style.paddingRight = origBodyPaddingRight;
+    };
+
+    // Lock while intro is present and not exiting
+    if (!isExiting) lock();
+
+    return () => {
+      // Unlock on cleanup or when intro starts exiting
+      unlock();
+    };
+  }, [isExiting]);
+
   // Respect user's reduced motion preference
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
