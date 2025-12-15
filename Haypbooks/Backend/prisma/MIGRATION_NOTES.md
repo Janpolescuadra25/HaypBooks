@@ -82,5 +82,14 @@ RLS Phase 1:
 - This script is safe to run multiple times and is intended to be run in CI or during deploy once reviewed.
 - After running the script, verify with `node scripts/ci/list-missing-rls.js` to confirm targeted tables no longer appear in the missing RLS list.
 
+2025-12-15: Accountant models migration
+------------------------------------
+Added `AccountantClient` and `AccountantActivity` and `UserType` enum in migration `20251215120000_add_accountant_models`.
+- The migration creates the enum and new user columns idempotently.
+- It creates the two new tables, FKs and indexes and explicitly enables RLS and creates a `rls_tenant` policy for both tables.
+- The migration uses idempotent SQL and is safe to run multiple times; RLS enabling and policy creation are present to satisfy CI lint checks.
+
+Follow the normal rollout guidance: add indexes/FKs, enable permissive RLS, then replace with strict tenant-isolation policy in a controlled window.
+
 Additional rollout docs:
 - See `prisma/DB_RLS_ROLLOUT.md` for a Phase 2 rollout plan, safe commands, and CI recommendations.
