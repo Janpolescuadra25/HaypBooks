@@ -71,7 +71,8 @@ export default function AppShellHeader() {
             </svg>
           </button>
           {/* HaypBooks logo/brand */}
-          <a href="/" className="hidden md:flex items-center gap-2" aria-label="HaypBooks Home">
+          {/* Logo navigates to dashboard (not intro) */}
+          <a href="/dashboard" className="hidden md:flex items-center gap-2" aria-label="HaypBooks Home" title="Go to Dashboard">
             <div className="flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 text-white font-bold text-sm">
               H
             </div>
