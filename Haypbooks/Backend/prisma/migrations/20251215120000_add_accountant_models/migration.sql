@@ -29,8 +29,15 @@ CREATE TABLE IF NOT EXISTS public."AccountantClient" (
 );
 
 -- FKs and indexes
-ALTER TABLE public."AccountantClient" ADD CONSTRAINT IF NOT EXISTS "AccountantClient_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE;
-ALTER TABLE public."AccountantClient" ADD CONSTRAINT IF NOT EXISTS "AccountantClient_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantClient_accountantId_fkey') THEN
+    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantClient_tenantId_fkey') THEN
+    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT;
+  END IF;
+END$$;
 CREATE UNIQUE INDEX IF NOT EXISTS "AccountantClient_accountant_tenant_uq" ON public."AccountantClient" ("accountantId", "tenantId");
 CREATE INDEX IF NOT EXISTS "AccountantClient_tenantId_idx" ON public."AccountantClient" ("tenantId");
 CREATE INDEX IF NOT EXISTS "AccountantClient_accountantId_idx" ON public."AccountantClient" ("accountantId");
@@ -45,16 +52,33 @@ CREATE TABLE IF NOT EXISTS public."AccountantActivity" (
   "createdAt" timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public."AccountantActivity" ADD CONSTRAINT IF NOT EXISTS "AccountantActivity_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE;
-ALTER TABLE public."AccountantActivity" ADD CONSTRAINT IF NOT EXISTS "AccountantActivity_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantActivity_accountantId_fkey') THEN
+    ALTER TABLE public."AccountantActivity" ADD CONSTRAINT "AccountantActivity_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantActivity_tenantId_fkey') THEN
+    ALTER TABLE public."AccountantActivity" ADD CONSTRAINT "AccountantActivity_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT;
+  END IF;
+END$$;
 CREATE INDEX IF NOT EXISTS "AccountantActivity_accountant_created_idx" ON public."AccountantActivity" ("accountantId", "createdAt");
 CREATE INDEX IF NOT EXISTS "AccountantActivity_tenantId_idx" ON public."AccountantActivity" ("tenantId");
 
 -- Enable RLS for the new tables and ensure tenant policy exists (migration-level safety)
 ALTER TABLE IF EXISTS public."AccountantClient" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS rls_tenant ON public."AccountantClient" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantClient' AND p.polname = 'rls_tenant') THEN
+    EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantClient" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true))';
+  END IF;
+END$$;
 
 ALTER TABLE IF EXISTS public."AccountantActivity" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS rls_tenant ON public."AccountantActivity" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantActivity' AND p.polname = 'rls_tenant') THEN
+    EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantActivity" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true))';
+  END IF;
+END$$;
 
 -- Note: apply remaining tenant index, FK and RLS updates via scripts/db/apply-rls-phase2.js if needed
