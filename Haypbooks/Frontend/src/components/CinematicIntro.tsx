@@ -210,6 +210,19 @@ export default function CinematicIntro() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // If the page is opened in the background or timers are throttled, ensure
+  // the intro still starts once the document becomes visible.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !introStarted) {
+        if (process.env.NODE_ENV === 'development') console.debug('CinematicIntro: visibilitychange -> starting')
+        setIntroStarted(true)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [introStarted])
+
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [overlayActive, setOverlayActive] = useState(false);
 
