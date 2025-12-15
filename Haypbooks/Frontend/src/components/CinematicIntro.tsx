@@ -159,10 +159,21 @@ export default function CinematicIntro() {
       setIntroStarted(true)
     }, 120)
 
+    // Longer fallback to handle odd cases (service worker registration, heavy IO,
+    // or throttled timers). Only triggers if the intro hasn't started yet and
+    // the intro isn't exiting.
+    const longFallback = setTimeout(() => {
+      if (!introStarted && !isExiting) {
+        if (process.env.NODE_ENV === 'development') console.debug('CinematicIntro: starting (long fallback)')
+        setIntroStarted(true)
+      }
+    }, 800)
+
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       cancelAnimationFrame(startRaf)
       clearTimeout(startTimeout);
+      clearTimeout(longFallback);
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
     };
   }, []);
