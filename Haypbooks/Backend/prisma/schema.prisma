@@ -27,6 +27,13 @@ enum UserType {
   ACCOUNTANT
 }
 
+// Access levels for accountant-client relationships
+enum AccountantAccessLevel {
+  FULL
+  VIEW_ONLY
+  BILLING_ONLY
+}
+
 // --------------------
 // Phase 1: Authentication + OTP
 // --------------------
@@ -73,6 +80,8 @@ model User {
   
   // Relations for Hayp Accountant
   managedTenants AccountantClient[]
+  // ProAdvisor perks and certifications
+  proAdvisorPerks ProAdvisorPerk[]
 }
 
 model Session {
@@ -1947,13 +1956,14 @@ model AccountantClient {
   id            String   @id @default(uuid())
   accountantId  String
   tenantId      String
-  accessLevel   String   @default("FULL")
+  accessLevel   AccountantAccessLevel @default(FULL)
   invitedBy     String?
   invitedAt     DateTime?
   acceptedAt    DateTime?
   status        String   @default("ACTIVE")
 
   accountant    User     @relation(fields: [accountantId], references: [id])
+  invitedByUser User?    @relation("AccountantClientInvitedBy", fields: [invitedBy], references: [id])
   tenant        Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([accountantId, tenantId])
@@ -1972,8 +1982,31 @@ model AccountantActivity {
 
   accountant    User     @relation(fields: [accountantId], references: [id])
 
+  // optionally link to a tenant owner
+  tenantRef Tenant? @relation(fields: [tenantId], references: [id])
+
   @@index([accountantId, createdAt])
   @@index([tenantId])
+}
+
+// ProAdvisor perks/certifications for accountants
+model ProAdvisorPerk {
+  id        String   @id @default(uuid())
+  userId    String
+  type      PerkType
+  name      String
+  issuer    String?
+  awardedAt DateTime @default(now())
+  metadata  Json?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+enum PerkType {
+  CERTIFICATION
+  BADGE
 }
 
 // OPERATIONS / INFRA PRIMITIVES
