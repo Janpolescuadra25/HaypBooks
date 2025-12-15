@@ -21,6 +21,12 @@ enum TenantStatus {
   CANCELED
 }
 
+// Hayp Accountant additions
+enum UserType {
+  STANDARD
+  ACCOUNTANT
+}
+
 // --------------------
 // Phase 1: Authentication + OTP
 // --------------------
@@ -57,6 +63,16 @@ model User {
   taskComments        TaskComment[]
   // Attachments uploaded by this user
   attachmentsUploaded Attachment[]
+  
+  // Hayp Accountant fields
+  userType      UserType @default(STANDARD)
+  isCertified   Boolean?  @default(false)
+  firmName      String?
+  certification String?
+  proAdvisorBadge Boolean @default(false)
+  
+  // Relations for Hayp Accountant
+  managedTenants AccountantClient[]
 }
 
 model Session {
@@ -1924,6 +1940,40 @@ model ConsentRecord {
   withdrawnAt   DateTime?
 
   @@index([tenantId, userId, consentType])
+}
+
+// Join table: which accountants manage which tenants
+model AccountantClient {
+  id            String   @id @default(uuid())
+  accountantId  String
+  tenantId      String
+  accessLevel   String   @default("FULL")
+  invitedBy     String?
+  invitedAt     DateTime?
+  acceptedAt    DateTime?
+  status        String   @default("ACTIVE")
+
+  accountant    User     @relation(fields: [accountantId], references: [id])
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([accountantId, tenantId])
+  @@index([tenantId])
+  @@index([accountantId])
+}
+
+// Optional activity log for accountants
+model AccountantActivity {
+  id            String   @id @default(uuid())
+  accountantId  String
+  tenantId      String?
+  action        String
+  details       Json?
+  createdAt     DateTime @default(now())
+
+  accountant    User     @relation(fields: [accountantId], references: [id])
+
+  @@index([accountantId, createdAt])
+  @@index([tenantId])
 }
 
 // OPERATIONS / INFRA PRIMITIVES

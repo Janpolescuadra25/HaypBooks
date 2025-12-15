@@ -4,6 +4,7 @@ const { Client } = require('pg')
 // Phase 2 default batch - can be overridden by editing this file or passing in ENV
 const TABLES = process.env.RLS_PHASE2_TABLES ? process.env.RLS_PHASE2_TABLES.split(',') : [
   'Account','BankAccount','BankTransaction','BankReconciliation','InvoiceLine','InvoicePaymentApplication','PaymentReceived','JournalEntry','JournalEntryLine','Bill','BillLine','PurchaseOrder','PurchaseOrderLine','Customer','Vendor','VendorCredit','VendorCreditLine','StockLevel','StockLocation','Item','InventoryTransaction','InventoryTransactionLine'
+  ,'AccountantClient','AccountantActivity'
 ]
 
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_dev'
