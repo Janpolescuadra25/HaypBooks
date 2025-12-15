@@ -146,11 +146,22 @@ export default function CinematicIntro() {
 
     animate();
 
-    // Start intro after short delay
-    const startTimeout = setTimeout(() => setIntroStarted(true), 100);
+    // Start intro after a short paint opportunity. Use rAF for reliability
+    // (timeouts can be throttled when the tab is backgrounded or during rapid
+    // navigations). Keep a short timeout fallback for environments where
+    // rAF may be delayed.
+    const startRaf = requestAnimationFrame(() => {
+      if (process.env.NODE_ENV === 'development') console.debug('CinematicIntro: starting (rAF)')
+      setIntroStarted(true)
+    })
+    const startTimeout = setTimeout(() => {
+      if (process.env.NODE_ENV === 'development') console.debug('CinematicIntro: starting (timeout)')
+      setIntroStarted(true)
+    }, 120)
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
+      cancelAnimationFrame(startRaf)
       clearTimeout(startTimeout);
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
     };
@@ -220,31 +231,18 @@ export default function CinematicIntro() {
       return;
     }
 
-    // set overlay start position using CSS variables so we avoid inline styles
-    if (typeof cx === 'number' && typeof cy === 'number') {
-      document.documentElement.style.setProperty('--exit-x', `${cx}px`);
-      document.documentElement.style.setProperty('--exit-y', `${cy}px`);
-    } else if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      document.documentElement.style.setProperty('--exit-x', `${rect.left + rect.width / 2}px`);
-      document.documentElement.style.setProperty('--exit-y', `${rect.top + rect.height / 2}px`);
-    } else {
-      document.documentElement.style.setProperty('--exit-x', `${window.innerWidth / 2}px`);
-      document.documentElement.style.setProperty('--exit-y', `${window.innerHeight / 2}px`);
-    }
-
-    // Activate overlay then navigate after animation completes
-    // Allow paint to register the style before activating
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      setOverlayActive(true);
-      // cleanup and nav after slow exit (~700ms)
-      const t = setTimeout(() => {
-        timeoutsRef.current.forEach((t) => clearTimeout(t));
-        if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
-        router.push('/landing');
-      }, 700);
-      timeoutsRef.current.push(t);
-    }));
+      // Trigger a simple fade transition (no expanding circle)
+      // Allow one paint frame so CSS transitions take effect
+      requestAnimationFrame(() => {
+        setOverlayActive(true);
+        // cleanup and nav after fade duration (~500ms)
+        const t = setTimeout(() => {
+          timeoutsRef.current.forEach((t) => clearTimeout(t));
+          if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
+          router.push('/landing');
+        }, 500);
+        timeoutsRef.current.push(t);
+      });
   };
 
   const handleGetStarted = (e?: React.MouseEvent) => {
@@ -528,34 +526,8 @@ export default function CinematicIntro() {
           --exit-y: 50%;
         }
 
-        .exit-overlay {
-          position: fixed;
-          left: var(--exit-x);
-          top: var(--exit-y);
-          width: 48px;
-          height: 48px;
-          border-radius: 9999px;
-          /* Darker teal/emerald mix matching the attached image */
-          background: radial-gradient(circle at 30% 30%,
-            #062e2b 0%,
-            #0b514a 28%,
-            #0f6f66 60%,
-            #115f56 100%
-          );
-          background-blend-mode: multiply;
-          filter: saturate(110%);
-          transform-origin: center center;
-          pointer-events: none;
-          z-index: 9999;
-          transform: translate(-50%, -50%) scale(0);
-          opacity: 0;
-          transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 700ms ease;
-        }
-
-        .exit-overlay.exit-active {
-          transform: translate(-50%, -50%) scale(140);
-          opacity: 1;
-        }
+        /* Exit overlay removed - use fade only */
+        .exit-overlay { display: none; }
 
         /* Landing peek */
         .landing-peek {
@@ -574,6 +546,7 @@ export default function CinematicIntro() {
         .landing-peek.landing-peek-active {
           opacity: 0.44; /* stronger peek */
           filter: blur(2px) saturate(115%);
+          transition: opacity 500ms ease, filter 500ms ease;
         }
 
         /* Fade overlay blends the scene into the landing palette */
@@ -583,7 +556,7 @@ export default function CinematicIntro() {
           z-index: 49;
           pointer-events: none;
           opacity: 0;
-          transition: opacity 700ms ease;
+          transition: opacity 500ms ease;
           background: linear-gradient(180deg, rgba(6,46,43,0) 0%, rgba(6,46,43,0.85) 100%);
           mix-blend-mode: multiply;
           backdrop-filter: blur(2px);
