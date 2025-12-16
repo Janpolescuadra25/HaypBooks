@@ -58,6 +58,7 @@
     "db:validate-unvalidated-fks": "node ./scripts/ci/validate-unvalidated-tenant-fks.js",
     "generate:cleanup-tenantid-columns": "node ./scripts/generate-cleanup-tenantid-columns.js",
     "test:e2e": "cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test npm run migrate:init && cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test node ./scripts/migrate/run-sql.js && cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test npm run db:seed:dev && cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test jest --runInBand --config jest.e2e.config.js",
+    "test:serial": "cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test npx jest --runInBand --config jest.e2e.config.js",
     "db:seed:smoke": "npm run db:seed:dev && npm run db:seed:inventory",
     "db:seed:export": "ts-node ./scripts/db/export-seed-snapshot.ts",
     "db:seed:import": "ts-node ./scripts/db/import-seed-snapshot.ts",

@@ -62,60 +62,6 @@ describe('Auth e2e', () => {
     expect(sessions.length).toBeGreaterThan(0)
   }, 20000)
 
-  it('signup with role=accountant sets userType', async () => {
-    const email = `e2e-acc-${Date.now()}@haypbooks.test`
-    const password = 'e2e-password'
-
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Accountant E2E', role: 'accountant' }).expect(201)
-    expect(signup.body).toHaveProperty('token')
-    expect(signup.body.user.email).toBe(email)
-    expect(signup.body.user.userType).toBe('ACCOUNTANT')
-
-    const saved = await prisma.user.findUnique({ where: { email } })
-    expect(saved).toBeTruthy()
-    expect((saved as any).userType).toBe('ACCOUNTANT')
-  }, 20000)
-
-  it('accountant can invite a tenant (creates AccountantClient)', async () => {
-    // Create a tenant to invite
-    const tenant = await prisma.tenant.create({ data: { name: `Tenant ${Date.now()}`, subdomain: `tenant-${Date.now()}` } })
-
-    // Signup as accountant
-    const email = `e2e-inviter-${Date.now()}@haypbooks.test`
-    const password = 'e2e-password'
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Inviter E2E', role: 'accountant' }).expect(201)
-    const token = signup.body.token
-    const userId = signup.body.user.id
-
-    // Ensure user exists in DB
-    const createdUser = await prisma.user.findUnique({ where: { id: userId } })
-    console.log('DEBUG createdUser id:', createdUser?.id, 'userId header value', userId)
-    expect(createdUser).toBeTruthy()
-
-    // Use the API invite endpoint (authenticated) to invite the tenant
-    await request(app.getHttpServer())
-      .post('/api/accountants/invite')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ tenantId: tenant.id, accessLevel: 'FULL' })
-      .expect(201)
-
-    // Verify DB row created
-    const ac = await prisma.accountantClient.findFirst({ where: { accountantId: userId, tenantId: tenant.id } })
-    expect(ac).toBeTruthy()
-    expect(ac?.status).toBe('ACTIVE')
-
-    // Negative: regular user cannot invite
-    const guestEmail = `e2e-guest-${Date.now()}@haypbooks.test`
-    const signup2 = await request(app.getHttpServer()).post('/api/auth/signup').send({ email: guestEmail, password, name: 'Guest E2E' }).expect(201)
-    const guestToken = signup2.body.token
-
-    await request(app.getHttpServer())
-      .post('/api/accountants/invite')
-      .set('Authorization', `Bearer ${guestToken}`)
-      .send({ tenantId: tenant.id, accessLevel: 'FULL' })
-      .expect(403)
-  }, 20000)
-
   it('signup -> verify email OTP -> user verified', async () => {
     const email = `e2e-verify-${Date.now()}@haypbooks.test`
     const password = 'verify-pass'

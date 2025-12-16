@@ -1,45 +1,30 @@
 import { Injectable } from '@nestjs/common'
 import { Pool } from 'pg'
 import type { AccountantAccessLevel, PerkType } from '@prisma/client'
-import { PrismaService } from '../repositories/prisma/prisma.service'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 @Injectable()
 export class AccountantService {
-  constructor(private readonly prisma: PrismaService) {}
-
   async createClient(accountantId: string, tenantId: string, accessLevel: AccountantAccessLevel = 'FULL' as AccountantAccessLevel) {
-    // Use Prisma (RLS-aware via PrismaService connection/session) so we don't get visibility issues
+    const client = await pool.connect()
     try {
-      const upserted = await this.prisma.accountantClient.upsert({
-        where: { accountantId_tenantId: { accountantId, tenantId } } as any,
-        update: { status: 'ACTIVE', accessLevel },
-        create: { accountantId, tenantId, accessLevel, status: 'ACTIVE' },
-      })
-      return upserted
-    } catch (e) {
-      // Fallback: use raw SQL as a last resort
-      const client = await pool.connect()
-      try {
-        await client.query('BEGIN')
-        await client.query(
-          'INSERT INTO public."AccountantClient" ("accountantId","tenantId","accessLevel","status","invitedAt") VALUES ($1,$2,$3,$4,now()) ON CONFLICT ("accountantId","tenantId") DO UPDATE SET "status" = EXCLUDED."status", "accessLevel" = EXCLUDED."accessLevel"',
-          [accountantId, tenantId, accessLevel, 'ACTIVE']
-        )
-        const res = await client.query('SELECT * FROM public."AccountantClient" WHERE "accountantId" = $1 AND "tenantId" = $2 LIMIT 1', [accountantId, tenantId])
-        await client.query('COMMIT')
-        return res.rows[0]
-      } finally {
-        client.release()
-      }
+      await client.query('BEGIN')
+      await client.query(
+        'INSERT INTO public."AccountantClient" ("accountantId","tenantId","accessLevel","status","invitedAt") VALUES ($1,$2,$3,$4,now()) ON CONFLICT ("accountantId","tenantId") DO UPDATE SET "status" = EXCLUDED."status", "accessLevel" = EXCLUDED."accessLevel"',
+        [accountantId, tenantId, accessLevel, 'ACTIVE']
+      )
+      const res = await client.query('SELECT * FROM public."AccountantClient" WHERE "accountantId" = $1 AND "tenantId" = $2 LIMIT 1', [accountantId, tenantId])
+      await client.query('COMMIT')
+      return res.rows[0]
+    } finally {
+      client.release()
     }
   }
 
   async listClientsForAccountant(accountantId: string) {
-    // Use Prisma to respect RLS/session settings and ensure consistent visibility
-    const rows = await this.prisma.accountantClient.findMany({ where: { accountantId } })
-    return rows
+    const res = await pool.query('SELECT * FROM public."AccountantClient" WHERE "accountantId" = $1', [accountantId])
+    return res.rows
   }
 
   async removeClient(id: string) {

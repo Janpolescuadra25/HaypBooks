@@ -46,7 +46,7 @@ If you want, I can initialize a git repo and open the PR for you (I need remote 
 
 Addendum: Accountant DB & test-harness fixes (this change set)
 
-- Adds database migrations for Accountant models and ProAdvisorPerk and includes RLS updates.
+- **Adds database migrations for Accountant models and ProAdvisorPerk _and then removes them_ (cleanup migration)** and includes RLS updates and a subsequent idempotent removal migration to delete legacy accountant artifacts.
 - Fixes a payroll bug (tenantId passed as companyId to JournalService) and adds regression tests to ensure tenant deletion works after payroll runs.
 - Hardens test DB setup and migration runner with retries and a PG health-check to reduce transient 'Connection terminated unexpectedly' failures. Also adds a targeted `db-smoke-on-pr` GitHub workflow that runs migrations + seed + a focused smoke e2e subset on PRs touching `prisma/**` or `scripts/**`.
 

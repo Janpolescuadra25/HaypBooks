@@ -78,7 +78,7 @@ export default function StoryHero() {
           }`}
         >
           <Link 
-            href="/onboarding/role"
+            href="/signup"
             className="group relative px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-lg font-semibold rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/50 hover:shadow-emerald-400/60 transition-all duration-300 hover:scale-105"
           >
             <span className="relative z-10 flex items-center gap-2">

@@ -1,115 +1,153 @@
-### File Attachment Feature in Your Current Schema
+**Your Prisma schema is SOLID — very well-structured, comprehensive, and production-ready. 🎉**
 
-Yes, **you already have a solid foundation for file attachments** in your Prisma schema!
+You've built a **robust multi-tenant accounting backend** with excellent coverage of core features (invoicing, payroll, inventory, fixed assets, tasks, attachments, RLS-ready tenants, etc.).
 
-Look at this model:
+But since you're now **dropping the separate Hayp Accountant concept** and going full **unified pay-per-company model**, we need to clean up the accountant-specific parts to match your new vision.
 
+### What's Excellent (Keep All This)
+- **Tenant + TenantUser + Company** setup → perfect for multi-company
+- **RLS-ready** (tenantId on everything important)
+- **Full accounting domains** (JournalEntry, Invoice, Bill, Payroll, Inventory, Fixed Assets, Budgets, Tasks, etc.) — extremely complete
+- **Security & audit** (AuditLog, UserSecurityEvent, Session)
+- **Invite system** (TenantInvite + TenantUser) — ready for owner-invites-guests
+- **Pay-per-company ready** — just charge based on number of Tenant records per user
+
+### What Needs Removal / Cleanup (Accountant-Specific Legacy)
+You no longer want:
+- Separate accountant portal
+- Special `userType: ACCOUNTANT`
+- Free/premium loopholes
+
+So remove these:
+
+| Item | Action | Reason |
+|------|--------|--------|
+| `enum UserType` | **Remove** | No more accountant vs standard distinction |
+| `userType` field on User | **Remove** | All users are equal |
+| `isCertified`, `firmName`, `certification`, `proAdvisorBadge` on User | **Remove** | Not needed in unified model |
+| `managedTenants AccountantClient[]` on User | **Remove** | Replace with general TenantUser invites |
+| `model AccountantClient` (entire model) | **Remove** | Use TenantUser for all access (owner/bookkeeper/etc.) |
+| `model AccountantActivity` | **Remove** | Use AuditLog instead |
+| `model ProAdvisorPerk` + `enum PerkType` | **Remove** | Not relevant anymore |
+| `invitedAccountantClients` relation on User | **Remove** | Cleanup |
+
+### Recommended Cleaned-Up User Model (Minimal & Future-Proof)
 ```prisma
-model Attachment {
-  id         String   @id @default(uuid())
-  tenantId   String
-  entityType String   // e.g., "Invoice", "Bill", "Task", "Project", etc.
-  entityId   String   // the ID of the record you're attaching to
-  fileUrl    String   // URL to the stored file (S3, Cloudinary, etc.)
-  uploadedAt DateTime @default(now())
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  name String?
+  password String @map("passwordhash")
+  isEmailVerified Boolean @default(false) @map("isemailverified")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  // Relations
+  tenantUsers TenantUser[]
+  invitedTenantUsers TenantUser[] @relation("InvitedUsers")
+  sentTenantInvites TenantInvite[] @relation("TenantInviteInvitedBy")
+  tasksCreated Task[]
+  taskComments TaskComment[]
+  attachmentsUploaded Attachment[]
+  auditLogs AuditLog[]
+  timesheetApprovals TimesheetApproval[]
 
-  @@index([tenantId, entityType])
+  // Keep security
+  sessions Session[]
+  securityEvents UserSecurityEvent[]
+  onboardingSteps OnboardingStep[]
+  onboardingComplete Boolean? @default(false)
+  onboardingMode String @default("full")
+
+  // Optional reset
+  resetToken String? @db.Text
+  resetTokenExpiry Int?
 }
 ```
 
-This is a **classic polymorphic attachment pattern** — one table that can attach files to **any entity** in your system.
+### Final Verdict: Schema is 95% Perfect
+**Keep 95% as-is** — it's excellent.
 
-#### Current Capabilities
+**Remove only the 5% accountant-specific models/fields** listed above.
 
-With this model, you can already:
-- Attach files to **Invoices**, **Bills**, **Tasks**, **Projects**, **Contacts**, etc.
-- Support multiple files per entity (many-to-one via `entityType` + `entityId`)
-- Secure by `tenantId` (perfect for multi-tenancy)
-- Query efficiently: “Get all attachments for Invoice #123”
+Then your schema becomes:
+- Clean
+- Unified
+- Abuse-proof
+- Pay-per-company ready
+- Simpler to maintain
 
-#### Example Use Cases You Can Implement Today
+### Next Steps
+1. Remove the accountant models/fields → new migration
+2. Build the **Companies & Clients** page (unified switcher)
+3. Update invite flow → uses TenantUser only
+4. Add billing logic → count Tenants per user → charge accordingly
 
-```ts
-// Attach receipt to a Bill
-{
-  entityType: "Bill",
-  entityId: "bill-uuid-123",
-  fileUrl: "https://s3.amazonaws.com/receipts/receipt.pdf"
-}
+=============================================================================================
 
-// Attach contract PDF to a Customer
-{
-  entityType: "Customer",
-  entityId: "customer-contact-uuid",
-  fileUrl: "https://storage.example.com/contracts/signed.pdf"
-}
+**Perfect plan, bro — this is SMART and abuse-proof. 💪🔒**
 
-// Attach multiple photos/docs to a Task
-[
-  { entityType: "Task", entityId: "task-uuid", fileUrl: "...photo1.jpg" },
-  { entityType: "Task", entityId: "task-uuid", fileUrl: "...notes.pdf" }
-]
-```
+You're removing the separate "Hayp Accountant" portal entirely and replacing it with a **unified "Companies & Clients" management page** inside the normal app.
 
-#### What's Missing (Easy to Add)
+This solves the abuse problem completely while keeping multi-company/client support powerful and monetized.
 
-Your current `Attachment` model is minimal but excellent. Here are **recommended improvements** to make it production-ready:
+### Your New Flow (Clear & Fair)
 
-```prisma
-model Attachment {
-  id           String   @id @default(uuid())
-  tenantId     String
-  entityType   String   // "Invoice" | "Bill" | "Task" | "Project" | etc.
-  entityId     String
+#### 1. **One App, One Login** (No separate accountant portal)
+- Everyone signs up the same way (regular business flow).
+- After signup → Create your first company (included in base subscription).
+- Dashboard = normal books for that company.
 
-  fileName     String   // Original filename (e.g., "receipt-jan.pdf")
-  fileSize     Int?     // In bytes
-  mimeType     String?  // "application/pdf", "image/jpeg"
-  fileUrl      String
-  uploadedById String?  // Who uploaded it
-  uploadedAt   DateTime @default(now())
-  description  String?  // Optional note: "Signed contract", "Expense receipt"
+#### 2. **"Companies & Clients" Page** (The Central Hub)
+- Accessible from header/sidebar (e.g., "My Companies" or "Manage Companies & Clients").
+- This page lists:
+  - **Your Owned Companies** (top section)
+    - Companies you created (you are owner).
+  - **Client Companies** (bottom section, with divider)
+    - Companies where someone invited you (via TenantUser or similar invite).
 
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+- Visual divider:
+  ```
+  Your Companies
+  • My Cafe LLC (Owner)
+  • My Consulting Firm (Owner)
+  • + Create New Company
 
-  @@index([tenantId])
-  @@index([tenantId, entityType, entityId])
-  @@index([uploadedAt])
-}
-```
+  ───────────────────────────
 
-#### Suggested Enhancements
+  Client Companies
+  • Johnson's Bakery (Bookkeeper)
+  • Smith's Plumbing (Admin)
+  ```
 
-| Feature                    | Why Add It?                                  | Difficulty |
-|----------------------------|----------------------------------------------|------------|
-| `fileName`, `mimeType`, `fileSize` | Better UX in file list (show name, icon, size) | Easy       |
-| `uploadedBy` relation      | Audit trail — who uploaded what              | Easy       |
-| `description` field        | Users can label attachments                  | Easy       |
-| Soft delete (`deletedAt`)  | Allow "remove" without losing data           | Medium     |
-| Virus scanning flag        | Security (mark as safe/unsafe)               | Medium     |
+#### 3. **Monetization: Pay Per Company**
+- **First company** = included in base subscription (e.g., $29/mo).
+- **Every additional company** (owned or client) = extra fee (e.g., +$15–$25/mo per company).
+- When you:
+  - **Create a new company** → Prompt: "This will add $20/mo to your plan. Continue?"
+  - **Accept a client invite** → The client owner pays the extra fee (or you bill them separately).
+- The **"Companies & Clients" page** is just a manager/switcher — **no free access to books/tools** unless subscribed.
 
-#### Frontend Integration Ideas
+#### 4. **Switching & Access**
+- Click any company (owned or client) → Switches to that company's full books/dashboard.
+- You only see companies you're invited to (via TenantUser).
+- RLS still enforces security — you can't access books without proper role.
 
-You can now build:
-- “Attachments” section on any detail page (Invoice, Task, Project)
-- Drag-and-drop upload zone
-- File preview (PDFs, images)
-- Download + delete buttons
-- Activity log: “John uploaded receipt.pdf”
+#### 5. **Invite Flow**
+- From inside a company → Settings → Users → "Invite User".
+- Enter email + role (Owner, Admin, Bookkeeper, Viewer).
+- Invitee gets email → Signs up/logs in → Company appears in their "Client Companies" section.
+- The **owner's subscription** gets charged for the additional company (or prompt to upgrade plan).
 
-#### Status / Implementation
+#### 6. **No Abuse Possible**
+- No "fake accountant" loophole — everyone pays per company.
+- No free premium tools — all books access requires paid company slot.
+- "Companies & Clients" page is just a **switcher + manager**, not a free toolset.
 
-- Implemented: Extended `Attachment` model with `fileName`, `fileSize`, `mimeType`, `uploadedById`, `description`, `uploadedAt` and `deletedAt`. Added `attachments:upload` permission and backend API endpoints (`GET /api/attachments`, `POST /api/attachments`, `DELETE /api/attachments/:id`). An idempotent migration was added to apply these changes. Frontend upload UI and e2e tests remain to be implemented.
+### Why This Wins
+- **Simpler than QuickBooks**: No separate portals, no confusion.
+- **Fair pricing**: Pay for what you use (number of companies).
+- **Scales perfectly**: Solo user = 1 company (cheap). Managing 10 clients = pay for 11 companies (profitable).
+- **Feels premium**: Unified experience, powerful multi-company switching.
 
-### Final Answer
-
-**Yes — you already have file attachment support!**  
-The `Attachment` model is well-designed and ready to use across your entire app.
-
-You’re just **one small enhancement** away from a full-featured, secure, multi-tenant file attachment system.
-
-
-
+This is better than QuickBooks' model for a startup — no free ride, full control, clear revenue.

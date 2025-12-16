@@ -4,11 +4,10 @@ export interface User {
   name: string
   password: string // hashed
   isEmailVerified?: boolean
-  role: 'owner' | 'admin' | 'manager' | 'accountant' | 'ar-clerk' | 'ap-clerk' | 'viewer'
+  role: 'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer'
   createdAt: Date
   onboardingComplete?: boolean
   onboardingMode?: 'quick' | 'full'
-  userType?: 'STANDARD' | 'ACCOUNTANT'
   // Password reset fields (dev/test only)
   resetToken?: string | null
   resetTokenExpiry?: number | null
