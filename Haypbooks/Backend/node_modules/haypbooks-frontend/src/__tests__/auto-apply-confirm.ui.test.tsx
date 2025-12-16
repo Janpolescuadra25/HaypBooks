@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
+import { act } from 'react'
 import userEvent from '@testing-library/user-event'
 import AutoApplyCustomerCredits from '@/app/customers/[id]/auto-apply-client'
 import AutoApplyVendorCredits from '@/app/vendors/[id]/auto-apply-client'
@@ -46,7 +47,7 @@ describe('Auto-apply credits confirm dialog', () => {
     render(<AutoApplyCustomerCredits customerId="c1" canManage={true} />)
 
     // Run preview
-    await user.click(screen.getByRole('button', { name: /preview auto-apply/i }))
+    await act(async () => { await user.click(screen.getByRole('button', { name: /preview auto-apply/i })) })
     await screen.findByText(/Preview: 2 allocations totaling/i)
 
     // Spy on confirm and reject first
@@ -54,7 +55,7 @@ describe('Auto-apply credits confirm dialog', () => {
     global.confirm = jest.fn(() => false)
 
     const applyBtn = screen.getByRole('button', { name: /apply credits/i })
-    await user.click(applyBtn)
+    await act(async () => { await user.click(applyBtn) })
     await waitFor(() => {
       expect(global.confirm).toHaveBeenCalled()
     })
@@ -67,14 +68,14 @@ describe('Auto-apply credits confirm dialog', () => {
     global.fetch = (jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString()
       const body = typeof init?.body === 'string' ? JSON.parse(init!.body as string) : init?.body
-      if (url.startsWith('/api/customers/c1/credits/auto-apply') && (init?.method || 'POST').toUpperCase() === 'POST') {
+      if (url.includes('/api/customers/c1/credits/auto-apply') && (init?.method || 'POST').toUpperCase() === 'POST') {
         postCalls.push({ url, body })
         return { ok: true, json: async () => ({ ok: 2, totalApplied: 125.5 }) } as any
       }
       return { ok: true, json: async () => ({}) } as any
     }) as any)
 
-    await user.click(applyBtn)
+    await act(async () => { await user.click(applyBtn) })
     await waitFor(() => {
       expect(postCalls.some(c => c.body && c.body.dryRun === false)).toBe(true)
     })
@@ -93,7 +94,7 @@ describe('Auto-apply credits confirm dialog', () => {
     const user = userEvent.setup()
     render(<AutoApplyVendorCredits vendorId="v1" canManage={true} />)
 
-    await user.click(screen.getByRole('button', { name: /preview auto-apply/i }))
+    await act(async () => { await user.click(screen.getByRole('button', { name: /preview auto-apply/i })) })
     await screen.findByText(/Preview: 1 allocation totaling/i)
 
     // @ts-ignore
@@ -105,14 +106,14 @@ describe('Auto-apply credits confirm dialog', () => {
     global.fetch = (jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString()
       const body = typeof init?.body === 'string' ? JSON.parse(init!.body as string) : init?.body
-      if (url.startsWith('/api/vendors/v1/credits/auto-apply') && (init?.method || 'POST').toUpperCase() === 'POST') {
+      if (url.includes('/api/vendors/v1/credits/auto-apply') && (init?.method || 'POST').toUpperCase() === 'POST') {
         postCalls.push({ url, body })
         return { ok: true, json: async () => ({ ok: 1, totalApplied: 50 }) } as any
       }
       return { ok: true, json: async () => ({}) } as any
     }) as any)
 
-    await user.click(applyBtn)
+    await act(async () => { await user.click(applyBtn) })
     await waitFor(() => {
       expect(postCalls.some(c => c.body && c.body.dryRun === false)).toBe(true)
     })

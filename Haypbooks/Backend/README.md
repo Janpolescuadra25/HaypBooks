@@ -195,6 +195,8 @@ npm run test:e2e
 - **Drift detection**: A scheduled workflow `.github/workflows/db-drift.yml` runs daily and checks expected schema and RLS policies.
 - Enable branch protection and require the "DB Validation & Integration Tests" workflow for PRs that touch database or migrations.
 - To add a badge to this README, use the Actions badge URL for the `db-validation.yml` workflow in your GitHub repo.
+- Added a targeted `DB smoke` workflow (`.github/workflows/db-smoke-on-pr.yml`) which runs migrations, seeds, and a focused smoke e2e subset for PRs that touch `prisma/**` and `scripts/**`. This helps surface transient DB or migration issues earlier.
+- Test harness improvements: `scripts/test/setup-test-db.js` and `scripts/migrate/run-sql.js` now include retry/backoff and a post-seed PG health-check to reduce intermittent connection termination failures in CI.
 
 ## Migration from Express
 

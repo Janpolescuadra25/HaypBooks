@@ -38,10 +38,11 @@ async function main() {
     process.exit(1)
   }
 
-  const client = new Client({ connectionString })
-  await client.connect()
+  async function runMigrationsOnce() {
+    const client = new Client({ connectionString })
+    await client.connect()
 
-  try {
+    try {
     for (const file of files) {
       const filePath = path.isAbsolute(file) ? file : path.join(migrationsDir, file)
       const content = fs.readFileSync(filePath, 'utf-8')
@@ -138,12 +139,35 @@ async function main() {
       }
       console.log('Applied', path.relative(migrationsDir, filePath))
     }
-    console.log('All migrations applied (attempted)')
-  } catch (err) {
-    console.error('Migration runner failed unexpectedly:', err)
-    process.exitCode = 1
-  } finally {
-    await client.end()
+      console.log('All migrations applied (attempted)')
+      await client.end()
+      return
+    } catch (err) {
+      try { await client.end() } catch (e) {}
+      throw err
+    }
+  }
+
+  // Retry the entire migration run a few times to handle transient connection resets
+  let attempts = 0
+  const maxAttempts = 3
+  let backoff = 500
+  while (attempts < maxAttempts) {
+    attempts++
+    try {
+      await runMigrationsOnce()
+      break
+    } catch (err) {
+      console.error(`Migration run failed (attempt ${attempts}/${maxAttempts}):`, err && err.message ? err.message : err)
+      if (attempts >= maxAttempts) {
+        console.error('Migration runner failed unexpectedly after retries:', err)
+        process.exitCode = 1
+        break
+      }
+      console.log(`Retrying migrations in ${backoff}ms...`)
+      await new Promise(r => setTimeout(r, backoff))
+      backoff *= 2
+    }
   }
 }
 

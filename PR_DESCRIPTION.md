@@ -41,3 +41,17 @@ git push -u origin feat/squash-validate-tenantid-uuid
 ```
 
 If you want, I can initialize a git repo and open the PR for you (I need remote details), or I can provide an applyable patch file you can use locally.
+
+---
+
+Addendum: Accountant DB & test-harness fixes (this change set)
+
+- Adds database migrations for Accountant models and ProAdvisorPerk and includes RLS updates.
+- Fixes a payroll bug (tenantId passed as companyId to JournalService) and adds regression tests to ensure tenant deletion works after payroll runs.
+- Hardens test DB setup and migration runner with retries and a PG health-check to reduce transient 'Connection terminated unexpectedly' failures. Also adds a targeted `db-smoke-on-pr` GitHub workflow that runs migrations + seed + a focused smoke e2e subset on PRs touching `prisma/**` or `scripts/**`.
+
+Commands I ran locally to validate:
+- npx jest --config jest.e2e.config.js --runInBand (repro and debug)
+- Repeated focused runs of `test/contacts.e2e-spec.ts` to validate retry/pg-check stability
+
+Recommendation: open a PR including everything in this branch; ensure CI runs `db-smoke-on-pr` and `e2e-tests` and watch the PR for any migration failures or flaky runs. I can prepare the PR draft and push it if you want.

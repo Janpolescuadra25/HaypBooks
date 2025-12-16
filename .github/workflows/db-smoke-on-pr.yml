@@ -1,0 +1,61 @@
+name: DB smoke (migrations + seed + smoke e2e)
+
+on:
+  pull_request:
+    paths:
+      - 'prisma/**'
+      - 'scripts/**'
+      - 'test/**'
+
+jobs:
+  db-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.1
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Ninetails45
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install backend deps
+        working-directory: ./Haypbooks/Backend
+        run: npm ci
+
+      - name: Run migrations and seed (with retries)
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+        run: |
+          node ./scripts/migrate/init-db.js --recreate
+          node ./scripts/migrate/run-sql.js
+          npm run db:seed:dev
+
+      - name: Run smoke e2e (subset)
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          NODE_ENV: 'test'
+        run: |
+          # Run a focused subset (contacts + payroll + accountant onboarding smoke) to validate migrations and seeds
+          npm run test:serial -- -- test/contacts.e2e-spec.ts test/accountant.onboarding.e2e-spec.ts test/payroll.submit.e2e-spec.ts
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-smoke-artifacts
+          path: |
+            Haypbooks/Backend/jest-e2e-results
+            Haypbooks/Backend/coverage

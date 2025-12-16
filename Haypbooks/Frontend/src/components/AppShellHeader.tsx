@@ -73,7 +73,7 @@ export default function AppShellHeader() {
           {/* HaypBooks logo/brand */}
           {/* Logo navigates to dashboard (not intro) */}
           <a href="/dashboard" className="hidden md:flex items-center gap-2" aria-label="HaypBooks Home" title="Go to Dashboard">
-            <div className="flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 text-white font-bold text-sm">
+            <div className="flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 font-bold text-sm" style={{ color: '#fff' }}>
               H
             </div>
             <span className="text-base font-semibold text-slate-800">HaypBooks</span>

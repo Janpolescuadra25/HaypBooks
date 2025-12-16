@@ -93,7 +93,8 @@ export class PayrollService {
     if (totalTax > 0) lines.push({ accountId: payrollLiability?.id || '', debitAmount: 0, creditAmount: totalTax })
     if (totalNet > 0) lines.push({ accountId: cash?.id || '', debitAmount: 0, creditAmount: totalNet })
 
-    await this.journal.createEntry(tenantId, { date: new Date().toISOString(), description: payload.description || `Payroll run ${payrollRun.id}`, lines })
+    // Create journal entry scoped to tenant (no specific company). Pass tenantId explicitly.
+    await this.journal.createEntry(null, { date: new Date().toISOString(), description: payload.description || `Payroll run ${payrollRun.id}`, lines, tenantId })
 
     await this.prisma.payrollRun.update({ where: { id: payrollRun.id }, data: { status: 'POSTED' } })
 

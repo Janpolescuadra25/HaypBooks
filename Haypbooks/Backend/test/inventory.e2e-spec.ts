@@ -75,7 +75,8 @@ describe('Inventory API (e2e)', () => {
       .post('/api/inventory/receive')
       .set('Authorization', `Bearer ${authToken}`)
       .send(payload)
-      .expect(201)
+    if (res.status !== 201) console.error('Inventory receive failed:', res.status, res.body)
+    expect(res.status).toBe(201)
 
     expect(res.body).toHaveProperty('id')
 
@@ -106,7 +107,8 @@ describe('Inventory API (e2e)', () => {
       .post('/api/inventory/ship')
       .set('Authorization', `Bearer ${authToken}`)
       .send(payload)
-      .expect(201)
+    if (res.status !== 201) console.error('Inventory ship failed:', res.status, res.body)
+    expect(res.status).toBe(201)
 
     expect(res.body).toHaveProperty('id')
 
@@ -138,7 +140,9 @@ describe('Inventory API (e2e)', () => {
       transactionNumber: 'RCPT-E2E-02',
       lines: [{ itemId, stockLocationId: dest.id, qty: 5, unitCost: 5 }]
     }
-    await request(app.getHttpServer()).post('/api/inventory/receive').set('Authorization', `Bearer ${authToken}`).send(payloadReceive).expect(201)
+    const res2 = await request(app.getHttpServer()).post('/api/inventory/receive').set('Authorization', `Bearer ${authToken}`).send(payloadReceive)
+    if (res2.status !== 201) console.error('Inventory receive (for transfer) failed:', res2.status, res2.body)
+    expect(res2.status).toBe(201)
 
     // transfer 3 from dest to main
     const payloadTransfer = {

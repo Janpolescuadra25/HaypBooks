@@ -176,7 +176,7 @@ export default function JourneySteps() {
               Join thousands of businesses who've transformed their accounting from burden to breakthrough.
             </p>
             <a 
-              href="/signup"
+              href="/onboarding/role"
               className="inline-flex items-center gap-2 px-8 py-4 bg-white text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
             >
               Start Your Free Trial

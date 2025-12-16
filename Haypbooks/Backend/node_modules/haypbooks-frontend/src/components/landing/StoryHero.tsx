@@ -43,19 +43,8 @@ export default function StoryHero() {
       />
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 text-center">
-        {/* Animated Badge */}
-        <div 
-          className={`inline-flex items-center gap-2 mb-8 px-4 py-2 bg-emerald-500/20 backdrop-blur-sm border border-emerald-400/30 rounded-full text-emerald-100 text-sm font-medium transition-all duration-1000 ${
-            visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
-          }`}
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          Trusted by 10,000+ businesses worldwide
-        </div>
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 text-center" style={{ marginTop: 'var(--hero-nudge, 2rem)' }}>
+        {/* Trusted badge removed per request */}
 
         {/* Main Headline with Typewriter Effect */}
         <h1 
@@ -89,7 +78,7 @@ export default function StoryHero() {
           }`}
         >
           <Link 
-            href="/signup"
+            href="/onboarding/role"
             className="group relative px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-lg font-semibold rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/50 hover:shadow-emerald-400/60 transition-all duration-300 hover:scale-105"
           >
             <span className="relative z-10 flex items-center gap-2">
@@ -108,13 +97,6 @@ export default function StoryHero() {
             View Pricing
           </Link>
 
-          <Link
-            href="/login"
-            aria-label="Sign in to HaypBooks"
-            className="mt-3 sm:mt-0 px-6 py-3 rounded-2xl text-sm font-semibold text-white border border-white/20 hover:bg-white/10 transition-all duration-200"
-          >
-            Sign in
-          </Link>
         </div>
 
         {/* Trust Indicators (with inline scroll badge between items 2 and 3) */}

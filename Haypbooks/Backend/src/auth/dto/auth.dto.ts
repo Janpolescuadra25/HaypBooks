@@ -23,6 +23,11 @@ export class SignupDto {
   @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters' })
   password: string
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
+  // Accept 'business'|'accountant'|'both' in the frontend; map to userType in backend
+  role?: string
 }
 
 export class ForgotPasswordDto {
