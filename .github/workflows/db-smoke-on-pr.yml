@@ -42,14 +42,21 @@ jobs:
           node ./scripts/migrate/run-sql.js
           npm run db:seed:dev
 
+      - name: CI sanity check (seed verification)
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+        run: |
+          node ./scripts/db/ci-sanity-check.js
+
       - name: Run smoke e2e (subset)
         working-directory: ./Haypbooks/Backend
         env:
           DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
           NODE_ENV: 'test'
         run: |
-          # Run a focused subset (contacts + payroll + accountant onboarding smoke) to validate migrations and seeds
-          npm run test:serial -- -- test/contacts.e2e-spec.ts test/accountant.onboarding.e2e-spec.ts test/payroll.submit.e2e-spec.ts
+          # Run a focused subset (contacts + payroll smoke) to validate migrations and seeds
+          npm run test:serial -- -- test/contacts.e2e-spec.ts test/payroll.submit.e2e-spec.ts
 
       - name: Upload artifacts
         if: always()

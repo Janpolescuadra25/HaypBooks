@@ -19,7 +19,7 @@ export default function Hero() {
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
           <Link 
-            href="/onboarding/role" 
+            href="/signup" 
             className="px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
           >
             Start Free 30-Day Trial

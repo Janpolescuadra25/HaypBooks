@@ -8,9 +8,6 @@ import { z } from 'zod'
 
 export default function SignupPage() {
   const router = useRouter()
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const roleParam = searchParams?.get('role') || null
-
   useEffect(() => {
     let mounted = true
 
@@ -29,11 +26,6 @@ export default function SignupPage() {
           localStorage.removeItem('user')
         }
       }
-    }
-
-    // Persist any role query parameter for downstream onboarding or backend use
-    if (roleParam && typeof window !== 'undefined') {
-      localStorage.setItem('preferred_role', roleParam)
     }
 
     checkSession()
@@ -55,11 +47,6 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
-  const [selectedRole, setSelectedRole] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return roleParam
-    return roleParam || localStorage.getItem('preferred_role')
-  })
 
   const passwordStrength = (password: string) => {
     if (password.length === 0) return { strength: 0, label: '', color: '' }
@@ -83,7 +70,6 @@ export default function SignupPage() {
         companyName: data.companyName,
         email: data.email,
         password: data.password,
-        role: selectedRole || undefined
       })
 
       // request a verification OTP explicitly (backend also triggers this)
@@ -124,12 +110,6 @@ export default function SignupPage() {
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Create your account</h1>
           <p className="text-slate-600">Start your free 30-day trial. No credit card required.</p>
-
-          {selectedRole && (
-            <div className="mt-4 inline-block px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
-              Signing up as <strong className="ml-1 capitalize">{selectedRole}</strong>. You can change this later in your profile.
-            </div>
-          )}
         </div>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5" noValidate>

@@ -14,18 +14,12 @@ async function hasColumn(table: string, column: string) {
 async function main() {
   console.log('Seeding database...')
 
-  // Demo user
+  // Demo user (raw upsert to remain compatible while Prisma client is being regenerated)
   const passwordHash = await bcrypt.hash('password', 10)
-  const user = await prisma.user.upsert({
-    where: { email: 'demo@haypbooks.test' },
-    update: {},
-    create: {
-      email: 'demo@haypbooks.test',
-      name: 'Demo User',
-      password: passwordHash,
-      isEmailVerified: true,
-    },
-  })
+  const demoUserId = require('crypto').randomUUID()
+  await prisma.$executeRaw`INSERT INTO public."User" ("id","email","name","passwordhash","isemailverified","createdAt","updatedAt") VALUES (${ demoUserId }, ${ 'demo@haypbooks.test' }, ${ 'Demo User' }, ${ passwordHash }, ${ true }, now(), now()) ON CONFLICT ("email") DO UPDATE SET "name" = EXCLUDED."name", "passwordhash" = EXCLUDED."passwordhash", "isemailverified" = EXCLUDED."isemailverified";`
+  const users = await prisma.$queryRaw<any[]>`SELECT id, email, name, "isemailverified" as "isEmailVerified", "createdAt", "updatedAt" FROM public."User" WHERE email = ${ 'demo@haypbooks.test' } LIMIT 1;`
+  const user = Array.isArray(users) && users.length ? users[0] : undefined
 
   // Demo tenant
   const tenant = await prisma.tenant.upsert({
@@ -188,23 +182,7 @@ async function main() {
     console.log('Seeded a sample TenantInvite (if migrations applied)')
   } catch (e) { /* ignore if migrations not applied or record exists */ }
 
-  // Seed AccountantClient (link demo user as accountant to demo tenant) if table exists
-  try {
-    const acctClientHasId = await hasColumn('AccountantClient', 'id')
-    if (acctClientHasId) {
-      await prisma.$executeRaw`INSERT INTO public."AccountantClient" ("accountantId","tenantId","accessLevel","invitedBy","invitedAt","status") VALUES (${user.id}, ${tenant.id}, ${'FULL'}::"AccountantAccessLevel", ${user.id}, now(), ${'ACTIVE'}) ON CONFLICT ("accountantId","tenantId") DO UPDATE SET "status" = EXCLUDED."status";`
-      console.log('Seeded sample AccountantClient linking demo user to demo tenant')
-    }
-  } catch (e) { console.warn('Skipping AccountantClient seed (table may not exist yet)', e) }
 
-  // Seed ProAdvisorPerk for demo user if table exists
-  try {
-    const perkHasId = await hasColumn('ProAdvisorPerk', 'id')
-    if (perkHasId) {
-      await prisma.$executeRaw`INSERT INTO public."ProAdvisorPerk" ("userId","type","name","issuer","awardedAt") VALUES (${user.id}, ${'CERTIFICATION'}, ${'Demo Certification'}, ${'Haypbooks'}, now()) ON CONFLICT DO NOTHING;`
-      console.log('Seeded sample ProAdvisorPerk for demo user')
-    }
-  } catch (e) { console.warn('Skipping ProAdvisorPerk seed (table may not exist yet)', e) }
 
   // Create some example AccountSubTypes for tenant (if not exists)
   const subtype1 = await prisma.accountSubType.findFirst({ where: { tenantId: tenant.id, name: 'CURRENT_ASSET', typeId: assetType.id } })

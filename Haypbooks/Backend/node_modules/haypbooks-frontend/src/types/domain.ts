@@ -441,7 +441,7 @@ export interface DatabaseState {
     email: string
     name: string
     password: string // In production: hashed with bcrypt/argon2
-    role: 'owner' | 'admin' | 'manager' | 'accountant' | 'ar-clerk' | 'ap-clerk' | 'viewer'
+    role: 'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer'
     createdAt: string
   }>
   // Messages (for statements, reminders, etc.)

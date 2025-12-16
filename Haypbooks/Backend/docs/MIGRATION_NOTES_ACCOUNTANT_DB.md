@@ -36,3 +36,28 @@ Testing & Validation
 
 Contact
 - If you need help applying migrations in production or run into RLS issues, tag the DB/Infra team and include the migration file names and failing SQL statements.
+
+---
+
+## Removal of Accountant legacy (post-cleanup)
+
+We removed the legacy accountant-specific models and fields as part of moving to a unified Companies & Clients model.
+
+What changed:
+- Added migration `20251217120000_remove_accountant_models/migration.sql` which:
+  - Drops `AccountantClient`, `AccountantActivity`, `ProAdvisorPerk` tables
+  - Drops related RLS policies and indexes
+  - Drops user columns `userType`, `isCertified`, `firmName`, `certification`, `proAdvisorBadge`
+  - Drops unused enums `UserType`, `AccountantAccessLevel`, `PerkType`
+
+Reviewer checklist:
+- Confirm `prisma/schema.prisma` no longer references accountant models/fields.
+- Confirm `prisma/migrations/*` contains the new removal migration and it is idempotent.
+- Ensure `prisma/seed.ts` has been updated to avoid inserting Accountant artifacts (seed guards in place).
+- Confirm all accountant endpoints/modules have been removed (`src/accountant/*`) and any related tests have been removed or updated.
+- Run `node ./scripts/migrate/init-db.js --recreate && node ./scripts/migrate/run-sql.js && npm run db:seed:dev` locally and verify the CI sanity check (`node scripts/db/ci-sanity-check.js`) and a small focused e2e subset pass.
+- Confirm PR description explains the behavior and rollback steps.
+
+Notes:
+- This is a backward-incompatible change for any external integrators relying on accountant-specific APIs; make sure to communicate via changelog and release notes.
+- Keep a DB backup snapshot prior to running the removal migration in production.
