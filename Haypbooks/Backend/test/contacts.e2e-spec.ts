@@ -16,8 +16,20 @@ describe('Contacts e2e', () => {
     // Use test DB for e2e
     process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
 
-    // Ensure DB exists and run migrations then seed
-    execSync('node ./scripts/test/setup-test-db.js --recreate', { cwd: BACKEND_DIR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL } })
+    // Ensure DB exists and run migrations then seed. Retry a few times to mitigate transient DB connection resets.
+    const maxAttempts = 3
+    let attempt = 0
+    while (attempt < maxAttempts) {
+      try {
+        execSync('node ./scripts/test/setup-test-db.js --recreate', { cwd: BACKEND_DIR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL } })
+        break
+      } catch (e) {
+        attempt++
+        if (attempt >= maxAttempts) throw e
+        // small backoff
+        await new Promise(r => setTimeout(r, 500))
+      }
+    }
 
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleFixture.createNestApplication()

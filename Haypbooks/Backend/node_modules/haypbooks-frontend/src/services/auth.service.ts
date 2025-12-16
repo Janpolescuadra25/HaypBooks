@@ -12,6 +12,7 @@ export interface SignupData {
   companyName: string;
   firstName: string;
   lastName: string;
+  role?: string; // optional role from onboarding (e.g., 'accountant')
 }
 
 export interface User {
@@ -53,7 +54,9 @@ class AuthService {
   async signup(data: SignupData): Promise<AuthResponse> {
     // Backend expects a single `name` property. Support both companyName or first+last.
     const name = data.companyName?.trim() || [data.firstName?.trim(), data.lastName?.trim()].filter(Boolean).join(' ').trim()
-    const payload = { email: data.email, password: data.password, name }
+    const payload: any = { email: data.email, password: data.password, name }
+    if (data.role) payload.role = data.role
+
     const response = await apiClient.post<AuthResponse>('/api/auth/signup', payload);
     
     // Don't persist the user yet — the signup response can represent a newly

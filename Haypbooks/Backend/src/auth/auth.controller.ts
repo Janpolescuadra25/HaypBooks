@@ -40,6 +40,7 @@ export class AuthController {
     res.cookie('email', result.user.email, cookieOptions)
     res.cookie('userId', result.user.id, cookieOptions)
     res.cookie('role', result.user.role, cookieOptions)
+    res.cookie('userType', (result as any).user.userType || 'STANDARD', cookieOptions)
     // Reflect onboarding status to frontend via cookie so middleware/client can
     // redirect users into onboarding when needed without relying solely on JS
     if (result.user.onboardingComplete) {
@@ -55,7 +56,7 @@ export class AuthController {
 
   @Post('signup')
   async signup(@Body() signupDto: SignupDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.signup(signupDto.email, signupDto.password, signupDto.name)
+    const result = await this.authService.signup(signupDto.email, signupDto.password, signupDto.name, signupDto.role)
 
     // Set cookies
     const cookieOptions = {
@@ -69,6 +70,7 @@ export class AuthController {
     res.cookie('email', result.user.email, cookieOptions)
     res.cookie('userId', result.user.id, cookieOptions)
     res.cookie('role', result.user.role, cookieOptions)
+    res.cookie('userType', (result as any).user.userType || 'STANDARD', cookieOptions)
     if (result.user.onboardingMode) res.cookie('onboardingMode', result.user.onboardingMode, cookieOptions)
     // After signup, send a verification OTP to user's email so they can verify ownership
     try {

@@ -17,7 +17,7 @@ export class PrismaAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signup(email: string, password: string, name?: string) {
+  async signup(email: string, password: string, name?: string, role?: string) {
     const existing = await this.userRepo.findByEmail(email)
     if (existing) {
       // Log failed signup attempt
@@ -26,7 +26,20 @@ export class PrismaAuthService {
     }
 
     const hashed = await bcrypt.hash(password, 10)
-    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false })
+
+    // Map simple frontend role strings to enum values used in DB
+    let userType: any = undefined
+    if (role) {
+      const r = String(role).toLowerCase()
+      if (r === 'accountant') userType = 'ACCOUNTANT'
+      else if (r === 'both') userType = 'ACCOUNTANT' // treat 'both' as accountant-enabled
+      else userType = 'STANDARD'
+    }
+
+    const createData: any = { email, password: hashed, name, isEmailVerified: false }
+    if (userType) createData.userType = userType
+
+    const user = await this.userRepo.create(createData)
 
     // Log successful signup
     await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })
@@ -39,6 +52,7 @@ export class PrismaAuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      userType: user.userType || 'STANDARD',
       onboardingCompleted: user.onboardingComplete ?? false,
       onboardingComplete: user.onboardingComplete ?? false,
       onboardingMode: user.onboardingMode || 'full',

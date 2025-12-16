@@ -82,6 +82,9 @@ model User {
   managedTenants AccountantClient[]
   // ProAdvisor perks and certifications
   proAdvisorPerks ProAdvisorPerk[]
+  // Accountant activity logs and invites
+  accountantActivities AccountantActivity[]
+  invitedAccountantClients AccountantClient[] @relation("AccountantClientInvitedBy")
 }
 
 model Session {
@@ -236,6 +239,9 @@ model Tenant {
   CustomerCreditApplication  CustomerCreditApplication[]
   invites                    TenantInvite[]
   tasks                      Task[]
+  // Accountant relations
+  accountantClients          AccountantClient[]
+  accountantActivities       AccountantActivity[]
 }
 
 model Company {

@@ -14,7 +14,12 @@ export default function MockInit() {
     if (window.__MSW_STARTED__) return
     window.__MSW_STARTED__ = true
     import('@/mocks/browser').then((m) => {
-      m.worker.start({ onUnhandledRequest: 'bypass' })
+      // Avoid forcing a reload on worker activation — use waitUntilReady:false
+      // so the dev tooling doesn't trigger a navigation that could interfere
+      // with initial page animations like the intro.
+      m.worker.start({ onUnhandledRequest: 'bypass', waitUntilReady: false }).then(() => {
+        if (process.env.NODE_ENV === 'development') console.debug('MockInit: msw worker started (no-reload)')
+      })
     })
   }, [])
   return null

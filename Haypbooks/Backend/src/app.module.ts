@@ -4,6 +4,7 @@ import { UsersModule } from './users/users.module'
 import { OnboardingModule } from './onboarding/onboarding.module'
 import { TestController } from './test/test.controller'
 import { HealthController } from './health/health.controller'
+import { AccountantModule } from './accountant/accountant.module'
 import { BillsModule } from './accounting/bills.module'
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module'
 import { InventoryModule } from './inventory/inventory.module'
@@ -21,6 +22,7 @@ const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? MockReposit
     AuthModule,
     UsersModule,
     OnboardingModule,
+    AccountantModule,
     BillsModule,
     PurchaseOrdersModule,
     InventoryModule,

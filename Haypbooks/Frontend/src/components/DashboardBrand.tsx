@@ -1,4 +1,5 @@
 "use client"
+import Link from 'next/link'
 import { useCompanySettings } from '@/hooks/useCompanySettings'
 
 export default function DashboardBrand() {
@@ -6,7 +7,7 @@ export default function DashboardBrand() {
   const logo = state.logoUrl as string | undefined
   const name = state.companyName || 'Your Company'
   return (
-    <div className="flex items-center gap-2" aria-label="Brand">
+    <Link href="/dashboard" className="flex items-center gap-2" aria-label={`Go to Dashboard: ${name}`} title={`Go to Dashboard: ${name}`}>
       <div className="h-10 w-10 rounded bg-slate-200 border overflow-hidden flex items-center justify-center">
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -16,6 +17,6 @@ export default function DashboardBrand() {
         )}
       </div>
       <span className="text-sm font-medium text-slate-800 truncate max-w-[160px]" title={name}>{name}</span>
-    </div>
+    </Link>
   )
 }

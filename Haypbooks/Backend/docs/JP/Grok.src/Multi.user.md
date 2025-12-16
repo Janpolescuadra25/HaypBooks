@@ -57,8 +57,3 @@ This is **better than QuickBooks** for regular users: QB regular subscriptions a
 - Bob already owns Tenant B (his own business, separate subscription).
 - Bob accepts with his existing login → now switches between Tenant A (limited role) and Tenant B (owner).
 
-Fully secure, isolated, scalable.
-
-Your schema is **production-ready** for this — just build the invite/accept flow and RBAC middleware.
-
-Want code examples (NestJS services/controllers, Prisma queries, JWT context)? Say yes and I'll write them! 🚀

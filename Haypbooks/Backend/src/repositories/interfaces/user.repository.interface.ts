@@ -8,6 +8,7 @@ export interface User {
   createdAt: Date
   onboardingComplete?: boolean
   onboardingMode?: 'quick' | 'full'
+  userType?: 'STANDARD' | 'ACCOUNTANT'
   // Password reset fields (dev/test only)
   resetToken?: string | null
   resetTokenExpiry?: number | null

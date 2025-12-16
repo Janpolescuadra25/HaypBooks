@@ -45,6 +45,9 @@ export class InventoryService {
   async receiveStock(tenantId: string, payload: any) {
     // payload: { transactionNumber?, lines: [ { itemId, stockLocationId, qty, unitCost } ], companyId }
     if (!payload.lines || payload.lines.length === 0) throw new BadRequestException('lines required')
+    // Debug: log companyId for failing tests where company lookup unexpectedly fails
+    // Remove after troubleshooting
+    if (payload.companyId) console.debug('receiveStock companyId:', payload.companyId)
     await assertCompanyBelongsToTenant(this.prisma, payload.companyId, tenantId)
     return this.prisma.$transaction(async (tx) => {
       const txRecord = await tx.inventoryTransaction.create({ data: { tenantId, companyId: payload.companyId || null, transactionNumber: payload.transactionNumber || null, type: 'RECEIPT', reference: payload.reference || null } })
@@ -79,7 +82,7 @@ export class InventoryService {
         }
       }
       if (jLines.length > 0) {
-        await this.journal.createEntry(payload.companyId || tenantId, { date: new Date().toISOString(), description: `Inventory receipt ${txRecord.transactionNumber || txRecord.id}`, lines: jLines } as any)
+          await this.journal.createEntry(payload.companyId || null, { tenantId, date: new Date().toISOString(), description: `Inventory receipt ${txRecord.transactionNumber || txRecord.id}`, lines: jLines } as any)
       }
       return txRecord
     })
@@ -121,7 +124,7 @@ export class InventoryService {
         const itemRow = await tx.item.findUnique({ where: { id: itemId } })
         if (itemRow?.cogsAccountId && itemRow?.inventoryAssetAccountId) {
           // debit COGS, credit inventory asset
-          await this.journal.createEntry(payload.companyId || tenantId, { date: new Date().toISOString(), description: `COGS for shipment ${txRecord.transactionNumber || txRecord.id}`, lines: [ { accountId: itemRow.cogsAccountId, debitAmount: totalCogs }, { accountId: itemRow.inventoryAssetAccountId, creditAmount: totalCogs } ] } as any)
+          await this.journal.createEntry(payload.companyId || null, { tenantId, date: new Date().toISOString(), description: `COGS for shipment ${txRecord.transactionNumber || txRecord.id}`, lines: [ { accountId: itemRow.cogsAccountId, debitAmount: totalCogs }, { accountId: itemRow.inventoryAssetAccountId, creditAmount: totalCogs } ] } as any)
         }
       }
       return txRecord
