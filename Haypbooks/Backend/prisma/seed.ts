@@ -40,11 +40,11 @@ async function main() {
     await prisma.tenantUser.upsert({
       where: { tenantId_userId: { tenantId: tenant.id, userId: user.id } },
       update: {},
-      create: { tenantId: tenant.id, userId: user.id, role: 'ADMIN', isOwner: true }
+      create: { tenantId: tenant.id, userId: user.id, role: 'ADMIN', isOwner: true, lastAccessedAt: new Date() }
     })
   } else {
     // Use raw upsert when DB doesn't have schema column yet (avoid Prisma selecting missing columns)
-    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt") VALUES (${tenant.id}, ${user.id}, 'ADMIN', true, now()) ON CONFLICT ("tenantId","userId") DO UPDATE SET "role" = EXCLUDED."role", "isOwner" = EXCLUDED."isOwner";`
+    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt","lastAccessedAt") VALUES (${tenant.id}, ${user.id}, 'ADMIN', true, now(), now()) ON CONFLICT ("tenantId","userId") DO UPDATE SET "role" = EXCLUDED."role", "isOwner" = EXCLUDED."isOwner", "lastAccessedAt" = COALESCE(public."TenantUser"."lastAccessedAt", EXCLUDED."lastAccessedAt")`;
   }
 
     // Create a default company for the demo tenant
@@ -55,8 +55,8 @@ async function main() {
       demoCompany = await prisma.company.upsert({ where: { tenantId_name: { tenantId: tenant.id, name: 'Demo Company' } }, update: {}, create: { tenantId: tenant.id, name: 'Demo Company' } })
     } else {
       // Older DB without tenantId on Company: insert id+name and select
-      await prisma.$executeRaw`INSERT INTO public."Company" ("id","name") VALUES (${`company-${tenant.id}`}, ${'Demo Company'}) ON CONFLICT ("id") DO NOTHING;`
-      const rows: any[] = await prisma.$queryRaw`SELECT id, name FROM public."Company" WHERE id = ${`company-${tenant.id}`} LIMIT 1;`
+      await prisma.$executeRaw`INSERT INTO public."Company" ("id","name") VALUES (${ 'company-' + tenant.id }, ${'Demo Company'}) ON CONFLICT ("id") DO NOTHING;`
+      const rows: any[] = await prisma.$queryRaw`SELECT id, name FROM public."Company" WHERE id = ${ 'company-' + tenant.id } LIMIT 1;`
       demoCompany = rows && rows.length ? rows[0] : undefined
     }
 
@@ -151,8 +151,8 @@ async function main() {
     await prisma.permission.upsert({ where: { key: 'tasks:write' }, update: {}, create: { key: 'tasks:write', desc: 'Create/update tasks' } }).catch(() => {})
     await prisma.permission.upsert({ where: { key: 'attachments:upload' }, update: {}, create: { key: 'attachments:upload', desc: 'Upload attachments' } }).catch(() => {})
   } else {
-    await prisma.$executeRaw`INSERT INTO public."Permission" ("key","desc") VALUES (${`manage:all`}, ${`Full access for admins`}) ON CONFLICT ("key") DO NOTHING;`
-    const rows: any[] = await prisma.$queryRaw`SELECT key, desc FROM public."Permission" WHERE key = ${`manage:all`} LIMIT 1;`
+    await prisma.$executeRaw`INSERT INTO public."Permission" ("key","desc") VALUES (${ 'manage:all' }, ${ 'Full access for admins' }) ON CONFLICT ("key") DO NOTHING;`
+    const rows: any[] = await prisma.$queryRaw`SELECT key, desc FROM public."Permission" WHERE key = ${ 'manage:all' } LIMIT 1;`
     permission = rows && rows.length ? rows[0] : undefined
   }
   try {
