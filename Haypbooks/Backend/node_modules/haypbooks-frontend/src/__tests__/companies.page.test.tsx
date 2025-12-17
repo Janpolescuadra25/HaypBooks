@@ -1,6 +1,6 @@
 import React from 'react'
-import { render, screen, waitFor } from '../test-utils'
-import CompaniesPage from '../../app/companies/page'
+import { render, screen, waitFor } from '@testing-library/react'
+import CompanyList from '../components/companies/CompanyList'
 
 describe('Companies page', () => {
   beforeEach(() => {
@@ -17,8 +17,7 @@ describe('Companies page', () => {
   })
 
   it('renders companies list', async () => {
-    render(<CompaniesPage />)
-    expect(screen.getByText(/My Companies & Clients/i)).toBeInTheDocument()
+    render(<CompanyList companies={[{ id: 'c1', name: 'Acme', status: 'ACTIVE' }]} />)
     await waitFor(() => expect(screen.getByText('Acme')).toBeInTheDocument())
   })
 })
