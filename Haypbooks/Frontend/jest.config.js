@@ -19,6 +19,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^.+\\.(css|less|sass|scss)$': '<rootDir>/src/__mocks__/styleMock.js'
   },
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
 };

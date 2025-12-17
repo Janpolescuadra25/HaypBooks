@@ -28,8 +28,6 @@ describe('AppShellHeader popovers (apps/help/more) close on scroll and blur trig
 
     // ensure a menu item appears
     expect(await screen.findByRole('menuitem', { name: /App hub/i })).toBeInTheDocument()
-    // Our new item should be present
-    expect(await screen.findByRole('menuitem', { name: /Companies & Clients/i })).toBeInTheDocument()
 
     // scroll should close the menu and blur the trigger
     fireEvent.scroll(window)

@@ -63,7 +63,6 @@ function isItemActive(itemHref: string, path: string) {
 
 const items: Array<{ href: string; label: string; perm?: Permission }> = [
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/companies', label: 'Companies & Clients', perm: 'tenants:read' },
   { href: '/sales', label: 'Sales', perm: 'invoices:read' },
   { href: '/customer-hub', label: 'Customer Hub', perm: 'customers:read' },
   // Route Expenses to the Expenses hub (not Bills) so the Expenses subnav and header appear
@@ -115,10 +114,6 @@ function iconFor(href: string) {
     case '/reports':
       return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v18H3z"/><path d="M7 17V7M12 17V11M17 17V13"/></svg>
-      )
-    case '/companies':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7h18v10H3z"/><path d="M9 7v-2a2 2 0 114 0v2"/></svg>
       )
     case '/payroll':
       return (
