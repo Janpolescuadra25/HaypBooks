@@ -19,10 +19,11 @@ export type Permission =
   | 'audit:write'
   | 'settings:write'
   | 'settings:close-period'
+  | 'tenants:read'
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  admin: ['bills:read','bills:write','bills:approve','invoices:read','invoices:write','statements:send','collections:send','journal:read','journal:write','reports:read','customers:read','customers:write','vendors:read','vendors:write','audit:read','audit:write','settings:write','settings:close-period'],
-  manager: ['bills:read','bills:write','bills:approve','invoices:read','invoices:write','statements:send','collections:send','journal:read','journal:write','reports:read','customers:read','customers:write','vendors:read','vendors:write','audit:read','settings:write'],
+  admin: ['bills:read','bills:write','bills:approve','invoices:read','invoices:write','statements:send','collections:send','journal:read','journal:write','reports:read','customers:read','customers:write','vendors:read','vendors:write','audit:read','audit:write','settings:write','settings:close-period','tenants:read'],
+  manager: ['bills:read','bills:write','bills:approve','invoices:read','invoices:write','statements:send','collections:send','journal:read','journal:write','reports:read','customers:read','customers:write','vendors:read','vendors:write','audit:read','settings:write','tenants:read'],
   'ap-clerk': ['bills:read','bills:write','reports:read','invoices:read','journal:read','customers:read','vendors:read','vendors:write'],
   viewer: ['bills:read','invoices:read','journal:read','reports:read','customers:read','vendors:read'],
   'no-reports': ['bills:read','invoices:read','journal:read','customers:read','vendors:read']
