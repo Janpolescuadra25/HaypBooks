@@ -33,4 +33,14 @@ export class CompanyRepository {
   async update(id: string, data: any) {
     return this.prisma.tenant.update({ where: { id }, data })
   }
+
+  async updateTenantUserLastAccessed(userId: string, tenantId: string) {
+    const now = new Date()
+    // Upsert pattern: if TenantUser exists, update lastAccessedAt, otherwise create minimal row
+    return this.prisma.tenantUser.upsert({
+      where: { tenantId_userId: { tenantId, userId } },
+      update: { lastAccessedAt: now },
+      create: { tenantId, userId, role: 'USER', joinedAt: now, lastAccessedAt: now, status: 'ACTIVE' },
+    })
+  }
 }

@@ -17,4 +17,10 @@ export class CompanyService {
   async listCompaniesForUser(userId: string) {
     return this.repo.findForUser(userId)
   }
+
+  async updateLastAccessed(userId: string, tenantId: string) {
+    // Defensive: ensure inputs
+    if (!userId || !tenantId) return { success: false }
+    return this.repo.updateTenantUserLastAccessed(userId, tenantId)
+  }
 }
