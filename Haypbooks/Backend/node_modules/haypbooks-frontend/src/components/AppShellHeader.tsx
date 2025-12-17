@@ -9,6 +9,7 @@ import useUI from '@/stores/ui'
 import { getProfileCached } from '@/lib/profile-cache'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import DashboardBrand from '@/components/DashboardBrand'
+import CompanySwitcher from '@/components/CompanySwitcher'
 
 export default function AppShellHeader() {
   const pathname = usePathname()
@@ -122,6 +123,7 @@ export default function AppShellHeader() {
             </div>
           )}
           <NewMenu />
+          <CompanySwitcher />
           <div className="hidden md:flex items-center gap-1">
             {/* Activity icon */}
             <a
@@ -199,6 +201,7 @@ export default function AppShellHeader() {
                 >
                   <div id="apps-menu" role="menu" aria-labelledby="apps-menu-button">
                   <a role="menuitem" className="block px-3 py-2 hover:bg-slate-50 rounded" href="/apps">App hub</a>
+                  <a role="menuitem" className="block px-3 py-2 hover:bg-slate-50 rounded" href="/companies">Companies & Clients</a>
                   <a role="menuitem" className="block px-3 py-2 hover:bg-slate-50 rounded" href="/apps/banking">Banking</a>
                   <a role="menuitem" className="block px-3 py-2 hover:bg-slate-50 rounded" href="/apps/time">Time</a>
                   <a role="menuitem" className="block px-3 py-2 hover:bg-slate-50 rounded" href="/apps/commerce">Commerce</a>
