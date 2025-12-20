@@ -1,0 +1,8 @@
+{
+  "firstName": "FIRST",
+  "lastName": "LAST",
+  "companyName": "ACME Example",
+  "email": "example+acct@yourdomain.test",
+  "password": "REDACTED_PASSWORD",
+  "role": "accountant"
+}

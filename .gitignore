@@ -1,0 +1,14 @@
+# Logs
+Haypbooks/Backend/logs/
+
+# Test artifacts
+test-results/
+
+# Temporary / local files
+tmp/
+
+# Local test fixtures (do not commit credentials)
+Haypbooks/Frontend/e2e/fixtures/tmp_acct.json
+
+# General
+*.log
