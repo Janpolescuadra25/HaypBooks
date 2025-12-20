@@ -11,3 +11,8 @@ e2e/fixtures/tmp_acct.json
 
 # Playwright / test artifacts
 test-results/
+
+# Playwright report artifacts
+playwright-report/
+playwright-report/**
+

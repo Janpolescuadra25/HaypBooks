@@ -1,0 +1,8 @@
+# Backend build / artifacts
+dist/
+node_modules/
+.DS_Store
+*.log
+*.tsbuildinfo
+.prisma/
+.env
