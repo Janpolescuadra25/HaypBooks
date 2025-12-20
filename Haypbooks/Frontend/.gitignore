@@ -5,3 +5,6 @@ dist
 out
 .DS_Store
 *.log
+
+# Local e2e fixtures (sensitive test credentials)
+e2e/fixtures/tmp_acct.json
