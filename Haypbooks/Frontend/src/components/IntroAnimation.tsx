@@ -41,6 +41,14 @@ export default function IntroAnimation() {
       return
     }
 
+    // Do not start the intro if the user already saw it or opted into signup
+    try {
+      if (typeof window !== 'undefined' && localStorage.getItem('hasSeenIntro') === 'true') {
+        setAborted(true)
+        return
+      }
+    } catch (e) {}
+
     // Start animation only on exact '/'
     setAborted(false)
 
