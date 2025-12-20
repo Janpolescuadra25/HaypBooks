@@ -8,11 +8,11 @@ Files:
 How to apply (recommended):
 
 1) Inspect the patch:
-   less patches/squash-validate-changes.patch
+   less archive/patches/squash-validate-changes.patch
 
 2) Apply using `git apply` from repo root:
 
-   git apply --index patches/squash-validate-changes.patch
+   git apply --index archive/patches/squash-validate-changes.patch
 
    - If `git apply` complains about mismatched hunks, you can use `git apply --allow-overlap --index` or apply individual file sections manually.
 
