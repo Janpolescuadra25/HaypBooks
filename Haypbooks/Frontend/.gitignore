@@ -8,3 +8,6 @@ out
 
 # Local e2e fixtures (sensitive test credentials)
 e2e/fixtures/tmp_acct.json
+
+# Playwright / test artifacts
+test-results/

@@ -2,7 +2,8 @@
 Haypbooks/Backend/logs/
 
 # Test artifacts
-test-results/
+# Root-level test-results moved to frontend test-results
+Haypbooks/Frontend/test-results/
 
 # Temporary / local files
 tmp/
