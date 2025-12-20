@@ -13,8 +13,8 @@
     "test:limited": "node --max-old-space-size=6144 ./node_modules/jest/bin/jest.js --maxWorkers=4",
     "test:coverage": "node --max-old-space-size=6144 ./node_modules/jest/bin/jest.js --maxWorkers=4 --coverage",
     "smoke": "node ./scripts/smoke.js",
-    "e2e": "node ../../scripts/wait-for-backend.js http://127.0.0.1:4000/api/health 60 && playwright test --project=chromium",
-    "e2e:hub": "node ../../scripts/wait-for-backend.js http://127.0.0.1:4000/api/health 60 && playwright test e2e/signup-role-hub.spec.ts --project=chromium",
+    "e2e": "node ../Backend/scripts/wait-for-backend.js http://127.0.0.1:4000/api/health 60 && playwright test --project=chromium",
+    "e2e:hub": "node ../Backend/scripts/wait-for-backend.js http://127.0.0.1:4000/api/health 60 && playwright test e2e/signup-role-hub.spec.ts --project=chromium",
     "e2e:signup:manual": "node e2e/scripts/run-signup-e2e.js",
     "e2e:headed": "playwright test --headed",
     "e2e:report": "playwright show-report"
