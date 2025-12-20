@@ -1,0 +1,40 @@
+import React from 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import AccountantOnboarding from '../app/onboarding/accountant/page'
+import apiClient from '@/lib/api-client'
+
+jest.mock('@/lib/api-client')
+const mockPost = apiClient.post as jest.Mock
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() })
+}))
+
+describe('AccountantOnboarding', () => {
+  it('disables finish and shows inline error when firm name missing', () => {
+    render(<AccountantOnboarding />)
+    const btn = screen.getByRole('button', { name: /finish setup/i })
+    // Button should be disabled when no firm name
+    expect(btn).toBeDisabled()
+    const input = screen.getByPlaceholderText(/your firm name/i)
+    // Blurring empty input should display validation
+    fireEvent.blur(input)
+    expect(screen.getByText(/firm name is required/i)).toBeInTheDocument()
+    // Skip action should not be present
+    expect(screen.queryByText(/skip for now/i)).toBeNull()
+  })
+
+  it('posts to API and navigates on success', async () => {
+    mockPost.mockResolvedValue({ status: 200 })
+    const pushMock = jest.fn()
+    const rn = require('next/navigation')
+    rn.useRouter = () => ({ push: pushMock })
+    render(<AccountantOnboarding />)
+    const input = screen.getByPlaceholderText(/your firm name/i)
+    fireEvent.change(input, { target: { value: 'Rivera CPA' } })
+    const btn = screen.getByRole('button', { name: /finish setup/i })
+    fireEvent.click(btn)
+    await waitFor(() => expect(mockPost).toHaveBeenCalled())
+    expect(pushMock).toHaveBeenCalledWith('/hub/accountant')
+  })
+})

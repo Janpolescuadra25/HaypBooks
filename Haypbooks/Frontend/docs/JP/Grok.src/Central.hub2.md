@@ -273,10 +273,10 @@ This section enumerates every modal and form required by the Hub/Onboarding flow
 
 - **When shown**: New Accountant signup or when `accountantOnboardingComplete` is false after selecting Accountant hub.
 - **Fields**:
-  - `firmName` (required, min 2 chars)
+  - `firmName` **(required — no skip allowed)**, min 2 chars
   - `practiceSize` (optional, numeric or select)
   - `contactPhone` (optional, formatting validation)
-- **API**: `POST /api/onboarding/complete` with `{ hub: 'ACCOUNTANT', type: 'full', details: { firmName, ... } }` (server sets `accountantOnboardingComplete = true`).
+- **API**: `POST /api/onboarding/complete` with `{ hub: 'ACCOUNTANT', type: 'full', details: { firmName, ... } }` (server sets `accountantOnboardingComplete = true`). The Accountant onboarding **does not** offer a "Skip for now" action — firm name must be provided to complete onboarding and access the Accountant Hub.
 - **Accessibility & Acceptance**: focus management, explicit required-field labels, tests verifying the flag is set after completion.
 
 ### 9.4 Hub Switcher (Top-right) — UX Rules
