@@ -5,8 +5,8 @@ const { spawnSync } = require('child_process')
 const waitScript = 'http://127.0.0.1:4000/api/health'
 
 function waitForBackend() {
-  // wait-for-backend moved to Backend/scripts; Frontend script runs from Frontend cwd so resolve via ../Backend
-  const waitPath = path.join(process.cwd(), '..', 'Backend', 'scripts', 'wait-for-backend.js')
+  // wait-for-backend moved into Haypbooks/Backend/scripts
+  const waitPath = path.join(__dirname, '..', 'Haypbooks', 'Backend', 'scripts', 'wait-for-backend.js')
   const res = spawnSync('node', [waitPath, waitScript, '60'], { stdio: 'inherit' })
   if (res.status !== 0) {
     console.error('Backend not healthy; aborting')
