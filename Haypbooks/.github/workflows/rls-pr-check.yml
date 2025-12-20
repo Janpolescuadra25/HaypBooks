@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - 'Backend/**'
-      - 'scripts/db/**'
-      - 'scripts/test/**'
+      - 'Haypbooks/Backend/scripts/db/**'
+      - 'Haypbooks/Backend/scripts/test/**'
       - '.github/workflows/**'
 
 jobs:
