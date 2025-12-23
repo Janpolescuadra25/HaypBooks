@@ -55,11 +55,25 @@ export class TestController {
   }
 
   @Post('create-user')
-  async createUser(@Body() body: { email: string; password: string; name?: string; isEmailVerified?: boolean; isAccountant?: boolean }) {
+  async createUser(@Body() body: { email: string; password: string; name?: string; isEmailVerified?: boolean; isAccountant?: boolean; role?: string }) {
     this.ensureEnabled()
     const hash = await bcrypt.hash(body.password, 10)
-    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', isEmailVerified: !!body.isEmailVerified, isAccountant: !!body.isAccountant } })
+    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', isEmailVerified: !!body.isEmailVerified, isAccountant: !!body.isAccountant, role: body.role } })
     return { id: created.id, email: created.email }
+  }
+
+  @Post('set-trial')
+  async setTrial(@Body() body: { email?: string; id?: string; trialEndsAt: string }) {
+    this.ensureEnabled()
+    if (!body || !body.trialEndsAt) return { error: 'missing trialEndsAt' }
+    // Prefer identifying by id, fallback to email
+    let where: any = {}
+    if (body.id) where = { id: body.id }
+    else if (body.email) where = { email: body.email }
+    else return { error: 'missing id or email' }
+
+    const updated = await this.prisma.user.update({ where, data: { trialEndsAt: body.trialEndsAt, trialStartedAt: new Date().toISOString() } })
+    return { id: updated.id, trialEndsAt: updated.trialEndsAt }
   }
 
   @Get('sessions')
