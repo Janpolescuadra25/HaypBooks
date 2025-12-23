@@ -18,8 +18,12 @@ export class UsersService {
     // Ensure required fields for frontend are present
     return {
       ...result,
+      // Back-compat: global flag
       onboardingCompleted: result.onboardingComplete ?? false,
       onboardingMode: result.onboardingMode || 'full',
+      // Per-hub flags
+      ownerOnboardingCompleted: (result as any).ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: (result as any).accountantOnboardingComplete ?? false,
     }
   }
 
@@ -29,6 +33,12 @@ export class UsersService {
       throw new NotFoundException('User not found')
     }
     const { password, ...result } = user
+    return result
+  }
+
+  async setPreferredHub(userId: string, preferredHub: 'OWNER' | 'ACCOUNTANT') {
+    const updated = await this.userRepository.update(userId, { preferredHub } as any)
+    const { password, ...result } = updated
     return result
   }
 }

@@ -17,7 +17,7 @@ export class PrismaAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signup(email: string, password: string, name?: string) {
+  async signup(email: string, password: string, name?: string, role?: string) {
     const existing = await this.userRepo.findByEmail(email)
     if (existing) {
       // Log failed signup attempt
@@ -26,7 +26,9 @@ export class PrismaAuthService {
     }
 
     const hashed = await bcrypt.hash(password, 10)
-    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false })
+    const isAccountant = role === 'accountant' || role === 'both'
+    const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
+    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub })
 
     // Log successful signup
     await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })
@@ -39,10 +41,17 @@ export class PrismaAuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      isAccountant: user.isAccountant ?? false,
       onboardingCompleted: user.onboardingComplete ?? false,
       onboardingComplete: user.onboardingComplete ?? false,
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
+      // Per-hub flags
+      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      preferredHub: user.preferredHub ?? null,
+      // If the user has both roles and hasn't chosen a preferred hub, the frontend should show the Hub Selection modal
+      requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
     }
     
     return { token, user: userResponse }
@@ -98,10 +107,49 @@ export class PrismaAuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      isAccountant: user.isAccountant ?? false,
       onboardingCompleted: user.onboardingComplete ?? false,
       onboardingComplete: user.onboardingComplete ?? false, // Both formats for compatibility
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
+      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      preferredHub: user.preferredHub ?? null,
+      requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
+    }
+
+    return { token, refreshToken, user: userResponse }
+  }
+
+  async createSessionForUser(userId: string, ipAddress?: string, userAgent?: string) {
+    const user = await this.userRepo.findById(userId)
+    if (!user) return null
+
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
+    const refreshToken = this.jwtService.sign({ sub: user.id }, { expiresIn: '7d' })
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    try {
+      await this.sessionRepo.create({ userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date() })
+    } catch (e) {
+      // ignore failures creating session to avoid blocking verification flow
+      console.error('Failed to create session for user', e?.message || e)
+    }
+
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isAccountant: user.isAccountant ?? false,
+      onboardingCompleted: user.onboardingComplete ?? false,
+      onboardingComplete: user.onboardingComplete ?? false,
+      onboardingMode: user.onboardingMode || 'full',
+      isEmailVerified: user.isEmailVerified ?? false,
+      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      preferredHub: user.preferredHub ?? null,
+      requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
     }
 
     return { token, refreshToken, user: userResponse }
@@ -136,10 +184,15 @@ export class PrismaAuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      isAccountant: user.isAccountant ?? false,
       onboardingCompleted: user.onboardingComplete ?? false,
       onboardingComplete: user.onboardingComplete ?? false,
       onboardingMode: user.onboardingMode || 'full',
       isEmailVerified: user.isEmailVerified ?? false,
+      ownerOnboardingCompleted: (user as any).ownerOnboardingComplete ?? false,
+      accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
+      preferredHub: user.preferredHub ?? null,
+      requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
     }
 
     return { token, refreshToken: newRefresh, user: userResponse }

@@ -92,7 +92,7 @@ export default function OnboardingPage() {
         const res = await fetch('/api/onboarding/complete', { method: 'POST', body: JSON.stringify({ type: 'full' }), headers: { 'Content-Type': 'application/json' } })
         if (!res.ok) throw new Error('complete failed')
       } else {
-        const res = await apiClient.post('/api/onboarding/complete', { type: 'full' })
+        const res = await apiClient.post('/api/onboarding/complete', { type: 'full', hub: 'OWNER' })
         if (!(res.status >= 200 && res.status < 300)) throw new Error('complete failed')
       }
       router.push('/dashboard')
@@ -122,11 +122,11 @@ export default function OnboardingPage() {
         const res = await fetch('/api/onboarding/complete', { method: 'POST', body: JSON.stringify({ type: 'quick' }), headers: { 'Content-Type': 'application/json' } })
         if (!res.ok) throw new Error('complete failed')
       } else {
-        const res = await apiClient.post('/api/onboarding/complete', { type: 'quick' })
+        const res = await apiClient.post('/api/onboarding/complete', { type: 'quick', hub: 'OWNER' })
         if (!(res.status >= 200 && res.status < 300)) throw new Error('complete failed')
       }
-      // After marking onboarding complete (quick), navigate to home/dashboard
-      router.push('/dashboard')
+      // After marking onboarding complete (quick), navigate to Central Hub
+      router.push('/hub/companies')
     } catch (err) {
       console.error(err)
       // Mark onboarding complete locally as a fallback so the UI renders (top bar/sidebar)
@@ -291,7 +291,7 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
           33% { transform: translate(30px, -30px) rotate(5deg); }

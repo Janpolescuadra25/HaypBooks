@@ -9,6 +9,8 @@ import useUI from '@/stores/ui'
 import { getProfileCached } from '@/lib/profile-cache'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import DashboardBrand from '@/components/DashboardBrand'
+import CompanySwitcher from '@/components/CompanySwitcher'
+import HubSwitcher from '@/components/HubSwitcher'
 
 export default function AppShellHeader() {
   const pathname = usePathname()
@@ -78,6 +80,13 @@ export default function AppShellHeader() {
             </div>
             <span className="text-base font-semibold text-slate-800">HaypBooks</span>
           </a>
+          <div className="ml-2">
+            <CompanySwitcher />
+          </div>
+          {/* Hub switcher for users with multiple roles (explicit context switch) */}
+          <div className="ml-2 hidden md:flex">
+            <HubSwitcher />
+          </div>
         </div>
 
         {/* Center: Global search (grows) */}

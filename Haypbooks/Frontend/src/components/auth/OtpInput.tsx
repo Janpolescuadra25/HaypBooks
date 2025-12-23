@@ -92,7 +92,7 @@ export default function OtpInput({ length = 6, value = '', onChange, ariaLabel }
         />
       ))}
 
-      <style jsx>{`
+      <style>{`
         input:focus {
           transform: scale(1.05);
         }

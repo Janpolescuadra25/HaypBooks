@@ -13,6 +13,7 @@ import ResetPasswordPage from '@/app/(public)/reset-password/page'
 jest.mock('@/services/auth.service', () => ({
   authService: {
     isAuthenticated: () => true,
+    getCurrentUser: () => Promise.resolve({ id: 'u-test', email: 'a@b.com' })
   }
 }))
 

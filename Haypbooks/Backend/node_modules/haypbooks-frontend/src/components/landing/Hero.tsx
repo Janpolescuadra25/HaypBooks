@@ -19,13 +19,31 @@ export default function Hero() {
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
           <Link 
-            href="/signup" 
+            href="/signup?showSignup=1&role=business"
+            onClick={async (e) => {
+              // If authenticated, confirm signout first so signup can proceed
+              try {
+                const auth = await import('@/services/auth.service')
+                const isAuth = auth?.authService?.isAuthenticated?.() || false
+                if (isAuth) {
+                  e.preventDefault()
+                  const ok = confirm('You are currently signed in. Sign out to create a new account?')
+                  if (!ok) return
+                  try { await auth.authService.logout() } catch (e) {}
+                  try { localStorage.setItem('hasSeenIntro','true'); window.dispatchEvent(new Event('suppressIntro')) } catch (e) {}
+                  try { window.location.href = '/signup?showSignup=1&role=business' } catch (e) {}
+                  return
+                }
+              } catch (e) {}
+
+              if (typeof window !== 'undefined') { localStorage.setItem('hasSeenIntro','true'); window.dispatchEvent(new Event('suppressIntro')) }
+            }}
             className="px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
           >
-            Start Free 30-Day Trial
+            Start Subscription
           </Link>
           <Link 
-            href="/login" 
+            href="/login?showLogin=1" 
             className="px-8 py-4 bg-white text-blue-600 text-lg font-semibold rounded-xl hover:bg-gray-50 transition-all border-2 border-blue-600"
           >
             Sign In

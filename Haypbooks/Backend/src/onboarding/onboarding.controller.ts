@@ -26,26 +26,22 @@ export class OnboardingController {
   @Post('complete')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async complete(@Request() req, @Res({ passthrough: true }) res: Response, @Body() body: { type?: 'quick' | 'full' }) {
+  async complete(@Request() req, @Res({ passthrough: true }) res: Response, @Body() body: { type?: 'quick' | 'full', hub?: 'OWNER' | 'ACCOUNTANT' }) {
     const userId = req.user.userId
     const type = body?.type || 'full'
-    await this.onboardingService.complete(userId, type)
+    const hub = body?.hub || 'OWNER'
+    await this.onboardingService.complete(userId, type, hub)
 
-    // Set cookie
-    res.cookie('onboardingComplete', 'true', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    })
+    // Set per-hub cookie
+    if (hub === 'ACCOUNTANT') {
+      res.cookie('onboardingAccountantComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+    } else {
+      res.cookie('onboardingOwnerComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+    }
 
-    // Expose onboarding mode client-side so the frontend can act accordingly
-    res.cookie('onboardingMode', type, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
+    // For backwards compatibility, also set the global cookie and mode
+    res.cookie('onboardingComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+    res.cookie('onboardingMode', type, { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
 
     return { success: true }
   }

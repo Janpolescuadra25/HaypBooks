@@ -9,6 +9,9 @@ export class LoginDto {
 
   @IsNotEmpty()
   password: string
+  // Optional frontend hint to request accountant view
+  @IsOptional()
+  loginAsAccountant?: boolean
 }
 
 export class SignupDto {

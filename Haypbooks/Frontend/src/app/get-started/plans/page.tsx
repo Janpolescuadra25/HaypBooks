@@ -1,0 +1,61 @@
+"use client"
+import { useRouter } from 'next/navigation'
+
+export default function GetStartedPlansPage() {
+  const router = useRouter()
+
+  function handleGetStarted() {
+    // proceed into the 3-step subscribe flow
+    router.push('/get-started/subscribe')
+  }
+
+  return (
+    <div className="min-h-screen flex items-start justify-center px-4 py-10 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white">
+      <div className="max-w-xl w-full">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-lg">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Welcome to HaypBooks 👋</h1>
+          <p className="text-base text-slate-700">We’re glad you’re here. HaypBooks helps you manage accounting with clarity and confidence.</p>
+        </div>
+
+
+
+        <div className="bg-white rounded-2xl shadow p-6 border border-white/40">
+          <h2 className="text-xl font-semibold text-slate-800 mb-3">Let's get started</h2>
+          <p className="text-slate-600 mb-6">Tell us your business name to personalize your experience.</p>
+
+          <div className="max-w-md mx-auto">
+            <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 mb-2">Company name</label>
+            <input id="company-name" type="text" placeholder="e.g., Acme Widgets LLC" className="w-full px-4 py-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90" required />
+            <p className="mt-3 text-sm text-slate-600">This will be the name of the new company you're adding to your HaypBooks account.</p>
+          </div>
+
+          <div className="mt-6">
+            <div className="flex items-center justify-center gap-3 flex-col sm:flex-row">
+              <button onClick={handleGetStarted} className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all shadow">Get Started with Plans</button>
+
+              {/* OR separator for wide screens; inline for accessibility */}
+              <div className="my-2 sm:my-0 text-sm text-slate-500">or</div>
+
+              <a href="/trial" aria-label="Start free trial" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 border border-emerald-600 text-emerald-600 rounded-lg text-sm font-semibold bg-white hover:bg-emerald-50">Start Free Trial</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-slate-600 mb-4">Need help? Our support team is always ready to assist.</p>
+        </div>
+
+        {/* Mobile sticky CTA for trial */}
+        <div className="fixed left-4 right-4 bottom-6 sm:hidden z-50">
+          <a href="/trial" aria-label="Start free trial" className="w-full inline-flex justify-center items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold shadow-lg">Start Free Trial</a>
+        </div>
+      </div>
+    </div>
+  )
+}

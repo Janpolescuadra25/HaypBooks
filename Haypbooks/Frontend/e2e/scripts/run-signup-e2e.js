@@ -27,7 +27,6 @@ function waitForBackend() {
     await page.click('button:has-text("Accountant")')
     await page.fill('#firstName', 'E2E')
     await page.fill('#lastName', 'Accountant')
-    await page.fill('#companyName', 'ACME Firm (E2E)')
     await page.fill('#email', acctEmail)
     await page.fill('#password', 'Playwright1!')
     await page.fill('#confirmPassword', 'Playwright1!')
@@ -43,15 +42,33 @@ function waitForBackend() {
     await page.click('button:has-text("My Business")')
     await page.fill('#firstName', 'E2E')
     await page.fill('#lastName', 'Owner')
-    await page.fill('#companyName', 'ACME Corp (E2E)')
     await page.fill('#email', bizEmail)
     await page.fill('#password', 'Playwright1!')
     await page.fill('#confirmPassword', 'Playwright1!')
     await Promise.all([
-      page.waitForNavigation({ url: '**/onboarding/tenant', timeout: 15000 }),
+      page.waitForNavigation({ url: '**/verify-otp', timeout: 15000 }),
       page.click('button:has-text("Create account")')
     ])
-    console.log('Business signup => redirected to /onboarding/tenant: OK')
+    console.log('Business signup => redirected to /verify-otp: OK')
+
+    // Retrieve dev OTP and verify
+    const otpResp = await (await fetch(`http://127.0.0.1:4000/api/test/otp/latest?email=${encodeURIComponent(bizEmail)}&purpose=VERIFY`)).json()
+    const otp = otpResp?.otp
+    if (!otp) throw new Error('Unable to fetch OTP for business signup')
+
+    await page.fill('input[name="otp"]', otp)
+    await Promise.all([
+      page.waitForNavigation({ url: '**/signup/get-started', timeout: 15000 }),
+      page.click('button:has-text("Verify")')
+    ])
+    console.log('Business signup => verified and redirected to /signup/get-started: OK')
+
+    // From Get Started, start trial and ensure we reach onboarding tenant in trial mode
+    await Promise.all([
+      page.waitForNavigation({ url: '**/onboarding/tenant?mode=trial', timeout: 15000 }),
+      page.click('button:has-text("Start Subscription")')
+    ])
+    console.log('Business signup => start trial => reached /onboarding/tenant?mode=trial: OK')
 
     console.log('All signup role E2E checks passed')
   } catch (err) {

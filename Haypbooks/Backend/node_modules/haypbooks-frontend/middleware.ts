@@ -2,14 +2,10 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // Paths that do not require auth
+// Keep general public assets and landing; specific auth pages are handled below to
+// allow redirecting authenticated users away from auth pages when appropriate.
 const PUBLIC_PATHS = [
   '/landing',
-  '/login',
-  '/signup',
-  '/forgot-password',
-  '/verify-otp',
-  '/reset-password',
-  '/api/auth',
   '/_next',
   '/favicon.ico',
 ]
@@ -49,8 +45,8 @@ export function middleware(req: NextRequest) {
     if (token && onboardingComplete !== 'true') {
       return NextResponse.redirect(new URL('/onboarding', req.url))
     }
-    // Otherwise, go to dashboard
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+    // Otherwise, go to Central Hub (hub page outside the core app)
+    return NextResponse.redirect(new URL('/hub/companies', req.url))
   }
 
   // Special handling for onboarding - allow if authenticated
@@ -74,7 +70,19 @@ export function middleware(req: NextRequest) {
   // If user already authenticated, avoid letting them visit auth pages directly
   const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/verify-otp', '/reset-password']
   if (token && AUTH_PAGES.some(p => pathname.startsWith(p))) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+    // Allow `/login?loggedOut=1` or `/login?showLogin=1` so a just-logged-out user or
+    // someone intentionally requesting the sign-in form can see the page even if a cookie
+    // still lingers due to a race or slow Set-Cookie processing.
+    try {
+      const loggedOut = req.nextUrl.searchParams.get('loggedOut')
+      const showLogin = req.nextUrl.searchParams.get('showLogin')
+      if (pathname.startsWith('/login') && (loggedOut === '1' || showLogin === '1')) {
+        return NextResponse.next()
+      }
+    } catch (e) {
+      // ignore and fall through to redirect
+    }
+    return NextResponse.redirect(new URL('/companies', req.url))
   }
 
   // Allow opt-out for CI/tests/dev if explicitly requested
@@ -92,6 +100,14 @@ export function middleware(req: NextRequest) {
         // Use the full onboarding path by default so the lifecycle is: login -> onboarding -> app
         url.pathname = '/onboarding'
       return NextResponse.redirect(url)
+    }
+  }
+
+  // Protect accountant routes: only users with isAccountant cookie === 'true' may visit
+  if (pathname.startsWith('/accountant')) {
+    const isAccountant = req.cookies.get('isAccountant')?.value
+    if (isAccountant !== 'true') {
+      return NextResponse.redirect(new URL('/companies', req.url))
     }
   }
 

@@ -63,12 +63,17 @@ export class AuthService {
     // Hash password
     const hashedPassword = await bcrypt.hash(signupDto.password, 10)
 
+    // Determine role and flags
+    const roleToAssign = signupDto.role === 'accountant' ? 'accountant' : 'owner'
+
     // Create user
     const user = await this.userRepository.create({
       email: signupDto.email,
       name: signupDto.name,
       password: hashedPassword,
-      role: 'owner',
+      role: roleToAssign,
+      isAccountant: roleToAssign === 'accountant',
+      preferredHub: roleToAssign === 'accountant' ? 'ACCOUNTANT' : 'OWNER',
     })
 
     // Generate token

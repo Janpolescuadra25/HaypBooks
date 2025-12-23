@@ -8,6 +8,20 @@ import { z } from 'zod'
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+
+  // If navigated to signup with explicit showSignup=1, opt out of the cinematic intro immediately
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const p = new URLSearchParams(window.location.search)
+        if (p.get('showSignup') === '1') {
+          try { localStorage.setItem('hasSeenIntro', 'true') } catch {}
+        }
+      }
+    } catch (e) {}
+  }, [])
+
   useEffect(() => {
     let mounted = true
 
@@ -30,23 +44,36 @@ export default function SignupPage() {
 
     checkSession()
 
+    // If a `role` query param is present, pre-select the role and show form
+    try {
+      if (searchParams) {
+        const r = searchParams.get('role')
+        if (r === 'accountant') { setRole('accountant'); setStep('form') }
+        if (r === 'business') { setRole('business'); setStep('form') }
+      }
+    } catch (e) {}
+
     return () => { mounted = false }
   }, [router])
+  // Basic shape validation with zod; companyName is validated dynamically based on selected role
   const signupSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
-    companyName: z.string().min(1, 'Company name is required'),
+    companyName: z.string().optional(), // role-specific validation done at submit
     email: z.string().email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters').regex(/(?=.*[A-Z])(?=.*\d)/, 'Include an uppercase letter and a number'),
     confirmPassword: z.string().min(1)
   }).refine((data) => data.password === data.confirmPassword, { message: 'Passwords must match', path: ['confirmPassword'] })
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, watch } = useForm({ resolver: zodResolver(signupSchema) })
+  const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setError } = useForm({ resolver: zodResolver(signupSchema) })
   const passwordValue = watch('password')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  // roleSelectionStep: 'role' shows the initial choice UI; 'form' shows the signup form
+  const [step, setStep] = useState<'role'|'form'>('role')
+  const [role, setRole] = useState<'business'|'accountant'>('business')
 
   const passwordStrength = (password: string) => {
     if (password.length === 0) return { strength: 0, label: '', color: '' }
@@ -61,33 +88,44 @@ export default function SignupPage() {
   const strength = passwordStrength(passwordValue || '')
 
   async function handleFormSubmit(data: any) {
-    setError(null)
+    setFormError(null)
     setLoading(true)
     try {
-      const signupResp = await authService.signup({
+
+
+      const payload: any = {
         firstName: data.firstName,
         lastName: data.lastName,
-        companyName: data.companyName,
         email: data.email,
         password: data.password,
-      })
+      }
+      if (data.companyName && String(data.companyName).trim()) payload.companyName = data.companyName
+      if (role === 'accountant') payload.role = 'accountant'
 
-      // request a verification OTP explicitly (backend also triggers this)
-      // Backend triggers a verification OTP automatically; call sendVerification for extra safety
+      const signupResp = await authService.signup(payload)
+
+      // After signup, send users to the Verify OTP UI so they can enter the 6-digit code.
       try {
-        const sendResp = await authService.sendVerification(data.email)
-        // If server returned the OTP in dev, forward into verify with code prefilled
-        const devOtp = (sendResp as any)?.otp || (signupResp as any)?._devOtp
-        if (devOtp) {
-          location.href = `/verify-otp?email=${encodeURIComponent(data.email)}&flow=signup&code=${encodeURIComponent(devOtp)}`
-          return
-        }
-      } catch (e) {}
-
-      // redirect to verification
-      location.href = `/verify-otp?email=${encodeURIComponent(data.email)}&flow=signup`
+        const devOtp = (signupResp as any)?._devOtp
+        const emailParam = encodeURIComponent(signupResp.user?.email || payload.email)
+        const roleParam = role ? `&role=${encodeURIComponent(role)}` : ''
+        const codeParam = devOtp ? `&code=${encodeURIComponent(devOtp)}` : ''
+        location.href = `/verify-otp?email=${emailParam}&flow=signup${roleParam}${codeParam}`
+        return
+      } catch (e) {
+        // fallback: send to onboarding to preserve previous behavior
+        if (role === 'accountant') location.href = '/onboarding/accountant'
+        else location.href = '/onboarding/tenant'
+        return
+      }
     } catch (e: any) {
-      setError(e.response?.data?.message || 'Signup failed. Please try again.')
+      const status = e?.response?.status
+      if (status === 409) {
+        // Account already exists: guide user to login instead of creating duplicate
+        setFormError('An account already exists for that email. Please sign in or reset your password.')
+      } else {
+        setFormError(e.response?.data?.message || 'Signup failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -109,71 +147,86 @@ export default function SignupPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Create your account</h1>
-          <p className="text-slate-600">Start your free 30-day trial. No credit card required.</p>
+          <p className="text-slate-600 mt-2">Manage your accounting with clarity and confidence using HaypBooks.</p>
+
+          {/* Role selection step */}
+          {step === 'role' ? (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Which best describes your role?</h3>
+              <div className="flex flex-col gap-3">
+                <button type="button" onClick={() => { setRole('business'); setStep('form') }} className="text-left p-4 rounded-xl border bg-white">
+                  <div className="font-medium">My Business</div>
+                  <div className="text-sm text-slate-500">I’m the owner running and managing my business</div>
+                </button>
+                <button type="button" onClick={() => { setRole('accountant'); setStep('form') }} className="text-left p-4 rounded-xl border bg-white">
+                  <div className="font-medium">Accountant</div>
+                  <div className="text-sm text-slate-500">I support clients by managing their accounts</div>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
         </div>
 
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5" noValidate>
-          <div className="grid grid-cols-2 gap-4">
+        {step === 'form' ? (
+          <>
+            <div className="mb-4 flex items-center justify-start">
+              <button data-testid="signup-back-to-role" type="button" onClick={() => setStep('role')} aria-label="Back to role selection" className="text-sm text-slate-600 hover:text-slate-800 inline-flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
+                Back
+              </button>
+            </div>
+            <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5" noValidate>
+              <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-2">
+                  First name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  {...register('firstName')}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
+                  placeholder="Juan"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-2">
+                  Last name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  {...register('lastName')}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
+                  placeholder="Dela Cruz"
+                  required
+                />
+              </div>
+            </div>
+
+
+
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-2">
-                First name
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                Email address
               </label>
               <input
-                id="firstName"
-                type="text"
-                {...register('firstName')}
+                id="email"
+                type="email"
+                {...register('email')}
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
-                placeholder="Juan"
+                placeholder="name@company.com"
                 required
               />
             </div>
+
+            
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-2">
-                Last name
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                Password
               </label>
-              <input
-                id="lastName"
-                type="text"
-                {...register('lastName')}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
-                placeholder="Dela Cruz"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="companyName" className="block text-sm font-medium text-slate-700 mb-2">
-              Company name
-            </label>
-            <input
-              id="companyName"
-              type="text"
-              {...register('companyName')}
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
-              placeholder="ACME Corp"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              {...register('email')}
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
-              placeholder="name@company.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-              Password
-            </label>
             <div className="relative">
               <input
                 id="password"
@@ -254,12 +307,12 @@ export default function SignupPage() {
             )}
           </div>
 
-          {error && (
+          {formError && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm animate-slide-down flex items-start gap-2">
               <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>{error}</span>
+              <span>{formError}</span>
             </div>
           )}
 
@@ -286,11 +339,13 @@ export default function SignupPage() {
             <a href="#" className="text-emerald-600 hover:underline">Privacy Policy</a>
           </p>
         </form>
+          </>
+        ) : null}
 
         <div className="mt-6 text-center">
           <p className="text-sm text-slate-600">
             Already have an account?{' '}
-            <a href="/login" className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
+            <a href="/login?showLogin=1" className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
               Sign in
             </a>
           </p>

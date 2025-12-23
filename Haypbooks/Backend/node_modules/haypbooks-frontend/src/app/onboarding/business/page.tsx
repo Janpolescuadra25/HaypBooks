@@ -60,7 +60,7 @@ export default function QuickBusinessOnboarding() {
         const r = await apiClient.post('/api/onboarding/complete', { type: 'quick' })
         if (!(r.status >= 200 && r.status < 300)) throw new Error('complete failed')
       }
-      router.push('/dashboard')
+      router.push('/hub/companies')
     } catch (err) {
       console.error(err)
       alert('Failed to complete onboarding')
@@ -119,14 +119,14 @@ export default function QuickBusinessOnboarding() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
-                Go to Dashboard
+                Open Books
               </span>
             )}
           </button>
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
           33% { transform: translate(30px, -30px) rotate(5deg); }

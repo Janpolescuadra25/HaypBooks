@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Req, Patch } from '@nestjs/common'
+import { Controller, Post, Get, Body, Param, UseGuards, Req, Patch, Query, HttpCode, HttpStatus } from '@nestjs/common'
 import { CompanyService } from './company.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 
@@ -13,9 +13,18 @@ export class CompaniesController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async list(@Req() req: any) {
+  async list(@Req() req: any, @Query('filter') filter?: string) {
     const userId = req.user?.userId
-    return this.svc.listCompaniesForUser(userId)
+    const email = req.user?.email
+    return this.svc.listCompaniesForUser(userId, filter, email)
+  }
+
+  @Get('recent')
+  @UseGuards(JwtAuthGuard)
+  async recent(@Req() req: any, @Query('limit') limit?: string) {
+    const userId = req.user?.userId
+    const l = limit ? parseInt(limit, 10) : 10
+    return this.svc.listRecentForUser(userId, l)
   }
 
   @Get(':id')
@@ -28,5 +37,13 @@ export class CompaniesController {
   async patchLastAccessed(@Req() req: any, @Param('id') id: string) {
     const userId = req.user?.userId
     return this.svc.updateLastAccessed(userId, id)
+  }
+
+  @Post('invites/:inviteId/accept')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async acceptInvite(@Req() req: any, @Param('inviteId') inviteId: string, @Body() body: { setIsAccountant?: boolean } = {}) {
+    const userId = req.user?.userId
+    return this.svc.acceptInvite(userId, inviteId, !!body.setIsAccountant)
   }
 }

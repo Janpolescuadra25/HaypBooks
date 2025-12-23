@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
         )}
 
         <div className="mt-6 pt-6 border-t border-slate-200 text-center">
-          <a href="/login" className="text-sm text-slate-500 hover:text-slate-700 transition-colors inline-flex items-center gap-1">
+          <a href="/login?showLogin=1" className="text-sm text-slate-500 hover:text-slate-700 transition-colors inline-flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
           33% { transform: translate(30px, -30px) rotate(5deg); }

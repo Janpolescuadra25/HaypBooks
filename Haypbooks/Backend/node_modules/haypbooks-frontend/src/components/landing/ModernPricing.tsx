@@ -47,7 +47,7 @@ export default function ModernPricing() {
         { text: 'Inventory tracking (basic)', included: true },
         { text: 'Custom branding', included: false }
       ],
-      cta: 'Start Free Trial',
+      cta: 'Start Subscription',
       popular: false,
       color: 'from-emerald-500 to-teal-600'
     },
@@ -69,7 +69,7 @@ export default function ModernPricing() {
         { text: '24/7 priority support', included: true },
         { text: 'Dedicated account manager', included: false }
       ],
-      cta: 'Start Free Trial',
+      cta: 'Start Subscription',
       popular: true,
       color: 'from-teal-500 to-cyan-600'
     },
@@ -91,7 +91,7 @@ export default function ModernPricing() {
         { text: 'Custom training sessions', included: true },
         { text: 'SLA guarantee (99.9%)', included: true }
       ],
-      cta: 'Start Free Trial',
+      cta: 'Start Subscription',
       popular: false,
       color: 'from-purple-500 to-indigo-600'
     },
@@ -144,7 +144,7 @@ export default function ModernPricing() {
           </h2>
           
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-            Start free, scale as you grow. All plans include 30-day trial.
+            Start now, scale as you grow. All plans include immediate access; charges apply immediately.
           </p>
 
           {/* Billing Toggle */}
@@ -249,7 +249,8 @@ export default function ModernPricing() {
 
                   {/* CTA Button */}
                   <Link
-                    href={plan.name === 'Enterprise' ? '/contact' : '/signup'}
+                    href={plan.name === 'Enterprise' ? '/contact' : '/signup?showSignup=1'}
+                    onClick={() => { try { localStorage.setItem('hasSeenIntro','true'); window.dispatchEvent(new Event('suppressIntro')) } catch (e) {} }} 
                     className={`block w-full py-3 px-6 rounded-xl font-semibold text-center transition-all duration-300 mb-8 ${
                       plan.popular
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg hover:shadow-xl hover:scale-105'

@@ -3,6 +3,7 @@ import { ReactNode, useEffect } from 'react'
 import AppShellHeader from '@/components/AppShellHeader'
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
+import { PUBLIC_PATH_PREFIXES } from '../config/publicPaths'
 import Sidebar from '@/components/Sidebar'
 import CommandPalette from '@/components/CommandPalette'
 import { useCommandPalette } from '@/stores/commandPalette'
@@ -92,20 +93,9 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
   // Using usePathname makes onboarding -> / navigation immediately re-render
   // and reveal the app chrome without requiring the user to refresh.
   const pathname = usePathname?.() || (typeof window !== 'undefined' ? window.location.pathname : '/')
-  // Keep any public auth/marketing pages out of the app chrome
-  const PUBLIC_PATHS = [
-    '/',
-    '/landing',
-    '/login',
-    '/signup',
-    '/pricing',
-    '/forgot-password',
-    '/verify-otp',
-    '/reset-password',
-    '/onboarding',
-    '/onboarding/business'
-  ]
-  const isPublic = pathname === '/' || PUBLIC_PATHS.some(p => p !== '/' && pathname.startsWith(p))
+  // Use centralized public path prefixes so new public pages can be registered
+  // in one place and tests / runtime logic stay consistent.
+  const isPublic = pathname === '/' || PUBLIC_PATH_PREFIXES.some(p => p !== '/' && pathname.startsWith(p))
 
   return (
     <>

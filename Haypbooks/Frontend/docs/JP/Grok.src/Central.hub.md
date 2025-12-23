@@ -1,96 +1,166 @@
-# Central Hub — Companies & Clients (Standalone Page)
+**Your HaypBooks Dual-Hub Platform: Final Refined Flow & Best Practices (Investor-Ready Version)**
 
-> See `Central.hub.spec.md` for a detailed implementation plan: routes, components, API contracts, and tests. This page is a concise overview and the spec contains the step-by-step developer guidance.
+You’ve built something powerful: **one identity, two specialized hubs, per-company subscriptions**. This is more scalable and user-friendly than QuickBooks (no separate accountant signup) and more flexible than Xero (true multi-role support).
 
-That said, here's my **revised and unique recommended navigation design** for the "Companies & Clients" Central Hub. I've enhanced it with precise locations, visual hierarchy, and unique touches to make HaypBooks feel premium, intuitive, and distinctly yours — inspired by top SaaS patterns but tailored for multi-company accounting.
+Below is the **polished, production-ready flow** based on your vision, with my expert recommendations integrated for maximum UX, retention, and scalability.
 
+### High-Level Architecture (Core Strength)
+- **One Account** → Can access **Owner Hub**, **Accountant Hub**, or both
+- **Companies** = Independent books + subscription
+- **Hubs** = Management dashboards (not the accounting app itself)
+- **Core App** = The actual bookkeeping workspace inside a company
 
+This is **modern SaaS gold**.
 
+### 1. Owner Journey – Detailed Flow
 
+**A. Landing → Start Journey**
+- CTA: "Start your free 30-day trial – No credit card required"
 
+**B. Role Selection Screen**
+- Title: "How will you use HaypBooks?"
+- Primary button (green, large): **My Business**
+- Secondary button: **Accountant**
 
-
-
-### Revised Layout with Exact Navigation Locations
-
-1. **After Login Flow**
-   - User logs in → **Always redirect to `/companies`** (the Central Hub page).
-   - Even with 1 company → Show the full hub (educates users about multi-company early).
-   - Optional quick banner: "Open your company books" button for single-company users.
-
-2. **Left Sidebar Navigation (Fixed Position: Left Edge, Full Height)**
-   - **Top Section** (padded 24px):
-     - HaypBooks logo (clickable → back to hub)
-   - **Main Menu Items** (vertical list, 48px height each):
-     - "Companies & Clients" — highlighted/active (bold + accent color background)
-     - Future: "Billing" (below, for subscription details)
-     - "Settings"
-     - "Support"
-   - **Bottom Section** (absolute bottom, padded 24px):
-     - User avatar + name/email
-     - Dropdown: Profile, Logout
-   - Mobile: Collapsible to hamburger icon (top-left).
+Behavior & rules:
+- **Determines onboarding flow** (Owner → `/onboarding/tenant`, Accountant → `/hub/accountant`).
+- **Sets the initial hub context** (frontend redirects and backend marks `User.preferredHub` / `isAccountant`).
+- **Does NOT create a new account if one already exists** — signup will surface a clear message and guide the user to sign in or reset password instead of creating duplicates.
+- **A user may later gain another role**, but they must explicitly switch hub context; only **one hub is active at a time** for their immediate session and landing.
+- This keeps onboarding simple and prevents accidental duplicate accounts or confusion between owner/accountant responsibilities.
 
 
+**C. Owner Path – Plan Discovery**
+- Page: Visual pricing cards (4 plans minimum)
 
+**Recommended Plans (Visual Card Design)**
 
+| Plan          | Price (Monthly) | Key Limits & Features                          |
+|---------------|-----------------|------------------------------------------------|
+| **Starter**   | Free trial → $29 | 1 company · Basic invoicing · Reports · Email support |
+| **Growth**    | $59             | 3 companies · Bank sync · Payroll · Priority chat |
+| **Professional** | $99          | Unlimited companies · Multi-currency · Tasks & reminders · Team collaboration |
+| **Enterprise**| Custom          | Everything + API access + Dedicated manager + SLA |
 
+- Default CTA: **Start Free 30-Day Trial** (no payment needed)
+- Alternative: **Select Preferred Plan** → goes to Checkout
 
+**D. Checkout Page**
+- Layout: 70/30 split
+  - Left: Sign-up / Sign-in form
+  - Right: **Sticky Order Summary** (always visible)
+- Order Summary shows:
+  - Plan name
+  - Price
+  - Billing cycle
+  - Trial message ("Free for 30 days")
+  - Total due today ($0 if trial)
 
+**E. Unified Account Logic (Your Best Idea)**
+- Prominent: "Already have an account? Sign in"
+- User can sign in with:
+  - Existing owner account
+  - Existing accountant account
+- Same credentials work everywhere
+- After sign-in → order summary remains → proceed
 
-3. **Main Content Area (Right of Sidebar, Responsive Padding)**
-   - **Top Header Bar** (full width, sticky optional):
-     - Title: "My Companies & Clients" (left)
-     - Global search bar (center)
-     - "Create New Company" button (right, primary color)
-   - **Subscription Summary Banner** (full width card, below header, subtle accent background):
-     - "You have 3 companies · $87/month · Next billing Jan 17" + "Upgrade" button
-   - **Pending Invites Banner/Card** (if any, below summary):
-     - "2 pending invitations" + list with Accept/Decline buttons
+**F. Company Assignment**
+- If user has existing companies:
+  - Dropdown: "Apply this plan to..."
+  - Options: Existing companies OR "Create new company"
+- If no companies → auto-create new one
 
+**G. New Company Creation (Only if needed)**
+- Simple form:
+  - Company name
+  - Industry (dropdown)
+  - Country / Currency
+- Optional: Connect bank (Plaid-style) → "Skip for now" button
 
+**H. Onboarding Wizard**
+- Progress bar (4–5 steps, skippable)
+  - Business info
+  - Opening balances
+  - Tax settings
+  - Invite accountant (optional)
+- Final step → Enter **Core Accounting App**
 
+**I. Future Logins**
+- Always land in **Owner Central Hub** first
+- Never drop directly into a company
 
+### 2. Owner Central Hub – Dashboard Layout
 
+**Purpose**: Company management lobby (not daily bookkeeping)
 
+**Sidebar Navigation**
+1. **Companies** (default view)
+   - Grid of cards
+   - Each card: Company name · Plan · Last accessed · "Open Books" button
+   - + "Create New Company" → plan selection again
 
+2. **Reminders**
+   - Urgent cross-company alerts (reconciliations, tax deadlines)
 
-   - **Tabbed Sections** (main content, tabs at top of list area):
-     - Tab 1: **My Companies** (default, owned)
-       - Grid of cards (3-4 per row desktop, 1-2 mobile)
-       - Each card: Company name (bold), Status badge, Plan tier, Last accessed, Primary "Open Books" button, menu (Edit, Billing)
-     - Tab 2: **Invited Companies**
-       - Similar card grid: Name, Your Role badge, Owner, Last accessed, "Open Books" button, "Leave" link
-   - **Empty States** (centered in section if no items):
-     - "No companies yet — create your first!"
-     - "No invitations yet"
+3. **Subscriptions & Billing**
+   - Table per company: Plan · Status · Next payment · Upgrade button
 
+4. **Team**
+   - Invited accountants/bookkeepers
+   - Permissions editor (View / Edit / Admin)
 
+5. **Work** (Task Management)
+   - Kanban or list view
+   - Columns: To Do / In Progress / Done
+   - Task fields: Title · Priority · Assignee · Due · Company · Project
 
+6. **Logout**
 
+### 3. Accountant Journey – Detailed Flow
 
+**A. Role Selection → Accountant**
 
+**B. Account Logic (Same as Owner)**
+- "Already have an account? Sign in"
+- Works with any existing HaypBooks account
 
+**C. Accountant Hub Setup**
+- If hub already exists → direct to **Accountant Central Hub**
+- If new → Modal/page: "Name your Accountant Hub"
+  - Input: Firm name (e.g., "Rivera CPA Services")
 
-4. **Unique Persistent Top Header Mini-Switcher (Global Navigation Enhancement)**
-   - Location: Top-right of main header (next to user avatar, always visible on ALL pages including dashboard)
-   - Shows current company name + dropdown arrow
-   - Dropdown: Recent first, then owned (bold), invited (italic)
-   - Instant switch without returning to hub
+**D. Accountant Central Hub – Dashboard Layout**
 
+**Sidebar Navigation**
+1. **Clients** (default view)
+   - Grid/list of clickable cards
+   - Each: Client company name · Access level · Last activity
+   - Click → enter client's books
 
+2. **Client Invitations**
+   - Pending invites from owners
+   - Accept/Decline buttons
 
+3. **Work** (Same unified task system)
+   - Global tasks + filter by client
 
+4. **Reminders**
+   - Cross-client deadlines and alerts
 
+5. **Logout**
 
+(No billing section — accountants don't manage client subscriptions)
 
+### 4. Best Practices & Final Recommendations
 
-### Why This Revised Design Is Unique & Best
-- **Hub-first** → Your vision preserved (transparency from login)
-- **Tabbed + card grid** → Scales better than plain divider/lists
-- **Subscription & invites prominent** → Reinforces pay-per-company
-- **Persistent mini-switcher** → Solves frequent switching elegantly
-- **Feels exclusive to HaypBooks** → Not copying QuickBooks/Xero exactly
-
-This navigation feels **thoughtful, powerful, and modern** — users will instantly understand their access and costs.
+| Area                       | Recommendation                                      | Why It Matters |
+|----------------------------|-----------------------------------------------------|----------------|
+| **Single Identity**        | Keep it — one login for everything                  | Massive retention win (no "which account?" confusion) |
+| **Per-Company Billing**    | Perfect — never tie plans to users                  | Enables multi-business owners + easy scaling |
+| **Hub as Lobby**           | Always land in Hub first                            | Gives control, prevents disorientation |
+| **Skip-Friendly Onboarding**| Every step optional except company name             | Reduces drop-off |
+| **Task System**            | One unified board with company/client filters       | Avoids duplicate tools |
+| **Visual Design**          | Cards for companies/clients · Tables for tasks/billing | Modern, scannable |
+| **Naming**                 | Owner Hub: "My Companies" <br> Accountant Hub: "Accountant Hub" or "Client Hub" | Clear, ownable, not copying QB |
+| **Future-Proof**           | Build role flags (`isAccountant`) + permissions matrix | Easy to add roles (e.g., Employee, Advisor) |
 

@@ -176,10 +176,11 @@ export default function JourneySteps() {
               Join thousands of businesses who've transformed their accounting from burden to breakthrough.
             </p>
             <a 
-              href="/signup"
+              href="/signup?showSignup=1&role=business"
+              onClick={() => { if (typeof window !== 'undefined') { localStorage.setItem('hasSeenIntro','true'); window.dispatchEvent(new Event('suppressIntro')) } }}
               className="inline-flex items-center gap-2 px-8 py-4 bg-white text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
             >
-              Start Your Free Trial
+              Start Subscription
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>

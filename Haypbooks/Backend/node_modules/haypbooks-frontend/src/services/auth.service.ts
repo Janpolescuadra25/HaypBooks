@@ -4,14 +4,18 @@ import type { AxiosRequestConfig } from 'axios';
 export interface LoginCredentials {
   email: string;
   password: string;
+  // When present, the backend may suggest redirect for accountant hub
+  loginAsAccountant?: boolean;
 }
 
 export interface SignupData {
   email: string;
   password: string;
-  companyName: string;
-  firstName: string;
-  lastName: string;
+  companyName?: string;
+  firstName?: string;
+  lastName?: string;
+  // Optional role: 'business' | 'accountant' | 'both'
+  role?: string;
 }
 
 export interface User {
@@ -22,6 +26,9 @@ export interface User {
   lastName: string;
   role: string;
   onboardingCompleted: boolean;
+  ownerOnboardingCompleted?: boolean;
+  accountantOnboardingCompleted?: boolean;
+  preferredHub?: 'OWNER' | 'ACCOUNTANT';
 }
 
 export interface AuthResponse {
@@ -36,6 +43,7 @@ class AuthService {
    * Login user
    */
   async login(credentials: LoginCredentials, config?: AxiosRequestConfig): Promise<AuthResponse> {
+    // credentials may include loginAsAccountant flag to request accountant landing
     const response = await apiClient.post<AuthResponse>('/api/auth/login', credentials, config);
     const data = response.data;
     // Validate response to avoid UI getting stuck on unexpected payloads
@@ -53,7 +61,8 @@ class AuthService {
   async signup(data: SignupData): Promise<AuthResponse> {
     // Backend expects a single `name` property. Support both companyName or first+last.
     const name = data.companyName?.trim() || [data.firstName?.trim(), data.lastName?.trim()].filter(Boolean).join(' ').trim()
-    const payload = { email: data.email, password: data.password, name }
+    const payload: any = { email: data.email, password: data.password, name }
+    if (data.role) payload.role = data.role
     const response = await apiClient.post<AuthResponse>('/api/auth/signup', payload);
     
     // Don't persist the user yet — the signup response can represent a newly
@@ -165,7 +174,7 @@ class AuthService {
           // Validate the user object has required fields
           if (parsed && typeof parsed === 'object' && 
               parsed.id && parsed.email && 
-              typeof parsed.onboardingCompleted === 'boolean') {
+              (typeof parsed.onboardingCompleted === 'boolean' || typeof parsed.ownerOnboardingCompleted === 'boolean' || typeof parsed.accountantOnboardingCompleted === 'boolean')) {
             return parsed as User;
           }
           // Invalid structure - clear corrupted data

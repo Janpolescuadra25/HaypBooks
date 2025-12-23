@@ -12,7 +12,6 @@ test('signup as accountant redirects to accountant onboarding then hub', async (
   // Fill form
   await page.fill('#firstName', 'E2E')
   await page.fill('#lastName', 'Accountant')
-  await page.fill('#companyName', 'ACME Firm (E2E)')
   await page.fill('#email', email)
   await page.fill('#password', password)
   await page.fill('#confirmPassword', password)
@@ -24,9 +23,9 @@ test('signup as accountant redirects to accountant onboarding then hub', async (
   const req = await signupReq
   expect(req).toBeTruthy()
 
-  // Expect to land on accountant onboarding
-  await page.waitForURL(new RegExp('.*/onboarding/accountant'), { timeout: 15000 })
-  expect(page.url()).toContain('/onboarding/accountant')
+  // Expect to land on the verify OTP page first
+  await page.waitForURL(new RegExp('.*/verify-otp'), { timeout: 15000 })
+  expect(page.url()).toContain('/verify-otp')
 
   // Complete the accountant onboarding (firm name is required)
   await page.fill('#firmName', 'ACME Firm (E2E)')
@@ -47,7 +46,6 @@ test('signup as business redirects to /onboarding/tenant', async ({ page, reques
   // Fill form
   await page.fill('#firstName', 'E2E')
   await page.fill('#lastName', 'Owner')
-  await page.fill('#companyName', 'ACME Corp (E2E)')
   await page.fill('#email', email)
   await page.fill('#password', password)
   await page.fill('#confirmPassword', password)
@@ -59,6 +57,6 @@ test('signup as business redirects to /onboarding/tenant', async ({ page, reques
   const req = await signupReq
   expect(req).toBeTruthy()
 
-  await page.waitForURL(new RegExp('.*/onboarding/tenant'), { timeout: 15000 })
-  expect(page.url()).toContain('/onboarding/tenant')
+  await page.waitForURL(new RegExp('.*/verify-otp'), { timeout: 15000 })
+  expect(page.url()).toContain('/verify-otp')
 })

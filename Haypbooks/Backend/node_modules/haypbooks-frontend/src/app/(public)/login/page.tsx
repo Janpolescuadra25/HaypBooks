@@ -5,6 +5,8 @@ import { authService } from '@/services/auth.service'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import dynamic from 'next/dynamic'
+const HubSelectionModal = dynamic(() => import('@/components/HubSelectionModal'), { ssr: false })
 
 export default function LoginPage() {
   // If the user is already signed in, don't allow visiting login page
@@ -12,6 +14,12 @@ export default function LoginPage() {
   
   useEffect(() => {
     let mounted = true
+
+    const paramsEarly = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    // If the user explicitly asked to see the login form (showLogin=1) or just logged out,
+    // skip the immediate redirect even if we detect an existing session/cookie. This allows
+    // UX flows like clicking the header "Sign In" to show the form first.
+    if (paramsEarly?.get('showLogin') === '1' || paramsEarly?.get('loggedOut') === '1') return
 
     const checkSession = async () => {
       if (!authService.isAuthenticated()) return
@@ -22,7 +30,7 @@ export default function LoginPage() {
 
         if (!mounted) return
         const params = new URLSearchParams(window.location.search)
-        const next = params.get('next') || '/dashboard'
+        const next = params.get('next') || '/companies'
         router.replace(next)
       } catch (e) {
         // If the stored user is stale or session expired, clear it and allow login
@@ -41,6 +49,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [showHubSelection, setShowHubSelection] = useState(false)
+  const [hubSelectionUser, setHubSelectionUser] = useState<any | null>(null)
+  // Login page no longer allows choosing Accountant/Owner — default to Owner flow here.
+  const loginAsAccountant = false
 
   async function onSubmit(values: any) {
     setLoading(true)
@@ -57,7 +69,7 @@ export default function LoginPage() {
       }, 10000)
       
       const response = await authService.login(
-        { email: values.email, password: values.password }, 
+        { email: values.email, password: values.password, loginAsAccountant }, 
         { signal: controller.signal }
       )
       
@@ -76,12 +88,21 @@ export default function LoginPage() {
       }
       
       const params = new URLSearchParams(window.location.search)
-      const next = params.get('next')
-      
-      if (response.user.onboardingCompleted) {
-        router.replace(next || '/dashboard')
+  const next = params.get('next') || '/hub/companies'
+      // If server indicates the user needs to select a hub (multi-role, no preferredHub), show modal
+      if ((response.user as any)?.requiresHubSelection) {
+        // Redirect to dedicated hub selection page to allow an explicit choice after sign-in
+        router.replace('/hub/selection')
+        setLoading(false)
+        return
+      }
+
+      // Respect server-suggested redirect (e.g., /accountant) when present
+      if (response && (response as any).redirect) {
+        router.replace((response as any).redirect)
       } else {
-        router.replace('/onboarding')
+        // Default now: send user to the dedicated hub selection page so they can pick or create a hub
+        router.replace('/hub/selection')
       }
     } catch (e: any) {
       // Clear timeout on error
@@ -142,9 +163,14 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Welcome back</h1>
           <p className="text-slate-600">Sign in to your Haypbooks account</p>
+    
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          {/* Hub selection modal (shown to multi-role users without preferredHub) */}
+          {showHubSelection && hubSelectionUser ? (
+            <HubSelectionModal user={hubSelectionUser} onClose={() => setShowHubSelection(false)} />
+          ) : null}
           <div className="relative group">
             <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2 transition-colors group-focus-within:text-emerald-600">
               Email address
@@ -243,7 +269,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center">
           <p className="text-sm text-slate-600">
             Don&apos;t have an account?{' '}
-            <a href="/signup" className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
+            <a href="/signup?showSignup=1" onClick={() => { if (typeof window !== 'undefined') { localStorage.setItem('hasSeenIntro','true'); window.dispatchEvent(new Event('suppressIntro')) } }} className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
               Sign up for free
             </a>
           </p>
@@ -259,7 +285,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
           33% { transform: translate(30px, -30px) rotate(5deg); }

@@ -13,4 +13,10 @@ describe('authService.signup', () => {
     expect(resp.user?.email).toBe('a@b.com')
     expect(localStorage.getItem('user')).toBeNull()
   })
+
+  test('passes role when provided to backend', async () => {
+    const spy = jest.spyOn(apiClient, 'post')
+    await authService.signup({ email: 'r@b.com', password: 'Pass1!', companyName: 'X', role: 'accountant' } as any)
+    expect(spy).toHaveBeenCalledWith('/api/auth/signup', expect.objectContaining({ role: 'accountant' }))
+  })
 })
