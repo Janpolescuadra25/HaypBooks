@@ -42,6 +42,12 @@ try {
   if (!process.argv.includes('--no-seed')) {
     try {
       runWithRetry('npm run db:seed:dev', 3, 500)
+      // After seeding, enable RLS policies needed by e2e tests (idempotent)
+      try {
+        runWithRetry('node ./scripts/test/enable-test-rls.js', 3, 500)
+      } catch (e) {
+        console.warn('Enabling test RLS policies failed (continuing):', e && e.message ? e.message : e)
+      }
     } catch (e) {
       console.warn('Skipping db:seed:dev due to error (possibly missing generated Prisma client):', e && e.message ? e.message : e)
     }

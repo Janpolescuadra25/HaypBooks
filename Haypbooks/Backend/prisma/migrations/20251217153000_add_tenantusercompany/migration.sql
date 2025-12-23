@@ -1,0 +1,2 @@
+-- Placeholder migration: no SQL changes (migration recorded as already applied)
+-- This file was added to allow Prisma to mark the migration as applied.

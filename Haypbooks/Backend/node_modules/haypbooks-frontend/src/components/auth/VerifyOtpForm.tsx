@@ -2,15 +2,17 @@
 import React, { useEffect, useState } from 'react'
 import OtpInput from './OtpInput'
 import { authService } from '@/services/auth.service'
+import { useRouter } from 'next/navigation'
 
 type Props = {
   email: string
   flow?: 'signup' | 'reset' | string
+  role?: 'business' | 'accountant' | string
   initialCode?: string
-  onVerified?: (success: boolean) => void
 }
 
-export default function VerifyOtpForm({ email, flow = 'reset', initialCode = '', onVerified }: Props) {
+export default function VerifyOtpForm({ email, flow = 'reset', role, initialCode = '' }: Props) {
+  const router = useRouter()
   const [code, setCode] = useState(initialCode)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -27,8 +29,18 @@ export default function VerifyOtpForm({ email, flow = 'reset', initialCode = '',
     setError(null)
     try {
       const res = await authService.verifyOtp(email, code)
-      if (res.success) onVerified?.(true)
-      else setError('Code invalid or expired')
+      if (res.success) {
+        // Handle redirect internally to avoid passing event handlers across
+        // server/client boundaries. This keeps props serializable.
+        if (flow === 'signup') {
+          // If role hint is present, forward into the appropriate flow
+          if (role === 'accountant') router.push('/onboarding/accountant')
+          else if (role === 'business') router.push('/get-started/plans')
+          else router.push('/signup/choose-role')
+        } else if (flow === 'reset') {
+          router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(code)}`)
+        } else router.push('/')
+      } else setError('Code invalid or expired')
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Verification failed')
     } finally { setLoading(false) }
@@ -37,7 +49,7 @@ export default function VerifyOtpForm({ email, flow = 'reset', initialCode = '',
   async function handleResend() {
     if (resendTimer > 0) return
     try {
-      const resp = await authService.forgotPassword(email)
+      const resp = await authService.sendVerification(email)
       const devOtp = (resp as any)?.otp
       if (devOtp) setCode(devOtp)
       setResendTimer(30)
@@ -69,14 +81,21 @@ export default function VerifyOtpForm({ email, flow = 'reset', initialCode = '',
               </svg>
               Verifying…
             </span>
-          ) : 'Verify code'}
+          ) : 'Verify OTP'}
         </button>
         <button disabled={resendTimer > 0} onClick={handleResend} className="px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-          {resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend'}
+          {resendTimer > 0 ? `Resend Code (available in ${resendTimer}s)` : 'Resend Code'}
         </button>
       </div>
 
-      <style jsx>{`
+      <div className="mt-3 text-sm text-slate-600">
+        <p className="mb-1">• The OTP is valid for <strong>5 minutes</strong>.</p>
+        <p className="mb-1">• Do not share your code with anyone.</p>
+        <p>• If you didn’t request this, you can safely ignore this message.</p>
+        <p className="mt-2 text-sm text-slate-500">📩 <em>Didn’t receive the code?</em> Check your spam folder or try <strong>Resend Code</strong>.</p>
+      </div>
+
+      <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           25% { transform: translateX(-4px); }

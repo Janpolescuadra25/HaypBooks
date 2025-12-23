@@ -7,8 +7,29 @@ export class PrismaSessionRepository implements ISessionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: Partial<Session>): Promise<Session> {
-    const created = await this.prisma.session.create({ data: data as any })
-    return created as any
+    // Retry if a unique constraint on refreshToken occurs (rare race in tests)
+    const maxAttempts = 3
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const created = await this.prisma.session.create({ data: data as any })
+        return created as any
+      } catch (e: any) {
+        // Prisma unique constraint error code P2002; meta.target may include the field
+        if (e?.code === 'P2002' && e?.meta?.target && (e.meta.target as string[]).includes('refreshToken')) {
+          // regenerate a refresh token and retry
+          try {
+            (data as any).refreshToken = require('crypto').randomUUID()
+          } catch (err) {
+            // fallback: append timestamp
+            (data as any).refreshToken = `${(data as any).refreshToken || 'r'}-${Date.now()}`
+          }
+          // loop to retry
+          continue
+        }
+        throw e
+      }
+    }
+    throw new Error('Failed to create session after retrying refreshToken')
   }
 
   async findByRefreshToken(token: string): Promise<Session | null> {

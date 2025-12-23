@@ -4,10 +4,16 @@ export interface User {
   name: string
   password: string // hashed
   isEmailVerified?: boolean
-  role: 'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer'
+  isAccountant?: boolean
+  role: 'owner' | 'admin' | 'manager' | 'ar-clerk' | 'ap-clerk' | 'viewer' | 'accountant' | 'both'
   createdAt: Date
   onboardingComplete?: boolean
   onboardingMode?: 'quick' | 'full'
+  // Per-hub onboarding flags
+  ownerOnboardingComplete?: boolean
+  accountantOnboardingComplete?: boolean
+  // Preferred hub for directing users at login
+  preferredHub?: 'OWNER' | 'ACCOUNTANT'
   // Password reset fields (dev/test only)
   resetToken?: string | null
   resetTokenExpiry?: number | null

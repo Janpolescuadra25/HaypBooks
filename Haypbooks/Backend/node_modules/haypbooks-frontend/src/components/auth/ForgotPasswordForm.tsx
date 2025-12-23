@@ -68,7 +68,7 @@ export default function ForgotPasswordForm({ onSuccess }: { onSuccess?: (email: 
         </form>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes slide-down {
           from { opacity: 0; transform: translateY(-10px); }
           to { opacity: 1; transform: translateY(0); }

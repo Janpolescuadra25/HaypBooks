@@ -21,6 +21,29 @@ enum TenantStatus {
   CANCELED
 }
 
+// Subscription plans for tenants (replace previous string plan)
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  GROWTH
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+// Preferred landing hub for users
+enum PreferredHub {
+  OWNER
+  ACCOUNTANT
+}
+
 
 // --------------------
 // Phase 1: Authentication + OTP
@@ -33,6 +56,7 @@ model User {
   name             String?
   password         String   @map("passwordhash")
   isEmailVerified  Boolean  @default(false) @map("isemailverified")
+  isAccountant     Boolean  @default(false) @map("isAccountant")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   // optional fields used by existing mock code
@@ -44,6 +68,11 @@ model User {
   onboardingComplete Boolean?         @default(false) @map("onboardingcomplete")
   // onboarding_mode stores whether user completed quick ('quick') or full ('full') onboarding
   onboardingMode     String           @default("full") @map("onboarding_mode")
+  // Per-hub onboarding completion flags (keeps compatibility with global flag)
+  ownerOnboardingComplete     Boolean  @default(false) @map("owneronboardingcomplete")
+  accountantOnboardingComplete Boolean  @default(false) @map("accountantonboardingcomplete")
+  // Preferred hub (owner vs accountant) used to route users on sign-in
+  preferredHub       PreferredHub?
 
   // relation back to security events (optional)
 
@@ -139,8 +168,8 @@ model Tenant {
   name         String
   subdomain    String       @unique
   status       TenantStatus @default(ACTIVE)
-  plan         String       @default("FREE")
-  baseCurrency String       @default("USD")
+  plan         SubscriptionPlan @default(FREE)
+  baseCurrency String           @default("USD")
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime?
@@ -213,6 +242,29 @@ model Tenant {
   CustomerCreditApplication  CustomerCreditApplication[]
   invites                    TenantInvite[]
   tasks                      Task[]
+  // Billing records
+  subscriptions              Subscription[]
+
+}
+
+model Subscription {
+  id                   String            @id @default(uuid())
+  tenantId             String
+  companyId            String?
+  plan                 SubscriptionPlan  @default(FREE)
+  status               SubscriptionStatus @default(TRIAL)
+  trialEndsAt          DateTime?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime          @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([tenantId])
+  @@unique([stripeSubscriptionId])
 }
 
 model Company {
@@ -220,6 +272,9 @@ model Company {
   tenantId  String
   name      String
   isActive  Boolean  @default(true)
+  // Company-specific currency and fiscal year start month (1-12)
+  currency  String   @default("USD")
+  fiscalYearStart Int?
   createdAt DateTime @default(now())
 
   tenant                   Tenant                     @relation(fields: [tenantId], references: [id])
@@ -241,6 +296,8 @@ model Company {
   CustomerCredit           CustomerCredit[]
   CustomerCreditLine       CustomerCreditLine[]
   tasks                    Task[]
+  // Subscriptions tracked separately
+  subscriptions            Subscription[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -334,6 +391,7 @@ model TenantUser {
   @@id([tenantId, userId])
   @@index([roleId])
   @@index([status])
+  @@index([tenantId, lastAccessedAt])
 }
 
 model TenantInvite {
@@ -690,7 +748,8 @@ model Reversal {
   originalId    String
   reversalEntry String
   reason        String?
-  createdAt     DateTime @default(now())
+  // Whether the user is an accountant (can manage multiple clients)
+  isAccountant Boolean @default(false)
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
@@ -783,6 +842,7 @@ model Account {
   parentId  String?
   currency  String   @default("USD")
   isActive  Boolean  @default(true)
+  isSystem  Boolean  @default(false)
   balance   Decimal  @default(0) @db.Decimal(20, 4)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1394,7 +1454,7 @@ model Invoice {
   InvoicePaymentApplication  InvoicePaymentApplication[]
   customerCreditApplications CustomerCreditApplication[] @relation("Invoice_CreditApplications")
 
-  @@index([tenantId, status])
+  @@index([tenantId, status, dueDate])
   @@index([tenantId, date])
   @@index([tenantId, customerId, status])
 }

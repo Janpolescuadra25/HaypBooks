@@ -160,7 +160,7 @@ export default function ResetPasswordForm({ token, email, otp, onSuccess }: Prop
         ) : 'Reset password'}
       </button>
 
-      <style jsx>{`
+      <style>{`
         @keyframes slide-down {
           from { opacity: 0; transform: translateY(-10px); }
           to { opacity: 1; transform: translateY(0); }

@@ -28,6 +28,8 @@ const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? MockReposit
     PayrollModule,
     TasksModule,
     AttachmentsModule,
+    // Companies module (provides company listing and last-accessed updates)
+    (require('./companies/companies.module').CompaniesModule),
   ],
   controllers: [TestController, HealthController],
 })

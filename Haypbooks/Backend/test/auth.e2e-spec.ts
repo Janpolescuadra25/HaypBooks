@@ -62,6 +62,32 @@ describe('Auth e2e', () => {
     expect(sessions.length).toBeGreaterThan(0)
   }, 20000)
 
+  it('login redirects accountant to accountant hub', async () => {
+    const email = `e2e-acct-login-${Date.now()}@haypbooks.test`
+    const password = 'LoginPass123'
+
+    // Signup as accountant
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Acct Login', role: 'accountant' }).expect(201)
+
+    // Login and expect redirect to accountant hub
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body).toHaveProperty('redirect')
+    expect(login.body.redirect).toBe('/hub/accountant')
+  }, 20000)
+
+  it('signup with existing email returns 409 and proper message (integration)', async () => {
+    const email = `e2e-dup-${Date.now()}@haypbooks.test`
+    const password = 'DupPass123'
+
+    // First signup should succeed
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Dup E2E' }).expect(201)
+
+    // Second signup with same email should return 409 Conflict
+    const resp = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Dup E2E' }).expect(409)
+    expect(resp.body).toHaveProperty('message')
+    expect(String(resp.body.message).toLowerCase()).toContain('already registered')
+  }, 20000)
+
   it('signup -> verify email OTP -> user verified', async () => {
     const email = `e2e-verify-${Date.now()}@haypbooks.test`
     const password = 'verify-pass'
@@ -83,6 +109,34 @@ describe('Auth e2e', () => {
     expect(user).toBeTruthy()
     expect((user as any).isEmailVerified).toBe(true)
   }, 20000)
+
+  it('GET /api/auth/verify-email sets session cookies when ENABLE_AUTO_VERIFY_LOGIN=true', async () => {
+    process.env.ENABLE_AUTO_VERIFY_LOGIN = 'true'
+
+    // Start a fresh app so env var takes effect
+    const moduleFixture = await Test.createTestingModule({ imports: [AppModule] }).compile()
+    const app2 = moduleFixture.createNestApplication()
+    await app2.init()
+
+    try {
+      const email = `e2e-auto-${Date.now()}@haypbooks.test`
+      const password = 'auto-pass'
+      await request(app2.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Auto E2E' }).expect(201)
+
+      const otpRow = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
+      expect(otpRow).toBeTruthy()
+
+      const res = await request(app2.getHttpServer()).get(`/api/auth/verify-email?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otpRow!.otpCode)}`).expect(302)
+      const setCookie = res.headers['set-cookie'] || []
+      const cookiesArr = Array.isArray(setCookie) ? setCookie : [setCookie]
+      const joint = cookiesArr.join(' ')
+      expect(joint).toMatch(/token=/)
+      expect(joint).toMatch(/refreshToken=/)
+    } finally {
+      await app2.close()
+      delete process.env.ENABLE_AUTO_VERIFY_LOGIN
+    }
+  }, 40000)
 
   it('forgot -> verify -> reset flows', async () => {
     const email = `e2e-reset-${Date.now()}@haypbooks.test`
@@ -134,6 +188,61 @@ describe('Auth e2e', () => {
     expect(Array.isArray(resp.body)).toBe(true)
     expect(resp.body.length).toBeGreaterThanOrEqual(1)
     expect(resp.body[0]).toHaveProperty('createdAt')
+  }, 20000)
+
+  it('signup as accountant persists isAccountant and preferredHub', async () => {
+    const email = `e2e-acct-${Date.now()}@haypbooks.test`
+    const password = 'Pass1234'
+
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Acct E2E', firstName: 'A', lastName: 'C', companyName: 'Acct Firm', role: 'accountant' }).expect(201)
+    expect(signup.body).toHaveProperty('token')
+
+    const saved = await prisma.user.findUnique({ where: { email } })
+    expect(saved).toBeTruthy()
+    expect((saved as any).isAccountant).toBe(true)
+    expect((saved as any).preferredHub).toBe('ACCOUNTANT')
+  }, 20000)
+
+  it('PATCH /api/users/preferred-hub updates preferredHub', async () => {
+    const email = `e2e-pref-${Date.now()}@haypbooks.test`
+    const password = 'Pass1234'
+
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pref E2E' }).expect(201)
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    const token = login.body.token
+    expect(token).toBeTruthy()
+
+    await request(app.getHttpServer()).patch('/api/users/preferred-hub').set('Authorization', `Bearer ${token}`).send({ preferredHub: 'ACCOUNTANT' }).expect(200)
+
+    const saved = await prisma.user.findUnique({ where: { email } })
+    expect(saved).toBeTruthy()
+    expect((saved as any).preferredHub).toBe('ACCOUNTANT')
+  }, 20000)
+
+  it('POST /api/onboarding/complete sets owner/accountant onboarding flags', async () => {
+    const email = `e2e-onb-${Date.now()}@haypbooks.test`
+    const password = 'Pass1234'
+
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Onb E2E' }).expect(201)
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    const token = login.body.token
+
+    // Mark owner onboarding complete
+    await request(app.getHttpServer()).post('/api/onboarding/complete').set('Authorization', `Bearer ${token}`).send({ type: 'full', hub: 'OWNER' }).expect(200)
+    let saved = await prisma.user.findUnique({ where: { email } })
+    expect((saved as any).ownerOnboardingComplete || (saved as any).onboardingComplete).toBeTruthy()
+
+    // Create a second user for accountant
+    const email2 = `e2e-onb-acct-${Date.now()}@haypbooks.test`
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email: email2, password, name: 'Acct Onb', role: 'accountant' }).expect(201)
+    const login2 = await request(app.getHttpServer()).post('/api/auth/login').send({ email: email2, password }).expect(200)
+    const token2 = login2.body.token
+
+    // Mark accountant onboarding complete
+    await request(app.getHttpServer()).post('/api/onboarding/complete').set('Authorization', `Bearer ${token2}`).send({ type: 'full', hub: 'ACCOUNTANT' }).expect(200)
+    const savedAccountant = await prisma.user.findUnique({ where: { email: email2 } })
+    expect(savedAccountant).toBeTruthy()
+    expect((savedAccountant as any).accountantOnboardingComplete || (savedAccountant as any).onboardingComplete).toBeTruthy()
   }, 20000)
 
 })

@@ -146,6 +146,42 @@ export default function CinematicIntro() {
 
     animate();
 
+    // Avoid starting the cinematic intro if the user explicitly intends to sign up
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const hasSeen = typeof window !== 'undefined' && localStorage.getItem('hasSeenIntro') === 'true'
+      if (params.get('showSignup') === '1' || window.location.pathname?.startsWith('/signup') || hasSeen) {
+        if (process.env.NODE_ENV === 'development') console.debug('CinematicIntro: suppressed due to signup intent or seen intro')
+        return
+      }
+    } catch (e) {}
+
+    // Listen for external suppression requests (e.g. a signup CTA was clicked)
+    const cleanup = () => {
+      // Cancel any pending start triggers and running animation/timeout work
+      try { cancelAnimationFrame(startRaf) } catch {}
+      try { clearTimeout(startTimeout) } catch {}
+      try { clearTimeout(longFallback) } catch {}
+      if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current)
+      window.removeEventListener('resize', resizeCanvas)
+    }
+
+    const suppressHandler = () => {
+      if (process.env.NODE_ENV === 'development') console.debug('CinematicIntro: suppressed via event')
+      cleanup()
+      setIsExiting(true)
+      setIntroStarted(false)
+    }
+    window.addEventListener('suppressIntro', suppressHandler)
+
+    // Ensure we clean up the event listener when the component unmounts
+    const outerCleanup = () => {
+      window.removeEventListener('suppressIntro', suppressHandler)
+    }
+
+    // Call outerCleanup in the effect's cleanup (will be added below where we already return cleanup)
+
+
     // Start intro after a short paint opportunity. Use rAF for reliability
     // (timeouts can be throttled when the tab is backgrounded or during rapid
     // navigations). Keep a short timeout fallback for environments where
@@ -175,6 +211,8 @@ export default function CinematicIntro() {
       clearTimeout(startTimeout);
       clearTimeout(longFallback);
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
+      // remove external suppress listener
+      window.removeEventListener('suppressIntro', suppressHandler)
     };
   }, []);
 
@@ -451,7 +489,7 @@ export default function CinematicIntro() {
           {/* Dim the intro content while overlay/peek is active */}
           <div className={`absolute z-10 inset-0 pointer-events-none transition-opacity duration-[700ms] ${overlayActive ? 'content-dim' : ''}`} />
           <p className={`mt-8 text-slate-400 text-sm cta-subtext ${currentStage === 4 ? 'active' : ''}`}>
-            No credit card required • 30-day trial
+            No credit card required • Start your free trial instantly
           </p>
         </div>
       </div>
@@ -462,7 +500,7 @@ export default function CinematicIntro() {
       </p>
 
       {/* CSS Animations */}
-      <style jsx>{`
+      <style>{`
         /* Hide scrollbars for Chrome, Safari and Opera */
         div::-webkit-scrollbar {
           display: none;

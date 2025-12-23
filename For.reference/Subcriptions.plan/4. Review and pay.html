@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html class="xui-html">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+	<meta name="theme-color" content="#0078c8" />
+	<script type="text/javascript" src="https://my.xero.com/static/c619a282dfcdbf008a80ef67ae6e3e069634de3a8f529a"  ></script><script type="text/javascript" src="https://edge.xero.com/my-xero/shell-config/1.x/new-relic.js"></script>
+	<script defer src="https://edge.xero.com/xobs/xobs-banner.js"></script>
+	<link rel="shortcut icon"  href="https://edge.xero.com/images/1.0.0/favicon/favicon.ico" type="image/x-icon"  />
+	<link rel="apple-touch-icon" sizes="180x180"  href="https://edge.xero.com/images/1.0.0/logo/xero-logo-180.png"  />
+	<link rel="icon" sizes="192x192"  href="https://edge.xero.com/images/1.0.0/logo/xero-logo-192.png" type="image/png"  />
+	<title>Xero</title>
+</head>
+
+<body class="xui-body">
+	<noscript>
+		You need to enable JavaScript to run this app.
+	</noscript>
+
+	<script type="application/json" id="shell-config">{
+  "basePath": "/app",
+  "identity": {
+    "authority": "https://identity.xero.com",
+    "clientId": "xero_business_my",
+    "enableDebugLogging": false,
+    "enableLogging": false,
+    "postLogoutRedirectUri": "https://identity.xero.com",
+    "redirectUri": "https://my.xero.com/oidc/callback.html",
+    "userActivityEvents": [
+      "mousemove",
+      "keypress"
+    ],
+    "userInactivityDuration": 420,
+    "scope": "openid profile email xero_frontend-apis xero_frontend-platform-apis",
+    "silentRedirectUri": "https://my.xero.com/oidc/silent.html",
+    "modalRedirectUri": "https://my.xero.com/oidc/modal.html",
+    "shouldSignInAutomatically": true
+  },
+  "internalRoutes": [
+    {
+      "appName": "Common Errors",
+      "path": "/errors",
+      "shouldMatchExactPathOnly": false,
+      "manifestUrl": "https://edge.xero.com/platform/common-errors/shell-manifest.json"
+    }
+  ],
+  "apps": [
+    {
+      "appName": "Billing Subscriptions SPA",
+      "path": "/subscriptions",
+      "shouldMatchExactPathOnly": false,
+      "manifestUrl": "https://edge.xero.com/billing/subscriptions/prod/shell-manifest.json"
+    },
+    {
+      "appName": "Common Errors",
+      "path": "/errors",
+      "shouldMatchExactPathOnly": false,
+      "manifestUrl": "https://edge.xero.com/platform/common-errors/shell-manifest.json"
+    },
+    {
+      "appName": "Subscriptions and Billing",
+      "path": "/billing",
+      "shouldMatchExactPathOnly": false,
+      "manifestUrl": "https://edge.xero.com/billing/subscription/production/shell-manifest.json"
+    },
+    {
+      "appName": "Taxpayer mapper",
+      "path": "/taxpayer",
+      "shouldMatchExactPathOnly": false,
+      "manifestUrl": "https://edge.xero.com/practice/taxpayer/mapper/shell-manifest.json"
+    },
+    {
+      "appName": "Shelljs Demo App",
+      "path": "/shelljs-demo-app",
+      "shouldMatchExactPathOnly": false,
+      "manifestUrl": "https://edge.xero.com/platform/shell/shelljs-demo-app/shell-manifest.json"
+    },
+    {
+      "appName": "Shelljs Demo App Alt",
+      "path": "/shelljs-demo-app-alt",
+      "shouldMatchExactPathOnly": true,
+      "manifestUrl": "https://edge.xero.com/platform/shell/shelljs-demo-app-alt/shell-manifest.json"
+    }
+  ],
+  "microfrontends": {
+    "business:plan-picker": {
+      "1.x": {
+        "manifestUrl": "https://edge.xero.com/business/checkout/plan-picker/1.x/manifest.json"
+      }
+    },
+    "shelljs:demo-mfe": {
+      "1.x": {
+        "manifestUrl": "https://edge.xero.com/platform/shell/shelljs-demo-mfe/manifest.json"
+      }
+    },
+    "shelljs:demo-mfe-alt": {
+      "1.x": {
+        "manifestUrl": "https://edge.xero.com/platform/shell/shelljs-demo-mfe-alt/manifest.json"
+      }
+    }
+  },
+  "domain": "my",
+  "shellEnv": "prod",
+  "nav": {
+    "appType": "my",
+    "navigationServiceUrl": "https://go.xero.com/navigation/api/public/latest?structure=MyXero",
+    "requiresShortcode": false
+  }
+}</script>
+	<script src="https://edge.xero.com/beanie/1.x/analytics.js"></script>
+  <script id="i6m-wrapper" src="https://edge.xero.com/i6m-wrapper/1.x/i6m-wrapper.js"></script>
+
+  <script id="shell-script" src="https://edge.xero.com/platform/shell/1.x/shell.js"></script>
+
+<script type="text/javascript"  src="/dRKC5s/T/d/NOpE4lz2j-67/E9OaV05O3SQYGhp1fi/VHwrOQRU/dwh1XwI/2dhc"></script></body>
+
+</html>

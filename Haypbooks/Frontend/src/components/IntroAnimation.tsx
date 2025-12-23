@@ -43,9 +43,17 @@ export default function IntroAnimation() {
 
     // Do not start the intro if the user already saw it or opted into signup
     try {
-      if (typeof window !== 'undefined' && localStorage.getItem('hasSeenIntro') === 'true') {
-        setAborted(true)
-        return
+      if (typeof window !== 'undefined') {
+        // Explicit signup intent should suppress the intro immediately
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('showSignup') === '1') {
+          setAborted(true)
+          return
+        }
+        if (localStorage.getItem('hasSeenIntro') === 'true') {
+          setAborted(true)
+          return
+        }
       }
     } catch (e) {}
 

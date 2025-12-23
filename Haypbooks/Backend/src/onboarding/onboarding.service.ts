@@ -22,9 +22,18 @@ export class OnboardingService {
     return steps
   }
 
-  async complete(userId: string, onboardingType: 'quick' | 'full' = 'full') {
+  async complete(userId: string, onboardingType: 'quick' | 'full' = 'full', hub: 'OWNER' | 'ACCOUNTANT' = 'OWNER') {
     await this.onboardingRepository.markComplete(userId)
-    await this.userRepository.update(userId, { onboardingComplete: true, onboardingMode: onboardingType })
+    // Set per-hub onboarding flags (and preserve backward compatibility with global flag)
+    const updateData: any = { onboardingMode: onboardingType }
+    if (hub === 'ACCOUNTANT') {
+      updateData.accountantOnboardingComplete = true
+    } else {
+      updateData.ownerOnboardingComplete = true
+    }
+    // Also set the legacy global flag for compatibility
+    updateData.onboardingComplete = true
+    await this.userRepository.update(userId, updateData)
     return { success: true }
   }
 

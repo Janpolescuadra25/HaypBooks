@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { LoginDto, SignupDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto/auth.dto'
 import { ISecurityEventRepository } from '../repositories/interfaces/security-event.repository.interface'
+import { MailService } from '../common/mail.service'
 
 @Controller('api/auth')
 export class AuthController {
@@ -16,6 +17,7 @@ export class AuthController {
     @Inject(SESSION_REPOSITORY) private readonly sessionRepo: any,
     @Inject(OTP_REPOSITORY) private readonly otpRepo: any,
     @Inject(SECURITY_EVENT_REPOSITORY) private readonly securityEventRepo: ISecurityEventRepository,
+    private readonly mailService: MailService,
   ) {}
 
   @Post('login')
@@ -23,6 +25,19 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     const ua = req.headers['user-agent'] || ''
     const result = await this.authService.login(loginDto.email, loginDto.password, req.ip || req.connection?.remoteAddress, String(ua))
+
+    // Determine landing redirect: if user is an accountant, suggest accountant hub; otherwise companies hub.
+    try {
+      if (result?.user) {
+        if (result.user.isAccountant) {
+          (result as any).redirect = '/hub/accountant'
+        } else {
+          (result as any).redirect = '/hub/companies'
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
 
     // Set cookies
     const cookieOptions = {
@@ -50,12 +65,31 @@ export class AuthController {
       res.clearCookie('onboardingComplete')
     }
 
+    // Set per-hub onboarding cookies (if available) and keep legacy compatibility
+    try {
+      if ((result.user as any).ownerOnboardingCompleted) {
+        res.cookie('onboardingOwnerComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+      } else {
+        res.clearCookie('onboardingOwnerComplete')
+      }
+      if ((result.user as any).accountantOnboardingCompleted) {
+        res.cookie('onboardingAccountantComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+      } else {
+        res.clearCookie('onboardingAccountantComplete')
+      }
+    } catch (e) {}
+
+    // Set accountant flag cookie for middleware/client
+    try {
+      res.cookie('isAccountant', result.user.isAccountant ? 'true' : 'false', cookieOptions)
+    } catch (e) {}
+
     return result
   }
 
   @Post('signup')
   async signup(@Body() signupDto: SignupDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.signup(signupDto.email, signupDto.password, signupDto.name)
+    const result = await this.authService.signup(signupDto.email, signupDto.password, signupDto.name, signupDto.role)
 
     // Set cookies
     const cookieOptions = {
@@ -69,12 +103,24 @@ export class AuthController {
     res.cookie('email', result.user.email, cookieOptions)
     res.cookie('userId', result.user.id, cookieOptions)
     res.cookie('role', result.user.role, cookieOptions)
+    // Surface accountant flag for middleware/client
+    try { res.cookie('isAccountant', result.user.isAccountant ? 'true' : 'false', cookieOptions) } catch (e) {}
     if (result.user.onboardingMode) res.cookie('onboardingMode', result.user.onboardingMode, cookieOptions)
     // After signup, send a verification OTP to user's email so they can verify ownership
     try {
-      const created = await this.authService.startOtp(result.user.email, undefined, 5, 'VERIFY_EMAIL')
+      // Use short-lived numeric OTP for email verification (5 minutes)
+      const created = await this.authService.startOtp(result.user.email, undefined, 5, 'VERIFY_EMAIL') // 5m TTL
       console.log(`Verification OTP for ${result.user.email}: ${created.otpCode}`)
-      // In development, attach OTP to response to make testing easier
+      // Send OTP email (numeric code) rather than a URL
+      try {
+        const html = this.mailService.buildVerifyEmailOtpHtml(result.user.name || result.user.email, created.otpCode)
+        const text = this.mailService.buildVerifyEmailOtpText(result.user.name || result.user.email, created.otpCode)
+        await this.mailService.sendEmail(result.user.email, `Your Haypbooks verification code`, html, text)
+      } catch (e) {
+        console.log('Failed to send verification email', e?.message || e)
+      }
+
+      // In development, attach OTP to response for testing (do NOT set a cookie)
       if (process.env.NODE_ENV !== 'production') {
         (result as any)._devOtp = created.otpCode
       }
@@ -87,13 +133,35 @@ export class AuthController {
 
   @Post('send-verification')
   @HttpCode(HttpStatus.OK)
-  async sendVerification(@Body() body: { email: string }) {
+  async sendVerification(@Body() body: { email: string }, @Res({ passthrough: true }) res: Response) {
     const { email } = body
     // do not reveal existence of email
     try {
+      // Throttle verification sends: allow up to 5 within 60 minutes
+      try {
+        const recent = await this.otpRepo.countRecentByEmail(email, 60)
+        if (recent >= 5) {
+          console.log(`sendVerification rate limit hit for ${email}`)
+          return { success: true }
+        }
+      } catch (e) {
+        // ignore throttle errors and continue
+      }
+
       const created = await this.authService.startOtp(email, undefined, 5, 'VERIFY_EMAIL')
       console.log(`Verification OTP for ${email}: ${created.otpCode}`)
-      if (process.env.NODE_ENV !== 'production') return { success: true, otp: created.otpCode }
+      try {
+        const html = this.mailService.buildVerifyEmailOtpHtml(email, created.otpCode)
+        const text = this.mailService.buildVerifyEmailOtpText(email, created.otpCode)
+        await this.mailService.sendEmail(email, `Your Haypbooks verification code`, html, text)
+      } catch (e) {
+        console.log('Failed to send verification email', e?.message || e)
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        // In dev, return OTP in response for testing but do NOT set a cookie or expose it in pages
+        return { success: true, otp: created.otpCode }
+      }
     } catch (e) {
       // ignore
     }
@@ -232,11 +300,90 @@ export class AuthController {
 
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() body: VerifyOtpDto) {
+  async verifyOtp(@Body() body: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
     const parsed = VerifyOtpSchema.safeParse(body)
     if (!parsed.success) return { success: false }
-    const ok = await this.authService.verifyOtp(parsed.data.email, parsed.data.otpCode)
-    return { success: ok }
+    const ok = await this.authService.verifyOtp(parsed.data.email, parsed.data.otpCode, true)
+    if (!ok) return { success: false }
+
+    // Mark user as email verified
+    try {
+      const user = await this.userRepository.findByEmail(parsed.data.email)
+      if (user && !user.isEmailVerified) {
+        await this.userRepository.update(user.id, { isEmailVerified: true })
+      }
+    } catch (e) {
+      // Don't surface this to client; verification is already successful
+      console.log('Failed to update email verified flag', e?.message || e)
+    }
+
+    return { success: true }
+  }
+
+  @Get('verify-email')
+  async verifyEmail(@Req() req: any, @Res() res: Response) {
+    const email = String(req.query?.email || '')
+    const otp = String(req.query?.otp || '')
+    if (!email || !otp) return res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + '/verify-email?status=error')
+
+    try {
+      const ok = await this.authService.verifyOtp(email, otp, true)
+      if (!ok) {
+        return res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + '/verify-email?status=invalid')
+      }
+
+      // mark user as email verified
+      let user: any = undefined
+      try {
+        user = await this.userRepository.findByEmail(email)
+        if (user && !user.isEmailVerified) {
+          await this.userRepository.update(user.id, { isEmailVerified: true })
+        }
+
+        // Optionally create a session and set cookies so users are logged in after verification
+        if (process.env.ENABLE_AUTO_VERIFY_LOGIN === 'true' && user) {
+          try {
+            const session = await this.authService.createSessionForUser(user.id, req.ip || req.connection?.remoteAddress, String(req.headers['user-agent'] || ''))
+            if (session && session.token) {
+              const cookieOptions = {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax' as const,
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+              }
+              res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 15 })
+              if ((session as any).refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions)
+              res.cookie('email', user.email, cookieOptions)
+              res.cookie('userId', user.id, cookieOptions)
+              res.cookie('role', user.role, cookieOptions)
+              try { res.cookie('isAccountant', user.isAccountant ? 'true' : 'false', cookieOptions) } catch (e) {}
+            }
+          } catch (e) {
+            // Do not block verification when session creation fails
+            console.log('Failed to create session on email verification', e?.message || e)
+          }
+        }
+      } catch (e) {}
+
+      // Redirect to frontend success page and include the user's name + email for friendly messaging
+      const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000')
+      try {
+        const emailEsc = user ? encodeURIComponent(user.email) : ''
+        let nameParam = ''
+        if (user) {
+          const parts: string[] = []
+          if (user.firstName && user.firstName.trim()) parts.push(encodeURIComponent(user.firstName.trim()))
+          if (user.lastName && user.lastName.trim()) parts.push(encodeURIComponent(user.lastName.trim()))
+          if (parts.length) nameParam = `&name=${parts.join('%20')}`
+        }
+        const emailParam = emailEsc ? `&email=${emailEsc}` : ''
+        return res.redirect(`${frontend}/verify-email?status=success${nameParam}${emailParam}`)
+      } catch (e) {
+        return res.redirect(frontend + '/verify-email?status=success')
+      }
+    } catch (e) {
+      return res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + '/verify-email?status=error')
+    }
   }
 
   @Post('reset-password')

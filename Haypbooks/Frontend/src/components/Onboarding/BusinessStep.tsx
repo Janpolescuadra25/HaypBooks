@@ -3,7 +3,20 @@ import { useEffect, useState } from 'react'
 
 export default function BusinessStepComponent({ initial, onSave }:{ initial?: any, onSave:(d:any)=>void }) {
   const [form, setForm] = useState<any>({ companyName: '', businessType: '', industry: '', address: '', phone: '', businessEmail: '' })
+  const [errors, setErrors] = useState<{ companyName?: string }>({})
   useEffect(() => { if (initial) setForm({ ...form, ...initial }) }, [])
+
+  function validate() {
+    const errs: any = {}
+    if (!form.companyName || form.companyName.trim().length < 2) errs.companyName = 'Company name is required and must be at least 2 characters.'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  function handleSave() {
+    if (!validate()) return
+    onSave(form)
+  }
 
   return (
     <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
@@ -15,8 +28,9 @@ export default function BusinessStepComponent({ initial, onSave }:{ initial?: an
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Company name</label>
-          <input value={form.companyName} onChange={(e)=>setForm({...form, companyName: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="ACME Corporation" />
+          <label htmlFor="companyName" className="block text-sm font-medium text-slate-700 mb-2">Company name</label>
+          <input id="companyName" aria-required="true" value={form.companyName} onChange={(e)=>{ setForm({...form, companyName: e.target.value}); setErrors({...errors, companyName: ''}) }} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="ACME Corporation" />
+          {errors.companyName && <p className="mt-2 text-sm text-red-600">{errors.companyName}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">Business type</label>
@@ -47,7 +61,7 @@ export default function BusinessStepComponent({ initial, onSave }:{ initial?: an
         </div>
       </div>
       <div className="flex justify-end">
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={() => onSave(form)}>
+        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={handleSave}>
           Save step
         </button>
       </div>

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { Pool } from 'pg'
-import type { AccountantAccessLevel, PerkType } from '@prisma/client'
+// Accountant enums were removed from Prisma schema; use local types to avoid build errors
+type AccountantAccessLevel = 'FULL' | 'VIEW_ONLY' | 'BILLING_ONLY'
+type PerkType = string
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 

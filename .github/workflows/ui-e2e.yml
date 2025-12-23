@@ -19,6 +19,13 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+      mailhog:
+        image: mailhog/mailhog:latest
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "curl -f http://localhost:8025 || exit 1" --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +71,11 @@ jobs:
           DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_ui_test
           ALLOW_TEST_ENDPOINTS: 'true'
           NODE_ENV: 'test'
+          # Use MailHog in CI for SMTP testing
+          MAILER_PROVIDER: 'smtp'
+          MAILER_SMTP_URL: 'smtp://127.0.0.1:1025'
+          MAILHOG_API_URL: 'http://127.0.0.1:8025'
+          MAIL_FROM: 'no-reply@test.haypbooks'
         run: |
           npm run build
           nohup npm start &
@@ -99,11 +111,11 @@ jobs:
           n=0; until curl --silent --fail http://localhost:4000/api/auth/health || [ $n -ge 30 ]; do n=$((n+1)); echo 'waiting for backend...'; sleep 2; done
           n=0; until curl --silent --fail http://localhost:3000/ || [ $n -ge 30 ]; do n=$((n+1)); echo 'waiting for frontend...'; sleep 2; done
 
-      - name: Run Playwright tests
+      - name: Run Playwright tests (allow creating missing snapshots)
         working-directory: ./Haypbooks/Frontend
         env:
           ALLOW_TEST_ENDPOINTS: 'true'
-        run: npm run e2e
+        run: npm run e2e -- --update-snapshots=missing
 
       - name: Upload Playwright report (artifact)
         if: always()

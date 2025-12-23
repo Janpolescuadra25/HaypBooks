@@ -7,5 +7,6 @@ module.exports = {
       tsconfig: 'tsconfig.json',
     },
   },
+  setupFilesAfterEnv: ['<rootDir>/test/e2e.setup.ts'],
   verbose: true,
 }

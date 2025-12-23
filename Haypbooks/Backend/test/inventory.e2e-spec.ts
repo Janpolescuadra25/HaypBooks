@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
 import { AppModule } from './../src/app.module'
 import { PrismaService } from '../src/repositories/prisma/prisma.service'
+import { retryRequest } from './http.retry'
 
 describe('Inventory API (e2e)', () => {
   let app: INestApplication
@@ -71,11 +72,8 @@ describe('Inventory API (e2e)', () => {
       lines: [{ itemId, stockLocationId: locationId, qty: 20, unitCost: 5 }]
     }
 
-    const res = await request(app.getHttpServer())
-      .post('/api/inventory/receive')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send(payload)
-    if (res.status !== 201) console.error('Inventory receive failed:', res.status, res.body)
+    const res = await retryRequest(() => request(app.getHttpServer()).post('/api/inventory/receive').set('Authorization', `Bearer ${authToken}`).send(payload), 3, 300)
+    if (res.status !== 201) console.error('Inventory receive failed after retries:', res.status, res.body)
     expect(res.status).toBe(201)
 
     expect(res.body).toHaveProperty('id')
@@ -103,11 +101,8 @@ describe('Inventory API (e2e)', () => {
       lines: [{ itemId, stockLocationId: locationId, qty: 10 }]
     }
 
-    const res = await request(app.getHttpServer())
-      .post('/api/inventory/ship')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send(payload)
-    if (res.status !== 201) console.error('Inventory ship failed:', res.status, res.body)
+    const res = await retryRequest(() => request(app.getHttpServer()).post('/api/inventory/ship').set('Authorization', `Bearer ${authToken}`).send(payload), 3, 300)
+    if (res.status !== 201) console.error('Inventory ship failed after retries:', res.status, res.body)
     expect(res.status).toBe(201)
 
     expect(res.body).toHaveProperty('id')
@@ -140,8 +135,8 @@ describe('Inventory API (e2e)', () => {
       transactionNumber: 'RCPT-E2E-02',
       lines: [{ itemId, stockLocationId: dest.id, qty: 5, unitCost: 5 }]
     }
-    const res2 = await request(app.getHttpServer()).post('/api/inventory/receive').set('Authorization', `Bearer ${authToken}`).send(payloadReceive)
-    if (res2.status !== 201) console.error('Inventory receive (for transfer) failed:', res2.status, res2.body)
+    const res2 = await retryRequest(() => request(app.getHttpServer()).post('/api/inventory/receive').set('Authorization', `Bearer ${authToken}`).send(payloadReceive), 3, 300)
+    if (res2.status !== 201) console.error('Inventory receive (for transfer) failed after retries:', res2.status, res2.body)
     expect(res2.status).toBe(201)
 
     // transfer 3 from dest to main

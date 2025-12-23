@@ -362,7 +362,7 @@ export const InvoiceLayoutPanel: React.FC<{ initialTab?: 'design'|'content'|'pay
           </div>
         </div>
         <div className="text-[10px] text-neutral-500">Print: {layout.printPageSize||'Letter'} · Margins (mm): {String(layout.printMarginTop??12.7)}/{String(layout.printMarginRight??12.7)}/{String(layout.printMarginBottom??12.7)}/{String(layout.printMarginLeft??12.7)}</div>
-        <style jsx>{`
+        <style>{`
           .hb-preview { 
             --hb-primary: ${layout.primaryColor || 'var(--hb-primary)'};
             --hb-accent: ${layout.accentColor || 'var(--hb-accent)'};

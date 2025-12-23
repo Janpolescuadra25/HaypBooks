@@ -19,15 +19,10 @@ export default function VerifyOtpPage() {
   // Only set flow if present — don't default to 'reset' so the guard can
   // detect whether this page is being used as part of a flow.
   const flow = search?.get('flow') || undefined // 'signup' | 'reset' | undefined
+  const role = search?.get('role') || undefined // 'business' | 'accountant' | undefined
 
   const initialCode = search?.get('code') || search?.get('otp') || ''
 
-  function onVerified(success: boolean) {
-    if (!success) return
-    if (flow === 'signup') router.push('/onboarding')
-    else if (flow === 'reset') router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(initialCode)}`)
-    else router.push('/')
-  }
 
   useEffect(() => {
     try {
@@ -56,16 +51,16 @@ export default function VerifyOtpPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Enter the 6-digit code</h1>
-          <p className="text-sm text-slate-600">We sent a 6-digit code to <strong className="text-emerald-600">{maskEmail(email)}</strong></p>
-        </div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Verify Your Identity</h1>
+          <p className="text-sm text-slate-600">We’ve sent a <strong>one-time password (OTP)</strong> to your registered email <strong className="text-emerald-600">{maskEmail(email)}</strong>. Please enter the 6-digit code below to continue.</p>
+        </div> 
 
         <div className="mb-4">
-          <VerifyOtpForm email={email} flow={flow as any} initialCode={initialCode} onVerified={onVerified} />
+          <VerifyOtpForm email={email} flow={flow as any} role={role} initialCode={initialCode} />
         </div>
 
         <div className="mt-6 pt-6 border-t border-slate-200 text-center">
-          <a href="/login" className="text-sm text-slate-500 hover:text-slate-700 transition-colors inline-flex items-center gap-1">
+          <a href="/login?showLogin=1" className="text-sm text-slate-500 hover:text-slate-700 transition-colors inline-flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -74,7 +69,7 @@ export default function VerifyOtpPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
           33% { transform: translate(30px, -30px) rotate(5deg); }

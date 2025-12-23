@@ -93,6 +93,7 @@ This document defines the **complete, production-grade user journey, architectur
      - If `preferredHub` exists → Redirect to preferred hub.
      - If no `preferredHub` (first time with both roles) → Show **Hub Selection Modal**.
 
+Note: The site header and other sign-in links intentionally include `?showLogin=1` to ensure the sign-in form is shown even when a session cookie exists (this avoids silent redirects to a hub and allows the user to re-authenticate or use another account). The middleware recognizes `showLogin=1` and allows the login page to render the form instead of redirecting to `/hub/companies`.
 **Error States**:
 - Network/API error → “Unable to connect. Check your internet and try again.”
 - Session expired during hub selection → Re-prompt for login.

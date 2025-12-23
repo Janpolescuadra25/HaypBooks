@@ -22,6 +22,7 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async update(id: string, data: Partial<User>): Promise<User> {
+    // Use the generated Prisma client for updates now that `prisma generate` has been run.
     const updated = await this.prisma.user.update({ where: { id }, data: data as any })
     return updated as any
   }

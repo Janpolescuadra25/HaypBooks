@@ -55,10 +55,10 @@ export class TestController {
   }
 
   @Post('create-user')
-  async createUser(@Body() body: { email: string; password: string; name?: string; isEmailVerified?: boolean }) {
+  async createUser(@Body() body: { email: string; password: string; name?: string; isEmailVerified?: boolean; isAccountant?: boolean }) {
     this.ensureEnabled()
     const hash = await bcrypt.hash(body.password, 10)
-    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', isEmailVerified: !!body.isEmailVerified } })
+    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', isEmailVerified: !!body.isEmailVerified, isAccountant: !!body.isAccountant } })
     return { id: created.id, email: created.email }
   }
 
