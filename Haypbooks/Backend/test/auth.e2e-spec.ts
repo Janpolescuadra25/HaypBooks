@@ -110,6 +110,40 @@ describe('Auth e2e', () => {
     expect((user as any).isEmailVerified).toBe(true)
   }, 20000)
 
+  it('signup/login include pin flags and pin setup toggles flags', async () => {
+    const email = `e2e-pin-${Date.now()}@haypbooks.test`
+    const password = 'PinPass123'
+
+    // Signup
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pin E2E' }).expect(201)
+    expect(signup.body.user).toHaveProperty('hasPin')
+    expect(signup.body.user.hasPin).toBe(false)
+    expect(signup.body.user.pinSetAt).toBeNull()
+
+    // Login
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body.user.requiresPinSetup).toBe(true)
+    const token = login.body.token
+
+    // Setup PIN
+    const setup = await request(app.getHttpServer()).post('/auth/pin/setup').set('Authorization', `Bearer ${token}`).send({ pin: '111111', pinConfirm: '111111' }).expect(201)
+    expect(setup.body).toHaveProperty('pinSetAt')
+    // New: ensure setup explicitly returns hasPin
+    expect(setup.body).toHaveProperty('hasPin')
+    expect(setup.body.hasPin).toBe(true)
+
+    // GET /api/users/me should include hasPin true and pinSetAt not null
+    const me = await request(app.getHttpServer()).get('/api/users/me').set('Authorization', `Bearer ${token}`).expect(200)
+    expect(me.body).toHaveProperty('id')
+    expect(me.body).toHaveProperty('hasPin')
+    expect(me.body.hasPin).toBe(true)
+    expect(me.body.pinSetAt).not.toBeNull()
+
+    // Logging in again should not require setup
+    const login2 = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login2.body.user.requiresPinSetup).toBe(false)
+  }, 30000)
+
   it('GET /api/auth/verify-email sets session cookies when ENABLE_AUTO_VERIFY_LOGIN=true', async () => {
     process.env.ENABLE_AUTO_VERIFY_LOGIN = 'true'
 
