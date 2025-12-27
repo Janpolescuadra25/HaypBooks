@@ -24,7 +24,15 @@ Risks / Notes
 - HMAC secret rotation requires a plan to re-hash or maintain an alternate index.
 - Legal/Privacy team review recommended before removing plaintext phone values.
 
+CI & Rollout
+----------
+- Add `HMAC_KEY` as a protected secret in CI (GitHub Actions: Repository secret `HMAC_KEY`). Ensure it is scoped only to environments that require it (staging/production). For tests in CI, either: 1) supply the secret in the workflow's env for the test job, or 2) run tests that rely on phone HMAC with a mocked key.
+- Backfill: run `npm run db:backfill:phoneHmac` in staging with `HMAC_KEY` set, run smoke checks, then run in production in a maintenance window.
+- Migration and client generation: ensure `npx prisma generate` is part of the CI setup after migrations are applied.
+
 Next steps
 ----------
 1. Create an issue with this proposal and label `privacy` / `enhancement`.
 2. If approved, implement as a follow-up PR with migration, code, tests and docs.
+3. Add `HMAC_KEY` to CI secrets and update workflow steps to inject the secret into the test job.
+4. Run backfill in staging and verify before production rollout.
