@@ -77,9 +77,14 @@ model User {
 
   // Contact fields
   phone              String?  @db.Text
+  // HMAC of normalized phone for privacy-safe lookups
+  phoneHmac          String?  @map("phone_hmac") @db.Text
+
   // Verified phone state
   isPhoneVerified    Boolean  @default(false) @map("isphoneverified")
   phoneVerifiedAt    DateTime? @map("phoneverifiedat")
+  
+  @@index([phoneHmac])
 
   // relation back to security events (optional)
 

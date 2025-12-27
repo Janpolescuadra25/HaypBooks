@@ -30,10 +30,14 @@ export class PrismaAuthService {
     const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
     // Normalize phone if provided
     let normalizedPhone: string | undefined = undefined
+    let phoneHmac: string | undefined = undefined
     if (phone) {
-      try { normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone) } catch (e) { throw e }
+      try {
+        normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone)
+        try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
+      } catch (e) { throw e }
     }
-    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub, phone: normalizedPhone })
+    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub, phone: normalizedPhone, phoneHmac } as any)
 
     // Log successful signup
     await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })

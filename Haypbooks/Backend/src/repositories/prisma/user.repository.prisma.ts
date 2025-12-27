@@ -38,7 +38,22 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async findByPhone(phone: string): Promise<User | null> {
-    const u = await this.prisma.user.findFirst({ where: { phone } })
+    // Normalize phone first
+    const normalize = require('../../utils/phone.util').normalizePhoneOrThrow
+    let normalized: string
+    try { normalized = normalize(phone) } catch (e) { return null }
+
+    // Try HMAC lookup if HMAC_KEY is configured
+    let hmac: string | null = null
+    try { hmac = require('../../utils/hmac.util').hmacPhone(normalized) } catch (e) { hmac = null }
+
+    if (hmac) {
+      const where: any = { OR: [{ phoneHmac: hmac }, { phone: normalized }] }
+      const u = await this.prisma.user.findFirst({ where })
+      return u as any
+    }
+
+    const u = await this.prisma.user.findFirst({ where: { phone: normalized } })
     return u as any
   }
 }
