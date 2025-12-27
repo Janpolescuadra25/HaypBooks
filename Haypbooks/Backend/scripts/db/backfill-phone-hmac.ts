@@ -5,13 +5,14 @@ async function main() {
   const prisma = new PrismaClient()
   if (!process.env.HMAC_KEY) {
     console.error('HMAC_KEY is required to backfill phone_hmac')
-    process.exit(1)
+    throw new Error('HMAC_KEY not set')
   }
 
   const batchSize = 100
   let offset = 0
   while (true) {
-    const users = await prisma.user.findMany({ where: { phone: { not: null }, phoneHmac: null }, take: batchSize, skip: offset })
+    const where: any = { phone: { not: null }, phoneHmac: null }
+    const users = await prisma.user.findMany({ where, take: batchSize, skip: offset } as any)
     if (!users.length) break
 
     for (const u of users) {
@@ -19,7 +20,7 @@ async function main() {
         const normalized = u.phone // assume existing users are normalized; if not, we could re-normalize using phone.util
         if (normalized) {
           const h = hmacPhone(normalized)
-          await prisma.user.update({ where: { id: u.id }, data: { phoneHmac: h } })
+          await prisma.user.update({ where: { id: u.id }, data: { phoneHmac: h } } as any)
           console.log(`Updated user ${u.email} (${u.id})`)
         }
       } catch (e) {
