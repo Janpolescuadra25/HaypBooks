@@ -20,22 +20,21 @@ export class MailService {
   }
 
   buildVerifyEmailOtpHtml(name: string, code: string) {
-    // HTML email that contains the OTP code and instructions
+    // Use customer's preferred wording for OTP emails
     return `
       <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; color: #111">
-        <h2>Hi ${name},</h2>
-        <p>Your one-time password (OTP) for <strong>Haypbooks</strong> is:</p>
-        <p style="font-size:20px;font-weight:700;letter-spacing:2px">${code}</p>
-        <p>Please enter this code to verify your action and continue securely.</p>
-        <p>⏱️ This code will expire in <strong>5 minutes</strong>.<br/>🔒 For your protection, never share this code with anyone. Haypbooks will never ask for it via phone or chat.</p>
-        <p>If you did not request this verification, you can safely ignore this email or contact our support team.</p>
-        <p>Best regards,<br/><strong>The Haypbooks Team</strong><br/>Accounting made simpler.</p>
+        <h2>Hi there,</h2>
+        <p>To keep your account secure, we need to confirm it's really you. Please enter the verification code we just sent to your email.</p>
+        <p style="font-size:20px;font-weight:700;letter-spacing:2px">🔐 Your Verification Code: ${code}</p>
+        <p><em>(This code will expire in 10 minutes.)</em></p>
+        <p>Thanks for helping us keep HaypBooks secure and owner-friendly.</p>
+        <p>— The HaypBooks Team</p>
       </div>
     `
   }
 
   buildVerifyEmailOtpText(name: string, code: string) {
-    return `Hi ${name},\n\nYour one-time password (OTP) for Haypbooks is:\n\n${code}\n\nPlease enter this code to verify your action and continue securely.\n\nThis code will expire in 5 minutes. For your protection, never share this code with anyone. Haypbooks will never ask for it via phone or chat.\n\nIf you did not request this verification, you can safely ignore this email or contact our support team.\n\nBest regards,\nThe Haypbooks Team\nAccounting made simpler.`
+    return `Hi there,\n\nTo keep your account secure, we need to confirm it's really you. Please enter the verification code we just sent to your email.\n\n🔐 Your Verification Code: ${code}\n\n(This code will expire in 10 minutes.)\n\nIf you didn’t request this, you can safely ignore this message.\n\nThanks for helping us keep HaypBooks secure and owner-friendly.\n\n— The HaypBooks Team`
   }
 
   async sendEmail(to: string, subject: string, html: string, text: string) {

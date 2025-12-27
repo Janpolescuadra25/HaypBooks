@@ -5,13 +5,14 @@ import { authService } from '@/services/auth.service'
 import { useRouter } from 'next/navigation'
 
 type Props = {
-  email: string
+  email?: string
+  phone?: string
   flow?: 'signup' | 'reset' | string
   role?: 'business' | 'accountant' | string
   initialCode?: string
 }
 
-export default function VerifyOtpForm({ email, flow = 'reset', role, initialCode = '' }: Props) {
+export default function VerifyOtpForm({ email, phone, flow = 'reset', role, initialCode = '' }: Props) {
   const router = useRouter()
   const [code, setCode] = useState(initialCode)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +29,14 @@ export default function VerifyOtpForm({ email, flow = 'reset', role, initialCode
     setLoading(true)
     setError(null)
     try {
-      const res = await authService.verifyOtp(email, code)
+      let res
+      if (phone) {
+        // verify by phone
+        const verification = require('@/services/verification.service').default
+        res = await verification.prototype.verifyPhoneCode(phone, code)
+      } else {
+        res = await authService.verifyOtp(email || '', code)
+      }
       if (res.success) {
         // Handle redirect internally to avoid passing event handlers across
         // server/client boundaries. This keeps props serializable.
@@ -38,20 +46,28 @@ export default function VerifyOtpForm({ email, flow = 'reset', role, initialCode
           else if (role === 'business') router.push('/get-started/plans')
           else router.push('/signup/choose-role')
         } else if (flow === 'reset') {
-          router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(code)}`)
+          router.push(`/reset-password?email=${encodeURIComponent(email || '')}&otp=${encodeURIComponent(code)}`)
         } else router.push('/')
       } else setError('Code invalid or expired')
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Verification failed')
+      // Prefer a clear message when the API client surfaces routing misconfig errors
+      setError(e?.message || e?.response?.data?.message || 'Verification failed')
     } finally { setLoading(false) }
   }
 
   async function handleResend() {
     if (resendTimer > 0) return
     try {
-      const resp = await authService.sendVerification(email)
-      const devOtp = (resp as any)?.otp
-      if (devOtp) setCode(devOtp)
+      if (phone) {
+        const verification = require('@/services/verification.service').default
+        const resp = await verification.prototype.sendPhoneCode(phone)
+        const devOtp = (resp as any)?.otp
+        if (devOtp) setCode(devOtp)
+      } else {
+        const resp = await authService.sendVerification(email || '')
+        const devOtp = (resp as any)?.otp
+        if (devOtp) setCode(devOtp)
+      }
       setResendTimer(30)
     } catch (e) {
       setError('Unable to resend code')
@@ -91,7 +107,6 @@ export default function VerifyOtpForm({ email, flow = 'reset', role, initialCode
       <div className="mt-3 text-sm text-slate-600">
         <p className="mb-1">• The OTP is valid for <strong>5 minutes</strong>.</p>
         <p className="mb-1">• Do not share your code with anyone.</p>
-        <p>• If you didn’t request this, you can safely ignore this message.</p>
         <p className="mt-2 text-sm text-slate-500">📩 <em>Didn’t receive the code?</em> Check your spam folder or try <strong>Resend Code</strong>.</p>
       </div>
 

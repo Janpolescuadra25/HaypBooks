@@ -6,11 +6,11 @@
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_policy p ON p.polrelid = c.oid WHERE c.relname = 'AccountantClient' AND p.polname = 'rls_tenant') THEN
-    EXECUTE 'ALTER TABLE IF EXISTS public."AccountantClient" DISABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE public."AccountantClient" DISABLE ROW LEVEL SECURITY';
     EXECUTE 'DROP POLICY IF EXISTS rls_tenant ON public."AccountantClient"';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_policy p ON p.polrelid = c.oid WHERE c.relname = 'AccountantActivity' AND p.polname = 'rls_tenant') THEN
-    EXECUTE 'ALTER TABLE IF EXISTS public."AccountantActivity" DISABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE public."AccountantActivity" DISABLE ROW LEVEL SECURITY';
     EXECUTE 'DROP POLICY IF EXISTS rls_tenant ON public."AccountantActivity"';
   END IF;
 END$$;
@@ -21,11 +21,24 @@ DROP TABLE IF EXISTS public."AccountantActivity" CASCADE;
 DROP TABLE IF EXISTS public."ProAdvisorPerk" CASCADE;
 
 -- Drop columns from User safely
-ALTER TABLE IF EXISTS public."User" DROP COLUMN IF EXISTS "userType";
-ALTER TABLE IF EXISTS public."User" DROP COLUMN IF EXISTS "isCertified";
-ALTER TABLE IF EXISTS public."User" DROP COLUMN IF EXISTS "firmName";
-ALTER TABLE IF EXISTS public."User" DROP COLUMN IF EXISTS "certification";
-ALTER TABLE IF EXISTS public."User" DROP COLUMN IF EXISTS "proAdvisorBadge";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='userType') THEN
+    ALTER TABLE public."User" DROP COLUMN "userType";
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='isCertified') THEN
+    ALTER TABLE public."User" DROP COLUMN "isCertified";
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='firmName') THEN
+    ALTER TABLE public."User" DROP COLUMN "firmName";
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='certification') THEN
+    ALTER TABLE public."User" DROP COLUMN "certification";
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='proAdvisorBadge') THEN
+    ALTER TABLE public."User" DROP COLUMN "proAdvisorBadge";
+  END IF;
+END$$;
 
 -- Drop any lingering constraints or indexes that may reference dropped tables
 DO $$

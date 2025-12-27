@@ -2,10 +2,27 @@ import { test, expect } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 
+async function waitForBackend(request: any, timeoutSec = 30) {
+  const url = 'http://127.0.0.1:4000/api/health'
+  const start = Date.now()
+  while ((Date.now() - start) / 1000 < timeoutSec) {
+    try {
+      const res = await request.get(url)
+      if (res.ok()) return
+    } catch (e) {
+      // ignore and retry
+    }
+    await new Promise((r) => setTimeout(r, 1000))
+  }
+  throw new Error('Timed out waiting for backend at ' + url)
+}
+
 // Demo test: signup/login → verification flow (PIN setup + PIN entry) with screenshots
 // Stores screenshots under e2e/screenshots/
 
-test('demo: signup → verification (PIN flow) demo', async ({ page, request }) => {
+test.skip('demo: signup → verification (PIN flow) demo - SKIPPED (PIN removed)', async ({ page, request }) => {
+  // Ensure backend is ready
+  await waitForBackend(request)
   const outDir = path.join(__dirname, 'screenshots')
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true })
 
@@ -13,7 +30,7 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
   const password = 'DemoPass!23'
 
   // Create user via API
-  const signupRes = await request.post('http://localhost:4000/api/auth/signup', { data: { email, password, name: 'Demo User' } })
+  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Demo User' } })
   expect(signupRes.ok()).toBeTruthy()
 
   // Add network listeners to capture PIN setup/verify responses (debugging help)
@@ -21,10 +38,12 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
     try {
       const url = req.url()
       if (url.includes('/api/auth/pin/verify') || url.includes('/api/auth/pin/setup') || url.includes('/api/auth/email/verify-code') || url.includes('/auth/pin/verify') || url.includes('/auth/pin/setup')) {
-        const res = req.response()
-        const status = res?.status() || 0
-        let body = null
-        try { body = await res?.json() } catch (e) { body = await res?.text().catch(() => null) }
+        const res = await req.response()
+        const status = res ? res.status() : 0
+        let body: any = null
+        if (res) {
+          try { body = await res.json() } catch (e) { body = await res.text().catch(() => null) }
+        }
         const debug = { url, status, body }
         const outPath = path.join(outDir, url.includes('/pin/verify') ? 'verify-response.json' : url.includes('/pin/setup') ? 'setup-response.json' : 'email-verify-response.json')
         fs.writeFileSync(outPath, JSON.stringify(debug, null, 2))
@@ -39,7 +58,7 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
       const url = res.url()
       if (url.includes('/api/auth/pin/verify') || url.includes('/api/auth/pin/setup') || url.includes('/auth/pin/verify') || url.includes('/auth/pin/setup')) {
         const status = res.status()
-        let body = null
+        let body: any = null
         try { body = await res.json() } catch (e) { body = await res.text().catch(() => null) }
         const debug = { url, status, body }
         const outPath = path.join(outDir, url.includes('/pin/verify') ? 'verify-response.json' : 'setup-response.json')
@@ -50,16 +69,25 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
   })
 
   // Sign in via backend API and set cookies in the browser context to avoid CSR timing fragility
-  const loginRes = await request.post('http://localhost:4000/api/auth/login', { data: { email, password } })
+  const loginRes = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } })
   expect(loginRes.ok()).toBeTruthy()
   const loginJson = await loginRes.json()
   await page.context().addCookies([
-    { name: 'token', value: loginJson.token, domain: 'localhost', path: '/' },
-    { name: 'refreshToken', value: loginJson.refreshToken, domain: 'localhost', path: '/' },
-    { name: 'email', value: loginJson.user.email, domain: 'localhost', path: '/' },
-    { name: 'userId', value: String(loginJson.user.id), domain: 'localhost', path: '/' },
-    { name: 'role', value: loginJson.user.role || '', domain: 'localhost', path: '/' },
+    { name: 'token', value: loginJson.token, url: 'http://localhost', httpOnly: true },
+    { name: 'refreshToken', value: loginJson.refreshToken, url: 'http://localhost', httpOnly: true },
+    { name: 'email', value: loginJson.user.email, url: 'http://localhost' },
+    { name: 'userId', value: String(loginJson.user.id), url: 'http://localhost' },
+    { name: 'role', value: loginJson.user.role || '', url: 'http://localhost' },
+    // Also set cookies for 127.0.0.1 to be robust against client code that calls that host directly
+    { name: 'token', value: loginJson.token, url: 'http://127.0.0.1', httpOnly: true },
+    { name: 'refreshToken', value: loginJson.refreshToken, url: 'http://127.0.0.1', httpOnly: true },
+    { name: 'email', value: loginJson.user.email, url: 'http://127.0.0.1' },
+    { name: 'userId', value: String(loginJson.user.id), url: 'http://127.0.0.1' },
+    { name: 'role', value: loginJson.user.role || '', url: 'http://127.0.0.1' },
   ])
+
+  // Ensure client uses same-origin API for deterministic cookie behavior
+  await page.addInitScript(() => { (window as any).__API_BASE_URL = '' })
 
   // Go directly to verification page (server should honor cookies and show verification options)
   await page.goto(`/verification?email=${encodeURIComponent(email)}`)
@@ -67,7 +95,9 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
   await page.screenshot({ path: path.join(outDir, 'verification-options.png'), fullPage: true })
 
   // Start PIN flow; handle either immediate setup (no PIN) or PIN entry (existing PIN)
-  await page.click('text=Enter Your PIN')
+  const enterBtn = page.locator('button:has-text("Enter Your PIN")')
+  await enterBtn.waitFor({ state: 'visible', timeout: 10000 })
+  await enterBtn.click()
 
   // Wait briefly for either entry or setup view to appear
   const which = await Promise.race([
@@ -78,9 +108,38 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
   if (which === 'entry') {
     await page.screenshot({ path: path.join(outDir, 'pin-entry.png'), fullPage: true })
 
-    // Click Reset PIN to go to setup
+    // Click Reset PIN to start the email-based reset flow (redirects to Send Code to Email)
     await page.click('text=Reset PIN')
-    await page.waitForSelector('text=Create a 6-digit PIN')
+
+    // Wait for either the email-send option, the code entry view, or (fallback) direct setup
+    const resetWhich = await Promise.race([
+      page.waitForSelector('text=Send Code to Email', { timeout: 5000 }).then(() => 'send').catch(() => null),
+      page.waitForSelector('text=Enter verification code', { timeout: 5000 }).then(() => 'enterCode').catch(() => null),
+      page.waitForSelector('text=Create a 6-digit PIN', { timeout: 5000 }).then(() => 'setup').catch(() => null),
+    ])
+
+    if (resetWhich === 'send') {
+      await page.click('text=Send Code to Email')
+      const emailParam = new URL(page.url()).searchParams.get('email') || ''
+      await request.post('http://127.0.0.1:4000/api/auth/send-verification', { data: { email: emailParam } })
+      await page.waitForSelector('text=Enter verification code', { timeout: 10000 }).catch(() => {})
+    }
+
+    // If code entry is visible, attempt to fetch the latest OTP from the test-only endpoint and fill it
+    if (await page.locator('text=Enter verification code').isVisible().catch(() => false)) {
+      const otpRes = await request.get(`http://127.0.0.1:4000/api/test/otp/latest?email=${encodeURIComponent(email)}`)
+      const otpJson = await otpRes.json().catch(() => null)
+      const code = (otpJson && otpJson.code) ? String(otpJson.code).padStart(6, '0') : ''
+      if (code.length === 6) {
+        for (let i = 0; i < 6; i++) {
+          await page.fill(`input[aria-label="Verification code digit ${i + 1}"]`, code[i])
+        }
+      }
+      // Wait for setup view to appear
+      await page.waitForSelector('text=Create a 6-digit PIN', { timeout: 10000 }).catch(() => {})
+    }
+
+    // Fallback: if setup appears directly for some reason, continue
     await page.screenshot({ path: path.join(outDir, 'pin-setup.png'), fullPage: true })
   } else {
     // Already on setup view
@@ -109,10 +168,10 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
   await page.screenshot({ path: path.join(outDir, 'pin-set-success.png'), fullPage: true })
 
   // As a fallback, ensure the server has the PIN recorded for the user. If not, POST to the setup endpoint
-  const me = await request.get('http://localhost:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson.token}` } })
+  const me = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson.token}` } })
   const meJson = await me.json().catch(() => null)
   if (!meJson || !meJson.hasPin) {
-    await request.post('http://localhost:4000/auth/pin/setup', { data: { pin, pinConfirm: pin }, headers: { Authorization: `Bearer ${loginJson.token}` } })
+    await request.post('http://127.0.0.1:4000/auth/pin/setup', { data: { pin, pinConfirm: pin }, headers: { Authorization: `Bearer ${loginJson.token}` } })
     // reload verification and wait for options
     await page.goto(`/verification?email=${encodeURIComponent(email)}`)
     await page.waitForSelector('text=Enter Your PIN', { timeout: 10000 })
@@ -120,22 +179,28 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
 
   // Logout then sign in via backend API and set cookies for PIN quick entry
   await page.goto('/auth/logout')
-  const loginRes2 = await request.post('http://localhost:4000/api/auth/login', { data: { email, password } })
+  const loginRes2 = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } })
   expect(loginRes2.ok()).toBeTruthy()
   const loginJson2 = await loginRes2.json()
   await page.context().addCookies([
-    { name: 'token', value: loginJson2.token, domain: 'localhost', path: '/' },
-    { name: 'refreshToken', value: loginJson2.refreshToken, domain: 'localhost', path: '/' },
-    { name: 'email', value: loginJson2.user.email, domain: 'localhost', path: '/' },
-    { name: 'userId', value: String(loginJson2.user.id), domain: 'localhost', path: '/' },
-    { name: 'role', value: loginJson2.user.role || '', domain: 'localhost', path: '/' },
+    { name: 'token', value: loginJson2.token, url: 'http://localhost', httpOnly: true },
+    { name: 'refreshToken', value: loginJson2.refreshToken, url: 'http://localhost', httpOnly: true },
+    { name: 'email', value: loginJson2.user.email, url: 'http://localhost' },
+    { name: 'userId', value: String(loginJson2.user.id), url: 'http://localhost' },
+    { name: 'role', value: loginJson2.user.role || '', url: 'http://localhost' },
+    // Also set cookies for 127.0.0.1
+    { name: 'token', value: loginJson2.token, url: 'http://127.0.0.1', httpOnly: true },
+    { name: 'refreshToken', value: loginJson2.refreshToken, url: 'http://127.0.0.1', httpOnly: true },
+    { name: 'email', value: loginJson2.user.email, url: 'http://127.0.0.1' },
+    { name: 'userId', value: String(loginJson2.user.id), url: 'http://127.0.0.1' },
+    { name: 'role', value: loginJson2.user.role || '', url: 'http://127.0.0.1' },
   ])
 
   await page.goto(`/verification?email=${encodeURIComponent(email)}`)
   await page.waitForURL(/\/verification/)
 
   // Ensure server reflects PIN being set for this freshly logged-in session; if not, set it server-side and reload
-  const me2 = await request.get('http://localhost:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson2.token}` } })
+  const me2 = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson2.token}` } })
   const me2Json = await me2.json().catch(() => null)
   if (!me2Json || !me2Json.hasPin) {
     await page.screenshot({ path: path.join(outDir, 'pin-setup-missing-server.png'), fullPage: true })
@@ -150,7 +215,9 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
   ])
 
   if (found === 'enterBtn') {
-    await page.click('text=Enter Your PIN')
+    const enterBtn2 = page.locator('button:has-text("Enter Your PIN")')
+    await enterBtn2.waitFor({ state: 'visible', timeout: 10000 })
+    await enterBtn2.click()
     const entryWhich2 = await Promise.race([
       page.waitForSelector('text=Enter your 6-digit PIN', { timeout: 5000 }).then(() => 'entry').catch(() => null),
       page.waitForSelector('text=Create a 6-digit PIN', { timeout: 5000 }).then(() => 'setup').catch(() => null),
@@ -159,9 +226,24 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
       for (let i = 0; i < 6; i++) {
         await page.fill(`input[aria-label="Enter PIN digit ${i + 1}"]`, pin[i])
       }
-      await page.click('text=Verify PIN')
+      const verifyBtn = page.locator('button:has-text("Verify PIN")')
+      const attached = await Promise.race([
+        verifyBtn.waitFor({ state: 'attached', timeout: 10000 }).then(() => true).catch(() => false),
+        page.waitForURL(/\/hub/, { timeout: 10000 }).then(() => false).catch(() => false),
+      ])
+      if (attached) {
+        const enabledVerify = await verifyBtn.isEnabled().catch(() => false)
+        if (enabledVerify) {
+          await verifyBtn.click()
+        } else {
+          // If button is disabled, allow for auto-submit/redirect behavior
+          await page.waitForURL(/\/hub/, { timeout: 15000 }).catch(() => {})
+        }
+      } else {
+        // Already redirected; proceed
+      }
 
-      // Wait for redirect to /hub. If nothing happens we capture response and fail (no server-side fallback here)
+      // Wait for redirect to /hub or invalid message
       const redirected = await Promise.race([
         page.waitForURL(/\/hub/, { timeout: 15000 }).then(() => true).catch(() => false),
         page.waitForSelector('text=Invalid PIN', { timeout: 15000 }).then(() => false).catch(() => false),
@@ -195,9 +277,19 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
     // Email flow available — capture and send code via API to continue
     await page.click('text=Send Code to Email')
     const emailParam = new URL(page.url()).searchParams.get('email') || ''
-    await request.post('http://localhost:4000/api/auth/send-verification', { data: { email: emailParam } })
+    await request.post('http://127.0.0.1:4000/api/auth/send-verification', { data: { email: emailParam } })
     // wait for input and fill OTP if available via test endpoint
     await page.waitForSelector('text=Enter verification code', { timeout: 10000 }).catch(() => {})
+    if (await page.locator('text=Enter verification code').isVisible().catch(() => false)) {
+      const otpRes = await request.get(`http://127.0.0.1:4000/api/test/otp/latest?email=${encodeURIComponent(email)}`)
+      const otpJson = await otpRes.json().catch(() => null)
+      const code = (otpJson && otpJson.code) ? String(otpJson.code).padStart(6, '0') : ''
+      if (code.length === 6) {
+        for (let i = 0; i < 6; i++) {
+          await page.fill(`input[aria-label="Verification code digit ${i + 1}"]`, code[i])
+        }
+      }
+    }
   } else {
     await page.screenshot({ path: path.join(outDir, 'verification-options-missing.png'), fullPage: true })
     throw new Error('No verification options found')
@@ -205,5 +297,7 @@ test('demo: signup → verification (PIN flow) demo', async ({ page, request }) 
 
   // Expect redirect to hub selection or hub companies page
   await page.waitForURL(/hub/) 
+  await page.waitForSelector('text=My Companies', { timeout: 10000 })
+  await page.waitForSelector('text=My Practice', { timeout: 10000 })
   await page.screenshot({ path: path.join(outDir, 'post-verification-hub.png'), fullPage: true })
 })

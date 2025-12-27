@@ -45,7 +45,13 @@ export default function LoginPage() {
     return () => { mounted = false }
   }, [router])
   const schema = z.object({ email: z.string().email('Invalid email'), password: z.string().min(1, 'Password required') })
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({ resolver: zodResolver(schema) })
+
+  useEffect(() => {
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const email = params?.get('email')
+    if (email) setValue('email', email)
+  }, [setValue])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -89,6 +95,24 @@ export default function LoginPage() {
       
       const params = new URLSearchParams(window.location.search)
   const next = params.get('next') || '/hub/companies'
+      // If server indicates MFA/verification is required, redirect to verification flow
+      if ((response as any)?.mfaRequired || (response.user as any)?.requiresVerification) {
+        // pass email in query so email code form can default to it
+        const q = new URLSearchParams({ email: response.user.email })
+        router.replace(`/verification?${q.toString()}`)
+        setLoading(false)
+        return
+      }
+
+      // If server indicates the user needs to set up a PIN explicitly, send them to the verification screen
+      // but do NOT force the setup view - show the options first and let the user choose.
+      if ((response.user as any)?.requiresPinSetup) {
+        const q = new URLSearchParams({ email: response.user.email })
+        router.replace(`/verification?${q.toString()}`)
+        setLoading(false)
+        return
+      }
+
       // If server indicates the user needs to select a hub (multi-role, no preferredHub), show modal
       if ((response.user as any)?.requiresHubSelection) {
         // Redirect to dedicated hub selection page to allow an explicit choice after sign-in
@@ -97,13 +121,9 @@ export default function LoginPage() {
         return
       }
 
-      // Respect server-suggested redirect (e.g., /accountant) when present
-      if (response && (response as any).redirect) {
-        router.replace((response as any).redirect)
-      } else {
-        // Default now: send user to the dedicated hub selection page so they can pick or create a hub
-        router.replace('/hub/selection')
-      }
+      // Always show hub selection first so users explicitly choose or create a hub
+      // (Do not auto-redirect to a preferred hub immediately after login.)
+      router.replace('/hub/selection')
     } catch (e: any) {
       // Clear timeout on error
       if (timeoutId) clearTimeout(timeoutId)
@@ -227,14 +247,7 @@ export default function LoginPage() {
             {errors.password && <p className="text-sm text-red-600 mt-1 animate-shake">{String(errors.password?.message)}</p>}
           </div>
 
-          <div className="flex items-center justify-between">
-            <label className="flex items-center cursor-pointer group">
-              <input
-                type="checkbox"
-                className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 transition-colors"
-              />
-              <span className="ml-2 text-sm text-slate-600 group-hover:text-slate-900 transition-colors">Remember me</span>
-            </label>
+          <div className="flex justify-end">
             <a href="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
               Forgot password?
             </a>

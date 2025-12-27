@@ -26,7 +26,7 @@ test('signup -> verify OTP -> skip onboarding -> dashboard shows nav & persisted
   for (let i = 0; i < otp.length; i++) {
     await page.fill(`input[aria-label="Digit ${i + 1}"]`, otp[i])
   }
-  await page.click('text=Verify code')
+  await page.getByRole('button', { name: /Verify OTP|Verify code/i }).click()
 
   // Wait for onboarding page
   await page.waitForURL(/.*onboarding.*/)

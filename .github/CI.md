@@ -8,6 +8,7 @@ Key points:
 - It runs on push & pull_request for `main` / `master`.
 - Services: Postgres (image postgres:15), database `haypbooks_ui_test`.
 - Backend must be started with `ALLOW_TEST_ENDPOINTS=true` so the Playwright test can use test-only endpoints (e.g. `/api/test/create-user`, `/api/test/otp/latest`, `/api/test/sessions`).
+- Note: A new focused test `e2e/verify-phone-persist.spec.ts` asserts phone verification persistence (`isPhoneVerified` and `phoneVerifiedAt`), so ensure migrations are applied (migration check will validate required columns) before running the workflow.
 
 How the workflow works (high level):
 

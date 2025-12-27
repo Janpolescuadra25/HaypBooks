@@ -24,8 +24,8 @@ export default function SubscribePage() {
     else router.push('/get-started/plans')
   }
   function finish() {
-    // For now, simulate success and route into onboarding/tenant
-    router.push('/onboarding/tenant')
+    // Simulate success: show welcome page before onboarding flow
+    router.push('/onboarding/welcome')
   }
 
   return (

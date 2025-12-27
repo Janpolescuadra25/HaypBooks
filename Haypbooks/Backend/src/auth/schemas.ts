@@ -9,9 +9,10 @@ export const VerifyOtpSchema = z.preprocess((val) => {
   }
   return val
 }, z.object({
-  email: z.string().email(),
+  email: z.string().email().optional(),
+  phone: z.string().regex(/^\+?[0-9 ()\-]{7,20}$/, 'Please provide a valid phone number').optional(),
   otpCode: z.string().regex(/^[0-9]{6}$/, 'OTP must be a 6-digit numeric string'),
-}))
+}).refine((d) => !!(d.email || d.phone), { message: 'email or phone required' }))
 
 export const ResetPasswordSchema = z.preprocess((val) => {
   // Accept either { newPassword } or { password } and map newPassword -> password

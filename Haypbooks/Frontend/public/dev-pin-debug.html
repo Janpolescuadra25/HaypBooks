@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dev Pin Debug (static)</title>
+    <style>body{font-family: system-ui, Arial; padding:20px} input{padding:8px;margin:4px} button{margin:4px;padding:8px}</style>
+  </head>
+  <body>
+    <h2>Dev Pin Debug (static)</h2>
+    <div>
+      <label>Email</label><br />
+      <input id="email" placeholder="you@dev.test" value="" /><br />
+      <label>Password</label><br />
+      <input id="password" type="password" value="Password!23" /><br />
+      <label>PIN (6 digits)</label><br />
+      <input id="pin" maxlength="6" value="123456" /><br />
+      <div style="margin-top:8px">
+        <button id="signup">Signup</button>
+        <button id="login">Login</button>
+        <button id="me">/api/users/me</button>
+        <button id="setpin" disabled>Set PIN (removed)</button>
+        <button id="verifypin" disabled>Verify PIN (removed)</button>
+        <button id="logout">Logout</button>
+      </div>
+    </div>
+    <div style="margin-top:20px;background:#f3f4f6;padding:12px;height:300px;overflow:auto" id="logs">
+      <h4>Logs</h4>
+      <ul id="loglist"></ul>
+    </div>
+
+    <script>
+      function log(msg){ const ul=document.getElementById('loglist'); const li=document.createElement('li'); li.textContent=msg; ul.insertBefore(li, ul.firstChild); console.log(msg)}
+      const BACKEND = 'http://127.0.0.1:4000'
+    async function apiPost(path, body){ log('POST '+path+' '+JSON.stringify(body)); try{ const res = await fetch(BACKEND + path, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), credentials: 'include' }); const text = await res.text().catch(()=>''); try{ const json=JSON.parse(text); log('=> '+res.status+' '+JSON.stringify(json)); return {ok:res.ok, status: res.status, body: json}}catch(e){ log('=> '+res.status+' (non-json) '+text); return {ok:res.ok, status: res.status, body: text}} }catch(e){ log('=> ERR '+(e.message||e)); return {ok:false}} }
+
+      document.getElementById('signup').addEventListener('click', async ()=>{ const email=document.getElementById('email').value; const password=document.getElementById('password').value; if(!email){ log('Set email'); return } ; await apiPost('/api/auth/signup', {email,password,name:'Dev Static'}); })
+      document.getElementById('login').addEventListener('click', async ()=>{ const email=document.getElementById('email').value; const password=document.getElementById('password').value; if(!email){ log('Set email'); return } ; await apiPost('/api/auth/login', {email,password}); })
+      document.getElementById('setpin').addEventListener('click', async ()=>{ log('PIN feature has been removed') })
+      document.getElementById('verifypin').addEventListener('click', async ()=>{ log('PIN feature has been removed') })
+      document.getElementById('me').addEventListener('click', async ()=>{ try{ const res=await fetch(BACKEND + '/api/users/me', {credentials: 'include'}); const json=await res.json().catch(()=>null); log('/api/users/me => '+res.status+' '+JSON.stringify(json)) }catch(e){ log('me err '+(e.message||e)) } })
+      document.getElementById('logout').addEventListener('click', async ()=>{ await apiPost('/api/auth/logout',{}); })
+    </script>
+  </body>
+</html>

@@ -17,7 +17,7 @@ export class PrismaAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signup(email: string, password: string, name?: string, role?: string) {
+  async signup(email: string, password: string, name?: string, role?: string, phone?: string) {
     const existing = await this.userRepo.findByEmail(email)
     if (existing) {
       // Log failed signup attempt
@@ -28,7 +28,12 @@ export class PrismaAuthService {
     const hashed = await bcrypt.hash(password, 10)
     const isAccountant = role === 'accountant' || role === 'both'
     const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
-    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub })
+    // Normalize phone if provided
+    let normalizedPhone: string | undefined = undefined
+    if (phone) {
+      try { normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone) } catch (e) { throw e }
+    }
+    const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub, phone: normalizedPhone })
 
     // Log successful signup
     await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })
@@ -116,6 +121,15 @@ export class PrismaAuthService {
       accountantOnboardingCompleted: (user as any).accountantOnboardingComplete ?? false,
       preferredHub: user.preferredHub ?? null,
       requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
+    }
+
+    // Developer convenience: in non-production environments, if a user is not email-verified,
+    // surface a flag so the frontend will present the verification UI immediately after login.
+    // This is strictly dev/test-only and will not run in production.
+    const devMfa = (process.env.NODE_ENV || 'development') !== 'production' && !user.isEmailVerified
+
+    if (devMfa) {
+      return { token, refreshToken, user: userResponse, mfaRequired: true }
     }
 
     return { token, refreshToken, user: userResponse }
@@ -207,6 +221,15 @@ export class PrismaAuthService {
     return created
   }
 
+  async startOtpByPhone(phone: string, otpCode?: string, ttlMinutes = 5, purpose: string = 'RESET') {
+    const code = otpCode || String(Math.floor(Math.random() * 1000000)).padStart(6, '0')
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000)
+    // Normalize phone before creating OTP
+    const normalized = require('../utils/phone.util').normalizePhoneOrThrow(phone)
+    const created = await this.otpRepo.create({ phone: normalized, otpCode: code, expiresAt, purpose })
+    return created
+  }
+
   async verifyOtp(email: string, otpCode: string, consume: boolean = false) {
     const row = await this.otpRepo.findLatestByEmail(email)
     if (!row) return false
@@ -237,6 +260,27 @@ export class PrismaAuthService {
       // ignore errors here
     }
 
+    return true
+  }
+
+  async verifyOtpByPhone(phone: string, otpCode: string, consume: boolean = false) {
+    const row = await this.otpRepo.findLatestByPhone(phone)
+    if (!row) return false
+    const expiryTs = typeof row.expiresAt === 'number' ? row.expiresAt : (row.expiresAt instanceof Date ? row.expiresAt.getTime() : Number(row.expiresAt))
+    if (expiryTs < Date.now()) return false
+    if (row.attempts >= 5) return false
+    if (row.otpCode !== otpCode) {
+      await this.otpRepo.incrementAttempts(row.id)
+      return false
+    }
+
+    try {
+      if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'VERIFY') {
+        await this.otpRepo.delete(row.id)
+      }
+    } catch (e) {}
+
+    // No automatic user flags updated for phone-based OTPs
     return true
   }
 

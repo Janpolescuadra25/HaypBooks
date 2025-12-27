@@ -36,4 +36,9 @@ export class PrismaUserRepository implements IUserRepository {
     const u = await this.prisma.user.findFirst({ where: { resetToken: token, resetTokenExpiry: { gt: Math.floor(Date.now() / 1000) } } })
     return u as any
   }
+
+  async findByPhone(phone: string): Promise<User | null> {
+    const u = await this.prisma.user.findFirst({ where: { phone } })
+    return u as any
+  }
 }

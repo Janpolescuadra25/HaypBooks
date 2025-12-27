@@ -31,6 +31,11 @@ export class SignupDto {
   @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   // Accept 'business'|'accountant'|'both' in the frontend; map to userType in backend
   role?: string
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @Matches(/^\+?[0-9 ()\-]{7,20}$/, { message: 'Please provide a valid phone number' })
+  phone?: string
 }
 
 export class ForgotPasswordDto {

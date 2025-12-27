@@ -4,30 +4,59 @@ import { test, expect } from '@playwright/test'
 // - No server-side fallback. Fails if client verify or redirect doesn't happen.
 // - Uses API signup/login + cookie injection to stabilize auth.
 
-test('signup → strict client-only verification (PIN flow)', async ({ page, request }) => {
+async function waitForBackend(request: any, timeoutSec = 30) {
+  const url = 'http://127.0.0.1:4000/api/health'
+  const start = Date.now()
+  while ((Date.now() - start) / 1000 < timeoutSec) {
+    try {
+      const res = await request.get(url)
+      if (res.ok()) return
+    } catch (e) {
+      // ignore and retry
+    }
+    await new Promise((r) => setTimeout(r, 1000))
+  }
+  throw new Error('Timed out waiting for backend at ' + url)
+}
+
+test.skip('signup → strict client-only verification (PIN flow) - SKIPPED (PIN removed)', async ({ page, request }) => {
   const email = `e2e-strict-${Date.now()}@haypbooks.test`
   const password = 'StrictPass!23'
 
+  // Wait for backend to be ready (forces IPv4 to avoid ::1 issues)
+  await waitForBackend(request)
+
   // Create user via API
-  const signup = await request.post('http://localhost:4000/api/auth/signup', { data: { email, password, name: 'Strict Demo' } })
+  const signup = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Strict Demo' } })
   expect(signup.ok()).toBeTruthy()
 
   // Login and set cookies
-  const login = await request.post('http://localhost:4000/api/auth/login', { data: { email, password } })
+  const login = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } })
   expect(login.ok()).toBeTruthy()
   const loginJson = await login.json()
   await page.context().addCookies([
-    { name: 'token', value: loginJson.token, domain: 'localhost', path: '/' },
-    { name: 'refreshToken', value: loginJson.refreshToken, domain: 'localhost', path: '/' },
-    { name: 'email', value: loginJson.user.email, domain: 'localhost', path: '/' },
-    { name: 'userId', value: String(loginJson.user.id), domain: 'localhost', path: '/' },
-    { name: 'role', value: loginJson.user.role || '', domain: 'localhost', path: '/' },
+    { name: 'token', value: loginJson.token, url: 'http://localhost', httpOnly: true },
+    { name: 'refreshToken', value: loginJson.refreshToken, url: 'http://localhost', httpOnly: true },
+    { name: 'email', value: loginJson.user.email, url: 'http://localhost' },
+    { name: 'userId', value: String(loginJson.user.id), url: 'http://localhost' },
+    { name: 'role', value: loginJson.user.role || '', url: 'http://localhost' },
+    // Also set cookies for 127.0.0.1 for robustness
+    { name: 'token', value: loginJson.token, url: 'http://127.0.0.1', httpOnly: true },
+    { name: 'refreshToken', value: loginJson.refreshToken, url: 'http://127.0.0.1', httpOnly: true },
+    { name: 'email', value: loginJson.user.email, url: 'http://127.0.0.1' },
+    { name: 'userId', value: String(loginJson.user.id), url: 'http://127.0.0.1' },
+    { name: 'role', value: loginJson.user.role || '', url: 'http://127.0.0.1' },
   ])
+
+  // Ensure client uses same-origin API for deterministic cookie behavior
+  await page.addInitScript(() => { (window as any).__API_BASE_URL = '' })
 
   // Go to verification and choose Enter Your PIN (options page shows first)
   await page.goto(`/verification?email=${encodeURIComponent(email)}`)
   await page.waitForSelector('text=Enter Your PIN', { timeout: 10000 })
-  await page.click('text=Enter Your PIN')
+  const enterBtn = page.locator('button:has-text("Enter Your PIN")')
+  await enterBtn.waitFor({ state: 'visible', timeout: 10000 })
+  await enterBtn.click()
   await page.waitForSelector('text=Create a 6-digit PIN', { timeout: 10000 })
 
   // Fill create + confirm and rely on auto-submit on last confirm input
@@ -44,22 +73,22 @@ test('signup → strict client-only verification (PIN flow)', async ({ page, req
 
   // Logout then re-login to exercise login-time flags
   await page.goto('/auth/logout')
-  const login2 = await request.post('http://localhost:4000/api/auth/login', { data: { email, password } })
+  const login2 = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } })
   expect(login2.ok()).toBeTruthy()
   const loginJson2 = await login2.json()
   await page.context().clearCookies()
   await page.context().addCookies([
-    { name: 'token', value: loginJson2.token, domain: 'localhost', path: '/' },
-    { name: 'refreshToken', value: loginJson2.refreshToken, domain: 'localhost', path: '/' },
-    { name: 'email', value: loginJson2.user.email, domain: 'localhost', path: '/' },
-    { name: 'userId', value: String(loginJson2.user.id), domain: 'localhost', path: '/' },
+    { name: 'token', value: loginJson2.token, url: 'http://localhost', httpOnly: true },
+    { name: 'refreshToken', value: loginJson2.refreshToken, url: 'http://localhost', httpOnly: true },
+    { name: 'email', value: loginJson2.user.email, url: 'http://localhost' },
+    { name: 'userId', value: String(loginJson2.user.id), url: 'http://localhost' },
   ])
 
   // Ensure the server reports the PIN is set for the current session; retry briefly if necessary
   let me2Json = null
   for (let attempt = 0; attempt < 6; attempt++) {
-    const me2 = await request.get('http://localhost:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson2.token}` } })
-    me2Json = await me2.json().catch(() => null)
+const me = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson2.token}` } })
+    me2Json = await me.json().catch(() => null)
     if (me2Json && me2Json.hasPin) break
     // wait 500ms and retry
     await page.waitForTimeout(500)
@@ -74,8 +103,8 @@ test('signup → strict client-only verification (PIN flow)', async ({ page, req
     try {
       const url = req.url()
       if (url.includes('/api/users/me')) {
-        const res = req.response()
-        const body = await res?.json().catch(() => null)
+        const res = await req.response()
+        const body = res ? await res.json().catch(() => null) : null
         meResponseBody = body
         console.log('Captured /api/users/me via page requestfinished:', body)
       }
@@ -97,7 +126,7 @@ test('signup → strict client-only verification (PIN flow)', async ({ page, req
 
   // If the page didn't fetch /api/users/me in the browser, fall back to checking server state directly for diagnostics
   if (!meResponseBody) {
-    const meDirect = await request.get('http://localhost:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson2.token}` } })
+    const meDirect = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson2.token}` } })
     const meDirectJson = await meDirect.json().catch(() => null)
     if (!meDirectJson || !meDirectJson.hasPin) {
       throw new Error('Server did not report hasPin=true for user after setup (direct check): ' + JSON.stringify(meDirectJson))
@@ -119,7 +148,23 @@ test('signup → strict client-only verification (PIN flow)', async ({ page, req
     for (let i = 0; i < 6; i++) {
       await page.fill(`input[aria-label="Enter PIN digit ${i + 1}"]`, pin[i])
     }
-    await page.click('text=Verify PIN')
+    // Wait for Verify button to become attached. If enabled, click; otherwise treat navigation as success (auto-submit case)
+    const verifyBtn = page.locator('button:has-text("Verify PIN")')
+    const attached = await Promise.race([
+      verifyBtn.waitFor({ state: 'attached', timeout: 10000 }).then(() => true).catch(() => false),
+      page.waitForURL(/hub/, { timeout: 10000 }).then(() => false).catch(() => false),
+    ])
+    if (attached) {
+      const enabled = await verifyBtn.isEnabled().catch(() => false)
+      if (enabled) {
+        await verifyBtn.click()
+      } else {
+        // Button disabled likely due to auto-submit or immediate redirect; wait for hub navigation
+        await page.waitForURL(/hub/, { timeout: 10000 }).catch(() => {})
+      }
+    } else {
+      // Already redirected; proceed
+    }
   } else if (whichAfterClick === 'setup') {
     // Complete setup then re-login and perform verify
     for (let i = 0; i < 6; i++) {
@@ -131,14 +176,14 @@ test('signup → strict client-only verification (PIN flow)', async ({ page, req
     await page.waitForSelector('text=Enter Your PIN', { timeout: 15000 })
 
     await page.goto('/auth/logout')
-    const login3 = await request.post('http://localhost:4000/api/auth/login', { data: { email, password } })
+    const login3 = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } })
     expect(login3.ok()).toBeTruthy()
     const loginJson3 = await login3.json()
 
     // Verify server reports the PIN exists for this freshly logged-in session
     let me3Json = null
     for (let attempt = 0; attempt < 6; attempt++) {
-      const me3 = await request.get('http://localhost:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson3.token}` } })
+      const me3 = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson3.token}` } })
       me3Json = await me3.json().catch(() => null)
       if (me3Json && me3Json.hasPin) break
       await new Promise((r) => setTimeout(r, 500))
@@ -157,18 +202,29 @@ test('signup → strict client-only verification (PIN flow)', async ({ page, req
 
     await page.goto(`/verification?email=${encodeURIComponent(email)}`)
     await page.waitForSelector('text=Enter Your PIN', { timeout: 10000 })
-    await page.click('text=Enter Your PIN')
+    const enterBtn3 = page.locator('button:has-text("Enter Your PIN")')
+    await enterBtn3.waitFor({ state: 'visible', timeout: 10000 })
+    await enterBtn3.click()
 
     await page.waitForSelector('text=Enter your 6-digit PIN', { timeout: 10000 })
     for (let i = 0; i < 6; i++) {
       await page.fill(`input[aria-label="Enter PIN digit ${i + 1}"]`, pin[i])
     }
-    await page.click('text=Verify PIN')
+    const verifyBtn = page.locator('button:has-text("Verify PIN")')
+    await verifyBtn.waitFor({ state: 'attached', timeout: 10000 })
+    const enabled = await verifyBtn.isEnabled().catch(() => false)
+    if (enabled) {
+      await verifyBtn.click()
+    } else {
+      await page.waitForURL(/hub/, { timeout: 10000 }).catch(() => {})
+    }
   } else {
     throw new Error('Unable to determine whether page showed PIN entry or PIN setup after clicking Enter Your PIN')
   }
 
   // Expect redirect to hub (client verify must redirect)
   await page.waitForURL(/hub/, { timeout: 15000 })
+  await page.waitForSelector('text=My Companies', { timeout: 10000 })
+  await page.waitForSelector('text=My Practice', { timeout: 10000 })
   expect(page.url()).toMatch(/\/hub/)
 })

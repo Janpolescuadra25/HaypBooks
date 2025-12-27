@@ -48,6 +48,14 @@
     "expectsTenantIndex": false
   },
   {
+    "name": "Subscription",
+    "tenantScoped": false,
+    "requiredColumns": [
+      "id"
+    ],
+    "expectsTenantIndex": false
+  },
+  {
     "name": "Company",
     "tenantScoped": false,
     "requiredColumns": [
@@ -794,7 +802,6 @@
     ],
     "expectsTenantIndex": false
   },
-
   {
     "name": "IdempotencyKey",
     "tenantScoped": false,

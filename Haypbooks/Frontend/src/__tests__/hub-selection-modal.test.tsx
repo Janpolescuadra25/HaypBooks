@@ -23,7 +23,8 @@ describe('HubSelectionModal', () => {
     const ownerBtn = screen.getByRole('button', { name: /Enter Owner Hub/i })
     expect(ownerBtn).toBeInTheDocument()
 
-    const acctBtn = screen.getByRole('button', { name: /Enter Accountant Hub/i })
+    // Now when accountant onboarding is incomplete we show a "Create Accountant Hub" CTA which opens the inline form
+    const acctBtn = screen.getByRole('button', { name: /Create Accountant Hub/i })
     fireEvent.click(acctBtn)
 
     // Form should be displayed
@@ -44,5 +45,17 @@ describe('HubSelectionModal', () => {
     expect((global as any).fetch).toHaveBeenCalledWith('/api/onboarding/save', expect.anything())
     expect((global as any).fetch).toHaveBeenCalledWith('/api/onboarding/complete', expect.anything())
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/accountant'))
+  })
+
+  test('shows Create Company CTA when user is an accountant without owner companies', async () => {
+    render(<HubSelectionModal user={{ id: 'u2', role: 'accountant', companies: [] }} onClose={() => {}} />)
+
+    // Owner side should show "Create Company" CTA
+    const createCompanyBtn = screen.getByRole('button', { name: /Create Company/i })
+    expect(createCompanyBtn).toBeInTheDocument()
+
+    // Click should navigate to company creation
+    fireEvent.click(createCompanyBtn)
+    expect(replaceMock).toHaveBeenCalledWith('/companies?create=1')
   })
 })

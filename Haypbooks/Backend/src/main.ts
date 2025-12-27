@@ -37,6 +37,14 @@ async function bootstrap() {
     credentials: true,
   })
 
+  // Add a lightweight request-id middleware (helps correlate e2e traces and server logs)
+  try {
+    const requestIdMiddleware = require('./common/request-id.middleware').default
+    app.use(requestIdMiddleware)
+  } catch (e) {
+    // ignore if middleware can't be loaded; this is best-effort for diagnostics
+  }
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({

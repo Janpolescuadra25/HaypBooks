@@ -24,6 +24,7 @@ export class UsersService {
       // Per-hub flags
       ownerOnboardingCompleted: (result as any).ownerOnboardingComplete ?? false,
       accountantOnboardingCompleted: (result as any).accountantOnboardingComplete ?? false,
+
     }
   }
 

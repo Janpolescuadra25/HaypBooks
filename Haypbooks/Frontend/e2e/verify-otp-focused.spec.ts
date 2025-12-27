@@ -25,7 +25,8 @@ test('verify-otp UI accepts code and verifies user', async ({ page, request }) =
 
   expect(otp).toBeTruthy()
 
-  await page.goto(`/verify-otp?email=${encodeURIComponent(email)}&flow=signup`)
+  // Navigate directly to email verification method to skip selection UI for focused test
+  await page.goto(`/verify-otp?email=${encodeURIComponent(email)}&flow=signup&method=email`)
 
   // Fill digits
   for (let i = 0; i < otp.length; i++) {

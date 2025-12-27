@@ -11,6 +11,7 @@ export const PUBLIC_PATH_PREFIXES = [
   '/learn-and-support',
   '/forgot-password',
   '/verify-otp',
+  '/verification',
   '/reset-password',
   '/onboarding',
   '/onboarding/business',

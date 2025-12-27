@@ -50,28 +50,28 @@ BEGIN
   -- Add tenant FK only if Tenant.id and Task.tenantId have the same data type
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_tenant') AND
      EXISTS (SELECT 1 FROM information_schema.columns t1 JOIN information_schema.columns t2 ON t1.data_type = t2.data_type WHERE t1.table_schema='public' AND t1.table_name='tenant' AND t1.column_name='id' AND t2.table_schema='public' AND t2.table_name='Task' AND t2.column_name='tenantId') THEN
-    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_tenant FOREIGN KEY ("tenantId") REFERENCES public."Tenant"("id") ON DELETE RESTRICT';
+    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_tenant FOREIGN KEY ("tenantId") REFERENCES public."Tenant"("id") ON DELETE RESTRICT NOT VALID';
   END IF;
   -- Add company FK only if Company.id and Task.companyId have the same data type
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_company') AND
      EXISTS (SELECT 1 FROM information_schema.columns c1 JOIN information_schema.columns c2 ON c1.data_type = c2.data_type WHERE c1.table_schema='public' AND c1.table_name='Company' AND c1.column_name='id' AND c2.table_schema='public' AND c2.table_name='Task' AND c2.column_name='companyId') THEN
-    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_company FOREIGN KEY ("companyId") REFERENCES public."Company"("id") ON DELETE SET NULL';
+    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_company FOREIGN KEY ("companyId") REFERENCES public."Company"("id") ON DELETE SET NULL NOT VALID';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_creator') THEN
-    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_creator FOREIGN KEY ("createdById") REFERENCES public."User"("id") ON DELETE CASCADE';
+    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_creator FOREIGN KEY ("createdById") REFERENCES public."User"("id") ON DELETE CASCADE NOT VALID';
   END IF;
   -- Composite FK to TenantUser (tenantId, assigneeId) -> (tenantId, userId)
   -- Only add if both pair of columns exist and their data types match
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_assignee') AND
      EXISTS (SELECT 1 FROM information_schema.columns c1 JOIN information_schema.columns c2 ON c1.data_type = c2.data_type WHERE c1.table_schema='public' AND c1.table_name='TenantUser' AND c1.column_name='tenantId' AND c2.table_schema='public' AND c2.table_name='Task' AND c2.column_name='tenantId') AND
      EXISTS (SELECT 1 FROM information_schema.columns c3 JOIN information_schema.columns c4 ON c3.data_type = c4.data_type WHERE c3.table_schema='public' AND c3.table_name='TenantUser' AND c3.column_name='userId' AND c4.table_schema='public' AND c4.table_name='Task' AND c4.column_name='assigneeId') THEN
-    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_assignee FOREIGN KEY ("tenantId", "assigneeId") REFERENCES public."TenantUser"("tenantId", "userId") ON DELETE SET NULL';
+    EXECUTE 'ALTER TABLE public."Task" ADD CONSTRAINT fk_task_assignee FOREIGN KEY ("tenantId", "assigneeId") REFERENCES public."TenantUser"("tenantId", "userId") ON DELETE SET NULL NOT VALID';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comment_task') THEN
-    EXECUTE 'ALTER TABLE public."TaskComment" ADD CONSTRAINT fk_comment_task FOREIGN KEY ("taskId") REFERENCES public."Task"("id") ON DELETE CASCADE';
+    EXECUTE 'ALTER TABLE public."TaskComment" ADD CONSTRAINT fk_comment_task FOREIGN KEY ("taskId") REFERENCES public."Task"("id") ON DELETE CASCADE NOT VALID';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comment_user') THEN
-    EXECUTE 'ALTER TABLE public."TaskComment" ADD CONSTRAINT fk_comment_user FOREIGN KEY ("userId") REFERENCES public."User"("id") ON DELETE CASCADE';
+    EXECUTE 'ALTER TABLE public."TaskComment" ADD CONSTRAINT fk_comment_user FOREIGN KEY ("userId") REFERENCES public."User"("id") ON DELETE CASCADE NOT VALID';
   END IF;
 END$$;
 

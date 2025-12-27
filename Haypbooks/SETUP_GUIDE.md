@@ -211,7 +211,7 @@ await authService.logout();
 
 **Frontend** (`.env.local`)
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=http://127.0.0.1:4000
 ```
 
 **Backend** (`.env` - create if needed)

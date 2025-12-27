@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@/test-utils'
+import { render, screen } from '../test-utils'
 import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 
@@ -8,60 +8,121 @@ jest.mock('@/services/auth.service', () => ({
     getCurrentUser: jest.fn()
   }
 }))
+
+// Mock verification service used by EmailCodeForm so we can simulate success
+jest.mock('@/services/verification.service', () => {
+  return jest.fn().mockImplementation(() => ({
+    sendEmailCode: jest.fn().mockResolvedValue({ success: true, otp: '123456' }),
+    verifyEmailCode: jest.fn().mockResolvedValue({ success: true }),
+    sendPhoneCode: jest.fn().mockResolvedValue({ success: true, otp: '123456' }),
+    verifyPhoneCode: jest.fn().mockResolvedValue({ success: true }),
+  }))
+})
 import { authService } from '@/services/auth.service'
 import VerificationPage from '@/app/verification/page'
 
-describe('Verification page PIN behavior', () => {
+describe('Verification page behavior', () => {
   afterEach(() => { jest.clearAllMocks() })
 
-  test('prompts to create a PIN when none exists after clicking Enter Your PIN', async () => {
+  test('initial view shows verification options and Continue button', async () => {
     ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false })
 
     render(<VerificationPage />)
-    // The initial page should show the options selection (not auto-navigate to setup)
-    expect(screen.getByText(/Enter Your PIN/i)).toBeInTheDocument()
-    expect(screen.getByText(/Send Code to Email/i)).toBeInTheDocument()
-
-    const enterBtn = await screen.findByRole('button', { name: /Enter Your PIN/i })
-    const user = userEvent.setup()
-    await act(async () => { await user.click(enterBtn) })
-
-    expect(await screen.findByText(/Set Up Your PIN for Faster Login/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Email/i)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Continue/i })).toBeInTheDocument()
   })
 
-  test('initial view is options (not setup) even when server suggests setup', async () => {
-    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', requiresPinSetup: true, hasPin: false })
+  test('selecting SMS option and clicking Continue opens phone form', async () => {
+    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false, phone: '+15551234567' })
 
     render(<VerificationPage />)
-    // Should still show options first
-    expect(screen.getByText(/Enter Your PIN/i)).toBeInTheDocument()
-    expect(screen.getByText(/Send Code to Email/i)).toBeInTheDocument()
-  } )
-
-  test('shows PIN input when user already has a PIN', async () => {
-    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: true })
-
-    render(<VerificationPage />)
-    const enterBtn = await screen.findByRole('button', { name: /Enter Your PIN/i })
+    // wait for phone option to appear
+    expect(await screen.findByText(/Text Message \(SMS\)/i)).toBeInTheDocument()
+    const phoneRadio = await screen.findByLabelText(/Text Message \(SMS\)/i)
     const user = userEvent.setup()
-    await act(async () => { await user.click(enterBtn) })
+    await act(async () => { await user.click(phoneRadio) })
+    const continueBtn = await screen.findByRole('button', { name: /Continue/i })
+    await act(async () => { await user.click(continueBtn) })
 
-    // Expect the first PIN input to be present
-    expect(await screen.findByLabelText('Enter PIN digit 1')).toBeInTheDocument()
+    expect(await screen.findByText(/Enter verification code/i)).toBeInTheDocument()
   })
 
-  test('re-fetches user on Enter and reacts to changed server flag', async () => {
-    // Initial mount returns hasPin=true, but on-click the server says hasPin=false
-    const mk = authService.getCurrentUser as jest.Mock
-    mk.mockResolvedValueOnce({ email: 'dev@example.com', hasPin: true })
-    mk.mockResolvedValueOnce({ email: 'dev@example.com', hasPin: false })
+  test('redirects to /hub/selection after successful email verification', async () => {
+    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false })
 
     render(<VerificationPage />)
-    const enterBtn = await screen.findByRole('button', { name: /Enter Your PIN/i })
     const user = userEvent.setup()
-    await act(async () => { await user.click(enterBtn) })
 
-    // Should navigate to setup after re-fetch showing hasPin=false
-    expect(await screen.findByText(/Set Up Your PIN for Faster Login/i)).toBeInTheDocument()
+    // Continue with default Email option
+    const continueBtn = await screen.findByRole('button', { name: /Continue/i })
+    expect(screen.getByText(/Email/i)).toBeInTheDocument()
+    await act(async () => { await user.click(continueBtn) })
+
+    // EmailCodeForm should be visible
+    expect(await screen.findByText(/Enter verification code/i)).toBeInTheDocument()
+
+    // Fill the mocked OTP digits and submit
+    for (let i = 0; i < 6; i++) {
+      const input = await screen.findByLabelText(new RegExp(`Verification code digit ${i + 1}`, 'i'))
+      await act(async () => { await user.type(input, '123456'[i]) })
+    }
+
+    // click Verify code
+    const verifyBtn = await screen.findByRole('button', { name: /Verify OTP|Verify code/i })
+
+    // Prevent JSDOM navigation by stubbing location.assign and assert it was called
+    const assignMock = jest.fn()
+    // @ts-ignore
+    const originalAssign = window.location.assign
+    // @ts-ignore
+    window.location.assign = assignMock
+
+    await act(async () => { await user.click(verifyBtn) })
+
+    expect(assignMock).toHaveBeenCalledWith('/hub/selection')
+
+    // restore assign
+    // @ts-ignore
+    window.location.assign = originalAssign
+  })
+
+  test('redirects to /hub/selection after successful phone verification', async () => {
+    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false, phone: '+15551234567' })
+
+    render(<VerificationPage />)
+    const user = userEvent.setup()
+
+    // Open phone flow by selecting the SMS option then Continue
+    const phoneRadio = await screen.findByLabelText(/Text Message \(SMS\)/i)
+    await act(async () => { await user.click(phoneRadio) })
+    const continueBtn = await screen.findByRole('button', { name: /Continue/i })
+    await act(async () => { await user.click(continueBtn) })
+
+    // PhoneCodeForm should be visible
+    expect(await screen.findByText(/Enter verification code/i)).toBeInTheDocument()
+
+    // Fill the mocked OTP digits and submit
+    for (let i = 0; i < 6; i++) {
+      const input = await screen.findByLabelText(new RegExp(`Verification code digit ${i + 1}`, 'i'))
+      await act(async () => { await user.type(input, '123456'[i]) })
+    }
+
+    // click Verify code
+    const verifyBtn = await screen.findByRole('button', { name: /Verify OTP|Verify code/i })
+
+    // Prevent JSDOM navigation by stubbing location.assign and assert it was called
+    const assignMock = jest.fn()
+    // @ts-ignore
+    const originalAssign = window.location.assign
+    // @ts-ignore
+    window.location.assign = assignMock
+
+    await act(async () => { await user.click(verifyBtn) })
+
+    expect(assignMock).toHaveBeenCalledWith('/hub/selection')
+
+    // restore assign
+    // @ts-ignore
+    window.location.assign = originalAssign
   })
 })

@@ -32,17 +32,16 @@ export default function GetStartedPlansPage() {
           <div className="max-w-md mx-auto">
             <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 mb-2">Company name</label>
             <input id="company-name" type="text" placeholder="e.g., Acme Widgets LLC" className="w-full px-4 py-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90" required />
-            <p className="mt-3 text-sm text-slate-600">This will be the name of the new company you're adding to your HaypBooks account.</p>
+            <p className="mt-2 text-xs text-slate-500">This will be the name of the new company you're adding to your HaypBooks account.</p>
           </div>
 
           <div className="mt-6">
             <div className="flex items-center justify-center gap-3 flex-col sm:flex-row">
-              <button onClick={handleGetStarted} className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all shadow">Get Started with Plans</button>
+              {/* Primary: Start Free Trial (solid) */}
+              <a href="/get-started/trial" aria-label="Start free trial" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow">Start Free Trial</a>
 
-              {/* OR separator for wide screens; inline for accessibility */}
-              <div className="my-2 sm:my-0 text-sm text-slate-500">or</div>
-
-              <a href="/trial" aria-label="Start free trial" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 border border-emerald-600 text-emerald-600 rounded-lg text-sm font-semibold bg-white hover:bg-emerald-50">Start Free Trial</a>
+              {/* Secondary: Get Started with Plans (outlined) */}
+              <button onClick={handleGetStarted} className="w-full sm:w-auto px-5 py-3 border border-emerald-600 text-emerald-600 rounded-lg text-sm font-semibold bg-white hover:bg-emerald-50">Get Started with Plans</button>
             </div>
           </div>
         </div>

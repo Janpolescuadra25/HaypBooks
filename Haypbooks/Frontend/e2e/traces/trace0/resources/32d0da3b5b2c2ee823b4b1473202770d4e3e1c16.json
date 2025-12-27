@@ -1,0 +1,1 @@
+{"message":"Test endpoints disabled; enable only in development/CI or set NODE_ENV=test or provide ALLOW_TEST_ENDPOINTS_TOKEN","error":"Forbidden","statusCode":403}

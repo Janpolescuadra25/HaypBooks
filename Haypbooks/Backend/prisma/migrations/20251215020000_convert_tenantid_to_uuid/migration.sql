@@ -6,6 +6,7 @@ DO $$
 DECLARE
   r RECORD;
   t RECORD;
+  cnt bigint;
 BEGIN
   -- Step 0: Prepare Tenant.id conversion: if non-UUID values exist, we'll assign gen_random_uuid() to preserve referential integrity
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Tenant' AND column_name='id' AND udt_name <> 'uuid') THEN
@@ -57,7 +58,11 @@ BEGIN
       EXECUTE format('ALTER TABLE %I.%I ADD COLUMN IF NOT EXISTS tenantId_new uuid;', t.table_schema, t.table_name);
       EXECUTE format('UPDATE %I.%I SET tenantId_new = CASE WHEN tenantId ~ ''^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'' THEN tenantId::uuid ELSE gen_random_uuid() END WHERE tenantId IS NOT NULL;', t.table_schema, t.table_name);
       -- Set NOT NULL if safe
-      EXECUTE format('DO $$ BEGIN IF (SELECT COUNT(*) FROM %I.%I WHERE tenantId IS NOT NULL AND tenantId_new IS NULL) = 0 THEN ALTER TABLE %I.%I ALTER COLUMN tenantId_new SET NOT NULL; END IF; END $$;', t.table_schema, t.table_name, t.table_schema, t.table_name);
+      -- set NOT NULL only if no rows violate the constraint (avoid nested DO blocks)
+      EXECUTE format('SELECT COUNT(*) FROM %I.%I WHERE tenantId IS NOT NULL AND tenantId_new IS NULL', t.table_schema, t.table_name) INTO cnt;
+      IF cnt = 0 THEN
+        EXECUTE format('ALTER TABLE %I.%I ALTER COLUMN tenantId_new SET NOT NULL', t.table_schema, t.table_name);
+      END IF;
       -- Rename and swap
       EXECUTE format('ALTER TABLE %I.%I DROP COLUMN IF EXISTS tenantId_old;', t.table_schema, t.table_name);
       EXECUTE format('ALTER TABLE %I.%I RENAME COLUMN tenantId TO tenantId_old;', t.table_schema, t.table_name);

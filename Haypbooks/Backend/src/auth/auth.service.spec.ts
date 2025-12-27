@@ -19,13 +19,14 @@ describe('AuthService.signup', () => {
     mockUserRepo.findByEmail.mockResolvedValue(null)
     mockUserRepo.create.mockImplementation((data: any) => Promise.resolve({ id: 'u1', ...data }))
 
-    const resp = await authService.signup({ email: 'a@b.com', name: 'Acct', password: 'Pass1!', role: 'accountant' } as any)
+    const resp = await authService.signup({ email: 'a@b.com', name: 'Acct', password: 'Pass1!', role: 'accountant', phone: '+1 555 000 0000' } as any)
 
     expect(mockUserRepo.create).toHaveBeenCalled()
     const passed = mockUserRepo.create.mock.calls[0][0]
     expect(passed.role).toBe('accountant')
     expect(passed.isAccountant).toBeTruthy()
     expect(passed.preferredHub).toBe('ACCOUNTANT')
+    expect(passed.phone).toBe('+1 555 000 0000')
     expect(resp.user.email).toBe('a@b.com')
   })
 

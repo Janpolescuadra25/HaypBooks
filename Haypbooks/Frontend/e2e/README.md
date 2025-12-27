@@ -22,3 +22,7 @@ Running locally (recommended for debugging)
 Notes
 - The test will skip itself automatically if the backend test endpoints are disabled (it checks `/api/test/users`), so it is safe to run the whole suite locally without enabling test endpoints; however, for full validation enable the endpoints.
 - CI runs the test (db-smoke-on-pr job) with `ALLOW_TEST_ENDPOINTS=true` set so it runs reliably in PRs that affect migrations and seeds.
+
+Phone verification persistence test
+- A new focused Playwright spec `e2e/verify-phone-persist.spec.ts` asserts that a phone verification flow results in `isPhoneVerified=true` and `phoneVerifiedAt` being set on the server.
+- Prerequisite: ensure the DB migration that adds `isphoneverified` and `phoneverifiedat` has been applied (run `npx prisma migrate dev` / `npx prisma migrate deploy` and `npx prisma generate`) before running the spec locally.

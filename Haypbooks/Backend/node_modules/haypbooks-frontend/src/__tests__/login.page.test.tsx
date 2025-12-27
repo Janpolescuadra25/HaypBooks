@@ -50,7 +50,7 @@ describe('LoginPage', () => {
     const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
 
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/accountant'))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/selection'))
     // ensure the login was called
     expect(authService.login).toHaveBeenCalled()
   })
@@ -70,6 +70,43 @@ describe('LoginPage', () => {
     fireEvent.submit(form)
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/selection'))
+    expect(authService.login).toHaveBeenCalled()
+  })
+
+  test('redirects to /verification when server requests additional verification', async () => {
+    // Simulate server asking for verification via mfaRequired flag
+    (authService.login as jest.Mock).mockResolvedValue({ mfaRequired: true, user: { id: 'u4', email: 'pinless@b.com', onboardingCompleted: true } })
+
+    render(<LoginPage />)
+
+    const emailInput = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput = screen.getByLabelText(/password/i)
+    const submit = screen.getByRole('button', { name: /sign in/i })
+
+    fireEvent.change(emailInput, { target: { value: 'pinless@b.com' } })
+    fireEvent.change(passInput, { target: { value: 'Pass1!' } })
+    const form = document.querySelector('form') as HTMLFormElement
+    fireEvent.submit(form)
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    expect(authService.login).toHaveBeenCalled()
+  })
+
+  test('redirects to /verification when server returns mfaRequired flag (dev)', async () => {
+    (authService.login as jest.Mock).mockResolvedValue({ mfaRequired: true, user: { id: 'u6', email: 'mfa@b.com', onboardingCompleted: true } })
+
+    render(<LoginPage />)
+
+    const emailInput = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput = screen.getByLabelText(/password/i)
+    const submit = screen.getByRole('button', { name: /sign in/i })
+
+    fireEvent.change(emailInput, { target: { value: 'mfa@b.com' } })
+    fireEvent.change(passInput, { target: { value: 'Pass1!' } })
+    const form = document.querySelector('form') as HTMLFormElement
+    fireEvent.submit(form)
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
     expect(authService.login).toHaveBeenCalled()
   })
 

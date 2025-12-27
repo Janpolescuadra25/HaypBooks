@@ -41,8 +41,8 @@ DO $$ BEGIN
       "stripeSubscriptionId" text,
       "createdAt" timestamptz DEFAULT now()
     );
-    ALTER TABLE public."Subscription" ADD CONSTRAINT fk_sub_tenant FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE CASCADE;
-    ALTER TABLE public."Subscription" ADD CONSTRAINT fk_sub_company FOREIGN KEY ("companyId") REFERENCES public."Company"(id) ON DELETE SET NULL;
+    ALTER TABLE public."Subscription" ADD CONSTRAINT fk_sub_tenant FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE CASCADE NOT VALID;
+    ALTER TABLE public."Subscription" ADD CONSTRAINT fk_sub_company FOREIGN KEY ("companyId") REFERENCES public."Company"(id) ON DELETE SET NULL NOT VALID;
   END IF;
 EXCEPTION WHEN others THEN
   -- ignore

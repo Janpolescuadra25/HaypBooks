@@ -1,0 +1,20 @@
+require('dotenv').config();
+const { Client } = require('pg');
+(async function(){
+  const c = new Client({ connectionString: process.env.DATABASE_URL });
+  await c.connect();
+  const m = await c.query('SELECT count(*)::int as c FROM _prisma_migrations');
+  console.log('prisma migrations count:', m.rows[0].c);
+  const last = await c.query("SELECT migration_name, finished_at FROM _prisma_migrations ORDER BY finished_at DESC LIMIT 5");
+  console.log('last migrations:', last.rows);
+  const t = await c.query("SELECT tablename FROM pg_tables WHERE schemaname='public' and tablename IN ('WebAuthnChallenge','WebAuthnCredential','User')");
+  console.log('tables present (case-sensitive names):', t.rows.map(r=>r.tablename));
+  const uc = await c.query("SELECT column_name,data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='User' ORDER BY ordinal_position");
+  console.log('User columns (all):', uc.rows.map(r=>r.column_name));
+  const trialCols = await c.query("SELECT column_name,data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name ILIKE '%trial%'");
+  console.log('User columns matching "%trial%":', trialCols.rows);
+  const fk = await c.query("SELECT count(*)::int as c FROM information_schema.table_constraints WHERE constraint_type='FOREIGN KEY'");
+  console.log('foreign keys count:', fk.rows[0].c);
+  await c.end();
+  process.exit(0);
+})().catch(err=>{console.error('ERROR',err); process.exit(1);});
