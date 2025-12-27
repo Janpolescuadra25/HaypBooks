@@ -1,6 +1,7 @@
 export interface Otp {
   id: string
-  email: string
+  email?: string
+  phone?: string
   otpCode: string
   attempts: number
   purpose?: string
@@ -11,7 +12,9 @@ export interface Otp {
 export interface IOtpRepository {
   create(data: Partial<Otp>): Promise<Otp>
   findLatestByEmail(email: string, purpose?: string): Promise<Otp | null>
+  findLatestByPhone(phone: string, purpose?: string): Promise<Otp | null>
   incrementAttempts(id: string): Promise<Otp>
   delete(id: string): Promise<boolean>
   countRecentByEmail(email: string, minutes: number): Promise<number>
+  countRecentByPhone(phone: string, minutes: number): Promise<number>
 }

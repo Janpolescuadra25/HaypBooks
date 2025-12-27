@@ -53,4 +53,15 @@ describe('ClientRoot public path behavior', () => {
     expect(screen.getByTestId('app-shell-header')).toBeInTheDocument()
     expect(screen.getByTestId('sidebar')).toBeInTheDocument()
   })
+
+  it('does not render app chrome for /verification', () => {
+    const nav = require('next/navigation')
+    nav.__setPath('/verification')
+
+    render(<ClientRoot><div>verification content</div></ClientRoot>)
+
+    expect(screen.getByText('verification content')).toBeInTheDocument()
+    expect(screen.queryByTestId('app-shell-header')).toBeNull()
+    expect(screen.queryByTestId('sidebar')).toBeNull()
+  })
 })

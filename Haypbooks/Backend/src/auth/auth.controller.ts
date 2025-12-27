@@ -89,7 +89,7 @@ export class AuthController {
 
   @Post('signup')
   async signup(@Body() signupDto: SignupDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.signup(signupDto.email, signupDto.password, signupDto.name, signupDto.role)
+    const result = await this.authService.signup(signupDto.email, signupDto.password, signupDto.name, signupDto.role, signupDto.phone)
 
     // Set cookies
     const cookieOptions = {
@@ -109,7 +109,7 @@ export class AuthController {
     // After signup, send a verification OTP to user's email so they can verify ownership
     try {
       // Use short-lived numeric OTP for email verification (5 minutes)
-      const created = await this.authService.startOtp(result.user.email, undefined, 5, 'VERIFY_EMAIL') // 5m TTL
+      const created = await this.authService.startOtp(result.user.email, undefined, 10, 'VERIFY_EMAIL') // 10m TTL
       console.log(`Verification OTP for ${result.user.email}: ${created.otpCode}`)
       // Send OTP email (numeric code) rather than a URL
       try {
@@ -303,21 +303,73 @@ export class AuthController {
   async verifyOtp(@Body() body: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
     const parsed = VerifyOtpSchema.safeParse(body)
     if (!parsed.success) return { success: false }
-    const ok = await this.authService.verifyOtp(parsed.data.email, parsed.data.otpCode, true)
-    if (!ok) return { success: false }
+    // Debug logging for e2e — avoid logging raw phone to reduce PII exposure
+    // eslint-disable-next-line no-console
+    console.log('[auth] verify-otp attempt', { email: parsed.data.email, otpCode: parsed.data.otpCode })
 
-    // Mark user as email verified
-    try {
-      const user = await this.userRepository.findByEmail(parsed.data.email)
-      if (user && !user.isEmailVerified) {
-        await this.userRepository.update(user.id, { isEmailVerified: true })
+    // Determine whether this is an email or phone verification
+    let ok = false
+    if (parsed.data.email) {
+      ok = await this.authService.verifyOtp(parsed.data.email, parsed.data.otpCode, false)
+      // eslint-disable-next-line no-console
+      console.log('[auth] verify-otp result (email)', { email: parsed.data.email, ok })
+      if (!ok) return { success: false }
+
+      // If this OTP was for email verification, explicitly consume it now; for RESET flows leave it for the reset endpoint to consume
+      try {
+        const latest = await this.otpRepo.findLatestByEmail(parsed.data.email)
+        // eslint-disable-next-line no-console
+        console.log('[auth] verify-otp latest row', { email: parsed.data.email, latest: latest ? { id: latest.id, otpCode: latest.otpCode, purpose: latest.purpose } : null })
+        if (latest && (latest as any).purpose === 'VERIFY' || (latest as any).purpose === 'VERIFY_EMAIL') {
+          try { await this.otpRepo.delete(latest.id) } catch (e) {}
+        }
+      } catch (e) {}
+
+      // Mark user as email verified
+      try {
+        const user = await this.userRepository.findByEmail(parsed.data.email)
+        if (user && !user.isEmailVerified) {
+          await this.userRepository.update(user.id, { isEmailVerified: true })
+        }
+      } catch (e) {
+        // Don't surface this to client; verification is already successful
+        console.log('Failed to update email verified flag', e?.message || e)
       }
-    } catch (e) {
-      // Don't surface this to client; verification is already successful
-      console.log('Failed to update email verified flag', e?.message || e)
+
+      return { success: true }
     }
 
-    return { success: true }
+    if (parsed.data.phone) {
+      const normalized = require('../utils/phone.util').normalizePhoneOrThrow(parsed.data.phone)
+      ok = await this.authService.verifyOtpByPhone(normalized, parsed.data.otpCode, false)
+      const maskedPhone = require('../utils/phone.util').maskPhoneForDisplay(normalized)
+      // eslint-disable-next-line no-console
+      console.log('[auth] verify-otp result (phone)', { phone: maskedPhone, ok })
+      if (!ok) return { success: false }
+
+      // For phone flows, consume any matching MFA row
+      try {
+        const latest = await this.otpRepo.findLatestByPhone(normalized)
+        if (latest && (latest as any).purpose === 'MFA') {
+          try { await this.otpRepo.delete(latest.id) } catch (e) {}
+        }
+      } catch (e) {}
+
+      // Mark user as phone verified (persist flag/timestamp)
+      try {
+        const user = this.userRepository.findByPhone ? await this.userRepository.findByPhone(normalized) : null
+        if (user && !(user as any).isPhoneVerified) {
+          await this.userRepository.update(user.id, { isPhoneVerified: true, phone: normalized, phoneVerifiedAt: new Date() })
+        }
+      } catch (e) {
+        // Don't surface to client; verification succeeded already
+        console.log('Failed to update phone verified flag', e?.message || e)
+      }
+
+      return { success: true }
+    }
+
+    return { success: false }
   }
 
   @Get('verify-email')

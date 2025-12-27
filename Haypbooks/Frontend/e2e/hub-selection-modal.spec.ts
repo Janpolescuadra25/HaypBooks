@@ -37,13 +37,13 @@ test('multi-role login shows hub selection modal and handles selection', async (
   await expect(page.getByText(/For Owners/i)).toBeVisible()
   await expect(page.getByText(/For Accountants/i)).toBeVisible()
 
-  // Buttons with new labels (page variant)
-  await expect(page.getByRole('button', { name: /\[ Enter Accountant Hub \]/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /\[ Enter Owner Hub \]/i })).toBeVisible()
+  // Links with new labels (page variant)
+  await expect(page.getByRole('link', { name: /Enter Accountant Hub/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Enter Owner Hub/i })).toBeVisible()
 
-  // Click accountant choice -> should show inline firm form when onboarding incomplete
-  await page.getByRole('button', { name: /\[ Enter Accountant Hub \]/i }).click()
-  await expect(page.getByLabel('Firm name')).toBeVisible()
+  // Click accountant choice -> navigate to accountant hub (user has practice data in this fixture)
+  await page.getByRole('link', { name: /Enter Accountant Hub/i }).click()
+  await page.waitForURL(/\/hub\/accountant/, { timeout: 5000 })
 
   // Create business account shortcut should be available
   await expect(page.getByRole('button', { name: /Create Business Account/i })).toBeVisible()
@@ -52,7 +52,7 @@ test('multi-role login shows hub selection modal and handles selection', async (
 
   // Now go back to selection and choose Owner which should patch preferred hub and navigate to companies hub
   await page.goto('/hub/selection')
-  await page.getByRole('button', { name: /\[ Enter Owner Hub \]/i }).click()
+  await page.getByRole('link', { name: /Enter Owner Hub/i }).click()
   await page.waitForTimeout(200)
   expect(prefHubCalled).toBe(true)
   await page.waitForURL(/\/hub\/companies/, { timeout: 5000 })

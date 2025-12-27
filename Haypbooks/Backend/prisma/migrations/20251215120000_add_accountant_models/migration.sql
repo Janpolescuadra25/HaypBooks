@@ -10,11 +10,24 @@ BEGIN
 END$$;
 
 -- Add columns to user (idempotent)
-ALTER TABLE IF EXISTS public."User" ADD COLUMN IF NOT EXISTS "userType" "UserType" NOT NULL DEFAULT 'STANDARD';
-ALTER TABLE IF EXISTS public."User" ADD COLUMN IF NOT EXISTS "isCertified" boolean DEFAULT false;
-ALTER TABLE IF EXISTS public."User" ADD COLUMN IF NOT EXISTS "firmName" text;
-ALTER TABLE IF EXISTS public."User" ADD COLUMN IF NOT EXISTS "certification" text;
-ALTER TABLE IF EXISTS public."User" ADD COLUMN IF NOT EXISTS "proAdvisorBadge" boolean DEFAULT false;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='userType') THEN
+    ALTER TABLE public."User" ADD COLUMN "userType" "UserType" NOT NULL DEFAULT 'STANDARD';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='isCertified') THEN
+    ALTER TABLE public."User" ADD COLUMN "isCertified" boolean DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='firmName') THEN
+    ALTER TABLE public."User" ADD COLUMN "firmName" text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='certification') THEN
+    ALTER TABLE public."User" ADD COLUMN "certification" text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='proAdvisorBadge') THEN
+    ALTER TABLE public."User" ADD COLUMN "proAdvisorBadge" boolean DEFAULT false;
+  END IF;
+END$$;
 
 -- Create AccountantClient table
 CREATE TABLE IF NOT EXISTS public."AccountantClient" (
@@ -32,10 +45,10 @@ CREATE TABLE IF NOT EXISTS public."AccountantClient" (
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantClient_accountantId_fkey') THEN
-    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE;
+    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE NOT VALID;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantClient_tenantId_fkey') THEN
-    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT;
+    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT NOT VALID;
   END IF;
 END$$;
 CREATE UNIQUE INDEX IF NOT EXISTS "AccountantClient_accountant_tenant_uq" ON public."AccountantClient" ("accountantId", "tenantId");
@@ -55,27 +68,31 @@ CREATE TABLE IF NOT EXISTS public."AccountantActivity" (
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantActivity_accountantId_fkey') THEN
-    ALTER TABLE public."AccountantActivity" ADD CONSTRAINT "AccountantActivity_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE;
+    ALTER TABLE public."AccountantActivity" ADD CONSTRAINT "AccountantActivity_accountantId_fkey" FOREIGN KEY ("accountantId") REFERENCES public."User"(id) ON DELETE CASCADE NOT VALID;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantActivity_tenantId_fkey') THEN
-    ALTER TABLE public."AccountantActivity" ADD CONSTRAINT "AccountantActivity_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT;
+    ALTER TABLE public."AccountantActivity" ADD CONSTRAINT "AccountantActivity_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES public."Tenant"(id) ON DELETE RESTRICT NOT VALID;
   END IF;
 END$$;
 CREATE INDEX IF NOT EXISTS "AccountantActivity_accountant_created_idx" ON public."AccountantActivity" ("accountantId", "createdAt");
 CREATE INDEX IF NOT EXISTS "AccountantActivity_tenantId_idx" ON public."AccountantActivity" ("tenantId");
 
 -- Enable RLS for the new tables and ensure tenant policy exists (migration-level safety)
-ALTER TABLE IF EXISTS public."AccountantClient" ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='AccountantClient') THEN
+    ALTER TABLE public."AccountantClient" ENABLE ROW LEVEL SECURITY;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantClient' AND p.polname = 'rls_tenant') THEN
     EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantClient" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true))';
   END IF;
 END$$;
 
-ALTER TABLE IF EXISTS public."AccountantActivity" ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='AccountantActivity') THEN
+    ALTER TABLE public."AccountantActivity" ENABLE ROW LEVEL SECURITY;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantActivity' AND p.polname = 'rls_tenant') THEN
     EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantActivity" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true))';
   END IF;

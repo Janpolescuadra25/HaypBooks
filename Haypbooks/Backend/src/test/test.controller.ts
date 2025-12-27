@@ -31,12 +31,58 @@ export class TestController {
   }
 
   @Get('otp/latest')
-  async latestOtp(@Query('email') email: string, @Query('purpose') purpose?: string) {
+  async latestOtp(@Query('email') email?: string, @Query('phone') phone?: string, @Query('purpose') purpose?: string) {
     this.ensureEnabled()
-    const where: any = { email }
-    if (purpose) where.purpose = purpose
+    const where: any = {}
+    if (email) where.email = email
+    if (phone) where.phone = phone
+    if (purpose) {
+      // Map incoming purpose strings to allowed enum values
+      if (purpose === 'VERIFY_PHONE') where.purpose = 'MFA'
+      else where.purpose = purpose as any
+    }
+    if (!email && !phone) return null
     const row = await this.prisma.otp.findFirst({ where, orderBy: { createdAt: 'desc' } })
     return row || null
+  }
+
+  @Post('create-otp')
+  // Return 201 Created for test helper creation convenience
+  async createOtp(@Body() body: { email?: string; phone?: string; otp?: string; purpose?: string; ttlMinutes?: number }) {
+    this.ensureEnabled()
+    if (!body || (!body.email && !body.phone)) return { error: 'missing email or phone' }
+    const code = body.otp || String(Math.floor(Math.random() * 1000000)).padStart(6, '0')
+    const ttl = body.ttlMinutes || 5
+    const expiresAt = new Date(Date.now() + ttl * 60 * 1000)
+    // Map free-form purpose values to allowed OtpPurpose
+    let purpose: any = 'RESET'
+    if (body.purpose === 'VERIFY_EMAIL') purpose = 'VERIFY_EMAIL'
+    else if (body.purpose === 'MFA') purpose = 'MFA'
+    else if (body.purpose === 'VERIFY_PHONE') purpose = 'MFA' // treat phone verification as MFA in DB
+
+    const created = await this.prisma.otp.create({ data: { email: body.email || null, phone: body.phone || null, otpCode: code, purpose, expiresAt } })
+    return { otp: created.otpCode }
+  }
+
+  @Post('create-otps')
+  async createOtps(@Body() body: { phones?: string[]; otp?: string; purpose?: string; ttlMinutes?: number }) {
+    this.ensureEnabled()
+    if (!body || !body.phones || !Array.isArray(body.phones) || body.phones.length === 0) return { error: 'missing phones' }
+    const ttl = body.ttlMinutes || 5
+    const expiresAt = new Date(Date.now() + ttl * 60 * 1000)
+    let purpose: any = 'RESET'
+    if (body.purpose === 'VERIFY_EMAIL') purpose = 'VERIFY_EMAIL'
+    else if (body.purpose === 'MFA') purpose = 'MFA'
+    else if (body.purpose === 'VERIFY_PHONE') purpose = 'MFA'
+
+    const results: Record<string, string> = {}
+    for (const p of body.phones) {
+      const code = body.otp || String(Math.floor(Math.random() * 1000000)).padStart(6, '0')
+      const created = await this.prisma.otp.create({ data: { phone: p, otpCode: code, purpose, expiresAt, email: null } })
+      results[p] = created.otpCode
+    }
+
+    return { otps: results }
   }
 
   @Get('user')
@@ -55,10 +101,10 @@ export class TestController {
   }
 
   @Post('create-user')
-  async createUser(@Body() body: { email: string; password: string; name?: string; isEmailVerified?: boolean; isAccountant?: boolean; role?: string }) {
+  async createUser(@Body() body: { email: string; password: string; name?: string; phone?: string; isEmailVerified?: boolean; isAccountant?: boolean; role?: string }) {
     this.ensureEnabled()
     const hash = await bcrypt.hash(body.password, 10)
-    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', isEmailVerified: !!body.isEmailVerified, isAccountant: !!body.isAccountant, role: body.role } })
+    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', phone: body.phone || null, isEmailVerified: !!body.isEmailVerified, isAccountant: !!body.isAccountant, role: body.role } })
     return { id: created.id, email: created.email }
   }
 
@@ -72,8 +118,26 @@ export class TestController {
     else if (body.email) where = { email: body.email }
     else return { error: 'missing id or email' }
 
-    const updated = await this.prisma.user.update({ where, data: { trialEndsAt: body.trialEndsAt, trialStartedAt: new Date().toISOString() } })
-    return { id: updated.id, trialEndsAt: updated.trialEndsAt }
+    const updated = await this.prisma.user.update({ where, data: { trialEndsAt: body.trialEndsAt, trialStartedAt: new Date().toISOString() } as any })
+    return { id: updated.id, trialEndsAt: (updated as any).trialEndsAt }
+  }
+
+  @Post('update-user')
+  async updateUser(@Body() body: { email?: string; id?: string; data: any }) {
+    this.ensureEnabled()
+    if (!body || !body.data) return { error: 'missing data' }
+    let where: any = {}
+    if (body.id) where = { id: body.id }
+    else if (body.email) where = { email: body.email }
+    else return { error: 'missing id or email' }
+
+    const allowed = ['isAccountant','role','preferredHub','name']
+    const toUpdate: any = {}
+    for (const k of allowed) if (body.data[k] !== undefined) toUpdate[k] = body.data[k]
+    if (Object.keys(toUpdate).length === 0) return { error: 'no allowed fields to update' }
+
+    const updated = await this.prisma.user.update({ where, data: toUpdate })
+    return { id: updated.id, ...toUpdate }
   }
 
   @Get('sessions')

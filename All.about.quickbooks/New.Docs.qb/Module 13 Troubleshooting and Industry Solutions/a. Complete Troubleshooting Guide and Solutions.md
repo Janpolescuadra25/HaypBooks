@@ -71,7 +71,7 @@ This comprehensive troubleshooting guide covers all common and advanced issues i
    
    Settings:
    - Sign me out if inactive for: 3 hours (maximum)
-   - Remember me: Enabled
+   - Remember me: Removed (feature retired)
    - Keep me signed in: Checked
    ```
 

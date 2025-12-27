@@ -37,7 +37,7 @@ END$$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'AccountantClient_invitedBy_fkey') THEN
-    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES public."User"(id) ON DELETE SET NULL;
+    ALTER TABLE public."AccountantClient" ADD CONSTRAINT "AccountantClient_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES public."User"(id) ON DELETE SET NULL NOT VALID;
   END IF;
 END$$;
 
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public."ProAdvisorPerk" (
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ProAdvisorPerk_userId_fkey') THEN
-    ALTER TABLE public."ProAdvisorPerk" ADD CONSTRAINT "ProAdvisorPerk_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE CASCADE;
+    ALTER TABLE public."ProAdvisorPerk" ADD CONSTRAINT "ProAdvisorPerk_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE CASCADE NOT VALID;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'ProAdvisorPerk_userId_idx') THEN
     CREATE INDEX "ProAdvisorPerk_userId_idx" ON public."ProAdvisorPerk" ("userId");

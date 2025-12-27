@@ -36,6 +36,7 @@ export class MockUserRepository implements IUserRepository {
       role: (data.role as any) || 'owner',
       isAccountant: !!data.isAccountant,
       preferredHub: (data.preferredHub as any) || undefined,
+      phone: data.phone || undefined,
       createdAt: new Date(),
       onboardingComplete: false,
       onboardingMode: data.onboardingMode || 'full',
@@ -56,6 +57,11 @@ export class MockUserRepository implements IUserRepository {
   async findByResetToken(token: string): Promise<User | null> {
     const now = Date.now()
     const user = this.users.find(u => u.resetToken === token && (u.resetTokenExpiry || 0) > now)
+    return user || null
+  }
+
+  async findByPhone(phone: string): Promise<User | null> {
+    const user = this.users.find((u) => u.phone === phone)
     return user || null
   }
 

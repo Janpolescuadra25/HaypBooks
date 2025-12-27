@@ -134,6 +134,44 @@ html { font-size: clamp(14px, 1vw + 12px, 18px); }
 
 /* Cards and layout gaps */
 .zoom-compact .card-base { padding: 0.5rem !important; }
+
+/* Card hover lift and shadow used on hub selection */
+.card-hover:hover { transform: translateY(-6px); box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.09); }
+
+/* Selection route: visually hide scrollbars while preserving scroll behavior on small screens */
+.hb-selection-hide-scrollbar, .hb-selection-hide-scrollbar * {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hb-selection-hide-scrollbar::-webkit-scrollbar,
+.hb-selection-hide-scrollbar *::-webkit-scrollbar {
+  display: none; /* Safari/WebKit */
+}
+
+/* Inner selection container (mobile scroll allowed but hide the track) */
+.hub-selection-inner {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch; /* smooth scroll on iOS */
+  overscroll-behavior: contain; /* avoid bounce showing background */
+  padding-bottom: 1rem; /* prevent content from being flush to bottom */
+}
+.hub-selection-inner::-webkit-scrollbar { display: none; }
+
+/* If the viewport is tall enough, ensure inner area doesn't need to scroll: */
+@media (min-height: 720px) {
+  .hub-selection-inner { overflow: visible !important; }
+}
+
+/* On wider desktop viewports ensure the selection area is not scrollable */
+@media (min-width: 1024px) {
+  .hub-selection-inner { overflow: hidden !important; }
+}
+
+/* Small visual tweak for sticky header (subtle border so it reads as separate) */
+.bg-emerald-600.sticky { box-shadow: inset 0 -1px 0 rgba(255,255,255,0.06); }
+
+
 .zoom-compact .card-tight { padding: 0.4rem !important; }
 .zoom-compact .metric-card { padding: 0.5rem 0.6rem !important; }
 .zoom-compact .stack { gap: 0.75rem !important; }

@@ -43,5 +43,29 @@ Usage tips
 
 - For extra safety, you can use ALLOW_TEST_ENDPOINTS_TOKEN on the server instead of enabling ALLOW_TEST_ENDPOINTS alone. When set (non-empty), it also permits the endpoints.
 
+## Phone verification persistence & E2E
+- Migration: A migration was added to persist phone verification to the `users` table (`isphoneverified` Boolean and `phoneverifiedat` DateTime). Apply it locally before running tests:
+
+- Note: Phone inputs are normalized on signup using the project's phone util (E.164 or digits-only fallback) and stored in `users.phone`. For privacy, avoid logging raw phone numbers in production and consider a hashed/HMAC lookup or separate PII table for phone-based lookups; tests and debug endpoints intentionally mask phone display values.
+
+  - Run migrations (dev/local): `npx prisma migrate dev --name add_user_phone_verified` (or `npx prisma migrate deploy` in CI-like scenarios)
+  - Regenerate the Prisma client: `npx prisma generate`
+
+- Local E2E run (dev):
+  - Start backend with test endpoints enabled:
+
+    # powershell
+    $env:ALLOW_TEST_ENDPOINTS = 'true'
+    $env:NODE_ENV = 'development'
+    npm --prefix Haypbooks/Backend run start:dev
+
+  - Run the Playwright spec that asserts phone verification is persisted:
+
+    npm --prefix Haypbooks/Frontend run e2e -- e2e/verify-phone-persist.spec.ts
+
+- CI: The Playwright workflows (`.github/workflows/ui-e2e.yml`, `db-smoke-on-pr.yml`, `db-persistence-e2e.yml`) already set `ALLOW_TEST_ENDPOINTS: 'true'` so the test endpoints are available in CI. Ensure migrations are applied in any workflow that runs DB-dependent E2E (the workflows in the repo already run migrations/seeds beforehand).
+
+- Privacy note: Phone lookups are normalized to E.164 before lookup. If you later need to reduce sensitivity of test helpers, consider adding a hashed-lookup column or separate test-only lookup field.
+
 Security
 - DO NOT expose these endpoints in production. They are intentionally permissive and return sensitive dev-only details (password hashes, sessions, etc.) solely for testing.

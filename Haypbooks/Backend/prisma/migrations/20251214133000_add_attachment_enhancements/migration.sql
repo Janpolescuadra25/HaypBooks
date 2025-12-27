@@ -4,13 +4,30 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Add columns to Attachment (idempotent)
-ALTER TABLE IF EXISTS public."Attachment" ADD COLUMN IF NOT EXISTS "fileName" text;
-ALTER TABLE IF EXISTS public."Attachment" ADD COLUMN IF NOT EXISTS "fileSize" integer;
-ALTER TABLE IF EXISTS public."Attachment" ADD COLUMN IF NOT EXISTS "mimeType" text;
-ALTER TABLE IF EXISTS public."Attachment" ADD COLUMN IF NOT EXISTS "uploadedById" text;
-ALTER TABLE IF EXISTS public."Attachment" ADD COLUMN IF NOT EXISTS "description" text;
-ALTER TABLE IF EXISTS public."Attachment" ADD COLUMN IF NOT EXISTS "uploadedAt" timestamptz NOT NULL DEFAULT now();
-ALTER TABLE IF EXISTS public."Attachment" ADD COLUMN IF NOT EXISTS "deletedAt" timestamptz;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='fileName') THEN
+    ALTER TABLE public."Attachment" ADD COLUMN "fileName" text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='fileSize') THEN
+    ALTER TABLE public."Attachment" ADD COLUMN "fileSize" integer;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='mimeType') THEN
+    ALTER TABLE public."Attachment" ADD COLUMN "mimeType" text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='uploadedById') THEN
+    ALTER TABLE public."Attachment" ADD COLUMN "uploadedById" text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='description') THEN
+    ALTER TABLE public."Attachment" ADD COLUMN "description" text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='uploadedAt') THEN
+    ALTER TABLE public."Attachment" ADD COLUMN "uploadedAt" timestamptz NOT NULL DEFAULT now();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='deletedAt') THEN
+    ALTER TABLE public."Attachment" ADD COLUMN "deletedAt" timestamptz;
+  END IF;
+END$$;
 
 -- Add FK to User for uploadedById if types match
 DO $$
@@ -18,7 +35,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='uploadedById') AND
      EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='"User"' AND column_name='id' AND (SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='Attachment' AND column_name='uploadedById') = (SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='"User"' AND column_name='id')) THEN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_attachment_user_uploadedby') THEN
-      EXECUTE 'ALTER TABLE public."Attachment" ADD CONSTRAINT fk_attachment_user_uploadedby FOREIGN KEY ("uploadedById") REFERENCES public."User"("id") ON DELETE SET NULL';
+      EXECUTE 'ALTER TABLE public."Attachment" ADD CONSTRAINT fk_attachment_user_uploadedby FOREIGN KEY ("uploadedById") REFERENCES public."User"("id") ON DELETE SET NULL NOT VALID';
     END IF;
   END IF;
 END$$;
@@ -29,7 +46,11 @@ CREATE INDEX IF NOT EXISTS idx_attachment_entity ON public."Attachment" ("tenant
 CREATE INDEX IF NOT EXISTS idx_attachment_uploadedAt ON public."Attachment" ("uploadedAt");
 
 -- Add deletedAt to Task if not present
-ALTER TABLE IF EXISTS public."Task" ADD COLUMN IF NOT EXISTS "deletedAt" timestamptz;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Task' AND column_name='deletedAt') THEN
+    ALTER TABLE public."Task" ADD COLUMN "deletedAt" timestamptz;
+  END IF;
+END$$;
 
 -- Full-text search index for Task.description
 DO $$ BEGIN

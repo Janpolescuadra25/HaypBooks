@@ -28,7 +28,7 @@ Write-Host "✅ Development servers started!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📍 URLs:" -ForegroundColor Cyan
 Write-Host "   Frontend: http://localhost:3000" -ForegroundColor White
-Write-Host "   Backend:  http://localhost:4000" -ForegroundColor White
+Write-Host "   Backend:  http://127.0.0.1:4000" -ForegroundColor White
 Write-Host ""
 Write-Host "🔐 Demo credentials:" -ForegroundColor Cyan
 Write-Host "   Email:    demo@haypbooks.test" -ForegroundColor White

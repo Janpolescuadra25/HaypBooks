@@ -63,6 +63,7 @@ model User {
   resetToken       String?  @map("resettoken") @db.Text
   resetTokenExpiry Int?     @map("resettokenexpiry")
 
+
   sessions           Session[]
   onboardingSteps    OnboardingStep[]
   onboardingComplete Boolean?         @default(false) @map("onboardingcomplete")
@@ -73,6 +74,12 @@ model User {
   accountantOnboardingComplete Boolean  @default(false) @map("accountantonboardingcomplete")
   // Preferred hub (owner vs accountant) used to route users on sign-in
   preferredHub       PreferredHub?
+
+  // Contact fields
+  phone              String?  @db.Text
+  // Verified phone state
+  isPhoneVerified    Boolean  @default(false) @map("isphoneverified")
+  phoneVerifiedAt    DateTime? @map("phoneverifiedat")
 
   // relation back to security events (optional)
 
@@ -107,7 +114,8 @@ model Session {
 
 model Otp {
   id        String     @id @default(cuid())
-  email     String     @db.VarChar(320)
+  email     String?    @db.VarChar(320)
+  phone     String?    @db.VarChar(32)
   otpCode   String     @db.VarChar(16)
   purpose   OtpPurpose @default(RESET)
   attempts  Int        @default(0)
@@ -115,6 +123,7 @@ model Otp {
   expiresAt DateTime
 
   @@index([email])
+  @@index([phone])
 }
 
 enum OtpPurpose {

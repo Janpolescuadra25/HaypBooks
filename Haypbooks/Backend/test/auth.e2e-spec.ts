@@ -44,7 +44,7 @@ describe('Auth e2e', () => {
     const password = 'e2e-password'
 
     // Signup
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'E2E Test' }).expect(201)
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'E2E Test', phone: '+1 555 000 0000' }).expect(201)
     expect(signup.body).toHaveProperty('token')
     expect(signup.body.user.email).toBe(email)
 
@@ -62,12 +62,75 @@ describe('Auth e2e', () => {
     expect(sessions.length).toBeGreaterThan(0)
   }, 20000)
 
+  it('login returns mfaRequired in non-prod when user is unverified', async () => {
+    const email = `e2e-unverified-${Date.now()}@haypbooks.test`
+    const password = 'Unver1!'
+
+    // Signup creates an unverified user by default
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Unverified', phone: '+1 555 000 0000' }).expect(201)
+
+    expect(signup.body).toHaveProperty('token')
+
+    // Signup creates an unverified user by default
+    const signup2 = await request(app.getHttpServer()).post('/api/auth/signup').send({ email: `pin-${Date.now()}@test.example`, password, name: 'PinVal', phone: '+1 555 000 0000' }).expect(201)
+
+    expect(signup.body).toHaveProperty('token')
+
+    // Login should include the dev-only mfaRequired flag (non-production environments)
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    // Either top-level mfaRequired or user.requiresVerification should be present
+    const hasMfa = Boolean(login.body.mfaRequired) || Boolean(login.body.user?.requiresVerification)
+    expect(hasMfa).toBe(true)
+  }, 20000)
+
+  it('login response includes Set-Cookie headers for token and refreshToken', async () => {
+    const email = `e2e-cookiecheck-${Date.now()}@haypbooks.test`
+    const password = 'CookiePass!23'
+
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Cookie Check', phone: '+1 555 000 0000' }).expect(201)
+    const res = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    const setCookie = res.headers['set-cookie'] || []
+    const cookiesArr = Array.isArray(setCookie) ? setCookie : [setCookie]
+    const joint = cookiesArr.join(' ')
+    expect(joint).toMatch(/token=/)
+    expect(joint).toMatch(/refreshToken=/)
+  }, 20000)
+
+  it('pin endpoints are removed and return 404', async () => {
+    const email = `e2e-pinval-${Date.now()}@haypbooks.test`
+    const password = 'PinVal!23'
+
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'PinVal', phone: '+1 555 000 0000' }).expect(201)
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    const token = login.body.token
+
+    // All pin-related endpoints should return 404 Not Found
+    await request(app.getHttpServer()).post('/api/auth/pin/setup').set('Authorization', `Bearer ${token}`).send({ pin: '123456' }).expect(404)
+    await request(app.getHttpServer()).post('/api/auth/pin/verify').set('Authorization', `Bearer ${token}`).send({ pin: '123456' }).expect(404)
+  }, 20000)
+
+  it('signup/login do not include pin-related flags', async () => {
+    const email = `e2e-pin-${Date.now()}@haypbooks.test`
+    const password = 'PinPass123'
+
+    // Signup
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pin E2E', phone: '+1 555 000 0000' }).expect(201)
+    // Ensure no PIN-related flags in response
+    expect(signup.body.user).not.toHaveProperty('hasPin')
+    expect(signup.body.user).not.toHaveProperty('pinSetAt')
+    expect(signup.body.user).not.toHaveProperty('requiresPinSetup')
+
+    // Login
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body.user).not.toHaveProperty('requiresPinSetup')
+  }, 30000)
+
   it('login redirects accountant to accountant hub', async () => {
     const email = `e2e-acct-login-${Date.now()}@haypbooks.test`
     const password = 'LoginPass123'
 
     // Signup as accountant
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Acct Login', role: 'accountant' }).expect(201)
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Acct Login', role: 'accountant', phone: '+1 555 000 0000' }).expect(201)  
 
     // Login and expect redirect to accountant hub
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
@@ -80,10 +143,10 @@ describe('Auth e2e', () => {
     const password = 'DupPass123'
 
     // First signup should succeed
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Dup E2E' }).expect(201)
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Dup E2E', phone: '+1 555 000 0000' }).expect(201)
 
     // Second signup with same email should return 409 Conflict
-    const resp = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Dup E2E' }).expect(409)
+    const resp = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Dup E2E', phone: '+1 555 000 0000' }).expect(409)
     expect(resp.body).toHaveProperty('message')
     expect(String(resp.body.message).toLowerCase()).toContain('already registered')
   }, 20000)
@@ -93,7 +156,7 @@ describe('Auth e2e', () => {
     const password = 'verify-pass'
 
     // Signup
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Verify E2E' }).expect(201)
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Verify E2E', phone: '+1 555 000 0000' }).expect(201)
     expect(signup.body).toHaveProperty('token')
 
     // Read verification OTP row
@@ -110,39 +173,44 @@ describe('Auth e2e', () => {
     expect((user as any).isEmailVerified).toBe(true)
   }, 20000)
 
-  it('signup/login include pin flags and pin setup toggles flags', async () => {
-    const email = `e2e-pin-${Date.now()}@haypbooks.test`
-    const password = 'PinPass123'
+  it('signup -> normalize phone on signup -> stored normalized', async () => {
+    const email = `e2e-phone-normalize-${Date.now()}@haypbooks.test`
+    const password = 'normalize-phone'
+    const phoneInput = '1 (555) 000-9999' // messy input with leading country digit
+    const expectedNormalized = '+15550009999'
 
     // Signup
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pin E2E' }).expect(201)
-    expect(signup.body.user).toHaveProperty('hasPin')
-    expect(signup.body.user.hasPin).toBe(false)
-    expect(signup.body.user.pinSetAt).toBeNull()
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Normalize E2E', phone: phoneInput }).expect(201)
+    expect(signup.body).toHaveProperty('token')
 
-    // Login
-    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
-    expect(login.body.user.requiresPinSetup).toBe(true)
-    const token = login.body.token
+    // Check user row persisted with normalized phone
+    const userNorm = await prisma.user.findUnique({ where: { email } })
+    expect(userNorm).toBeTruthy()
+    expect(userNorm?.phone).toBe(expectedNormalized)
+  }, 20000)
 
-    // Setup PIN
-    const setup = await request(app.getHttpServer()).post('/auth/pin/setup').set('Authorization', `Bearer ${token}`).send({ pin: '111111', pinConfirm: '111111' }).expect(201)
-    expect(setup.body).toHaveProperty('pinSetAt')
-    // New: ensure setup explicitly returns hasPin
-    expect(setup.body).toHaveProperty('hasPin')
-    expect(setup.body.hasPin).toBe(true)
+  it('signup -> verify phone OTP -> user phone verified', async () => {
+    const email = `e2e-phone-verify-${Date.now()}@haypbooks.test`
+    const password = 'verify-phone'
+    const phone = '+15550009999' 
 
-    // GET /api/users/me should include hasPin true and pinSetAt not null
-    const me = await request(app.getHttpServer()).get('/api/users/me').set('Authorization', `Bearer ${token}`).expect(200)
-    expect(me.body).toHaveProperty('id')
-    expect(me.body).toHaveProperty('hasPin')
-    expect(me.body.hasPin).toBe(true)
-    expect(me.body.pinSetAt).not.toBeNull()
+    // Signup
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'VerifyPhone E2E', phone }).expect(201)
 
-    // Logging in again should not require setup
-    const login2 = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
-    expect(login2.body.user.requiresPinSetup).toBe(false)
-  }, 30000)
+    // Create deterministic OTP via test helper
+    await request(app.getHttpServer()).post('/api/test/create-otp').send({ phone, otp: '222222' }).expect(201)
+
+    // Verify via generic endpoint
+    const verify = await request(app.getHttpServer()).post('/api/auth/verify-otp').send({ phone, otpCode: '222222' }).expect(200)
+    expect(verify.body.success).toBe(true)
+
+    // Check user flag persisted
+    const user = await prisma.user.findUnique({ where: { email } })
+    expect(user).toBeTruthy()
+    expect((user as any).isPhoneVerified).toBe(true)
+    expect((user as any).phoneVerifiedAt).toBeTruthy()
+  }, 20000)
+
 
   it('GET /api/auth/verify-email sets session cookies when ENABLE_AUTO_VERIFY_LOGIN=true', async () => {
     process.env.ENABLE_AUTO_VERIFY_LOGIN = 'true'
@@ -155,7 +223,7 @@ describe('Auth e2e', () => {
     try {
       const email = `e2e-auto-${Date.now()}@haypbooks.test`
       const password = 'auto-pass'
-      await request(app2.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Auto E2E' }).expect(201)
+      await request(app2.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Auto E2E', phone: '+1 555 000 0000' }).expect(201)
 
       const otpRow = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
       expect(otpRow).toBeTruthy()
@@ -212,7 +280,7 @@ describe('Auth e2e', () => {
     const password = 'Pass1234'
 
     // signup
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'E2E Sec' }).expect(201)
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'E2E Sec', phone: '+1 555 000 0000' }).expect(201)
     // login
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token || login.body.accessToken || login.body.accessToken
@@ -228,7 +296,7 @@ describe('Auth e2e', () => {
     const email = `e2e-acct-${Date.now()}@haypbooks.test`
     const password = 'Pass1234'
 
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Acct E2E', firstName: 'A', lastName: 'C', companyName: 'Acct Firm', role: 'accountant' }).expect(201)
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Acct E2E', firstName: 'A', lastName: 'C', companyName: 'Acct Firm', role: 'accountant', phone: '+1 555 000 0000' }).expect(201)
     expect(signup.body).toHaveProperty('token')
 
     const saved = await prisma.user.findUnique({ where: { email } })
@@ -241,7 +309,7 @@ describe('Auth e2e', () => {
     const email = `e2e-pref-${Date.now()}@haypbooks.test`
     const password = 'Pass1234'
 
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pref E2E' }).expect(201)
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pref E2E', phone: '+1 555 000 0000' }).expect(201)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token
     expect(token).toBeTruthy()
@@ -257,7 +325,7 @@ describe('Auth e2e', () => {
     const email = `e2e-onb-${Date.now()}@haypbooks.test`
     const password = 'Pass1234'
 
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Onb E2E' }).expect(201)
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Onb E2E', phone: '+1 555 000 0000' }).expect(201)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token
 

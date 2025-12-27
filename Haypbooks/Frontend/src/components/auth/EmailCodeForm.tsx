@@ -109,7 +109,7 @@ export default function EmailCodeForm({ email, onSuccess, onBack, enableAutoSubm
             {digits.map((d, i) => (
               <input
                 key={i}
-                ref={(el) => (inputsRef.current[i] = el)}
+                ref={(el) => { inputsRef.current[i] = el; /* return void for typing */ }}
                 aria-label={`Verification code digit ${i + 1}`}
                 inputMode="numeric"
                 pattern="[0-9]*"

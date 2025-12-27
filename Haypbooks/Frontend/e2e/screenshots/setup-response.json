@@ -1,0 +1,5 @@
+{
+  "url": "http://localhost:3000/api/auth/pin/setup",
+  "status": 201,
+  "body": null
+}

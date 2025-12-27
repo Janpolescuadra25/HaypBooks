@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth.service'
 import { useForm } from 'react-hook-form'
+import { normalizePhoneOrThrow } from '@/utils/phone.util'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 export default function SignupPage() {
   const router = useRouter()
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
 
   // If navigated to signup with explicit showSignup=1, opt out of the cinematic intro immediately
   useEffect(() => {
@@ -46,8 +46,9 @@ export default function SignupPage() {
 
     // If a `role` query param is present, pre-select the role and show form
     try {
-      if (searchParams) {
-        const r = searchParams.get('role')
+      const sp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+      if (sp) {
+        const r = sp.get('role')
         if (r === 'accountant') { setRole('accountant'); setStep('form') }
         if (r === 'business') { setRole('business'); setStep('form') }
       }
@@ -61,6 +62,7 @@ export default function SignupPage() {
     lastName: z.string().min(1, 'Last name is required'),
     companyName: z.string().optional(), // role-specific validation done at submit
     email: z.string().email('Invalid email address'),
+    phone: z.string().min(1, 'Phone number is required'),
     password: z.string().min(8, 'Password must be at least 8 characters').regex(/(?=.*[A-Z])(?=.*\d)/, 'Include an uppercase letter and a number'),
     confirmPassword: z.string().min(1)
   }).refine((data) => data.password === data.confirmPassword, { message: 'Passwords must match', path: ['confirmPassword'] })
@@ -100,6 +102,15 @@ export default function SignupPage() {
         password: data.password,
       }
       if (data.companyName && String(data.companyName).trim()) payload.companyName = data.companyName
+      if (data.phone && String(data.phone).trim()) {
+        try {
+          payload.phone = normalizePhoneOrThrow(String(data.phone).trim())
+        } catch (err: any) {
+          setError('phone', { type: 'manual', message: err?.message || 'Please provide a valid phone number' })
+          setLoading(false)
+          return
+        }
+      }
       if (role === 'accountant') payload.role = 'accountant'
 
       const signupResp = await authService.signup(payload)
@@ -110,7 +121,8 @@ export default function SignupPage() {
         const emailParam = encodeURIComponent(signupResp.user?.email || payload.email)
         const roleParam = role ? `&role=${encodeURIComponent(role)}` : ''
         const codeParam = devOtp ? `&code=${encodeURIComponent(devOtp)}` : ''
-        location.href = `/verify-otp?email=${emailParam}&flow=signup${roleParam}${codeParam}`
+        const phoneParam = payload.phone ? `&phone=${encodeURIComponent(payload.phone)}` : ''
+        location.href = `/verify-otp?email=${emailParam}&flow=signup${roleParam}${phoneParam}${codeParam}`
         return
       } catch (e) {
         // fallback: send to onboarding to preserve previous behavior
@@ -220,6 +232,25 @@ export default function SignupPage() {
                 placeholder="name@company.com"
                 required
               />
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">
+                Phone number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                {...register('phone')}
+                required
+                aria-required="true"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
+                placeholder="+63 912 345 6789"
+              />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{String(errors.phone?.message)}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-2">We'll send a short verification code to this number (SMS or call). Message & data rates may apply.</p>
             </div>
 
             

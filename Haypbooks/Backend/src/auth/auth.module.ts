@@ -6,6 +6,8 @@ import { PrismaAuthService } from './prisma-auth.service'
 import { AuthController } from './auth.controller'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { MailService } from '../common/mail.service'
+import { VerificationService } from './verification.service'
+import { VerificationController } from './verification.controller'
 
 @Module({
   imports: [
@@ -15,8 +17,8 @@ import { MailService } from '../common/mail.service'
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  controllers: [AuthController],
-  providers: [PrismaAuthService, JwtStrategy, MailService],
-  exports: [PrismaAuthService],
+  controllers: [AuthController, VerificationController],
+  providers: [PrismaAuthService, JwtStrategy, MailService, VerificationService],
+  exports: [PrismaAuthService, VerificationService],
 })
 export class AuthModule {}

@@ -19,7 +19,7 @@
 ```
 
 This will open 2 terminal windows:
-- **Backend** (NestJS): http://localhost:4000
+- **Backend** (NestJS): http://127.0.0.1:4000
 - **Frontend** (Next.js): http://localhost:3000
 
 ### 2. Access the Landing Page
@@ -84,14 +84,14 @@ This page provides a single-step form to quickly set the company/business detail
 
 ### Test Signup
 ```powershell
-curl -X POST http://localhost:4000/api/auth/signup `
+curl -X POST http://127.0.0.1:4000/api/auth/signup `
   -H "Content-Type: application/json" `
   -d '{"email":"test@test.com","password":"password","firstName":"Test","lastName":"User","companyName":"Test Co"}'
 ```
 
 ### Test Login
 ```powershell
-curl -X POST http://localhost:4000/api/auth/login `
+curl -X POST http://127.0.0.1:4000/api/auth/login `
   -H "Content-Type: application/json" `
   -d '{"email":"demo@haypbooks.test","password":"password"}'
 ```
@@ -99,7 +99,7 @@ curl -X POST http://localhost:4000/api/auth/login `
 ### Test Protected Endpoint
 ```powershell
 # Replace YOUR_TOKEN with the access_token from login response
-curl http://localhost:4000/api/users/me `
+curl http://127.0.0.1:4000/api/users/me `
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 

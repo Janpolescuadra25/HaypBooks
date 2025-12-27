@@ -25,7 +25,7 @@ test('forgot -> verify -> reset -> login', async ({ page, request }) => {
   for (let i = 0; i < otp.length; i++) {
     await page.fill(`input[aria-label="Digit ${i + 1}"]`, otp[i])
   }
-  await page.click('text=Verify code')
+  await page.click('text=Verify OTP')
 
   // Expect redirect to reset-password page with email & otp query
   await page.waitForURL(/.*reset-password.*/)
@@ -39,7 +39,7 @@ test('forgot -> verify -> reset -> login', async ({ page, request }) => {
     expect(resetJson?.success).toBeTruthy()
 
     // On success, the backend has updated the password. Navigate back to login via the page's link.
-    await page.click('text=← Back to sign in')
+    await page.click('text=Back to sign in')
     await page.waitForURL(/.*login.*/)
 
   // Validate login works using the API (reliable in automated tests)
