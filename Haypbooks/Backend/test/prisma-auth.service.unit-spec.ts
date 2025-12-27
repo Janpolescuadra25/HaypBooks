@@ -41,4 +41,20 @@ describe('PrismaAuthService (phone normalization)', () => {
     expect(createdArgs.phone).toBe('+15550009999')
     expect(createdArgs.otpCode).toBeDefined()
   })
+
+  test('signup stores phoneHmac when HMAC_KEY is set', async () => {
+    process.env.HMAC_KEY = 'testkey'
+    mockUserRepo.findByEmail.mockResolvedValue(null)
+    mockUserRepo.create.mockImplementation((data: any) => Promise.resolve({ id: 'u1', ...data }))
+
+    const resp = await svc.signup('hmac@e.test', 'Password1!', 'Hmac Name', 'owner', '1 (555) 000-9999')
+
+    expect(mockUserRepo.create).toHaveBeenCalled()
+    const passed = mockUserRepo.create.mock.calls[0][0]
+    expect(passed.phone).toBe('+15550009999')
+    expect(passed.phoneHmac).toBeDefined()
+    const { hmacPhone } = require('../src/utils/hmac.util')
+    expect(passed.phoneHmac).toBe(hmacPhone('+15550009999'))
+    delete process.env.HMAC_KEY
+  })
 })
