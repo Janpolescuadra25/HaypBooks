@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Res, HttpCode, HttpStatus, Inject, NotFoundException, Req, UnauthorizedException, UseGuards, Get } from '@nestjs/common'
+import { Controller, Post, Body, Res, HttpCode, HttpStatus, Inject, NotFoundException, Req, UnauthorizedException, UseGuards, Get, ConflictException } from '@nestjs/common'
+import * as bcrypt from 'bcrypt'
 import { Response } from 'express'
 import { PrismaAuthService } from './prisma-auth.service'
 import { VerifyOtpSchema, ResetPasswordSchema, ForgotPasswordSchema } from './schemas'
@@ -8,6 +9,7 @@ import { IUserRepository } from '../repositories/interfaces/user.repository.inte
 import { LoginDto, SignupDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto/auth.dto'
 import { ISecurityEventRepository } from '../repositories/interfaces/security-event.repository.interface'
 import { MailService } from '../common/mail.service'
+import { PendingSignupService } from './pending-signup.service'
 
 @Controller('api/auth')
 export class AuthController {
@@ -18,6 +20,7 @@ export class AuthController {
     @Inject(OTP_REPOSITORY) private readonly otpRepo: any,
     @Inject(SECURITY_EVENT_REPOSITORY) private readonly securityEventRepo: ISecurityEventRepository,
     private readonly mailService: MailService,
+    private readonly pendingSignupService: PendingSignupService,
   ) {}
 
   @Post('login')
@@ -29,10 +32,18 @@ export class AuthController {
     // Determine landing redirect: if user is an accountant, suggest accountant hub; otherwise companies hub.
     try {
       if (result?.user) {
-        if (result.user.isAccountant) {
-          (result as any).redirect = '/hub/accountant'
+        // Respect an explicit preferredHub when present; otherwise fall back to accountant iff user.isAccountant
+        const preferred = (result.user as any)?.preferredHub ? String((result.user as any).preferredHub).toLowerCase() : ''
+        if (preferred) {
+          if (preferred === 'owner') {
+            (result as any).redirect = '/hub/companies'
+          } else if (preferred === 'accountant') {
+            (result as any).redirect = '/hub/accountant'
+          } else {
+            (result as any).redirect = result.user.isAccountant ? '/hub/accountant' : '/hub/companies'
+          }
         } else {
-          (result as any).redirect = '/hub/companies'
+          (result as any).redirect = result.user.isAccountant ? '/hub/accountant' : '/hub/companies'
         }
       }
     } catch (e) {
@@ -87,8 +98,103 @@ export class AuthController {
     return result
   }
 
+  @Post('pre-signup')
+  @HttpCode(HttpStatus.OK)
+  async preSignup(@Body() body: { email: string; password: string; name?: string; role?: string; phone?: string; phoneCountry?: string }) {
+    const { email, password, name, role, phone, phoneCountry } = body
+    // Ensure no verified user exists with that email
+    const existing = await this.userRepository.findByEmail(email)
+    if (existing && existing.isEmailVerified) {
+      throw new ConflictException('Email already registered')
+    }
+
+    // Hash password and store pending signup in-memory (replace with Redis in prod)
+    const hashed = await bcrypt.hash(password, 10)
+    const token = await this.pendingSignupService.create({ email, hashedPassword: hashed, name, role, phone, phoneCountry }, 60 * 30)
+
+    // Start OTP to provided contact(s)
+    let devOtp
+    try {
+      if (phone) {
+        const otp = await this.authService.startOtpByPhone(phone, undefined, 10, 'VERIFY')
+        if (process.env.NODE_ENV !== 'production') devOtp = (otp as any).otp
+      } else {
+        const otp = await this.authService.startOtp(email, undefined, 10, 'VERIFY_EMAIL')
+        if (process.env.NODE_ENV !== 'production') devOtp = (otp as any).otp
+        // Send email
+        try {
+          const html = this.mailService.buildVerifyEmailOtpHtml(name || email, (otp as any).otp)
+          const text = this.mailService.buildVerifyEmailOtpText(name || email, (otp as any).otp)
+          await this.mailService.sendEmail(email, `Your Haypbooks verification code`, html, text)
+        } catch (e) {
+          console.log('Failed to send verification email', e?.message || e)
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return { signupToken: token, otp: devOtp }
+  }
+
+  @Post('complete-signup')
+  @HttpCode(HttpStatus.OK)
+  async completeSignup(@Body() body: { signupToken: string; code: string; method?: 'email'|'phone' }, @Res({ passthrough: true }) res: Response) {
+    const { signupToken, code, method } = body
+    const pending = await this.pendingSignupService.get(signupToken)
+    if (!pending) throw new NotFoundException('Signup token not found or expired')
+
+    // Verify OTP
+    let verified = false
+    if (method === 'phone' && pending.phone) {
+      verified = await this.authService.verifyOtpByPhone(pending.phone, code, true)
+    } else {
+      verified = await this.authService.verifyOtp(pending.email, code, true)
+    }
+    if (!verified) throw new UnauthorizedException('Invalid or expired code')
+
+    // Ensure no other verified user exists now
+    const existing = await this.userRepository.findByEmail(pending.email)
+    if (existing && existing.isEmailVerified) {
+      // Clean up pending to avoid stale tokens and surface conflict
+      try { await this.pendingSignupService.delete(signupToken) } catch (e) {}
+      throw new ConflictException('Email already registered')
+    }
+
+    // Create final user record
+    const created = await this.userRepository.create({ email: pending.email, password: pending.hashedPassword, name: pending.name || null, isEmailVerified: true, role: pending.role || 'owner', phone: pending.phone || null } as any)
+
+    // Log signup success
+    try { await this.securityEventRepo.create({ userId: created.id, email: created.email, type: 'SIGNUP_SUCCESS' }) } catch (e) { /* ignore */ }
+
+    // Set session cookies as in signup
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    }
+
+    const session = await this.authService.createSessionForUser(created.id)
+    try { if (session) res.cookie('token', session.token, cookieOptions) } catch (e) {}
+    try { res.cookie('email', created.email, cookieOptions) } catch (e) {}
+    try { res.cookie('userId', created.id, cookieOptions) } catch (e) {}
+    try { res.cookie('role', created.role, cookieOptions) } catch (e) {}
+
+    // Delete pending
+    await this.pendingSignupService.delete(signupToken)
+
+    // Return created user (consistent shape)
+    return { token: session?.token || null, user: { id: created.id, email: created.email, name: created.name, role: created.role, isEmailVerified: true } }
+  }
+
   @Post('signup')
   async signup(@Body() signupDto: SignupDto, @Res({ passthrough: true }) res: Response) {
+    // Optional enforcement: prefer pre-signup flow so unverified users are not persisted to DB
+    if (process.env.ENFORCE_PRE_SIGNUP === 'true') {
+      return await this.preSignup({ email: signupDto.email, password: signupDto.password, name: signupDto.name, role: signupDto.role, phone: signupDto.phone })
+    }
+
     const result = await this.authService.signup(signupDto.email, signupDto.password, signupDto.name, signupDto.role, signupDto.phone)
 
     // Set cookies
@@ -99,34 +205,11 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     }
 
-    res.cookie('token', result.token, cookieOptions)
-    res.cookie('email', result.user.email, cookieOptions)
-    res.cookie('userId', result.user.id, cookieOptions)
-    res.cookie('role', result.user.role, cookieOptions)
-    // Surface accountant flag for middleware/client
-    try { res.cookie('isAccountant', result.user.isAccountant ? 'true' : 'false', cookieOptions) } catch (e) {}
-    if (result.user.onboardingMode) res.cookie('onboardingMode', result.user.onboardingMode, cookieOptions)
-    // After signup, send a verification OTP to user's email so they can verify ownership
-    try {
-      // Use short-lived numeric OTP for email verification (5 minutes)
-      const created = await this.authService.startOtp(result.user.email, undefined, 10, 'VERIFY_EMAIL') // 10m TTL
-      console.log(`Verification OTP for ${result.user.email}: ${created.otpCode}`)
-      // Send OTP email (numeric code) rather than a URL
-      try {
-        const html = this.mailService.buildVerifyEmailOtpHtml(result.user.name || result.user.email, created.otpCode)
-        const text = this.mailService.buildVerifyEmailOtpText(result.user.name || result.user.email, created.otpCode)
-        await this.mailService.sendEmail(result.user.email, `Your Haypbooks verification code`, html, text)
-      } catch (e) {
-        console.log('Failed to send verification email', e?.message || e)
-      }
-
-      // In development, attach OTP to response for testing (do NOT set a cookie)
-      if (process.env.NODE_ENV !== 'production') {
-        (result as any)._devOtp = created.otpCode
-      }
-    } catch (e) {
-      // ignore errors
-    }
+    try { res.cookie('token', result.token, { ...cookieOptions, maxAge: 1000 * 60 * 15 }) } catch (e) {}
+    try { if ((result as any).refreshToken) res.cookie('refreshToken', (result as any).refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 }) } catch (e) {}
+    try { res.cookie('email', result.user.email, cookieOptions) } catch (e) {}
+    try { res.cookie('userId', result.user.id, cookieOptions) } catch (e) {}
+    try { res.cookie('role', result.user.role, cookieOptions) } catch (e) {}
 
     return result
   }

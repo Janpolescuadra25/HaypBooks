@@ -125,6 +125,14 @@ describe('Auth e2e', () => {
     expect(login.body.user).not.toHaveProperty('requiresPinSetup')
   }, 30000)
 
+  it('signup rejects missing phone', async () => {
+    const email = `e2e-nophone-${Date.now()}@haypbooks.test`
+    const password = 'NoPhone123'
+
+    // Missing phone should result in 400 Bad Request due to validation
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'No Phone' }).expect(400)
+  }, 10000)
+
   it('login redirects accountant to accountant hub', async () => {
     const email = `e2e-acct-login-${Date.now()}@haypbooks.test`
     const password = 'LoginPass123'
@@ -136,6 +144,22 @@ describe('Auth e2e', () => {
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     expect(login.body).toHaveProperty('redirect')
     expect(login.body.redirect).toBe('/hub/accountant')
+  }, 20000)
+
+  it('login respects preferredHub when present and redirects accordingly', async () => {
+    const email = `e2e-pref-redirect-${Date.now()}@haypbooks.test`
+    const password = 'LoginPass123'
+
+    // Signup as both roles then set preferredHub to OWNER
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pref Redirect', role: 'both', phone: '+1 555 000 0000' }).expect(201)
+    const updateRes = await request(app.getHttpServer()).post('/api/test/update-user').send({ email, data: { preferredHub: 'OWNER' } })
+    expect(updateRes.status).toBeGreaterThanOrEqual(200)
+    expect(updateRes.status).toBeLessThan(300)
+
+    // Login and expect redirect to companies (owner hub)
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body).toHaveProperty('redirect')
+    expect(login.body.redirect).toBe('/hub/companies')
   }, 20000)
 
   it('signup with existing email returns 409 and proper message (integration)', async () => {
@@ -336,7 +360,8 @@ describe('Auth e2e', () => {
 
     // Create a second user for accountant
     const email2 = `e2e-onb-acct-${Date.now()}@haypbooks.test`
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email: email2, password, name: 'Acct Onb', role: 'accountant' }).expect(201)
+    const phone2 = '+15550009999'
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email: email2, password, name: 'Acct Onb', role: 'accountant', phone: phone2 }).expect(201)
     const login2 = await request(app.getHttpServer()).post('/api/auth/login').send({ email: email2, password }).expect(200)
     const token2 = login2.body.token
 
