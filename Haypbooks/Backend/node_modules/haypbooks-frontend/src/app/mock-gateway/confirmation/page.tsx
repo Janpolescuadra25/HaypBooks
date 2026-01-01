@@ -2,7 +2,7 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 
 export default function MockGatewayConfirmationPage() {
-  const params = useSearchParams()
+  const params = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
   const invoiceId = params.get('invoiceId') || 'INV-DEMO'
   const amount = params.get('amount') || '0'

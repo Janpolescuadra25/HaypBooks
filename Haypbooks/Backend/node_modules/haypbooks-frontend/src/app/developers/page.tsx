@@ -1,5 +1,6 @@
 "use client"
 
+"use client"
 import { useEffect, useState } from 'react'
 
 // Redesigned developer portal: clear sections, anchor navigation with active pill, and scroll-safe API Explorer

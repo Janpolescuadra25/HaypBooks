@@ -19,19 +19,35 @@ afterEach(() => {
   ;(global.fetch as any)?.mockRestore?.()
 })
 
-test('renders owned and invited tabs and displays companies', async () => {
+test('renders owned companies and displays them', async () => {
   render(<CompanyHub />)
-  expect(screen.getByText(/my companies & clients/i)).toBeInTheDocument()
-  // Wait for owned list to appear
+  // Check for header
+  expect(screen.getByText(/HAYPBOOKS/i)).toBeInTheDocument()
+  // Wait for owned list to appear and check card CTA
   await waitFor(() => expect(screen.getByText('Owned Co')).toBeInTheDocument())
-  // Switch to invited tab
-  const invitedBtn = screen.getByRole('button', { name: /invited companies/i })
-  await act(async () => { await userEvent.click(invitedBtn) })
-  await waitFor(() => expect(screen.getByText('Invited Co')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByRole('button', { name: /open dashboard/i })).toBeInTheDocument())
+})
+
+test('register entity card is present when companies are present', async () => {
+  render(<CompanyHub />)
+  await waitFor(() => expect(screen.getByText(/new entity/i)).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText(/expand portfolio/i)).toBeInTheDocument())
 })
 
 test('shows empty state when no companies', async () => {
   ;(global.fetch as any).mockImplementation((url: any) => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
   render(<CompanyHub />)
   await waitFor(() => expect(screen.getByText(/no companies yet/i)).toBeInTheDocument())
+})
+
+test('search filters companies', async () => {
+  render(<CompanyHub />)
+  // wait for initial owned company to show
+  await waitFor(() => expect(screen.getByText('Owned Co')).toBeInTheDocument())
+
+  const input = screen.getByLabelText('search entities') as HTMLInputElement
+  await act(async () => { await userEvent.type(input, 'Invited') })
+
+  // Wait for debounce and the no-match message
+  await waitFor(() => expect(screen.getByText(/no companies match that search/i)).toBeInTheDocument())
 })

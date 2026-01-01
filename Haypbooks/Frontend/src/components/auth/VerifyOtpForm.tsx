@@ -3,6 +3,26 @@ import React, { useEffect, useState } from 'react'
 import OtpInput from './OtpInput'
 import { authService } from '@/services/auth.service'
 import { useRouter } from 'next/navigation'
+import { normalizePhoneOrThrow, maskPhoneForDisplay } from '@/utils/phone.util'
+
+function maskEmail(email?: string | null) {
+  if (!email) return ''
+  const [local, domain] = email.split('@')
+  if (!local) return email
+  if (local.length <= 2) return `*@${domain}`
+  return `${local[0]}${'*'.repeat(Math.max(1, local.length - 2))}${local[local.length - 1]}@${domain}`
+}
+
+function maskPhone(phone?: string | null) {
+  if (!phone) return ''
+  try {
+    const normalized = normalizePhoneOrThrow(phone)
+    return maskPhoneForDisplay(normalized)
+  } catch (e) {
+    const last = String(phone).slice(-4)
+    return `***${last}`
+  }
+}
 
 type Props = {
   email?: string
@@ -10,9 +30,11 @@ type Props = {
   flow?: 'signup' | 'reset' | string
   role?: 'business' | 'accountant' | string
   initialCode?: string
+  signupToken?: string
+  showHeader?: boolean
 }
 
-export default function VerifyOtpForm({ email, phone, flow = 'reset', role, initialCode = '' }: Props) {
+export default function VerifyOtpForm({ email, phone, flow = 'reset', role, initialCode = '', signupToken, showHeader = true }: Props) {
   const router = useRouter()
   const [code, setCode] = useState(initialCode)
   const [error, setError] = useState<string | null>(null)
@@ -30,14 +52,27 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
     setError(null)
     try {
       let res
-      if (phone) {
+      if (signupToken && flow === 'signup') {
+        // Complete the pending signup; server creates the user on success
+        const method = phone ? 'phone' : 'email'
+        res = await authService.completeSignup(signupToken, code, method as any)
+        // Backend returns token+user on success
+        if (res && (res as any).token) {
+          // Navigate into onboarding same as previously
+          if (role === 'accountant') router.push('/onboarding/accountant')
+          else if (role === 'business') router.push('/get-started/plans')
+          else router.push('/signup/choose-role')
+          return
+        }
+      } else if (phone) {
         // verify by phone
         const verification = require('@/services/verification.service').default
         res = await verification.prototype.verifyPhoneCode(phone, code)
       } else {
         res = await authService.verifyOtp(email || '', code)
       }
-      if (res.success) {
+
+      if (res && (res as any).success) {
         // Handle redirect internally to avoid passing event handlers across
         // server/client boundaries. This keeps props serializable.
         if (flow === 'signup') {
@@ -75,39 +110,47 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
   }
 
   return (
-    <div>
-      <div className="mb-4">
-        <OtpInput value={code} onChange={setCode} />
+    <div className="text-center">
+        {showHeader && (
+        <>
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-600 rounded-lg mb-4 shadow-md mx-auto">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+
+          <h2 className="text-2xl font-semibold mb-2">Confirm your account</h2>
+          <p className="text-sm text-slate-600 mb-4">Almost there! Enter the 6-digit code we sent to confirm it's you and finish setting up your account.</p>
+        </>
+      )}
+
+      <div className="text-sm font-medium text-slate-800">Sent to <strong className="text-slate-800">{phone ? maskPhone(phone) : maskEmail(email)}</strong></div>
+      <div className="text-xs text-slate-400 mb-6 mt-2">The code expires in 5 minutes.</div>
+
+      <div className="mb-6">
+        <div className="overflow-visible">
+          <OtpInput value={code} onChange={setCode} />
+        </div>
       </div>
+
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-3 animate-shake flex items-start gap-2">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-3 animate-shake flex items-start gap-2 max-w-md mx-auto">
           <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>{error}</span>
         </div>
       )}
-      <div className="flex gap-2">
-        <button disabled={loading || !/^\d{6}$/.test(code)} onClick={handleVerify} className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.98]">
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Verifying…
-            </span>
-          ) : 'Verify OTP'}
-        </button>
-        <button disabled={resendTimer > 0} onClick={handleResend} className="px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-          {resendTimer > 0 ? `Resend Code (available in ${resendTimer}s)` : 'Resend Code'}
+
+      <div className="mb-4 max-w-md mx-auto">
+        <button disabled={loading || !/^\d{6}$/.test(code)} onClick={handleVerify} className="w-full py-3 bg-emerald-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+          {loading ? 'Verifying…' : 'Continue'}
         </button>
       </div>
 
-      <div className="mt-3 text-sm text-slate-600">
-        <p className="mb-1">• The OTP is valid for <strong>5 minutes</strong>.</p>
-        <p className="mb-1">• Do not share your code with anyone.</p>
-        <p className="mt-2 text-sm text-slate-500">📩 <em>Didn’t receive the code?</em> Check your spam folder or try <strong>Resend Code</strong>.</p>
+      <div className="flex flex-col items-center gap-2 text-sm">
+        <button disabled={resendTimer > 0} onClick={handleResend} className="text-emerald-600 hover:underline disabled:opacity-50">{resendTimer > 0 ? `Resend code (available in ${resendTimer}s)` : 'Resend code'}</button>
+        <button onClick={() => {/* fallback to allow user to change method */ router.push('/verify-otp?flow=signup') }} className="text-emerald-600 hover:underline">Try another method</button>
       </div>
 
       <style>{`

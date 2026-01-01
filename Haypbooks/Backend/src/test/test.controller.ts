@@ -1,10 +1,11 @@
 import { Controller, Get, Query, ForbiddenException, Post, Body } from '@nestjs/common'
 import * as bcrypt from 'bcrypt'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { PendingSignupService } from '../auth/pending-signup.service'
 
 @Controller('api/test')
 export class TestController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly pendingSignupService: PendingSignupService) {}
 
   private ensureEnabled() {
     const allowFlag = process.env.ALLOW_TEST_ENDPOINTS === 'true'
@@ -85,6 +86,58 @@ export class TestController {
     return { otps: results }
   }
 
+  @Post('force-complete-signup')
+  async forceCompleteSignup(@Body() body: { signupToken?: string }) {
+    this.ensureEnabled()
+    if (!body || !body.signupToken) return { error: 'missing signupToken' }
+    const pending = await this.pendingSignupService.get(body.signupToken)
+    if (!pending) return { error: 'pending signup not found' }
+
+    // Ensure no existing verified user
+    const existing = await this.prisma.user.findUnique({ where: { email: pending.email } })
+    if (existing && existing.isEmailVerified) return { error: 'email already verified' }
+
+    // Create final user record
+    const created = await this.prisma.user.create({ data: { email: pending.email, password: pending.hashedPassword, name: pending.name || null, isEmailVerified: true, role: pending.role || 'owner', phone: pending.phone || null } as any })
+
+    try { await this.pendingSignupService.delete(body.signupToken) } catch (e) { /* ignore */ }
+
+    return { success: true, user: { id: created.id, email: created.email } }
+  }
+
+  @Post('force-verify-user')
+  async forceVerifyUser(@Body() body: { email?: string; phone?: string; type?: 'email'|'phone' }) {
+    this.ensureEnabled()
+    if ((!body || !body.email) && (!body || !body.phone)) return { error: 'missing email or phone' }
+
+    let user: any = null
+    if (body.email) user = await this.prisma.user.findUnique({ where: { email: body.email } })
+    else if (body.phone) user = await this.prisma.user.findFirst({ where: { phone: body.phone } })
+    if (!user) return { error: 'user not found' }
+
+    const data: any = {}
+    if (body.type === 'phone' || body.phone) {
+      data.isPhoneVerified = true
+      data.phoneVerifiedAt = new Date()
+    }
+    if (body.type === 'email' || body.email) {
+      data.isEmailVerified = true
+    }
+
+    const updated = await this.prisma.user.update({ where: { id: user.id }, data })
+    return { success: true, user: { id: updated.id, email: updated.email, isEmailVerified: updated.isEmailVerified, isPhoneVerified: updated.isPhoneVerified } }
+  }
+
+  @Post('force-complete-onboarding')
+  async forceCompleteOnboarding(@Body() body: { email?: string; mode?: 'quick'|'full' }) {
+    this.ensureEnabled()
+    if (!body || !body.email) return { error: 'missing email' }
+    const user = await this.prisma.user.findUnique({ where: { email: body.email } })
+    if (!user) return { error: 'user not found' }
+    const mode = body.mode || 'quick'
+    const updated = await this.prisma.user.update({ where: { id: user.id }, data: { onboardingComplete: true, onboardingMode: mode } as any })
+    return { success: true, user: { id: updated.id, email: updated.email, onboardingComplete: updated.onboardingComplete, onboardingMode: updated.onboardingMode } }
+  }
   @Get('user')
   async getUser(@Query('email') email: string) {
     this.ensureEnabled()

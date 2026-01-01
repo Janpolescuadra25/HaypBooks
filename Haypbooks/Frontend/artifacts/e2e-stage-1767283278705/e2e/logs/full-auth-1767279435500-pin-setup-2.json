@@ -1,0 +1,8 @@
+{
+  "status": 404,
+  "body": {
+    "message": "Cannot POST /api/auth/pin/setup",
+    "error": "Not Found",
+    "statusCode": 404
+  }
+}

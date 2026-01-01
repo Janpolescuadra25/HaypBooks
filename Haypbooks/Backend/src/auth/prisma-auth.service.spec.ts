@@ -12,7 +12,7 @@ describe('PrismaAuthService (phone normalization)', () => {
   const mockSessionRepo: any = { create: jest.fn(), delete: jest.fn(), findByRefreshToken: jest.fn() }
   const mockOtpRepo: any = { create: jest.fn(), findLatestByPhone: jest.fn(), delete: jest.fn() }
   const mockSecurityEventRepo: any = { countRecentByEmail: jest.fn(), create: jest.fn() }
-  const mockJwt: any = { sign: jest.fn(() => 'signed-token') } as JwtService
+  const mockJwt: any = { sign: jest.fn(() => 'signed-token') } as unknown as JwtService
 
   beforeEach(() => {
     jest.resetAllMocks()
@@ -29,6 +29,16 @@ describe('PrismaAuthService (phone normalization)', () => {
     const passed = mockUserRepo.create.mock.calls[0][0]
     expect(passed.phone).toBe('+15550009999')
     expect(resp.user.email).toBe('norm@e.test')
+  })
+
+  test('updates existing unverified user instead of creating duplicate', async () => {
+    mockUserRepo.findByEmail.mockResolvedValue({ id: 'u2', email: 'dup@e.test', isEmailVerified: false })
+    mockUserRepo.update.mockImplementation((id: string, data: any) => Promise.resolve({ id, email: 'dup@e.test', ...data }))
+
+    const resp = await svc.signup('dup@e.test', 'Password1!', 'Dup Name', 'owner', '1 (555) 000-9999')
+
+    expect(mockUserRepo.update).toHaveBeenCalled()
+    expect(resp.user.email).toBe('dup@e.test')
   })
 
   test('startOtpByPhone normalizes phone before creating OTP', async () => {

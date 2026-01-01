@@ -1,9 +1,12 @@
 "use client"
 
+"use client"
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import EmailCodeForm from '@/components/auth/EmailCodeForm'
 import PhoneCodeForm from '@/components/auth/PhoneCodeForm'
+import AddPhoneForm from '@/components/auth/AddPhoneForm'
+import AuthLayout from '@/components/auth/AuthLayout' 
 import { maskPhoneForDisplay } from '@/utils/phone.util'
 import { authService } from '@/services/auth.service'
 
@@ -59,13 +62,17 @@ export default function VerificationPage() {
     })()
   }, [])
 
-  function onVerified() {
-    // Redirect to hub selection
-    window.location.href = '/hub/selection'
-  }
-
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const onVerified = React.useCallback(() => {
+    try {
+      // prefer router.replace for testability
+      router.replace('/hub/selection')
+    } catch (e) {
+      try { window.location.href = '/hub/selection' } catch (err) { /* swallow in tests */ }
+    }
+  }, [router])
 
   async function handleSwitchAccount() {
     setIsLoggingOut(true)
@@ -93,12 +100,11 @@ export default function VerificationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-12">
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-emerald-600 rounded-2xl flex items-center justify-center text-white text-4xl font-bold mx-auto mb-6 shadow-lg">HB</div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Confirm Your Identity</h2>
-          <p className="text-md text-slate-600">Choose a secure way to verify you before continuing.</p>
+    <AuthLayout innerClassName="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8">
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold mx-auto mb-3 shadow-md">HB</div>
+          <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-1">Let’s verify it’s really you</h2>
+          <p className="text-sm text-slate-600">To keep your account secure, choose how you’d like to receive your verification code.</p> 
         </div>
 
         {/* Hidden state for tests/e2e: exposes current view for deterministic waits */}
@@ -115,31 +121,39 @@ export default function VerificationPage() {
         ) : null}
 
         {view === 'options' && (
-          <form className="space-y-6">
-            <label className="option-card flex items-center p-6 border-2 border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-500 transition peer-checked:bg-emerald-50/50 peer-checked:border-emerald-500">
-              <input type="radio" name="preferred_method" value="email" defaultChecked={!!userEmail} onChange={() => {/* noop for accessibility: selection handled by form state */}} className="peer form-radio h-6 w-6 text-emerald-600 focus:ring-emerald-500" />
-              <div className="ml-5 flex-1">
-                <div className="font-bold text-xl text-slate-900">Email</div>
-                <div className="text-slate-600 mt-1">Verification code will be sent to:<br /><span className="font-semibold">{maskEmail(userEmail)}</span></div>
-              </div>
-            </label>
-
-            {userPhone ? (
-              <label className="option-card flex items-center p-6 border-2 border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-500 transition peer-checked:bg-emerald-50/50 peer-checked:border-emerald-500">
-                <input type="radio" name="preferred_method" value="phone" className="peer form-radio h-6 w-6 text-emerald-600 focus:ring-emerald-500" />
-                <div className="ml-5 flex-1">
-                  <div className="font-bold text-xl text-slate-900">Text Message (SMS)</div>
-                  <div className="text-slate-600 mt-1">Verification code will be sent to:<br /><span className="font-semibold">{maskPhoneForDisplay(userPhone)}</span></div>
+          <form className="space-y-4 flex flex-col items-center max-w-md mx-auto">
+            <button type="button" data-testid="option-email" className="option-card flex items-center p-3 md:p-4 w-full border-2 border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-500 transition focus:outline-none mx-auto" onClick={() => { setEmailFlowPurpose('login'); setView('email') }}>
+              <div className="flex items-start gap-4 w-full">
+                <div className="flex-none w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </div>
-              </label>
-            ) : null}
+                <div className="flex flex-col items-start text-left">
+                  <div className="font-bold text-lg md:text-lg text-slate-900 leading-tight">Email</div>
+                  <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold">{maskEmail(userEmail)}</span></div>
+                </div>
+              </div>
+            </button>
 
-            <button type="button" onClick={(e) => {
-              // Read selected option and navigate
-              const sel = (document.querySelector('input[name="preferred_method"]:checked') as HTMLInputElement | null)?.value
-              if (sel === 'phone') setView('phone')
-              else setEmailFlowPurpose('login') || setView('email')
-            }} className="mt-8 w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-emerald-700 hover:to-teal-700 transition shadow-xl hover:shadow-2xl">Continue</button>
+            {userPhone && (
+              <button type="button" data-testid="option-phone" className="option-card flex items-center p-3 md:p-4 w-full border-2 border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-500 transition focus:outline-none mx-auto" onClick={() => setView('phone')}>
+                <div className="flex items-start gap-4 w-full">
+                  <div className="flex-none w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 15a2 2 0 0 1-2 2H8l-5 3V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      <circle cx="8.5" cy="11.5" r="0.6" fill="currentColor" />
+                      <circle cx="12" cy="11.5" r="0.6" fill="currentColor" />
+                      <circle cx="15.5" cy="11.5" r="0.6" fill="currentColor" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <div className="font-bold text-lg md:text-lg text-slate-900 leading-tight">Text Message (SMS)</div>
+                    <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold">{maskPhoneForDisplay(userPhone)}</span></div>
+                  </div>
+                </div>
+              </button>
+            )}
+
+
 
             <div className="text-center mt-6">
               <button type="button" className="text-emerald-600 hover:text-emerald-700 font-semibold text-md" onClick={handleSwitchAccount}>{isLoggingOut ? 'Signing out...' : 'Not you? Switch account'}</button>
@@ -159,10 +173,6 @@ export default function VerificationPage() {
           </div>
         )}
 
-      </div>
-      <style>{`
-        .option-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
-      `}</style>
-    </div>
+      </AuthLayout>
   )
 }

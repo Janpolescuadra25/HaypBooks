@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       return acc
     }, {})
 
-    let user = null
+    let user: any = null
     if (cookies && cookies.userId) {
       user = (db.users || []).find((u: any) => u.id === cookies.userId)
       if (user) {

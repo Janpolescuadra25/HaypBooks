@@ -20,7 +20,8 @@ test('Shows cookie hint when cookies are not attached and clears when cookies se
   const password = 'CookieFlow!23'
 
   // Create user via API
-  await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Cookie E2E' } })
+  const phone = '+15550009999'
+  await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Cookie E2E', phone } })
 
   // Navigate without cookies -> should show cookie hint after probe
   await page.goto(`http://localhost:3000/verification?email=${encodeURIComponent(email)}`)

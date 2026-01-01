@@ -440,35 +440,59 @@ export async function seedDefaultRolesForTenant(tenantId: string) {
     });
 
     if (!role) {
-      role = await prisma.role.create({
-        data: {
-          tenantId,
-          name: template.name,
-        },
-      });
-      console.log(`   ✓ Created role: ${template.name}`);
+      try {
+        role = await prisma.role.create({
+          data: {
+            tenantId,
+            name: template.name,
+          },
+        });
+        console.log(`   ✓ Created role: ${template.name}`);
+      } catch (e) {
+        // Fallback for legacy DBs with tenantId_old non-NULL constraint: insert via raw SQL.
+        try {
+          const { randomUUID } = await import('crypto')
+          const roleId = randomUUID()
+          const rows: any[] = await prisma.$queryRawUnsafe(
+            `INSERT INTO public."Role" ("id","tenantId","name","tenantId_old") VALUES ($1::uuid,$2::uuid,$3,$4) RETURNING *`,
+            roleId,
+            tenantId,
+            template.name,
+            tenantId,
+          )
+          role = rows && rows.length ? rows[0] : null
+          if (role) console.log(`   ✓ Created role (raw): ${template.name}`)
+        } catch (e2) {
+          // If fallback fails, log and continue; this is non-fatal for the tenant create flow.
+          console.warn('role creation fallback failed', e2?.message)
+        }
+      }
     }
 
-    // Create role permissions
-    for (const permKey of template.permissionKeys) {
-      const permId = permissionMap.get(permKey);
-      if (permId) {
-        await prisma.rolePermission.upsert({
-          where: {
-            roleId_permissionId: {
+    // Create role permissions (only if role creation succeeded)
+    if (role) {
+      for (const permKey of template.permissionKeys) {
+        const permId = permissionMap.get(permKey);
+        if (permId) {
+          await prisma.rolePermission.upsert({
+            where: {
+              roleId_permissionId: {
+                roleId: role.id,
+                permissionId: permId,
+              }
+            },
+            update: {},
+            create: {
               roleId: role.id,
               permissionId: permId,
-            }
-          },
-          update: {},
-          create: {
-            roleId: role.id,
-            permissionId: permId,
-          },
-        }).catch(() => {
-          // Ignore duplicates
-        });
+            },
+          }).catch(() => {
+            // Ignore duplicates
+          });
+        }
       }
+    } else {
+      console.warn(`Skipping rolePermission creation: role not created for tenant ${tenantId} and template ${template.name}`)
     }
   }
 

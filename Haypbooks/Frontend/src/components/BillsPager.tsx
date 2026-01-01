@@ -8,9 +8,9 @@ type Props = {
 }
 
 export default function BillsPager({ page, limit, total }: Props) {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
 
   const totalPages = total && limit ? Math.max(1, Math.ceil(total / limit)) : undefined
   const canPrev = page > 1

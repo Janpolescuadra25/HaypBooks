@@ -1,0 +1,107 @@
+[
+  {
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "loc": {
+      "url": "http://127.0.0.1:3000/auth/logout",
+      "lineNumber": 0,
+      "columnNumber": 0
+    }
+  },
+  {
+    "type": "console",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "loc": {
+      "url": "webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js",
+      "lineNumber": 38559,
+      "columnNumber": 16
+    }
+  },
+  {
+    "type": "console",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "loc": {
+      "url": "webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js",
+      "lineNumber": 38559,
+      "columnNumber": 16
+    }
+  },
+  {
+    "type": "response",
+    "url": "http://127.0.0.1:3000/api/users/me",
+    "status": 200,
+    "body": "{\"id\":\"cmjlqqbkm00ry55fgcugwkxqz\",\"email\":\"e2e-pin-1766685162200@haypbooks.test\",\"role\":\"user\",\"name\":\"E2E Pin\",\"isEmailVerified\":false,\"isAccountant\":false,\"createdAt\":\"2025-12-25T17:52:42.262Z\",\"updatedAt\":\"2025-12-25T17:52:45.935Z\",\"resetToken\":null,\"resetTokenExpiry\":null,\"pinHash\":\"$2b$12$DIPQEXZRHklNfMgpkrYz/uLnAnb5Ymygbk6vQ9dKZBpReS6Q9FWWi\",\"pinSetAt\":\"2025-12-25T17:52:45.934Z\",\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"ownerOnboardingComplete\":false,\"accountantOnboardingComplete\":false,\"preferredHub\":\"OWNER\",\"onboardingCompleted\":false,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"hasPin\":true}"
+  },
+  {
+    "type": "response",
+    "url": "http://127.0.0.1:3000/api/users/me",
+    "status": 200,
+    "body": "{\"id\":\"cmjlqqbkm00ry55fgcugwkxqz\",\"email\":\"e2e-pin-1766685162200@haypbooks.test\",\"role\":\"user\",\"name\":\"E2E Pin\",\"isEmailVerified\":false,\"isAccountant\":false,\"createdAt\":\"2025-12-25T17:52:42.262Z\",\"updatedAt\":\"2025-12-25T17:52:45.935Z\",\"resetToken\":null,\"resetTokenExpiry\":null,\"pinHash\":\"$2b$12$DIPQEXZRHklNfMgpkrYz/uLnAnb5Ymygbk6vQ9dKZBpReS6Q9FWWi\",\"pinSetAt\":\"2025-12-25T17:52:45.934Z\",\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"ownerOnboardingComplete\":false,\"accountantOnboardingComplete\":false,\"preferredHub\":\"OWNER\",\"onboardingCompleted\":false,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"hasPin\":true}"
+  },
+  {
+    "type": "console",
+    "text": "[verification] handleEnterPin fetched user {id: cmjlqqbkm00ry55fgcugwkxqz, email: e2e-pin-1766685162200@haypbooks.test, hasPin: true, pinSetAt: 2025-12-25T17:52:45.934Z, attempt: 1}",
+    "loc": {
+      "url": "webpack-internal:///(app-pages-browser)/./src/app/verification/page.tsx",
+      "lineNumber": 101,
+      "columnNumber": 28
+    }
+  },
+  {
+    "type": "response",
+    "url": "http://127.0.0.1:3000/api/users/me",
+    "status": 200,
+    "body": "{\"id\":\"cmjlqqbkm00ry55fgcugwkxqz\",\"email\":\"e2e-pin-1766685162200@haypbooks.test\",\"role\":\"user\",\"name\":\"E2E Pin\",\"isEmailVerified\":false,\"isAccountant\":false,\"createdAt\":\"2025-12-25T17:52:42.262Z\",\"updatedAt\":\"2025-12-25T17:52:45.935Z\",\"resetToken\":null,\"resetTokenExpiry\":null,\"pinHash\":\"$2b$12$DIPQEXZRHklNfMgpkrYz/uLnAnb5Ymygbk6vQ9dKZBpReS6Q9FWWi\",\"pinSetAt\":\"2025-12-25T17:52:45.934Z\",\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"ownerOnboardingComplete\":false,\"accountantOnboardingComplete\":false,\"preferredHub\":\"OWNER\",\"onboardingCompleted\":false,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"hasPin\":true}"
+  },
+  {
+    "type": "console",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "loc": {
+      "url": "webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js",
+      "lineNumber": 38559,
+      "columnNumber": 16
+    }
+  },
+  {
+    "type": "console",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "loc": {
+      "url": "webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js",
+      "lineNumber": 38559,
+      "columnNumber": 16
+    }
+  },
+  {
+    "type": "response",
+    "url": "http://127.0.0.1:3000/api/users/me",
+    "status": 200,
+    "body": "{\"id\":\"cmjlqqbkm00ry55fgcugwkxqz\",\"email\":\"e2e-pin-1766685162200@haypbooks.test\",\"role\":\"user\",\"name\":\"E2E Pin\",\"isEmailVerified\":false,\"isAccountant\":false,\"createdAt\":\"2025-12-25T17:52:42.262Z\",\"updatedAt\":\"2025-12-25T17:52:45.935Z\",\"resetToken\":null,\"resetTokenExpiry\":null,\"pinHash\":\"$2b$12$DIPQEXZRHklNfMgpkrYz/uLnAnb5Ymygbk6vQ9dKZBpReS6Q9FWWi\",\"pinSetAt\":\"2025-12-25T17:52:45.934Z\",\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"ownerOnboardingComplete\":false,\"accountantOnboardingComplete\":false,\"preferredHub\":\"OWNER\",\"onboardingCompleted\":false,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"hasPin\":true}"
+  },
+  {
+    "type": "response",
+    "url": "http://127.0.0.1:3000/api/users/me",
+    "status": 200,
+    "body": "{\"id\":\"cmjlqqbkm00ry55fgcugwkxqz\",\"email\":\"e2e-pin-1766685162200@haypbooks.test\",\"role\":\"user\",\"name\":\"E2E Pin\",\"isEmailVerified\":false,\"isAccountant\":false,\"createdAt\":\"2025-12-25T17:52:42.262Z\",\"updatedAt\":\"2025-12-25T17:52:45.935Z\",\"resetToken\":null,\"resetTokenExpiry\":null,\"pinHash\":\"$2b$12$DIPQEXZRHklNfMgpkrYz/uLnAnb5Ymygbk6vQ9dKZBpReS6Q9FWWi\",\"pinSetAt\":\"2025-12-25T17:52:45.934Z\",\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"ownerOnboardingComplete\":false,\"accountantOnboardingComplete\":false,\"preferredHub\":\"OWNER\",\"onboardingCompleted\":false,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"hasPin\":true}"
+  },
+  {
+    "type": "console",
+    "text": "[verification] handleEnterPin fetched user {id: cmjlqqbkm00ry55fgcugwkxqz, email: e2e-pin-1766685162200@haypbooks.test, hasPin: true, pinSetAt: 2025-12-25T17:52:45.934Z, attempt: 1}",
+    "loc": {
+      "url": "webpack-internal:///(app-pages-browser)/./src/app/verification/page.tsx",
+      "lineNumber": 101,
+      "columnNumber": 28
+    }
+  },
+  {
+    "type": "response",
+    "url": "http://127.0.0.1:3000/api/users/me",
+    "status": 200,
+    "body": "{\"id\":\"cmjlqqbkm00ry55fgcugwkxqz\",\"email\":\"e2e-pin-1766685162200@haypbooks.test\",\"role\":\"user\",\"name\":\"E2E Pin\",\"isEmailVerified\":false,\"isAccountant\":false,\"createdAt\":\"2025-12-25T17:52:42.262Z\",\"updatedAt\":\"2025-12-25T17:52:45.935Z\",\"resetToken\":null,\"resetTokenExpiry\":null,\"pinHash\":\"$2b$12$DIPQEXZRHklNfMgpkrYz/uLnAnb5Ymygbk6vQ9dKZBpReS6Q9FWWi\",\"pinSetAt\":\"2025-12-25T17:52:45.934Z\",\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"ownerOnboardingComplete\":false,\"accountantOnboardingComplete\":false,\"preferredHub\":\"OWNER\",\"onboardingCompleted\":false,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"hasPin\":true}"
+  },
+  {
+    "type": "response",
+    "url": "http://127.0.0.1:3000/api/auth/email/send-code",
+    "status": 201,
+    "body": "{\"success\":true,\"expiresAt\":\"2025-12-25T18:02:48.890Z\",\"otp\":\"238864\"}"
+  }
+]

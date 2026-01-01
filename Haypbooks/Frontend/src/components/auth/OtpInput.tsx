@@ -75,26 +75,31 @@ export default function OtpInput({ length = 6, value = '', onChange, ariaLabel }
   }
 
   return (
-    <div role="group" aria-label={ariaLabel || 'OTP input'} className="flex gap-2 justify-center">
-      {Array.from({ length }).map((_, i) => (
-        <input
-          key={i}
-          ref={(el) => { inputsRef.current[i] = el }}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={1}
-          value={vals[i] || ''}
-          onChange={(e) => handleChange(i, e.target.value)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onPaste={handlePaste}
-          className="w-12 h-12 text-center rounded-xl border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-lg font-semibold transition-all bg-white/50 hover:bg-white hover:border-emerald-300"
-          aria-label={`Digit ${i + 1}`}
-        />
-      ))}
+    <div role="group" aria-label={ariaLabel || 'OTP input'} className="w-full max-w-[420px] mx-auto">
+      <div
+        className="grid gap-1 sm:gap-2 md:gap-3"
+        style={{ gridTemplateColumns: `repeat(${length}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length }).map((_, i) => (
+          <input
+            key={i}
+            ref={(el) => { inputsRef.current[i] = el }}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={1}
+            value={vals[i] || ''}
+            onChange={(e) => handleChange(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+            onPaste={handlePaste}
+            className="w-full h-11 sm:h-11 md:h-14 text-center rounded-xl border-2 border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-lg md:text-xl font-semibold transition-transform bg-white"
+            aria-label={`Digit ${i + 1}`}
+          />
+        ))}
+      </div>
 
       <style>{`
         input:focus {
-          transform: scale(1.05);
+          transform: translateY(-3px) scale(1.01);
         }
       `}</style>
     </div>

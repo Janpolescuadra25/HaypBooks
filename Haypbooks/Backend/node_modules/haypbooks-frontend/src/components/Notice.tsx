@@ -4,9 +4,9 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import type { Route } from 'next'
 
 export default function Notice() {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const message = sp.get('notice')
   const [open, setOpen] = useState<boolean>(!!message)
   useEffect(() => { setOpen(!!message) }, [message])

@@ -47,13 +47,32 @@ export class PrismaUserRepository implements IUserRepository {
     let hmac: string | null = null
     try { hmac = require('../../utils/hmac.util').hmacPhone(normalized) } catch (e) { hmac = null }
 
+    // Diagnostic log for easier triage in dev/test
+    // eslint-disable-next-line no-console
+    console.log('[prisma-user-repo] findByPhone', { input: phone, normalized, hasHmac: !!hmac })
+
     if (hmac) {
       const where: any = { OR: [{ phoneHmac: hmac }, { phone: normalized }] }
       const u = await this.prisma.user.findFirst({ where })
-      return u as any
+      if (u) return u as any
+    } else {
+      const u = await this.prisma.user.findFirst({ where: { phone: normalized } })
+      if (u) return u as any
     }
 
-    const u = await this.prisma.user.findFirst({ where: { phone: normalized } })
-    return u as any
+    // Tolerant fallback: try suffix match on national number (best-effort)
+    const digits = normalized.replace(/\D/g, '')
+    const suffixLengths = [10, 9, 8, 7]
+    for (const len of suffixLengths) {
+      if (digits.length > len) {
+        const suffix = digits.slice(-len)
+        // eslint-disable-next-line no-console
+        console.log('[prisma-user-repo] suffix-lookup', { suffixLength: len, suffix })
+        const u2 = await this.prisma.user.findFirst({ where: { phone: { endsWith: suffix } } })
+        if (u2) return u2 as any
+      }
+    }
+
+    return null
   }
 }

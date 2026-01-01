@@ -1,0 +1,27 @@
+{
+  "status": 200,
+  "body": {
+    "id": "cmjvl00gs003o55gkvpghp8np",
+    "email": "e2e-full-1767280198423@haypbooks.test",
+    "role": "user",
+    "name": "E2E Full Flow",
+    "isEmailVerified": false,
+    "isAccountant": false,
+    "createdAt": "2026-01-01T15:09:58.493Z",
+    "updatedAt": "2026-01-01T15:09:58.493Z",
+    "resetToken": null,
+    "resetTokenExpiry": null,
+    "onboardingComplete": false,
+    "onboardingMode": "full",
+    "ownerOnboardingComplete": false,
+    "accountantOnboardingComplete": false,
+    "preferredHub": "OWNER",
+    "phone": "+15550009999",
+    "phoneHmac": null,
+    "isPhoneVerified": false,
+    "phoneVerifiedAt": null,
+    "onboardingCompleted": false,
+    "ownerOnboardingCompleted": false,
+    "accountantOnboardingCompleted": false
+  }
+}

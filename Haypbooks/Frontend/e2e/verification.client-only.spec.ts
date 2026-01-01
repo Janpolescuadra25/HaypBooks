@@ -27,7 +27,8 @@ test.skip('signup → strict client-only verification (PIN flow) - SKIPPED (PIN 
   await waitForBackend(request)
 
   // Create user via API
-  const signup = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Strict Demo' } })
+  const phone = '+15550009999'
+  const signup = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Strict Demo', phone } })
   expect(signup.ok()).toBeTruthy()
 
   // Login and set cookies
@@ -85,7 +86,7 @@ test.skip('signup → strict client-only verification (PIN flow) - SKIPPED (PIN 
   ])
 
   // Ensure the server reports the PIN is set for the current session; retry briefly if necessary
-  let me2Json = null
+  let me2Json: any = null
   for (let attempt = 0; attempt < 6; attempt++) {
 const me = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson2.token}` } })
     me2Json = await me.json().catch(() => null)
@@ -181,7 +182,7 @@ const me = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { 
     const loginJson3 = await login3.json()
 
     // Verify server reports the PIN exists for this freshly logged-in session
-    let me3Json = null
+    let me3Json: any = null
     for (let attempt = 0; attempt < 6; attempt++) {
       const me3 = await request.get('http://127.0.0.1:4000/api/users/me', { headers: { Authorization: `Bearer ${loginJson3.token}` } })
       me3Json = await me3.json().catch(() => null)

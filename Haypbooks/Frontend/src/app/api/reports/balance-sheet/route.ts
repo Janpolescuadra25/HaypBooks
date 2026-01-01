@@ -182,7 +182,7 @@ export async function GET(req: Request) {
   const balanceSheet = computeBalanceSheet(asOfDate)
   
   // Handle comparative reporting if requested
-  let compareData = null
+  let compareData: BalanceSheetData | null = null
   if (compare && start) {
     // Generate comparative balance sheet for start date
     const startDate = new Date(start)

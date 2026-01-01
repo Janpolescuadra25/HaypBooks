@@ -46,7 +46,7 @@ type Account = { id: string; number: string; name: string; type: string }
 
 export default function NewJournalEntryPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const today = useMemo(() => new Date().toISOString().slice(0,10), [])
   const [error, setError] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<{ name: string; size: number }[]>([])

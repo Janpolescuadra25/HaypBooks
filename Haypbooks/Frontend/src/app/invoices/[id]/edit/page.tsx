@@ -37,7 +37,7 @@ const defaultSettings: InvoiceSettings = {
 export default function EditInvoicePage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
-  const id = params.id
+  const id = params?.id || ''
   const [inv, setInv] = useState<Invoice | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)

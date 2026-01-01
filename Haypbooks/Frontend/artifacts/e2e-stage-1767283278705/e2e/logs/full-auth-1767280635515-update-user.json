@@ -1,0 +1,6 @@
+{
+  "status": 201,
+  "body": {
+    "error": "no allowed fields to update"
+  }
+}

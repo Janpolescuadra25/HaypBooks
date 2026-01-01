@@ -28,7 +28,8 @@ test('PIN setup and verify flow (headed)', async ({ page, request }) => {
   await waitForBackend(request)
 
   // Create user via API
-  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Pin Demo' } })
+  const phone = '+15550009999'
+  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Pin Demo', phone } })
   expect(signupRes.ok()).toBeTruthy()
   const signupBody = await signupRes.json().catch(() => null)
 
@@ -155,7 +156,7 @@ test('PIN setup and verify flow (headed)', async ({ page, request }) => {
           ])
           if (resp) {
             // If backend reports success, prefer the response body to decide whether hasPin
-            let body = null
+            let body: any = null
             try { body = await resp.json() } catch (e) { /* ignore */ }
             if (body && (body.hasPin || body.pinSetAt)) {
               await page.waitForSelector('text=Enter Your PIN', { timeout: 10000 })
@@ -397,7 +398,7 @@ test('PIN setup and verify flow (headed)', async ({ page, request }) => {
           setBtn2.click(),
         ])
         if (resp2) {
-          let body2 = null
+          let body2: any = null
           try { body2 = await resp2.json() } catch (e) { /* ignore */ }
           if (body2 && (body2.hasPin || body2.pinSetAt)) {
             await page.waitForSelector('text=Enter Your PIN', { timeout: 10000 })

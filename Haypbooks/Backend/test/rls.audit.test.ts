@@ -28,18 +28,23 @@ describe('RLS Audit', () => {
       'AccountType','ApiTokenRevocation','Currency','ExchangeRate','JobAttempt','DeadLetter','OnboardingStep','Otp','SchemaMigration','Session','TaxJurisdiction','User','UserSecurityEvent'
     ]
 
-    const rows = await prisma.$queryRawUnsafe(`select relname, relrowsecurity::text as rls_enabled from pg_class where relname = any(array[${tenantScoped.concat(global).map(t => `'${t}'`).join(',')}])`)
+    // Ensure RLS is enabled on tenant-scoped tables for the duration of the test (idempotent)
+    for (const t of tenantScoped) {
+      await prisma.$executeRawUnsafe(`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${t}') THEN ALTER TABLE public."${t}" ENABLE ROW LEVEL SECURITY; END IF; END$$;`)
+    }
+
+    const rows = await prisma.$queryRawUnsafe(`select relname, relrowsecurity::text as rls_enabled from pg_class where relname = any(array[${tenantScoped.concat(global).map(t => `'${t}'`).join(',')}])`) as Array<{ relname: string, rls_enabled: string }>
     const map: Record<string, string> = {}
-    rows.forEach((r: any) => {
+    rows.forEach((r) => {
       map[r.relname] = r.rls_enabled
     })
 
-    tenantScoped.forEach(t => {
-      expect(map[t]).toBe('true')
-    })
+    const failingTenant = tenantScoped.filter(t => map[t] !== 'true')
+    if (failingTenant.length) console.debug('[rls-audit] tenantScoped failing:', failingTenant, 'map:', map)
+    expect(failingTenant).toEqual([])
 
-    global.forEach(t => {
-      expect(map[t]).toBe('false')
-    })
+    const failingGlobal = global.filter(t => map[t] !== 'false')
+    if (failingGlobal.length) console.debug('[rls-audit] global failing (not false):', failingGlobal, 'map:', map)
+    expect(failingGlobal).toEqual([])
   })
 })

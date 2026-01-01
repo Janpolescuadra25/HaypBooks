@@ -143,7 +143,7 @@ function iconFor(href: string) {
 }
 
 export default function Sidebar() {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const { sidebarOpen, closeSidebar, sidebarCollapsed, toggleSidebarCollapsed } = useUI()
   const firstLinkRef = useRef<HTMLAnchorElement | null>(null)
   const lastLinkRef = useRef<HTMLAnchorElement | null>(null)

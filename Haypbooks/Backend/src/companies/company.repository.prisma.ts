@@ -8,18 +8,75 @@ export class CompanyRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: any) {
-    const tenant = await this.prisma.tenant.create({ data })
-    // Create default roles and permissions for the tenant (best-effort)
+    // Try the straightforward Prisma path first. If the DB enforces a legacy
+    // non-NULL `id_old` column (not present in the Prisma schema), this may fail
+    // with a constraint error; in that case, fall back to a raw SQL insert that
+    // includes `id_old` to satisfy legacy DBs.
     try {
-      await seedDefaultRolesForTenant(tenant.id)
-    } catch (e) {
-      // Non-fatal: seeding should not block tenant creation
-      // Log warning in server logs (avoid holding up response)
+      const tenant = await this.prisma.tenant.create({ data })
       // eslint-disable-next-line no-console
-      console.warn('seedDefaultRolesForTenant failed', e)
-    }
+      console.debug('[CompanyRepository] prisma.tenant.create succeeded', { id: tenant.id })
 
-    return tenant
+      try {
+        await this.prisma.$executeRaw`UPDATE public."Tenant" SET "id_old" = ${tenant.id} WHERE id = ${tenant.id}`
+      } catch (e) {
+        // ignore
+      }
+
+      // Create default roles and permissions for the tenant (best-effort)
+      try {
+        await seedDefaultRolesForTenant(tenant.id)
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('seedDefaultRolesForTenant failed', e)
+      }
+
+      return tenant
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.debug('[CompanyRepository] prisma.tenant.create failed, falling back to raw insert', { err: err?.message })
+      // Fallback: raw SQL insert including `id_old` so legacy DBs accept the row.
+      // Generate an id on the application side so we can set both id and id_old.
+      const { randomUUID } = await import('crypto')
+      const id = data.id || randomUUID()
+      const idOld = data.id_old || id
+      const name = data.name || null
+      const subdomain = data.subdomain || null
+      const baseCurrency = data.baseCurrency || null
+      const status = data.status || 'ACTIVE'
+
+      try {
+        // eslint-disable-next-line no-console
+        console.debug('[CompanyRepository] attempting raw INSERT with id,id_old', { id, idOld })
+        const rows: any[] = await this.prisma.$queryRawUnsafe(
+          `INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt","id_old") VALUES ($1::uuid,$2,$3,$4,now(),now(),$5) RETURNING *`,
+          id,
+          name,
+          subdomain,
+          baseCurrency,
+          idOld,
+        )
+
+        const tenant = rows && rows.length ? rows[0] : null
+        // eslint-disable-next-line no-console
+        console.debug('[CompanyRepository] raw INSERT result', { tenant })
+
+        // Create roles (best-effort)
+        try {
+          if (tenant && tenant.id) await seedDefaultRolesForTenant(tenant.id)
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn('seedDefaultRolesForTenant failed', e)
+        }
+
+        return tenant
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.debug('[CompanyRepository] raw INSERT failed', { message: e?.message })
+        // If we still fail, rethrow the original error for visibility
+        throw err
+      }
+    }
   }
 
   async findById(id: string) {

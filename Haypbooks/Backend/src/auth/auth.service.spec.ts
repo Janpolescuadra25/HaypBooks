@@ -30,9 +30,18 @@ describe('AuthService.signup', () => {
     expect(resp.user.email).toBe('a@b.com')
   })
 
-  test('throws ConflictException when email already exists', async () => {
-    mockUserRepo.findByEmail.mockResolvedValue({ id: 'u1', email: 'a@b.com' })
+  test('throws ConflictException when email already exists and is verified', async () => {
+    mockUserRepo.findByEmail.mockResolvedValue({ id: 'u1', email: 'a@b.com', isEmailVerified: true })
 
     await expect(authService.signup({ email: 'a@b.com', name: 'X', password: 'pass' } as any)).rejects.toThrow(ConflictException)
+  })
+
+  test('updates existing unverified user instead of creating a duplicate', async () => {
+    mockUserRepo.findByEmail.mockResolvedValue({ id: 'u1', email: 'a@b.com', isEmailVerified: false })
+    mockUserRepo.update.mockImplementation((id: string, data: any) => Promise.resolve({ id, email: 'a@b.com', ...data }))
+
+    const resp = await authService.signup({ email: 'a@b.com', name: 'X', password: 'pass', phone: '+1 555 000 0000' } as any)
+    expect(mockUserRepo.update).toHaveBeenCalled()
+    expect(resp.user.email).toBe('a@b.com')
   })
 })

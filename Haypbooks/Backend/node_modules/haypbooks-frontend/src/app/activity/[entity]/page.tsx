@@ -14,7 +14,7 @@ export default function EntityActivityPage({ params }: { params: { entity: strin
 }
 
 function EntityActivityInner({ entity }: { entity: string }) {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [start, setStart] = useState<string>(searchParams.get('start') || '')

@@ -59,7 +59,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used inside <ToastProvider>');
-  return ctx;
+  try {
+    const ctx = useContext(ToastContext);
+    // Return a no-op push when a provider is not present (helps tests and non-critical render paths)
+    if (!ctx) return { push: () => {} } as ToastContextValue;
+    return ctx;
+  } catch (e) {
+    // Defensive: if React.useContext is unavailable during some server prerender path, return no-op
+    return { push: () => {} } as ToastContextValue;
+  }
 }

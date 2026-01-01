@@ -1,4 +1,5 @@
 "use client"
+"use client"
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth.service'
@@ -82,7 +83,7 @@ export default function HubSelectionPage() {
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Owner Hub Card */}
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-5 transform transition-all hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-500 text-center">
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-5 transform-gpu transition-transform duration-200 ease-out hover:scale-105 hover:-translate-y-1 hover:shadow-2xl border border-transparent hover:border-emerald-500 text-center animate-slide-up motion-reduce:animate-none" style={{ animationDelay: '0ms' }}>
               <div className="w-14 h-14 bg-emerald-600 rounded-2xl mx-auto mb-3 flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -92,14 +93,14 @@ export default function HubSelectionPage() {
               <p className="text-sm text-slate-700 mb-4 leading-relaxed">Manage your businesses, subscriptions, teams, and accounting books.</p>
               <p className="text-sm font-medium text-emerald-700 mb-4">{ownerCount} active companies</p>
               {(!hasOwnerCompanies && userRole === 'accountant') ? (
-                <a href="/companies?create=1" className="inline-block px-5 py-2 bg-amber-500 text-white text-sm font-bold rounded-2xl hover:bg-amber-600 transition-all shadow-sm">Create Company →</a>
+                <a href="/companies?create=1" className="inline-block px-5 py-2 bg-amber-500 text-white text-sm font-bold rounded-2xl hover:bg-amber-600 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 motion-reduce:transition-none">Create Company →</a>
               ) : (
-                <a href="/hub/companies" className="inline-block px-5 py-2 bg-emerald-600 text-white text-sm font-bold rounded-2xl hover:bg-emerald-700 transition-all shadow-sm">Enter Owner Hub →</a>
-              )}
-            </div>
+                <a href="/hub/companies" className="inline-block px-5 py-2 bg-emerald-600 text-white text-sm font-bold rounded-2xl shadow-sm hover:shadow-md hover:bg-emerald-700 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:shadow-md motion-reduce:transition-none">Enter Owner Hub →</a>
+              )} 
+            </div> 
 
             {/* Accountant Hub Card */}
-            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-3xl p-5 transform transition-all hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-teal-500 text-center">
+            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-3xl p-5 transform-gpu transition-transform duration-200 ease-out hover:scale-105 hover:-translate-y-1 hover:shadow-2xl border border-transparent hover:border-teal-500 text-center animate-slide-up motion-reduce:animate-none" style={{ animationDelay: '80ms' }}>
               <div className="w-14 h-14 bg-teal-600 rounded-2xl mx-auto mb-3 flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -109,11 +110,11 @@ export default function HubSelectionPage() {
               <p className="text-sm text-slate-700 mb-4 leading-relaxed">Manage your clients, tasks, and accounting across multiple firms.</p>
               <p className="text-sm font-medium text-teal-700 mb-4">{practiceName} • {clientCount} clients</p>
               {(!hasAccountantHub && userRole === 'business') ? (
-                <a href="/onboarding/accountant" className="inline-block px-5 py-2 bg-teal-600 text-white text-sm font-bold rounded-2xl hover:bg-teal-700 transition-all shadow-sm">Create Accountant Hub →</a>
+                <a href="/onboarding/accountant" className="inline-block px-5 py-2 bg-teal-600 text-white text-sm font-bold rounded-2xl hover:bg-teal-700 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none">Create Accountant Hub →</a>
               ) : (
-                <a href="/hub/accountant" className="inline-block px-5 py-2 bg-teal-600 text-white text-sm font-bold rounded-2xl hover:bg-teal-700 transition-all shadow-sm">Enter Accountant Hub →</a>
+                <a href="/hub/accountant" className="inline-block px-5 py-2 bg-teal-600 text-white text-sm font-bold rounded-2xl shadow-sm hover:shadow-md hover:bg-teal-700 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 focus-visible:shadow-md motion-reduce:transition-none">Enter Accountant Hub →</a>
               )}
-            </div>
+            </div> 
           </div>
 
           <div className="mt-6 text-center">
@@ -129,6 +130,10 @@ export default function HubSelectionPage() {
             </button>
             <p className="text-slate-600 mt-3 text-sm">You can switch hubs anytime from the top-right menu.</p>
           </div>
+
+          <style>{`@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+          .animate-slide-up { animation: slideUp 320ms cubic-bezier(.16,1,.3,1) both; }
+          @media (prefers-reduced-motion: reduce) { .animate-slide-up { animation: none !important; } }`}</style>
         </div>
       </div>
     </main>

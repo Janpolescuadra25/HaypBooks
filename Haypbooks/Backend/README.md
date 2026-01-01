@@ -20,6 +20,38 @@ src/
 │   ├── auth.controller.ts  # Login, signup, logout endpoints
 │   ├── auth.service.ts     # Auth business logic
 │   ├── auth.module.ts      # Auth module definition
+
+Redis support
+-------------
+
+This backend supports a Redis-backed pending signup store for handling unverified signups in a durable, TTL-backed fashion. Set the environment variable `REDIS_URL` (e.g. `redis://localhost:6379`) and the server will use Redis automatically. If no Redis client is available, the service falls back to an in-memory store (useful for development and tests), but Redis is recommended for production deployments.
+To fully enforce that no unverified users are persisted to the database, set `ENFORCE_PRE_SIGNUP=true`. When enabled, the `/signup` endpoint will behave like `/pre-signup` and return a `signupToken` instead of creating a DB user directly. This requires a reliable Redis instance (or another durable TTL store) to work safely in production.
+
+Local testing
+-------------
+
+To test locally:
+
+1. Start infrastructure (Postgres + Redis):
+   - cd Haypbooks/Backend && docker compose up -d
+2. Run the backend with pre-signup enforced:
+   - npm run start:pre-signup --prefix Haypbooks/Backend
+3. Start frontend: `npm run start --prefix Haypbooks/Frontend`
+4. Run the Playwright pre-signup test (ensures pre-signup is honored):
+   - npm run e2e --prefix Haypbooks/Frontend -- e2e/pre-signup-flow.spec.ts
+
+If you prefer not to run Redis, the app falls back to an in-memory pending store (useful for dev/test). In that case the backend will not attempt to connect to Redis (no error spam) and pending signups are stored only in-memory (not durable across process restarts). For production use, set `REDIS_URL` to a durable Redis instance and enable `ENFORCE_PRE_SIGNUP=true` to guarantee unverified signups are never persisted to the database.
+
+CI integration recommendation
+---------------------------
+
+To ensure the pre-signup flow is validated in CI, add a Redis service to the CI job that runs backend tests and set:
+
+- `REDIS_URL=redis://127.0.0.1:6379`
+- `ENFORCE_PRE_SIGNUP=true`
+- `ALLOW_TEST_ENDPOINTS=true`
+
+This makes the E2E `e2e/pre-signup-flow.spec.ts` run reliably in CI and validates that unverified signups are not persisted to the database until verification completes.
 │   ├── dto/                # Data transfer objects
 │   ├── strategies/         # Passport JWT strategy
 │   └── guards/             # JWT auth guard

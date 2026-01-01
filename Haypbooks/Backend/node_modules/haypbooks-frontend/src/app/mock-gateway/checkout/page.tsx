@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createIntent, attachMethod, captureIntent, listMethods } from '@/lib/gateway/mock'
 
 const MockGatewayCheckoutPage: React.FC = () => {
-  const params = useSearchParams()
+  const params = useSearchParams() ?? new URLSearchParams()
   const invoiceId = params.get('invoiceId') || 'INV-DEMO'
   const amount = parseFloat(params.get('amount') || '125.00')
   const router = useRouter()

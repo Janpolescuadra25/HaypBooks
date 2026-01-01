@@ -26,3 +26,36 @@ Notes
 Phone verification persistence test
 - A new focused Playwright spec `e2e/verify-phone-persist.spec.ts` asserts that a phone verification flow results in `isPhoneVerified=true` and `phoneVerifiedAt` being set on the server.
 - Prerequisite: ensure the DB migration that adds `isphoneverified` and `phoneverifiedat` has been applied (run `npx prisma migrate dev` / `npx prisma migrate deploy` and `npx prisma generate`) before running the spec locally.
+
+Pre-signup (prevent unverified users in DB)
+- A focused Playwright spec `e2e/pre-signup-flow.spec.ts` verifies the pre-signup flow: POST `/api/auth/pre-signup` → no DB user exists yet → navigate to `/verify-otp?signupToken=...` and complete OTP → final DB user is created with `isEmailVerified=true`.
+- Prerequisites: set `ALLOW_TEST_ENDPOINTS=true` (or `NODE_ENV=test`) and have a Redis instance available (start with `docker compose up -d` from `Haypbooks/Backend` to start Redis and Postgres). For local dev, also set `ENFORCE_PRE_SIGNUP=true` when you want `/signup` to route through pre-signup.
+- The test will skip itself if the server does not return a `signupToken` from `/api/auth/pre-signup` (so it's safe to run without enabling pre-signup).
+
+Full integrated auth flow (signup → verify → PIN → hub)
+- The focused full auth spec `e2e/full-auth-flow.spec.ts` validates the entire sign-up and onboarding pivot (signup, email verification via OTP, PIN setup/entry, hub selection, switch hub, and logout). This spec exercises dev-only test endpoints for deterministic behavior.
+
+Prerequisites & gating
+- This spec is gated by the environment variable `E2E_FULL_AUTH`. To run it locally set `E2E_FULL_AUTH=true` and then run the script below.
+- Required backend test endpoints must be available and allow the test to:
+  - update a user via `/api/test/update-user` (to set `isEmailVerified` / `hasPin`), and/or
+  - persist a PIN via `/api/auth/pin/setup`, and
+  - return dev OTP via `POST /api/auth/send-verification` (in dev mode) or via `/api/test/otp/latest`.
+- If these endpoints are not available, the test will gracefully skip itself and capture diagnostic artifacts for triage.
+
+How to run (examples)
+- PowerShell (Windows):
+    $env:E2E_FULL_AUTH='true'
+    npm run e2e:full-auth --prefix Haypbooks/Frontend
+- Bash/macOS:
+    E2E_FULL_AUTH=true npm run e2e:full-auth --prefix Haypbooks/Frontend
+
+Triage artifacts
+- On failure the test writes traces and logs to `e2e/logs/` and screenshots to `e2e/screenshots/`. Playwright traces and the HTML report are in `playwright-report/` when tests run with reporters enabled.
+
+CI helper scripts
+- To run the full auth flow in CI (recommended): set the backend to expose test endpoints and run `npm run e2e:full-auth:ci` from the `Frontend` folder (this sets `E2E_FULL_AUTH=true` for the run and emits a JSON reporter).
+- After the CI job finishes, call `npm run e2e:collect-artifacts` to produce `artifacts/e2e-artifacts-<ts>.zip` containing `e2e/logs/`, `e2e/screenshots/`, and `playwright-report/`. Upload that zip as CI artifacts for debugging.
+
+Notes
+- The collector script adds placeholder `*-MISSING.txt` files in the zip when any of the directories are absent, making CI logs explicit about missing artifacts.

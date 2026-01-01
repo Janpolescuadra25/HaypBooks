@@ -166,7 +166,7 @@ function RecentSessions() {
 }
 
 function ReconcilePageInner() {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const hasParams = Boolean(sp.get('accountId') && sp.get('endingBalance') && sp.get('periodEnd'))
   return (
     <div className="space-y-4">

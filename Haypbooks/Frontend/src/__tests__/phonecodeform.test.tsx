@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { act } from 'react'
 
 jest.mock('@/services/verification.service', () => {
   return jest.fn().mockImplementation(() => ({
@@ -16,11 +17,12 @@ describe('PhoneCodeForm', () => {
     const svc = new (require('@/services/verification.service') as any)()
     const onSuccess = jest.fn()
     render(<PhoneCodeForm phone='+15551234567' onSuccess={onSuccess} verificationService={svc} />)
-    expect(screen.getByText(/We will send a 6-digit code to/i)).toBeInTheDocument()
+    expect(screen.getByText(/\+1 \*\*\* \*\*\* 4567/)).toBeInTheDocument()
 
-    const sendBtn = screen.getByRole('button', { name: /send code/i })
+    const resendBtn = screen.getByRole('button', { name: /resend/i })
     const user = userEvent.setup()
-    await user.click(sendBtn)
+    await act(async () => { await user.click(resendBtn) })
     expect(svc.sendPhoneCode).toHaveBeenCalledWith('+15551234567')
+    expect(await screen.findByText(/Code resent/i)).toBeInTheDocument()
   })
 })

@@ -3,7 +3,7 @@
 import React from 'react'
 
 // PIN Setup removed — keep a small stub to avoid import errors and to communicate removal to devs
-export default function PinSetupForm({ onDone }: { onDone?: (res?: any) => void }) {
+export default function PinSetupForm({ onDone, verificationService, enableAutoSubmit }: { onDone?: (res?: any) => void, verificationService?: any, enableAutoSubmit?: boolean }) {
   return (
     <div className="p-4 border rounded-md bg-yellow-50">
       <strong>PIN feature removed</strong>

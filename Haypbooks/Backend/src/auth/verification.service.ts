@@ -133,11 +133,19 @@ export class VerificationService {
     await this.otpRepo.delete(mfaRow.id).catch(() => {})
     // Mark user's phone as verified if we can find a user with that phone
     try {
+      // Diagnostic: log normalized phone and attempt find
+      // eslint-disable-next-line no-console
+      console.log('[verification] verifying phone', { inputPhone: phone, normalized })
+
       const user = await this.userRepo.findByPhone?.(normalized)
+      // eslint-disable-next-line no-console
+      console.log('[verification] findByPhone result', { userId: user?.id, userPhone: user?.phone })
+
       if (user) {
         await this.userRepo.update(user.id, { phone: normalized, isPhoneVerified: true, phoneVerifiedAt: new Date() })
         // eslint-disable-next-line no-console
         const maskedPhone = require('../utils/phone.util').maskPhoneForDisplay(normalized)
+        // eslint-disable-next-line no-console
         console.log('[verification] marked user phone verified', { userId: user.id, phone: maskedPhone })
       }
     } catch (err) {

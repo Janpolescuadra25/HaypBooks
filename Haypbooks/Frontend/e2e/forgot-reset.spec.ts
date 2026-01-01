@@ -15,17 +15,23 @@ test('forgot -> verify -> reset -> login', async ({ page, request }) => {
 
   // Wait to be redirected to verify-otp flow
   await page.waitForURL(/.*verify-otp.*/)
+  // If the method selection appears, choose Email to show the OTP inputs
+  if ((await page.locator('button:has-text("Email")').count()) > 0) {
+    await page.getByRole('button', { name: /Email/i }).click()
+  }
 
   // Fetch OTP from backend test endpoint
   const otpResp = await request.get(`http://localhost:4000/api/test/otp/latest?email=${encodeURIComponent(email)}&purpose=RESET`)
   const otp = (await otpResp.json())?.otpCode
   expect(otp).toBeTruthy()
 
-  // Fill OTP
+  // Wait for & fill OTP
+  await page.waitForSelector(`input[aria-label="Digit 1"]`, { timeout: 10000 })
   for (let i = 0; i < otp.length; i++) {
     await page.fill(`input[aria-label="Digit ${i + 1}"]`, otp[i])
   }
-  await page.click('text=Verify OTP')
+  // Click the verification action (CTA may be 'Continue')
+  await page.getByRole('button', { name: /Verify OTP|Verify code|Continue/i }).click()
 
   // Expect redirect to reset-password page with email & otp query
   await page.waitForURL(/.*reset-password.*/)

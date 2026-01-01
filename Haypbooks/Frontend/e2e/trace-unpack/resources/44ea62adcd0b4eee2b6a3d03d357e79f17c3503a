@@ -1,0 +1,31 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - main [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: HB
+        - heading "Let’s verify it’s really you" [level=2] [ref=e8]
+        - paragraph [ref=e9]: To keep your account secure, choose how you’d like to receive your verification code.
+      - generic [ref=e10]: view:options
+      - generic [ref=e11]:
+        - 'button "Email Verification code will be sent to: e********************0@haypbooks.test" [ref=e12] [cursor=pointer]':
+          - generic [ref=e13]:
+            - img [ref=e15]
+            - generic [ref=e17]:
+              - generic [ref=e18]: Email
+              - generic [ref=e19]:
+                - text: "Verification code will be sent to:"
+                - text: e********************0@haypbooks.test
+        - 'button "Text Message (SMS) Verification code will be sent to: +1 *** *** 9999" [ref=e20] [cursor=pointer]':
+          - generic [ref=e21]:
+            - img [ref=e23]
+            - generic [ref=e28]:
+              - generic [ref=e29]: Text Message (SMS)
+              - generic [ref=e30]:
+                - text: "Verification code will be sent to:"
+                - text: +1 *** *** 9999
+        - button "Not you? Switch account" [ref=e32] [cursor=pointer]
+```

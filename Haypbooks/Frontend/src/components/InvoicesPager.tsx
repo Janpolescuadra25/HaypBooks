@@ -4,9 +4,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 type Props = { page: number; limit: number; total?: number }
 
 export default function InvoicesPager({ page, limit, total }: Props) {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const totalPages = total && limit ? Math.max(1, Math.ceil(total / limit)) : undefined
   const canPrev = page > 1
   const canNext = totalPages ? page < totalPages : true

@@ -18,7 +18,7 @@ function useDebounced<T>(value: T, delay = 200) {
 }
 
 function GlobalSearchPageInner() {
-  const params = useSearchParams()
+  const params = useSearchParams() ?? new URLSearchParams()
   const [q, setQ] = React.useState('')
   const dq = useDebounced(q, 250)
   const [groups, setGroups] = React.useState<Record<GroupKey, Group> | null>(null)

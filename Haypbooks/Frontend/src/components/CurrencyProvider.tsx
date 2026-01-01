@@ -43,8 +43,12 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useCurrency() {
-  const ctx = useContext(Ctx)
-  if (ctx) return ctx
+  try {
+    const ctx = useContext(Ctx)
+    if (ctx) return ctx
+  } catch (e) {
+    // Defensive fallback if useContext is unavailable during server prerender
+  }
   // Safe fallback when a Provider isn't mounted (e.g., isolated tests or SSR-only render paths)
   const base = 'USD'
   return {

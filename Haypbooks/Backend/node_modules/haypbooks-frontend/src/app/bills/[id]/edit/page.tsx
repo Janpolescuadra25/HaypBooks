@@ -21,7 +21,7 @@ type Bill = {
 export default function EditBillPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
-  const id = params.id
+  const id = params?.id || ''
   const [bill, setBill] = useState<Bill | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)

@@ -12,9 +12,7 @@ jest.mock('@/components/HubHeader', () => ({ __esModule: true, default: () => <d
 describe('HubLayout', () => {
   it('renders Hub header and children', () => {
     render(<HubLayout><div>hub body</div></HubLayout>)
-    expect(screen.getByText('Central Hub')).toBeInTheDocument()
+    // HubHeader is now conditionally hidden for /hub routes — ensure child is still rendered
     expect(screen.getByText('hub body')).toBeInTheDocument()
-    // Our added HubSwitcher stub should render a Switch hub action
-    expect(screen.getByText('Switch hub')).toBeInTheDocument()
   })
 })

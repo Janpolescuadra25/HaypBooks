@@ -191,7 +191,7 @@ export async function GET(req: Request) {
   const currentCF = computeCashFlow(start, end)
   
   // Generate comparative cash flow if requested
-  let prevCF = null
+  let prevCF: Omit<CashFlowData, 'period' | 'start' | 'end' | 'prev'> | null = null
   if (compare && start && end) {
     const startDate = new Date(start)
     const endDate = new Date(end)

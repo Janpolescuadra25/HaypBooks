@@ -16,6 +16,7 @@ export interface User {
   preferredHub?: 'OWNER' | 'ACCOUNTANT'
   // Contact fields
   phone?: string
+  phoneHmac?: string | null
   // Whether the phone number has been verified (server-side canonical flag)
   isPhoneVerified?: boolean
   phoneVerifiedAt?: Date | null

@@ -9,7 +9,8 @@ test('login page Sign up for free navigates to /signup?showSignup=1', async ({ p
   const hasFirstName = await page.locator('input#firstName').count()
   if (hasFirstName === 0) {
     // role selection present — choose My Business to reveal the form
-    await page.getByRole('button', { name: 'My Business' }).click()
+    await page.waitForSelector('button[data-testid="signup-role-business"]', { timeout: 10000 })
+    await page.click('button[data-testid="signup-role-business"]')
     await page.waitForSelector('input#firstName', { timeout: 10000 })
   }
 

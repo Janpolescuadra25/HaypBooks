@@ -160,7 +160,7 @@ export async function GET(req: Request) {
   const currentPL = computeProfitLoss(start, end)
   
   // Generate comparative P&L if requested
-  let prevPL = null
+  let prevPL: Omit<ProfitLossData, 'period' | 'start' | 'end' | 'prevLines' | 'prevTotals'> | null = null
   if (compare && start && end) {
     const startDate = new Date(start)
     const endDate = new Date(end)

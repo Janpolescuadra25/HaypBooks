@@ -7,7 +7,7 @@ import usePersistedFilterParams from '../hooks/usePersistedFilterParams'
 type Account = { id: string; number: string; name: string }
 
 export default function AccountLedgerFilters() {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(false)
   const [account, setAccount] = useState(sp.get('account') || '')

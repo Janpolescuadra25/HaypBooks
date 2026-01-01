@@ -26,7 +26,8 @@ test.skip('Enter PIN: slow /api/users/me triggers timeout and Retry recovers to 
   await waitForBackend(request)
 
   // Create user and mark email verified and no PIN
-  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Timeout Demo' } })
+  const phone = '+15550009999'
+  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Timeout Demo', phone } })
   expect(signupRes.ok()).toBeTruthy()
   await request.post('http://127.0.0.1:4000/api/test/update-user', { data: { email, data: { isEmailVerified: true, hasPin: false } } }).catch(() => {})
 
