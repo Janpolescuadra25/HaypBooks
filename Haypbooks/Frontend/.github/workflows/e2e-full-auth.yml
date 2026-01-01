@@ -1,0 +1,68 @@
+name: E2E Full Auth Flow
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  e2e-full-auth:
+    runs-on: ubuntu-latest
+    env:
+      E2E_FULL_AUTH: 'true'
+      # If your backend supports a flag to expose test-only endpoints, set it here
+      ALLOW_TEST_ENDPOINTS: 'true'
+      PLAYWRIGHT_SKIP_BROWSERS_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci --workspace=Haypbooks/frontend
+
+      - name: Start backend (test mode)
+        # Replace this with your real backend startup command that enables test endpoints
+        run: |
+          cd Haypbooks/Backend
+          npm ci
+          # example: start the backend with a test flag
+          # adjust the command below to match your project's test startup
+          npm run start:test &
+        shell: bash
+
+      - name: Wait for backend to be healthy
+        uses: jakejarvis/wait-action@v0.1.2
+        with:
+          timeout: '60'
+          url: 'http://127.0.0.1:4000/api/health'
+
+      - name: Run E2E full auth test
+        working-directory: Haypbooks/frontend
+        run: |
+          npm run e2e:full-auth:ci
+        continue-on-error: true
+
+      - name: Collect e2e artifacts
+        working-directory: Haypbooks/frontend
+        run: |
+          npm run e2e:collect-artifacts || true
+
+      - name: Upload e2e artifact zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: Haypbooks/frontend/artifacts/e2e-artifacts-*.zip
+
+      - name: Upload Playwright traces and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: |
+            Haypbooks/frontend/playwright-report/**
+            Haypbooks/frontend/tmp_trace/**
+            Haypbooks/frontend/e2e/logs/**
+            Haypbooks/frontend/e2e/screenshots/**
