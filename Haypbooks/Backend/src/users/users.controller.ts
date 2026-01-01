@@ -19,4 +19,11 @@ export class UsersController {
     const userId = req.user.userId
     return this.usersService.setPreferredHub(userId, body.preferredHub)
   }
+
+  @Patch('phone')
+  @UseGuards(JwtAuthGuard)
+  async updatePhone(@Request() req, @Body() body: any) {
+    const userId = req.user.userId
+    return this.usersService.updatePhone(userId, body.phone)
+  }
 }

@@ -1,4 +1,4 @@
-import { Injectable, Inject, UnauthorizedException, ConflictException } from '@nestjs/common'
+import { Injectable, Inject, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { USER_REPOSITORY, SESSION_REPOSITORY, OTP_REPOSITORY, SECURITY_EVENT_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
@@ -20,23 +20,64 @@ export class PrismaAuthService {
   async signup(email: string, password: string, name?: string, role?: string, phone?: string) {
     const existing = await this.userRepo.findByEmail(email)
     if (existing) {
-      // Log failed signup attempt
-      await this.logSecurityEvent({ email, type: 'SIGNUP_FAILED_DUPLICATE' })
-      throw new ConflictException('Email already registered')
+      // If user already exists and is verified, block duplicate signups
+      if (existing.isEmailVerified) {
+        // Log failed signup attempt
+        await this.logSecurityEvent({ email, type: 'SIGNUP_FAILED_DUPLICATE' })
+        throw new ConflictException('Email already registered')
+      }
+      // If user exists but is not verified, update the existing (idempotent) record
+      // so repeated signup attempts don't create duplicates. We'll replace the
+      // password, name, role flags and phone info with the latest provided values.
+      const hashed = await bcrypt.hash(password, 10)
+      const isAccountant = role === 'accountant' || role === 'both'
+      const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
+      let normalizedPhone: string | undefined = undefined
+      let phoneHmac: string | undefined = undefined
+      try {
+        if (phone) {
+          normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone)
+          try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
+        }
+      } catch (e) { throw e }
+
+      const updated = await this.userRepo.update(existing.id, { password: hashed, name, isAccountant, preferredHub, phone: normalizedPhone, phoneHmac, isEmailVerified: false } as any)
+
+      // Log successful (updated) signup attempt
+      await this.logSecurityEvent({ userId: existing.id, email, type: 'SIGNUP_UPDATED' })
+
+      const token = this.jwtService.sign({ sub: updated.id, email: updated.email, role: updated.role })
+      const userResponse = {
+        id: updated.id,
+        email: updated.email,
+        name: updated.name,
+        role: updated.role,
+        isAccountant: updated.isAccountant ?? false,
+        onboardingCompleted: updated.onboardingComplete ?? false,
+        onboardingComplete: updated.onboardingComplete ?? false,
+        onboardingMode: updated.onboardingMode || 'full',
+        isEmailVerified: updated.isEmailVerified ?? false,
+        ownerOnboardingCompleted: (updated as any).ownerOnboardingComplete ?? false,
+        accountantOnboardingCompleted: (updated as any).accountantOnboardingComplete ?? false,
+        preferredHub: updated.preferredHub ?? null,
+        requiresHubSelection: !!(updated.isAccountant && (updated.role !== 'accountant') && !updated.preferredHub),
+      }
+      return { token, user: userResponse }
     }
+
+    // Defensive validation: require phone at signup
+    if (!phone) throw new BadRequestException('Phone number is required')
 
     const hashed = await bcrypt.hash(password, 10)
     const isAccountant = role === 'accountant' || role === 'both'
     const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
-    // Normalize phone if provided
+    // Normalize phone
     let normalizedPhone: string | undefined = undefined
     let phoneHmac: string | undefined = undefined
-    if (phone) {
-      try {
-        normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone)
-        try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
-      } catch (e) { throw e }
-    }
+    try {
+      normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone)
+      try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
+    } catch (e) { throw e }
     const user = await this.userRepo.create({ email, password: hashed, name, isEmailVerified: false, isAccountant, preferredHub, phone: normalizedPhone, phoneHmac } as any)
 
     // Log successful signup

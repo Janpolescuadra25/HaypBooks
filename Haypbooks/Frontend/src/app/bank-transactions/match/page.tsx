@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LegacyMatchRedirect() {
   const router = useRouter()
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   useEffect(() => {
     const qs = new URLSearchParams()
     qs.set('bankStatus', 'for_review')

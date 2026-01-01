@@ -19,6 +19,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
     first?.focus()
 
     function onKey(e: KeyboardEvent) {
+      if (!node) return
       if (e.key !== 'Tab') return
       const list = Array.from(node.querySelectorAll(focusable)) as HTMLElement[]
       if (list.length === 0) return

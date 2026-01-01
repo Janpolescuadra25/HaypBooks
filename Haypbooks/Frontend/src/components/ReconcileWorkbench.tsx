@@ -11,7 +11,7 @@ type Txn = { id: string; date: string; description: string; amount: number; acco
 // Use shared Amount component for currency displays
 
 export default function ReconcileWorkbench() {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const spString = useMemo(() => sp.toString(), [sp])

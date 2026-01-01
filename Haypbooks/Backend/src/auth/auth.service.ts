@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException, ConflictException, Inject } from '@nestjs/common'
+import { Injectable, UnauthorizedException, ConflictException, Inject, BadRequestException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { USER_REPOSITORY } from '../repositories/mock/mock-repositories.module'
 import { LoginDto, SignupDto } from './dto/auth.dto'
+import { normalizePhoneOrThrow } from '../utils/phone.util'
+import { hmacPhone } from '../utils/hmac.util'
 
 @Injectable()
 export class AuthService {
@@ -60,11 +62,27 @@ export class AuthService {
       throw new ConflictException('Email already registered')
     }
 
+    // Validate required phone presence (defensive: some test environments may not apply the global validation pipe)
+    if (!signupDto.phone) throw new BadRequestException('Phone number is required')
+
     // Hash password
     const hashedPassword = await bcrypt.hash(signupDto.password, 10)
 
     // Determine role and flags
     const roleToAssign = signupDto.role === 'accountant' ? 'accountant' : 'owner'
+
+    // Normalize and store phone (phone is required by DTO)
+    let normalizedPhone: string | undefined = undefined
+    let phoneHmac: string | undefined = undefined
+    if (signupDto.phone) {
+      normalizedPhone = normalizePhoneOrThrow(signupDto.phone)
+      try {
+        phoneHmac = hmacPhone(normalizedPhone)
+      } catch (e) {
+        // If HMAC_KEY is not set, proceed without phoneHmac (rollout safe)
+        phoneHmac = undefined
+      }
+    }
 
     // Create user
     const user = await this.userRepository.create({
@@ -74,6 +92,10 @@ export class AuthService {
       role: roleToAssign,
       isAccountant: roleToAssign === 'accountant',
       preferredHub: roleToAssign === 'accountant' ? 'ACCOUNTANT' : 'OWNER',
+      phone: normalizedPhone,
+      phoneHmac,
+      isPhoneVerified: false,
+      phoneVerifiedAt: null,
     })
 
     // Generate token

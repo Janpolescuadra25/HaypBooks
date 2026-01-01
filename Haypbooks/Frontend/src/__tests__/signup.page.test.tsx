@@ -3,7 +3,7 @@ import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { act } from 'react'
 
-jest.mock('@/services/auth.service', () => ({ authService: { signup: jest.fn(), isAuthenticated: jest.fn(() => false), getCurrentUser: jest.fn(), sendVerification: jest.fn() } }))
+jest.mock('@/services/auth.service', () => ({ authService: { preSignup: jest.fn(), completeSignup: jest.fn(), isAuthenticated: jest.fn(() => false), getCurrentUser: jest.fn(), sendVerification: jest.fn() } }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn(), push: jest.fn(), back: jest.fn(), refresh: jest.fn() }) }))
 
 import SignupPage from '@/app/(public)/signup/page'
@@ -60,7 +60,7 @@ describe('SignupPage', () => {
 
   test('selecting Accountant preserves role and includes it in signup payload', async () => {
     const user = userEvent.setup()
-    const signupMock = (require('@/services/auth.service').authService.signup as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'acct@b.com' } })
+    const signupMock = (require('@/services/auth.service').authService.preSignup as jest.Mock).mockResolvedValue({ signupToken: 'token1', otp: '123456' })
 
     render(<SignupPage />)
 
@@ -82,15 +82,15 @@ describe('SignupPage', () => {
       fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Jane' } })
       fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Doe' } })
       fireEvent.change(screen.getByPlaceholderText(/name@company.com/i), { target: { value: 'acct@b.com' } })
-      fireEvent.change(screen.getByPlaceholderText(/\+63 912 345 6789/i), { target: { value: '+63 912 345 6789' } })
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+63 912 345 6789' } })
       // Firm name removed from the form by design; ensure we can sign up without it
       fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'Password1' } })
       fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password1' } })
     })
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /create account|sign up|create your account|start/i }))
-    })
+    const submitBtn = screen.getByRole('button', { name: /create account|sign up|create your account|start/i })
+    await waitFor(() => expect(submitBtn).toBeEnabled())
+    act(() => { fireEvent.click(submitBtn) })
 
     await waitFor(() => expect(signupMock).toHaveBeenCalled())
     const callArgs = (signupMock as jest.Mock).mock.calls[0][0]
@@ -101,7 +101,7 @@ describe('SignupPage', () => {
 
   test('business signup allows missing Company name', async () => {
     const user = userEvent.setup()
-    const signupMock = (require('@/services/auth.service').authService.signup as jest.Mock).mockResolvedValue({ user: { id: 'u2', email: 'biz@b.com' } })
+    const signupMock = (require('@/services/auth.service').authService.preSignup as jest.Mock).mockResolvedValue({ signupToken: 'token2', otp: '123456' })
     render(<SignupPage />)
 
     // Ensure role selection visible and choose business
@@ -119,12 +119,14 @@ describe('SignupPage', () => {
       fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'John' } })
       fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Smith' } })
       fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'john@test.com' } })
-      fireEvent.change(screen.getByPlaceholderText(/\+63 912 345 6789/i), { target: { value: '+63 912 345 6789' } })
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+63 912 345 6789' } })
       fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'Password1' } })
       fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password1' } })
     })
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /create account|sign up|create your account|start/i })) })
+    const submitBtn = screen.getByRole('button', { name: /create account|sign up|create your account|start/i })
+    await waitFor(() => expect(submitBtn).toBeEnabled())
+    act(() => { fireEvent.click(submitBtn) })
 
     await waitFor(() => expect(signupMock).toHaveBeenCalled())
   })
@@ -194,7 +196,7 @@ describe('SignupPage', () => {
 
   test('includes phone in signup payload when provided', async () => {
     const user = userEvent.setup()
-    const signupMock = (require('@/services/auth.service').authService.signup as jest.Mock).mockResolvedValue({ user: { id: 'u3', email: 'p@b.com' } })
+    const signupMock = (require('@/services/auth.service').authService.preSignup as jest.Mock).mockResolvedValue({ signupToken: 'token3', otp: '123456' })
 
     render(<SignupPage />)
 
@@ -212,12 +214,14 @@ describe('SignupPage', () => {
       fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Phone' } })
       fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Tester' } })
       fireEvent.change(screen.getByPlaceholderText(/name@company.com/i), { target: { value: 'p@b.com' } })
-      fireEvent.change(screen.getByPlaceholderText(/\+63 912 345 6789/i), { target: { value: '+63 912 345 6789' } })
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+63 912 345 6789' } })
       fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'Password1' } })
       fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password1' } })
     })
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /create account|sign up|create your account|start/i })) })
+    const submitBtn = screen.getByRole('button', { name: /create account|sign up|create your account|start/i })
+    await waitFor(() => expect(submitBtn).toBeEnabled())
+    act(() => { fireEvent.click(submitBtn) })
 
     await waitFor(() => expect(signupMock).toHaveBeenCalled())
     const called = (signupMock as jest.Mock).mock.calls[0][0]
@@ -227,7 +231,7 @@ describe('SignupPage', () => {
 
   test('shows validation error and prevents signup when phone missing', async () => {
     const user = userEvent.setup()
-    const signupMock = (require('@/services/auth.service').authService.signup as jest.Mock).mockResolvedValue({ user: { id: 'u4', email: 'no-phone@b.com' } })
+    const signupMock = (require('@/services/auth.service').authService.preSignup as jest.Mock).mockResolvedValue({ signupToken: 'token4', otp: '123456' })
 
     render(<SignupPage />)
 
@@ -246,15 +250,73 @@ describe('SignupPage', () => {
       fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Phone' } })
       fireEvent.change(screen.getByPlaceholderText(/name@company.com/i), { target: { value: 'no-phone@b.com' } })
       // intentionally DO set an invalid phone here
-      fireEvent.change(screen.getByPlaceholderText(/\+63 912 345 6789/i), { target: { value: 'abc123' } })
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: 'abc123' } })
       fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'Password1' } })
       fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password1' } })
     })
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /create account|sign up|create your account|start/i })) })
+    const submitBtn = screen.getByRole('button', { name: /create account|sign up|create your account|start/i })
+    await waitFor(() => expect(submitBtn).toBeEnabled())
+    act(() => { fireEvent.click(submitBtn) })
 
     // ensure validation error renders (from normalize) and signup not called
     await waitFor(() => expect(screen.getByText(/Please provide a valid phone number/i)).toBeInTheDocument())
     expect(signupMock).not.toHaveBeenCalled()
+  })
+
+  test('long email does not show a "Show full" control and input contains full value', async () => {
+    const user = userEvent.setup()
+    render(<SignupPage />)
+
+    // go to form
+    if (!screen.queryByRole('button', { name: /my business/i })) {
+      const backBtn = screen.getByTestId('signup-back-to-role')
+      await act(async () => { await user.click(backBtn) })
+      await waitFor(() => expect(screen.queryByRole('button', { name: /my business/i })).toBeTruthy())
+    }
+
+    await act(async () => { await user.click(screen.getByRole('button', { name: /my business/i })) })
+    await waitFor(() => expect(screen.getByLabelText(/email address/i)).toBeTruthy())
+
+    const longEmail = 'janpolescuadra12341234@gmail.com'
+    await act(async () => { await user.type(screen.getByPlaceholderText(/name@company.com/i), longEmail) })
+
+    // No 'Show full' control should be present
+    expect(screen.queryByRole('button', { name: /show full/i })).toBeNull()
+
+    // Input element should still contain the full email value
+    expect((screen.getByPlaceholderText(/name@company.com/i) as HTMLInputElement).value).toBe(longEmail)
+  })
+
+  test('Create account button disabled until passwords match and meet rules', async () => {
+    const user = userEvent.setup()
+    render(<SignupPage />)
+
+    // go to form
+    if (!screen.queryByRole('button', { name: /my business/i })) {
+      const backBtn = screen.getByTestId('signup-back-to-role')
+      await act(async () => { await user.click(backBtn) })
+      await waitFor(() => expect(screen.queryByRole('button', { name: /my business/i })).toBeTruthy())
+    }
+
+    await act(async () => { await user.click(screen.getByRole('button', { name: /my business/i })) })
+    await waitFor(() => expect(screen.getByLabelText(/first name/i)).toBeTruthy())
+
+    // fill required fields but leave confirm mismatched
+    act(() => {
+      fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Match' } })
+      fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Test' } })
+      fireEvent.change(screen.getByPlaceholderText(/name@company.com/i), { target: { value: 'm@t.com' } })
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+63 912 345 6789' } })
+      fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'Password1' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Mismatch' } })
+    })
+
+    // button should be disabled
+    expect(screen.getByRole('button', { name: /create account|sign up|create your account|start/i })).toBeDisabled()
+
+    // fix confirm and the button should become enabled
+    act(() => { fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password1' } }) })
+    await waitFor(() => expect(screen.getByRole('button', { name: /create account|sign up|create your account|start/i })).toBeEnabled())
   })
 })

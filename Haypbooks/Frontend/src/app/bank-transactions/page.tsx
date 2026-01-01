@@ -52,9 +52,9 @@ function BankTransactionsContent() {
 
   
   const [showTransfer, setShowTransfer] = React.useState(false)
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const start = sp.get('start') || ''
   const end = sp.get('end') || ''
   const type = sp.get('type') || ''
@@ -947,7 +947,7 @@ function LinkBankDialog({ onClose, onSimulateLink }: { onClose: ()=>void; onSimu
 
 // Vertical account list showing quick snapshots (name, bank, haypbooks, diff)
 function AccountListSidebar({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string)=>void }) {
-  const sp2 = useSearchParams()
+  const sp2 = useSearchParams() ?? new URLSearchParams()
   const demoParam = React.useMemo(() => (sp2.get('demoAccounts') === '1'), [sp2])
   const [accounts, setAccounts] = React.useState<Array<{ id: string; number: string; name?: string; balance?: number }>>([])
   const [summaries, setSummaries] = React.useState<Record<string, { bankBalance?: number|null; booksBalance?: number|null }>>({})

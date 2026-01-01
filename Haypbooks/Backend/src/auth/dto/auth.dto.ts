@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MinLength, Length, Matches, IsOptional } from 'class-validator'
+import { IsEmail, IsNotEmpty, MinLength, Length, Matches, IsOptional, IsDefined } from 'class-validator'
 import { Transform } from 'class-transformer'
 
 export class LoginDto {
@@ -32,10 +32,11 @@ export class SignupDto {
   // Accept 'business'|'accountant'|'both' in the frontend; map to userType in backend
   role?: string
 
-  @IsOptional()
+  @IsDefined()
+  @IsNotEmpty({ message: 'Phone number is required' })
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @Matches(/^\+?[0-9 ()\-]{7,20}$/, { message: 'Please provide a valid phone number' })
-  phone?: string
+  phone: string
 }
 
 export class ForgotPasswordDto {

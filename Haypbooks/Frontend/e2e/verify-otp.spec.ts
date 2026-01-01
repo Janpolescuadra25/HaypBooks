@@ -9,11 +9,12 @@ test('signup -> verify otp (dev flow)', async ({ page, request, browserName }) =
   const password = 'Verify1!'
 
   // Create a user via standard signup API (dev returns _devOtp) and generate a deterministic OTP for verify flow
-  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'E2E UI' } })
+  const phone = '+15550009999'
+  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'E2E UI', phone } })
   expect(signupRes.ok()).toBeTruthy()
-  let signupBody = null
+  let signupBody: any = null
   try { signupBody = await signupRes.json() } catch (e) { signupBody = null }
-  let devOtp = signupBody?._devOtp || null
+  let devOtp: string | null = signupBody?._devOtp || null
 
   // If dev OTP wasn't returned, fall back to test create-otp endpoint (if enabled in dev)
   if (!devOtp) {
@@ -39,8 +40,8 @@ test('signup -> verify otp (dev flow)', async ({ page, request, browserName }) =
   const inputsState = await page.evaluate(() => Array.from(document.querySelectorAll('input[aria-label^="Digit"]')).map(i => (i as HTMLInputElement).value))
   console.log('DEBUG inputs:', JSON.stringify(inputsState))
 
-  // Click 'Verify OTP' and await the verify API call
-  await page.getByRole('button', { name: /Verify OTP|Verify code/i }).click()
+  // Click the verification action (button label may be 'Verify OTP', 'Verify code' or 'Continue')
+  await page.getByRole('button', { name: /Verify OTP|Verify code|Continue/i }).click()
   const verifyResp = await page.waitForResponse(r => r.url().includes('/api/auth/verify-otp') && r.request().method() === 'POST', { timeout: 5000 }).catch(() => null)
   if (verifyResp) {
     const vjson = await verifyResp.json().catch(() => null)

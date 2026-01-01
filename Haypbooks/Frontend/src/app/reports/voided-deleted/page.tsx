@@ -12,7 +12,7 @@ function matchesVoidedOrDeleted(action: string): boolean {
 }
 
 export default function VoidedDeletedReportPage() {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [start, setStart] = React.useState(sp.get('start') || '')

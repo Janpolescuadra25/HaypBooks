@@ -16,7 +16,7 @@ function SalesReceiptsContent() {
   const [rows, setRows] = useState<Receipt[]>([])
   const [error, setError] = useState<string | null>(null)
   const [canWrite, setCanWrite] = useState<boolean>(false)
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const from = sp.get('from') || ''
   useEffect(() => {
     api<{ receipts: Receipt[] }>(`/api/sales-receipts?page=1&limit=20`).then((d) => setRows(d.receipts)).catch((e) => setError(e.message))

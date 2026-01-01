@@ -1,7 +1,9 @@
 "use client"
+"use client"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth.service'
+import AuthLayout from '@/components/auth/AuthLayout' 
 import { useForm } from 'react-hook-form'
 import { normalizePhoneOrThrow } from '@/utils/phone.util'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -63,12 +65,15 @@ export default function SignupPage() {
     companyName: z.string().optional(), // role-specific validation done at submit
     email: z.string().email('Invalid email address'),
     phone: z.string().min(1, 'Phone number is required'),
+    phoneCountry: z.string().optional(),
     password: z.string().min(8, 'Password must be at least 8 characters').regex(/(?=.*[A-Z])(?=.*\d)/, 'Include an uppercase letter and a number'),
     confirmPassword: z.string().min(1)
   }).refine((data) => data.password === data.confirmPassword, { message: 'Passwords must match', path: ['confirmPassword'] })
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setError } = useForm({ resolver: zodResolver(signupSchema) })
+  const { register, handleSubmit, formState: { errors, isSubmitting, isValid }, watch, setError } = useForm({ resolver: zodResolver(signupSchema), mode: 'onChange' })
   const passwordValue = watch('password')
+  const confirmValue = watch('confirmPassword')
+  const emailValue = watch('email')
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -104,7 +109,7 @@ export default function SignupPage() {
       if (data.companyName && String(data.companyName).trim()) payload.companyName = data.companyName
       if (data.phone && String(data.phone).trim()) {
         try {
-          payload.phone = normalizePhoneOrThrow(String(data.phone).trim())
+          payload.phone = normalizePhoneOrThrow(String(data.phone).trim(), data.phoneCountry)
         } catch (err: any) {
           setError('phone', { type: 'manual', message: err?.message || 'Please provide a valid phone number' })
           setLoading(false)
@@ -113,23 +118,17 @@ export default function SignupPage() {
       }
       if (role === 'accountant') payload.role = 'accountant'
 
-      const signupResp = await authService.signup(payload)
+      // Use pre-signup to avoid creating a DB user until OTP verified
+      const pre = await authService.preSignup(payload)
 
-      // After signup, send users to the Verify OTP UI so they can enter the 6-digit code.
-      try {
-        const devOtp = (signupResp as any)?._devOtp
-        const emailParam = encodeURIComponent(signupResp.user?.email || payload.email)
-        const roleParam = role ? `&role=${encodeURIComponent(role)}` : ''
-        const codeParam = devOtp ? `&code=${encodeURIComponent(devOtp)}` : ''
-        const phoneParam = payload.phone ? `&phone=${encodeURIComponent(payload.phone)}` : ''
-        location.href = `/verify-otp?email=${emailParam}&flow=signup${roleParam}${phoneParam}${codeParam}`
-        return
-      } catch (e) {
-        // fallback: send to onboarding to preserve previous behavior
-        if (role === 'accountant') location.href = '/onboarding/accountant'
-        else location.href = '/onboarding/tenant'
-        return
-      }
+      // Navigate to verify OTP UI with the signup token
+      const emailParam = encodeURIComponent(payload.email)
+      const roleParam = role ? `&role=${encodeURIComponent(role)}` : ''
+      const codeParam = pre?.otp ? `&code=${encodeURIComponent(pre.otp)}` : ''
+      const phoneParam = payload.phone ? `&phone=${encodeURIComponent(payload.phone)}` : ''
+      const tokenParam = `&signupToken=${encodeURIComponent(pre.signupToken)}`
+      location.href = `/verify-otp?email=${emailParam}&flow=signup${roleParam}${phoneParam}${codeParam}${tokenParam}`
+      return
     } catch (e: any) {
       const status = e?.response?.status
       if (status === 409) {
@@ -144,33 +143,41 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white relative overflow-hidden">
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-float-delayed" />
-      </div>
-
-      <div className="max-w-md w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20 relative z-10 animate-slide-up">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-lg animate-scale-in">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <AuthLayout innerClassName="max-w-sm w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20 relative z-10 animate-slide-up">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-3 shadow-lg animate-scale-in">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Create your account</h1>
-          <p className="text-slate-600 mt-2">Manage your accounting with clarity and confidence using HaypBooks.</p>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Create your account</h1>
+          <p className="text-sm text-slate-600 mt-1">Manage your accounting with clarity and confidence using HaypBooks.</p>
 
           {/* Role selection step */}
           {step === 'role' ? (
             <div className="mt-6">
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Which best describes your role?</h3>
               <div className="flex flex-col gap-3">
-                <button type="button" onClick={() => { setRole('business'); setStep('form') }} className="text-left p-4 rounded-xl border bg-white">
+                <style>{`@keyframes breatheRole { 0%,100% { transform: translateY(-4px) scale(1.02); } 50% { transform: translateY(-6px) scale(1.03); } } @media (prefers-reduced-motion: reduce) { .breatheRole { animation: none !important; } }`}</style>
+
+                <button
+                  type="button"
+                  data-testid="signup-role-business"
+                  aria-pressed={role === 'business'}
+                  onClick={() => { setRole('business'); setStep('form') }}
+                  className={`option-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-102 hover:-translate-y-0.5 hover:shadow-sm hover:border-emerald-600 hover:ring-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'business' ? 'bg-emerald-50 shadow-sm breatheRole border-emerald-500' : ''}`}
+                >
                   <div className="font-medium">My Business</div>
                   <div className="text-sm text-slate-500">I’m the owner running and managing my business</div>
                 </button>
-                <button type="button" onClick={() => { setRole('accountant'); setStep('form') }} className="text-left p-4 rounded-xl border bg-white">
+
+                <button
+                  type="button"
+                  data-testid="signup-role-accountant"
+                  aria-pressed={role === 'accountant'}
+                  onClick={() => { setRole('accountant'); setStep('form') }}
+                  className={`option-card text-left p-4 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-105 hover:-translate-y-1 hover:shadow-md hover:border-emerald-600 hover:ring-4 hover:ring-emerald-100 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'accountant' ? 'bg-teal-50 shadow-md breatheRole border-emerald-500' : ''}`}
+                >
                   <div className="font-medium">Accountant</div>
                   <div className="text-sm text-slate-500">I support clients by managing their accounts</div>
                 </button>
@@ -179,6 +186,11 @@ export default function SignupPage() {
           ) : null}
 
         </div>
+
+        {/* Add small style block to ensure hover border/shadow match other option-cards */}
+        <style>{`.option-card:hover { transform: translateY(-2px); box-shadow: 0 12px 18px -4px rgba(0,0,0,0.08), 0 6px 8px -4px rgba(0,0,0,0.03); border-color: #10b981; }
+          .option-card:focus-visible { box-shadow: 0 0 0 4px rgba(16,185,129,0.08); }
+        `}</style>
 
         {step === 'form' ? (
           <>
@@ -224,33 +236,45 @@ export default function SignupPage() {
               <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
                 Email address
               </label>
-              <input
-                id="email"
-                type="email"
-                {...register('email')}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
-                placeholder="name@company.com"
-                required
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  id="email"
+                  type="email"
+                  {...register('email')}
+                  className="truncate w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white pr-12"
+                  placeholder="name@company.com"
+                  required
+                />
+              </div>
             </div>
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">
                 Phone number
               </label>
-              <input
-                id="phone"
-                type="tel"
-                {...register('phone')}
-                required
-                aria-required="true"
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
-                placeholder="+63 912 345 6789"
-              />
+              <div className="flex gap-0 items-stretch">
+                <select {...register('phoneCountry')} defaultValue="PH" aria-label="Country code" className="w-20 h-10 px-2 pr-6 py-2 border border-slate-700 rounded-l-lg bg-white text-sm text-slate-900 text-left" title="+63 Philippines">
+                  <option value="PH">+63 Philippines</option>
+                  <option value="US">+1 United States</option>
+                  <option value="GB">+44 United Kingdom</option>
+                  <option value="AU">+61 Australia</option>
+                  <option value="IN">+91 India</option>
+                  <option value="SG">+65 Singapore</option>
+                </select>
+                <input
+                  id="phone"
+                  type="tel"
+                  {...register('phone')}
+                  required
+                  aria-required="true"
+                  className="flex-1 min-w-0 h-10 px-3 py-2 border border-slate-700 rounded-r-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white placeholder-slate-400 text-sm text-slate-900"
+                  placeholder="0916 123 4567"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">We’ll send a verification code by SMS if required. Message & data rates may apply.</p>
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{String(errors.phone?.message)}</p>
               )}
-              <p className="text-xs text-gray-500 mt-2">We'll send a short verification code to this number (SMS or call). Message & data rates may apply.</p>
             </div>
 
             
@@ -315,6 +339,7 @@ export default function SignupPage() {
                 className="w-full px-4 py-3 pr-11 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
                 placeholder="Re-enter your password"
                 required
+                aria-describedby="confirmStatus"
               />
               <button
                 type="button"
@@ -333,6 +358,12 @@ export default function SignupPage() {
                 )}
               </button>
             </div>
+
+            {/* Live confirm status for accessibility */}
+            {(confirmValue && confirmValue.length > 0) ? (
+              <div id="confirmStatus" role="status" aria-live="polite" className={`${confirmValue === passwordValue ? 'text-emerald-600' : 'text-red-600'} mt-2 text-sm`}>{confirmValue === passwordValue ? 'Passwords match' : 'Passwords do not match'}</div>
+            ) : null}
+
             {errors.confirmPassword && (
               <p className="mt-1 text-sm text-red-600 animate-shake">{String(errors.confirmPassword?.message)}</p>
             )}
@@ -350,7 +381,8 @@ export default function SignupPage() {
           <button
             type="submit"
             className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.98]"
-            disabled={loading || isSubmitting}
+            disabled={loading || isSubmitting || !isValid}
+            aria-disabled={loading || isSubmitting || !isValid}
           >
             {loading || isSubmitting ? (
               <span className="flex items-center justify-center gap-2">
@@ -390,43 +422,6 @@ export default function SignupPage() {
             Back to home
           </a>
         </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(30px, -30px) rotate(5deg); }
-          66% { transform: translate(-20px, 20px) rotate(-5deg); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(-30px, 30px) rotate(-5deg); }
-          66% { transform: translate(20px, -20px) rotate(5deg); }
-        }
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes scale-in {
-          from { opacity: 0; transform: scale(0.8); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes slide-down {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
-        }
-        .animate-float { animation: float 20s ease-in-out infinite; }
-        .animate-float-delayed { animation: float-delayed 25s ease-in-out infinite; }
-        .animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-scale-in { animation: scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.2s; opacity: 0; }
-        .animate-slide-down { animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-shake { animation: shake 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-      `}</style>
-    </div>
+      </AuthLayout>
   )
 }

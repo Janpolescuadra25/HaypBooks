@@ -7,11 +7,19 @@ test('logout then click Sign in shows sign-in form and not redirect to hub', asy
 
   // Sign up as business
   await page.goto('/signup')
-  await page.getByRole('button', { name: 'My Business' }).click()
+  await page.waitForSelector('button[data-testid="signup-role-business"]', { timeout: 10000 })
+  await page.click('button[data-testid="signup-role-business"]')
+  // Wait for form to appear before filling
+  await page.waitForSelector('#firstName', { timeout: 15000 })
   await page.fill('#firstName', 'E2E')
   await page.fill('#lastName', 'Logout')
-  await page.fill('#companyName', 'E2E Corp')
+  // companyName input is optional / not present in the form; skip if missing
+  if ((await page.locator('#companyName').count()) > 0) {
+    await page.fill('#companyName', 'E2E Corp')
+  }
   await page.fill('#email', email)
+  // Add phone to satisfy required validation
+  await page.fill('#phone', '+15551234567')
   await page.fill('#password', password)
   await page.fill('#confirmPassword', password)
   await page.getByRole('button', { name: 'Create account' }).click()

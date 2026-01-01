@@ -30,7 +30,8 @@ test.skip('demo: signup → verification (PIN flow) demo - SKIPPED (PIN removed)
   const password = 'DemoPass!23'
 
   // Create user via API
-  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Demo User' } })
+  const phone = '+15550009999'
+  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Demo User', phone } })
   expect(signupRes.ok()).toBeTruthy()
 
   // Add network listeners to capture PIN setup/verify responses (debugging help)

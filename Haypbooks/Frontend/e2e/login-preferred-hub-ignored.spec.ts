@@ -15,7 +15,7 @@ test('preferredHub is not auto-redirected; show hub selection first', async ({ p
   await request.post('http://localhost:4000/api/test/update-user', { data: { email, data: { preferredHub: 'OWNER', isAccountant: true, role: 'both' } } }).catch(()=>{})
 
   // Ensure the backend update persisted (retry briefly)
-  let prefUser = null
+  let prefUser: any = null
   for (let i = 0; i < 10; i++) {
     const uResp = await request.get(`http://localhost:4000/api/test/user?email=${encodeURIComponent(email)}`)
     if (uResp.ok()) {
@@ -70,7 +70,7 @@ test('preferredHub is not auto-redirected; show hub selection first', async ({ p
   expect(finalUrl).toMatch(/\/hub\/selection/)
   await expect(page.locator('text=Choose how')).toBeVisible()
   const userResp = await request.get(`http://localhost:4000/api/test/user?email=${encodeURIComponent(email)}`)
-  const userJson = await userResp.json().catch(() => null)
+  const userJson: any = await userResp.json().catch(() => null)
   if (userJson && (userJson.preferredHub === 'OWNER' || userJson.preferredHub === 'owner')) {
     // Backend preserved the preferred hub as expected
   } else {

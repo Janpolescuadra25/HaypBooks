@@ -5,7 +5,7 @@ import { Suspense, useState } from 'react'
 const BSColumnSettings = ({ current }: { current: Array<'curr'|'prev'|'delta'|'pct'> }) => {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const [open, setOpen] = useState(false)
 
   const toggleSubcol = (key: 'curr'|'prev'|'delta'|'pct') => {

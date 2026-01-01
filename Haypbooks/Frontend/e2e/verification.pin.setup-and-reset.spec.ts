@@ -123,13 +123,13 @@ test.skip('PIN setup -> login -> enter PIN -> reset -> OTP -> set new PIN end-to
   await page.click('text=Reset PIN')
 
   // Click send code and capture browser's send-code response which includes OTP in dev
+  let otp: string | null = null
   try {
     // Support both the options-label and the email-flow button text
     let sendBtn = page.locator('text=Send Code to Email')
     if ((await sendBtn.count()) === 0) sendBtn = page.locator('text=Send code')
     await sendBtn.waitFor({ state: 'visible', timeout: 15000 })
     // To make OTP retrieval deterministic in dev, trigger send-code via the backend first and use that OTP.
-    let otp: string | null = null
     try {
       const apiSend = await request.post('http://127.0.0.1:4000/api/auth/email/send-code', { data: { email } }).catch(() => null)
       const apiSendJson = apiSend ? await apiSend.json().catch(() => null) : null
@@ -172,6 +172,7 @@ test.skip('PIN setup -> login -> enter PIN -> reset -> OTP -> set new PIN end-to
     }
 
     expect(otp).toHaveLength(6)
+    if (!otp) throw new Error('OTP missing')
   } catch (err) {
     await page.screenshot({ path: path.join(outDir, `send-code-missing-${ts}.png`), fullPage: true }).catch(() => {})
     const html = await page.content().catch(() => '<no html>')

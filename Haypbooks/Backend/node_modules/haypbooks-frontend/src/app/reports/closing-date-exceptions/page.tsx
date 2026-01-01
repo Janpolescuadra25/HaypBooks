@@ -7,7 +7,7 @@ import ClosedThroughBanner from '@/components/ClosedThroughBanner'
 function todayIso() { return new Date().toISOString().slice(0,10) }
 
 export default function ClosingDateExceptionsPage() {
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 

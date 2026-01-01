@@ -2,6 +2,8 @@ import { PrismaAuthService } from '../src/auth/prisma-auth.service'
 import { JwtService } from '@nestjs/jwt'
 
 describe('PrismaAuthService (phone normalization)', () => {
+  beforeEach(() => { process.env.DEFAULT_PHONE_COUNTRY = 'US' })
+  afterEach(() => { delete process.env.DEFAULT_PHONE_COUNTRY })
   let svc: PrismaAuthService
 
   const mockUserRepo: any = {
@@ -29,6 +31,21 @@ describe('PrismaAuthService (phone normalization)', () => {
     const passed = mockUserRepo.create.mock.calls[0][0]
     expect(passed.phone).toBe('+15550009999')
     expect(resp.user.email).toBe('norm@e.test')
+  })
+
+  test('signup stores phoneHmac when HMAC_KEY is set', async () => {
+    process.env.HMAC_KEY = 'testkey'
+    mockUserRepo.findByEmail.mockResolvedValue(null)
+    mockUserRepo.create.mockImplementation((data: any) => Promise.resolve({ id: 'u2', ...data }))
+
+    const resp = await svc.signup('hmac@e.test', 'Password1!', 'Hmac Name', 'owner', '1 (555) 000-9999')
+
+    expect(mockUserRepo.create).toHaveBeenCalled()
+    const passed = mockUserRepo.create.mock.calls[0][0]
+    expect(passed.phone).toBe('+15550009999')
+    expect(passed.phoneHmac).toBeDefined()
+
+    delete process.env.HMAC_KEY
   })
 
   test('startOtpByPhone normalizes phone before creating OTP', async () => {

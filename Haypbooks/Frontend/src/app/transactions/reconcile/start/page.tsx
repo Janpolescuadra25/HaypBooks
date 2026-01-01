@@ -5,7 +5,7 @@ import HelpPopover from '@/components/HelpPopover'
 
 function ReconcileStartPageInner() {
   const router = useRouter()
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const [accounts, setAccounts] = React.useState<Array<{ id: string; number: string; name: string }>>([])
   const [accountId, setAccountId] = React.useState<string>('')
   const [periodEnd, setPeriodEnd] = React.useState<string>('')

@@ -1,8 +1,10 @@
 "use client"
+"use client"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm'
 import { authService } from '@/services/auth.service'
+import AuthLayout from '@/components/auth/AuthLayout'
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
@@ -26,16 +28,9 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white relative overflow-hidden">
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-float-delayed" />
-      </div>
-
-      <div className="max-w-md w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20 relative z-10 animate-slide-up">
+    <AuthLayout innerClassName="max-w-sm w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20 relative z-10 animate-slide-up">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-lg animate-scale-in">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-3 shadow-lg animate-scale-in">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
@@ -65,37 +60,6 @@ export default function ForgotPasswordPage() {
             Back to sign in
           </a>
         </div>
-      </div>
-
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(30px, -30px) rotate(5deg); }
-          66% { transform: translate(-20px, 20px) rotate(-5deg); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(-30px, 30px) rotate(-5deg); }
-          66% { transform: translate(20px, -20px) rotate(5deg); }
-        }
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes scale-in {
-          from { opacity: 0; transform: scale(0.8); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes slide-down {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-float { animation: float 20s ease-in-out infinite; }
-        .animate-float-delayed { animation: float-delayed 25s ease-in-out infinite; }
-        .animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-scale-in { animation: scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.2s; opacity: 0; }
-        .animate-slide-down { animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}</style>
-    </div>
+      </AuthLayout>
   )
 }

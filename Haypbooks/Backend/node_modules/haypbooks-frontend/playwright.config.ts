@@ -8,7 +8,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
+    // Retain traces on failure so CI can upload them; `retain-on-failure` keeps traces for failed tests
+    trace: 'retain-on-failure',
     headless: true,
     actionTimeout: 10_000,
   },

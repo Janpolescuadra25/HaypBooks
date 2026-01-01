@@ -13,7 +13,7 @@ import CompanySwitcher from '@/components/CompanySwitcher'
 import HubSwitcher from '@/components/HubSwitcher'
 
 export default function AppShellHeader() {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const { toggleSidebar } = useUI()
   const [perms, setPerms] = useState<string[] | null>(null)
   const [query, setQuery] = useState('')

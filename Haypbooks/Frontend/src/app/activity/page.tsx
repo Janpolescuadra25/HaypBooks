@@ -14,7 +14,7 @@ export default function ActivityHubPage() {
 }
 
 function ActivityHubInner() {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   // Use native date pickers with ISO values (YYYY-MM-DD)

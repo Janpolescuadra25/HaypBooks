@@ -23,14 +23,14 @@ export default function RootLayout({ children, modal }: { children: ReactNode; m
   return (
     <html lang="en" className={`h-full ${inter.variable}`}>
       <body className="min-h-screen h-full text-slate-900 antialiased selection:bg-sky-200/60 selection:text-slate-900">
-        <ToastProvider>
-          <CurrencyProvider>
-            <ClientRoot>
+        <ClientRoot>
+          <ToastProvider>
+            <CurrencyProvider>
               {children}
               {modal}
-            </ClientRoot>
-          </CurrencyProvider>
-        </ToastProvider>
+            </CurrencyProvider>
+          </ToastProvider>
+        </ClientRoot>
       </body>
     </html>
   )

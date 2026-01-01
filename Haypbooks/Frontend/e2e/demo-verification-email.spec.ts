@@ -35,7 +35,8 @@ test('demo: signup → verification (email flow) demo', async ({ page, request }
     const txt = await createRes.text().catch(() => null)
     console.warn('create-user test endpoint failed', createRes.status(), txt)
     // If endpoints are disabled, use standard signup API and rely on dev OTP behavior
-    const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Demo User' } })
+    const phone = '+15550009999'
+    const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Demo User', phone } })
     expect(signupRes.ok()).toBeTruthy()
   } else {
     expect(createRes.ok()).toBeTruthy()

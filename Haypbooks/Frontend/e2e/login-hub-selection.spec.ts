@@ -80,7 +80,7 @@ test('after sign-in shows hub selection with two hubs', async ({ page, request }
     await page.getByRole('link', { name: /Enter Owner Hub/ }).click()
     await page.waitForURL(/\/hub\/companies/, { timeout: 5000 })
     // Backend: confirm preferredHub set (retry briefly to allow backend persistence)
-    let userJson = null
+    let userJson: any = null
     for (let i = 0; i < 6; i++) {
       const userResp = await request.get(`http://localhost:4000/api/test/user?email=${encodeURIComponent(email)}`)
       if (userResp.ok()) {

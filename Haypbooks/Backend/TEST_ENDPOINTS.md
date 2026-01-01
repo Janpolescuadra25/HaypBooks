@@ -18,6 +18,9 @@ Available endpoints (all under /api/test):
   - Returns a single user row (including password hash in dev) for that email. Use only in dev. Example: http://localhost:4000/api/test/user?email=demo@haypbooks.test
 
 - GET /api/test/otp/latest?email={email}&purpose={RESET|VERIFY}
+- POST /api/test/force-complete-signup { signupToken } (dev/CI only) - force finalize a pending pre-signup into a verified user
+- POST /api/test/force-verify-user { email|phone, type } (dev/CI only) - mark an existing user's email or phone as verified for deterministic tests
+- POST /api/test/force-complete-onboarding { email, mode=(quick|full) } (dev/CI only) - mark onboardingComplete=true and set onboardingMode for a user
   - Returns the latest OTP record for the email and purpose.
 
 - POST /api/test/create-user

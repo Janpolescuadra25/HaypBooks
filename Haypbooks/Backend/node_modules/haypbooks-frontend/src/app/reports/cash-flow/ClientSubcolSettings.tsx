@@ -7,7 +7,7 @@ type Key = 'curr' | 'prev' | 'delta' | 'pct'
 
 export default function CFClientSubcolSettings({ current }: { current: Key[] }) {
   const router = useRouter()
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const currentSet = new Set(current)
   const options = [
     { key: 'curr', label: 'Current', required: true },

@@ -8,9 +8,9 @@ test('signup -> verify OTP -> full onboarding flow -> complete', async ({ page, 
   const phone = '+15550009999'
   const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Onboard E2E', phone } })
   expect(signupRes.ok()).toBeTruthy()
-  let signupBody = null
+  let signupBody: any = null
   try { signupBody = await signupRes.json() } catch (e) { signupBody = null }
-  let otp = signupBody?._devOtp || null
+  let otp: string | null = signupBody?._devOtp || null
   if (!otp) {
     const createOtpRes = await request.post('http://127.0.0.1:4000/api/test/create-otp', { data: { email, otp: '654321', purpose: 'VERIFY' } })
     if (createOtpRes.ok()) {
@@ -22,6 +22,7 @@ test('signup -> verify OTP -> full onboarding flow -> complete', async ({ page, 
     }
   }
   expect(otp).toBeTruthy()
+  if (!otp) throw new Error('Missing OTP')
 
   // Navigate to verification page and enter the code
   await page.goto(`/verify-otp?email=${encodeURIComponent(email)}&flow=signup&method=email&code=${encodeURIComponent(otp || '')}`)
@@ -66,7 +67,7 @@ test('signup -> verify OTP -> full onboarding flow -> complete', async ({ page, 
 
   // Verify server-side onboarding flags instead of performing the full UI flow (reduces flakiness)
   const resp = await request.get(`http://127.0.0.1:4000/api/test/user?email=${encodeURIComponent(email)}`)
-  const user = resp && resp.ok() ? await resp.json().catch(() => null) : null
+  const user: any = resp && resp.ok() ? await resp.json().catch(() => null) : null
   expect(user).not.toBeNull()
   expect(user.onboardingComplete || user.onboarding_mode || user.onboardingComplete).toBeTruthy()
   expect(user.onboardingMode || user.onboarding_mode || user.onboardingMode).toBe('full')

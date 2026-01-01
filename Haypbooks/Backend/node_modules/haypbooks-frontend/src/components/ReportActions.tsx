@@ -21,7 +21,7 @@ export function PrintButton() {
 
 export function ExportCsvButton({ exportPath, title = 'Export CSV' }: { exportPath: string; title?: string }) {
   const sp = useSearchParams()
-  const qs = sp.toString()
+  const qs = (sp ?? new URLSearchParams()).toString()
   const href = `${exportPath}${qs ? (exportPath.includes('?') ? `&${qs}` : `?${qs}`) : ''}`
   return (
     <a

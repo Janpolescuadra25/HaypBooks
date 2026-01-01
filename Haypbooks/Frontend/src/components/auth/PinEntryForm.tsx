@@ -4,7 +4,7 @@ import React from 'react'
 
 // PIN feature removed. This component is kept as a harmless stub to avoid import-time errors
 // and to make it explicit that the feature has been removed.
-export default function PinEntryForm({ onSuccess, onBack }: { onSuccess?: () => void, onBack?: () => void }) {
+export default function PinEntryForm({ onSuccess, onBack, verificationService, enableAutoSubmit }: { onSuccess?: () => void, onBack?: () => void, verificationService?: any, enableAutoSubmit?: boolean }) {
   return (
     <div className="p-4 border rounded-md bg-yellow-50">
       <strong>PIN feature removed</strong>

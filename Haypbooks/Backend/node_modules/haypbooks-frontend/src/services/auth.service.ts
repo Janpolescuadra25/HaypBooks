@@ -16,6 +16,8 @@ export interface SignupData {
   lastName?: string;
   // Optional role: 'business' | 'accountant' | 'both'
   role?: string;
+  // Optional phone (E.164 normalized or local string handled by UI)
+  phone?: string;
 }
 
 export interface User {
@@ -63,6 +65,7 @@ class AuthService {
     const name = data.companyName?.trim() || [data.firstName?.trim(), data.lastName?.trim()].filter(Boolean).join(' ').trim()
     const payload: any = { email: data.email, password: data.password, name }
     if (data.role) payload.role = data.role
+    if (data.phone) payload.phone = data.phone
     const response = await apiClient.post<AuthResponse>('/api/auth/signup', payload);
     
     // Don't persist the user yet — the signup response can represent a newly
@@ -72,6 +75,26 @@ class AuthService {
     // a real login/verify action before saving the user to local storage.
     
     return response.data;
+  }
+
+  /**
+   * Create a pending signup and send an OTP to the user (does not create DB user)
+   */
+  async preSignup(data: SignupData): Promise<{ signupToken: string; otp?: string }> {
+    const name = data.companyName?.trim() || [data.firstName?.trim(), data.lastName?.trim()].filter(Boolean).join(' ').trim()
+    const payload: any = { email: data.email, password: data.password, name }
+    if (data.role) payload.role = data.role
+    if (data.phone) payload.phone = data.phone
+    const response = await apiClient.post('/api/auth/pre-signup', payload)
+    return response.data as { signupToken: string; otp?: string }
+  }
+
+  /**
+   * Complete a pending signup by verifying OTP and creating the real user (sets cookies)
+   */
+  async completeSignup(signupToken: string, code: string, method?: 'email'|'phone'): Promise<AuthResponse & { token?: string }> {
+    const response = await apiClient.post('/api/auth/complete-signup', { signupToken, code, method })
+    return response.data as any
   }
 
   /**

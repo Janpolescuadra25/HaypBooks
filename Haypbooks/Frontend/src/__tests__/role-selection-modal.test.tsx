@@ -21,6 +21,12 @@ describe('RoleSelectionModal', () => {
     const business = screen.getByRole('button', { name: 'My Business' })
     const accountant = screen.getByRole('button', { name: 'Accountant' })
 
+    // Accessibility checks: ensure cards have aria-describedby and test ids
+    expect(screen.getByTestId('role-business')).toBeTruthy()
+    expect(screen.getByTestId('role-accountant')).toBeTruthy()
+    expect(screen.getByTestId('role-business')).toHaveAttribute('aria-describedby', 'role-business-desc')
+    expect(screen.getByTestId('role-accountant')).toHaveAttribute('aria-describedby', 'role-accountant-desc')
+
     await act(async () => { await userEvent.click(accountant) })
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/signup?role=accountant&showSignup=1'))
     // Confirm we saved the flag that suppresses the intro

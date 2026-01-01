@@ -39,8 +39,8 @@ function buildInitial<T extends Record<string,string>>(specs: FilterSpecItem[]):
 export function usePersistedFilterParams<T extends Record<string,string>>(opts: UsePersistedFilterParamsOptions): Result<T> {
   const { reportKey, specs, mode = 'replace', autoHydrate = true } = opts
   const router = useRouter()
-  const pathname = usePathname()
-  const sp = useSearchParams()
+  const pathname = usePathname() ?? ''
+  const sp = useSearchParams() ?? new URLSearchParams()
   const { filters, update, load, register, unregister, status, error, updatedAt } = useReportFilters(reportKey)
   const [values, setValues] = useState<T>(() => buildInitial<T>(specs))
   const hydratedRef = useRef(false)

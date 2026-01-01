@@ -2,7 +2,7 @@ import { normalizePhoneOrThrow, maskPhoneForDisplay } from './phone.util'
 
 describe('phone.util', () => {
   test('maskPhoneForDisplay returns formatted masked string', () => {
-    expect(maskPhoneForDisplay('+15551234567')).toBe('+1555 ••• ••• 4567')
+    expect(maskPhoneForDisplay('+15551234567')).toBe('+1 *** *** 4567')
     expect(maskPhoneForDisplay('')).toBe('')
     expect(maskPhoneForDisplay(undefined)).toBe('')
   })

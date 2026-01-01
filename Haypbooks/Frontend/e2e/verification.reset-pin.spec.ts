@@ -37,7 +37,8 @@ test('Reset PIN → OTP → Set PIN end-to-end', async ({ page, request }) => {
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true })
 
   // Create user
-  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Reset Demo' } })
+  const phone = '+15550009999'
+  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'Reset Demo', phone } })
   expect(signupRes.ok()).toBeTruthy()
 
   // Login to get token

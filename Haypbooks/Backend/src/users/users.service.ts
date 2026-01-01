@@ -42,4 +42,18 @@ export class UsersService {
     const { password, ...result } = updated
     return result
   }
+
+  async updatePhone(userId: string, phone: string) {
+    // Normalize phone and compute HMAC if available
+    const normalize = require('../utils/phone.util').normalizePhoneOrThrow
+    let normalized: string
+    try { normalized = normalize(phone) } catch (e) { throw e }
+
+    let phoneHmac: string | undefined = undefined
+    try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalized) } catch (e) { phoneHmac = undefined }
+
+    const updated = await this.userRepository.update(userId, { phone: normalized, phoneHmac } as any)
+    const { password, ...result } = updated
+    return result
+  }
 }

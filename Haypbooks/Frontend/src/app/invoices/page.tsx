@@ -31,7 +31,7 @@ function InvoicesContent() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [sendingBatch, setSendingBatch] = useState(false)
   const { push } = useToast()
-  const sp = useSearchParams()
+  const sp = useSearchParams() ?? new URLSearchParams()
   const start = sp.get('start') || ''
   const end = sp.get('end') || ''
   const status = sp.get('status') || ''
