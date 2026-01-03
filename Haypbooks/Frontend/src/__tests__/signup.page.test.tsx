@@ -229,7 +229,7 @@ describe('SignupPage', () => {
     expect(called.phone).toBe('+639123456789')
   })
 
-  test('shows validation error and prevents signup when phone missing', async () => {
+  test('shows validation error and prevents signup when phone is invalid', async () => {
     const user = userEvent.setup()
     const signupMock = (require('@/services/auth.service').authService.preSignup as jest.Mock).mockResolvedValue({ signupToken: 'token4', otp: '123456' })
 
@@ -262,6 +262,38 @@ describe('SignupPage', () => {
     // ensure validation error renders (from normalize) and signup not called
     await waitFor(() => expect(screen.getByText(/Please provide a valid phone number/i)).toBeInTheDocument())
     expect(signupMock).not.toHaveBeenCalled()
+  })
+
+  test('allows signup without phone', async () => {
+    const user = userEvent.setup()
+    const signupMock = (require('@/services/auth.service').authService.preSignup as jest.Mock).mockResolvedValue({ signupToken: 'token5', otp: '123456' })
+
+    render(<SignupPage />)
+
+    // go to form
+    if (!screen.queryByRole('button', { name: /my business/i })) {
+      const backBtn = screen.getByTestId('signup-back-to-role')
+      await act(async () => { await user.click(backBtn) })
+      await waitFor(() => expect(screen.queryByRole('button', { name: /my business/i })).toBeTruthy())
+    }
+
+    await act(async () => { await user.click(screen.getByRole('button', { name: /my business/i })) })
+    await waitFor(() => expect(screen.getByLabelText(/first name/i)).toBeTruthy())
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'NoPhone' } })
+      fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'User' } })
+      fireEvent.change(screen.getByPlaceholderText(/name@company.com/i), { target: { value: 'nophone@test.com' } })
+      // Leave phone empty intentionally
+      fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'Password1' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password1' } })
+    })
+
+    const submitBtn = screen.getByRole('button', { name: /create account|sign up|create your account|start/i })
+    await waitFor(() => expect(submitBtn).toBeEnabled())
+    act(() => { fireEvent.click(submitBtn) })
+
+    await waitFor(() => expect(signupMock).toHaveBeenCalled())
   })
 
   test('long email does not show a "Show full" control and input contains full value', async () => {
