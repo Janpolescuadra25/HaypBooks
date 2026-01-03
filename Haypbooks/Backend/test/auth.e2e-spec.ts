@@ -62,6 +62,40 @@ describe('Auth e2e', () => {
     expect(sessions.length).toBeGreaterThan(0)
   }, 20000)
 
+  it('refresh rotates session and returns new tokens', async () => {
+    const email = `e2e-refresh-verify-${Date.now()}@haypbooks.test`
+    const password = 'RefreshE2E!23'
+
+    // Signup and login
+    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Refresh E2E', phone: '+1 555 000 0000' }).expect(201)
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body).toHaveProperty('refreshToken')
+    const initialRefresh = login.body.refreshToken
+
+    // Ensure session present
+    const before = (await request(app.getHttpServer()).get(`/api/test/sessions?email=${encodeURIComponent(email)}`).expect(200)).body
+    expect(before.length).toBeGreaterThan(0)
+    const beforeRefresh = before[0].refreshToken
+    expect(beforeRefresh).toBe(initialRefresh)
+
+    // Call refresh endpoint with cookie
+    const refreshResp = await request(app.getHttpServer()).post('/api/auth/refresh').set('Cookie', `refreshToken=${initialRefresh}`).expect(200)
+    expect(refreshResp.body).toHaveProperty('token')
+    expect(refreshResp.body).toHaveProperty('user')
+
+    // New session should be created (refresh token rotated)
+    const after = (await request(app.getHttpServer()).get(`/api/test/sessions?email=${encodeURIComponent(email)}`).expect(200)).body
+    expect(after.length).toBeGreaterThan(0)
+    const afterRefresh = after[0].refreshToken
+    expect(afterRefresh).toBeTruthy()
+    expect(afterRefresh).not.toBe(beforeRefresh)
+
+    // Response should set cookies including refreshToken
+    const setCookie = refreshResp.headers['set-cookie'] || []
+    const joint = Array.isArray(setCookie) ? setCookie.join(' ') : String(setCookie)
+    expect(joint).toMatch(/refreshToken=/)
+  }, 20000)
+
   it('login returns mfaRequired in non-prod when user is unverified', async () => {
     const email = `e2e-unverified-${Date.now()}@haypbooks.test`
     const password = 'Unver1!'
@@ -297,6 +331,32 @@ describe('Auth e2e', () => {
 
     // Verify new password works
     await request(app.getHttpServer()).post('/api/auth/login').send({ email, password: newPassword }).expect(200)
+
+    // Attempt reuse of the same OTP should fail (it should have been consumed on successful reset)
+    await request(app.getHttpServer()).post('/api/auth/reset-password').send({ email, otpCode: otpRow2!.otpCode, password: 'Another1!' }).expect(404)
+  }, 30000)
+
+  it('expired OTP is rejected for verify and reset', async () => {
+    const email = `e2e-expired-${Date.now()}@haypbooks.test`
+    const password = 'original-pass'
+
+    // Create user directly
+    const user = await prisma.user.create({ data: { email, password: await require('bcrypt').hash(password, 10), name: 'Expired OTP E2E' } })
+
+    // Trigger forgot-password -> creates OTP
+    await request(app.getHttpServer()).post('/api/auth/forgot-password').send({ email }).expect(200)
+
+    // Read OTP from DB and expire it
+    const otpRow = await prisma.otp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })
+    expect(otpRow).toBeTruthy()
+    await prisma.otp.update({ where: { id: otpRow!.id }, data: { expiresAt: new Date(Date.now() - 60 * 60 * 1000) } })
+
+    // verify-otp should report success: false
+    const verify = await request(app.getHttpServer()).post('/api/auth/verify-otp').send({ email, otpCode: otpRow!.otpCode }).expect(200)
+    expect(verify.body.success).toBe(false)
+
+    // reset-password should reject with 404 because OTP is expired
+    await request(app.getHttpServer()).post('/api/auth/reset-password').send({ email, otpCode: otpRow!.otpCode, password: 'NewPass123' }).expect(404)
   }, 30000)
 
   it('logs security events on signup/login and exposes them', async () => {

@@ -80,13 +80,13 @@ class AuthService {
   /**
    * Create a pending signup and send an OTP to the user (does not create DB user)
    */
-  async preSignup(data: SignupData): Promise<{ signupToken: string; otp?: string }> {
+  async preSignup(data: SignupData): Promise<{ signupToken: string; otp?: string; otpEmail?: string; otpPhone?: string }> {
     const name = data.companyName?.trim() || [data.firstName?.trim(), data.lastName?.trim()].filter(Boolean).join(' ').trim()
     const payload: any = { email: data.email, password: data.password, name }
     if (data.role) payload.role = data.role
     if (data.phone) payload.phone = data.phone
     const response = await apiClient.post('/api/auth/pre-signup', payload)
-    return response.data as { signupToken: string; otp?: string }
+    return response.data as { signupToken: string; otp?: string; otpEmail?: string; otpPhone?: string }
   }
 
   /**

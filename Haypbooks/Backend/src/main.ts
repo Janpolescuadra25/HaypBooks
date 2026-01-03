@@ -45,6 +45,15 @@ async function bootstrap() {
     // ignore if middleware can't be loaded; this is best-effort for diagnostics
   }
 
+  // Parse cookies so routes can read req.cookies (required for refresh/logout flows)
+  try {
+    // use require to avoid runtime failure in environments where cookie-parser isn't installed
+    const cookieParser = require('cookie-parser')
+    app.use(cookieParser())
+  } catch (e) {
+    // ignore in environments where cookie-parser isn't available
+  }
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({

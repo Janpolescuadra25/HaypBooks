@@ -80,7 +80,7 @@ jobs:
           ALLOW_TEST_ENDPOINTS: 'true'
           REDIS_URL: redis://localhost:6379
         run: |
-          npx playwright test e2e/smoke.signup-phone-only.spec.ts --project=chromium -g "smoke" --reporter=list
+          npx playwright test e2e/smoke.signup-phone-only.spec.ts e2e/proxy-refresh.spec.ts --project=chromium -g "smoke" --reporter=list
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

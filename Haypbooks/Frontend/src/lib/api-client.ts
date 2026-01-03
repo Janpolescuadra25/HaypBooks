@@ -51,6 +51,13 @@ apiClient.interceptors.response.use(
 
     // Handle 401s with a single refresh attempt in flight to avoid flooding the backend
     if (error.response?.status === 401 && !originalRequest?._retry) {
+      const originalUrl = originalRequest?.url || originalRequest?.baseURL || ''
+      // Don't attempt a global refresh for auth endpoints (login/send-verification/refresh) - let the caller handle failures
+      const isAuthEndpoint = /\/api\/auth\//.test(originalUrl)
+      if (isAuthEndpoint) {
+        return Promise.reject(error)
+      }
+
       originalRequest._retry = true
       if (!refreshInProgress) {
         // Start a single refresh request for the app
@@ -88,6 +95,13 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401) {
       // Already retried or refresh isn't available — fail and redirect
+      const originalUrl = originalRequest?.url || originalRequest?.baseURL || ''
+      const isAuthEndpoint = /\/api\/auth\//.test(originalUrl)
+      if (isAuthEndpoint) {
+        // Let the caller handle auth endpoint failures (e.g., login page should show a verification/resend UI)
+        return Promise.reject(error)
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.removeItem('user')
         // Preserve current path so user returns after re-login

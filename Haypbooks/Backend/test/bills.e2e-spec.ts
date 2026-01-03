@@ -34,7 +34,7 @@ describe('Bills API (e2e)', () => {
 
     // Ensure no existing user will conflict, then signup
     await prisma.user.deleteMany({ where: { email: 'bills-test@example.com' } })
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email: 'bills-test@example.com', password: 'bills-pass', name: 'Bills Tester' }).expect(201)
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email: 'bills-test@example.com', password: 'bills-pass', name: 'Bills Tester', phone: '+15550001111' }).expect(201)
     // login again to obtain a fresh token that the app recognizes
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'bills-test@example.com', password: 'bills-pass' }).expect(200)
     authToken = login.body.token

@@ -1,67 +1,41 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { getPermissionsForRole } from '@/lib/rbac-server'
-import type { Role } from '@/lib/rbac-shared'
-import { db } from '@/mock/db'
 
+/**
+ * Proxy login to the backend so browser cookies are set against the frontend origin.
+ * This keeps the UI behavior consistent with backend auth + refresh token cookies.
+ */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}))
-  const { email, password } = body
-  
-  if (!email) {
-    return NextResponse.json({ error: 'Email required', code: 'invalid_credentials' }, { status: 400 })
+  try {
+    const bodyText = await req.text()
+    const backendBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:4000'
+    const url = `${backendBase.replace(/\/$/, '')}/api/auth/login`
+
+    const backendRes = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: req.headers.get('cookie') ?? '',
+      },
+      body: bodyText,
+    })
+
+    const respText = await backendRes.text().catch(() => '')
+    let respJson: any = null
+    try {
+      respJson = respText ? JSON.parse(respText) : null
+    } catch {
+      respJson = { raw: respText }
+    }
+
+    const nextRes = NextResponse.json(respJson || {}, { status: backendRes.status })
+    const setCookies: string[] = (backendRes.headers as any).getSetCookie?.() ?? []
+    for (const c of setCookies) {
+      nextRes.headers.append('set-cookie', c)
+    }
+
+    return nextRes
+  } catch (error) {
+    console.error('Proxy login error:', error)
+    return NextResponse.json({ error: 'Login proxy failed' }, { status: 500 })
   }
-
-  // Find user in mock DB
-  const user = db.users?.find((u) => u.email === email)
-
-  // If password is provided, validate it
-  if (password !== undefined) {
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid email or password', code: 'invalid_credentials' }, { status: 401 })
-    }
-    // In production, use bcrypt.compare or argon2.verify
-    // For mock, direct comparison (NEVER do this in production!)
-    if (user.password !== password) {
-      return NextResponse.json({ error: 'Invalid email or password', code: 'invalid_credentials' }, { status: 401 })
-    }
-  }
-
-  // Mock token
-  const token = `mock-jwt-${user?.id || 'demo'}`
-  const userId = user?.id || 'u_1'
-  const userName = user?.name || 'Demo User'
-  
-  // Derive role
-  const role = (user?.role || (
-    email.includes('manager') ? 'manager' : 
-    email.includes('ap') ? 'ap-clerk' : 
-    email.includes('view') ? 'viewer' : 
-    'admin'
-  )) as Role
-
-  // Set session cookies
-  cookies().set({
-    name: 'token',
-    value: token,
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  })
-  cookies().set('email', email, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
-  cookies().set('userId', userId, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
-  cookies().set('role', role, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
-
-  return NextResponse.json({
-    token,
-    user: {
-      id: userId,
-      name: userName,
-      email,
-      role,
-      permissions: getPermissionsForRole(role),
-      onboardingCompleted: (user as any)?.onboardingCompleted ?? true
-    }
-  })
 }

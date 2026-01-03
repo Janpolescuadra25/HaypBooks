@@ -10,6 +10,9 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     // Retain traces on failure so CI can upload them; `retain-on-failure` keeps traces for failed tests
     trace: 'retain-on-failure',
+    // take screenshots on failure and capture videos for failed tests to help CI debugging
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
     headless: true,
     actionTimeout: 10_000,
   },

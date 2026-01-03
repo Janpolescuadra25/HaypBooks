@@ -1,11 +1,12 @@
-import { Controller, Get, Query, ForbiddenException, Post, Body } from '@nestjs/common'
-import * as bcrypt from 'bcrypt'
+import { Controller, Get, Query, ForbiddenException, Post, Body, Req, Inject } from '@nestjs/common'
+import * as bcrypt from '../utils/bcrypt-fallback'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { PendingSignupService } from '../auth/pending-signup.service'
+import { PrismaAuthService } from '../auth/prisma-auth.service'
 
 @Controller('api/test')
 export class TestController {
-  constructor(private readonly prisma: PrismaService, private readonly pendingSignupService: PendingSignupService) {}
+  constructor(private readonly prisma: PrismaService, private readonly pendingSignupService: PendingSignupService, private readonly authService: PrismaAuthService) {}
 
   private ensureEnabled() {
     const allowFlag = process.env.ALLOW_TEST_ENDPOINTS === 'true'
@@ -39,8 +40,16 @@ export class TestController {
     if (phone) where.phone = phone
     if (purpose) {
       // Map incoming purpose strings to allowed enum values
-      if (purpose === 'VERIFY_PHONE') where.purpose = 'MFA'
-      else where.purpose = purpose as any
+      if (purpose === 'VERIFY') {
+        // Legacy alias used by older Playwright scripts
+        if (email) where.purpose = 'VERIFY_EMAIL'
+        else if (phone) where.purpose = 'MFA'
+        else where.purpose = 'VERIFY_EMAIL'
+      } else if (purpose === 'VERIFY_PHONE') {
+        where.purpose = 'MFA'
+      } else {
+        where.purpose = purpose as any
+      }
     }
     if (!email && !phone) return null
     const row = await this.prisma.otp.findFirst({ where, orderBy: { createdAt: 'desc' } })
@@ -57,6 +66,10 @@ export class TestController {
     const expiresAt = new Date(Date.now() + ttl * 60 * 1000)
     // Map free-form purpose values to allowed OtpPurpose
     let purpose: any = 'RESET'
+    if (body.purpose === 'VERIFY') {
+      // Legacy alias used by older Playwright scripts
+      purpose = body.phone ? 'MFA' : 'VERIFY_EMAIL'
+    }
     if (body.purpose === 'VERIFY_EMAIL') purpose = 'VERIFY_EMAIL'
     else if (body.purpose === 'MFA') purpose = 'MFA'
     else if (body.purpose === 'VERIFY_PHONE') purpose = 'MFA' // treat phone verification as MFA in DB
@@ -72,6 +85,7 @@ export class TestController {
     const ttl = body.ttlMinutes || 5
     const expiresAt = new Date(Date.now() + ttl * 60 * 1000)
     let purpose: any = 'RESET'
+    if (body.purpose === 'VERIFY') purpose = 'MFA'
     if (body.purpose === 'VERIFY_EMAIL') purpose = 'VERIFY_EMAIL'
     else if (body.purpose === 'MFA') purpose = 'MFA'
     else if (body.purpose === 'VERIFY_PHONE') purpose = 'MFA'
@@ -145,6 +159,28 @@ export class TestController {
     return user || null
   }
 
+  @Get('check-user-verification')
+  async checkUserVerification(@Query('email') email: string) {
+    this.ensureEnabled()
+    if (!email) return { error: 'email query parameter required' }
+    const user = await this.prisma.user.findUnique({ where: { email } })
+    if (!user) return { error: 'user not found' }
+    const hasPhone = !!user.phone
+    const emailVerified = !!user.isEmailVerified
+    const phoneVerified = !!(user as any).isPhoneVerified
+    return {
+      userId: user.id,
+      email: user.email,
+      phone: user.phone || null,
+      isEmailVerified: emailVerified,
+      isPhoneVerified: phoneVerified,
+      phoneVerifiedAt: (user as any).phoneVerifiedAt || null,
+      hasPhone,
+      canLogin: hasPhone ? (emailVerified || phoneVerified) : emailVerified,
+      policy: hasPhone ? 'OR (email OR phone)' : 'email required'
+    }
+  }
+
   @Get('users')
   async listUsers() {
     this.ensureEnabled()
@@ -191,6 +227,28 @@ export class TestController {
 
     const updated = await this.prisma.user.update({ where, data: toUpdate })
     return { id: updated.id, ...toUpdate }
+  }
+
+  @Post('echo-headers')
+  async echoHeaders(@Body() _body: any, @Req() req: any) {
+    this.ensureEnabled()
+    return { headers: req.headers }
+  }
+
+  @Post('session/find-by-refresh')
+  async findSessionByRefresh(@Body() body: { token?: string }) {
+    this.ensureEnabled()
+    if (!body || !body.token) return { error: 'missing token' }
+    const session = await this.prisma.session.findUnique({ where: { refreshToken: body.token } })
+    return session || null
+  }
+
+  @Post('debug/refresh')
+  async debugRefresh(@Body() body: { token?: string }) {
+    this.ensureEnabled()
+    if (!body || !body.token) return { error: 'missing token' }
+    const result = await this.authService.refresh(body.token)
+    return { result }
   }
 
   @Get('sessions')

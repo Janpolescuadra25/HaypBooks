@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 
 jest.mock('@/services/auth.service', () => ({ authService: { login: jest.fn(), isAuthenticated: jest.fn(() => false), getCurrentUser: jest.fn() } }))
 const replaceMock = jest.fn()
@@ -16,6 +16,26 @@ describe('LoginPage', () => {
   beforeEach(() => {
     localStorage.clear()
     jest.resetAllMocks()
+  })
+
+  test('shows invalid credentials message on 401 (not timeout)', async () => {
+    ;(authService.login as jest.Mock).mockRejectedValue({
+      response: { status: 401, data: { code: 'invalid_credentials' } },
+    })
+
+    render(<LoginPage />)
+
+    const emailInput = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput = screen.getByLabelText(/password/i)
+
+    fireEvent.change(emailInput, { target: { value: 'bad@b.com' } })
+    fireEvent.change(passInput, { target: { value: 'WrongPass!' } })
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/request timed out/i)).not.toBeInTheDocument()
   })
 
   test('stores user in localStorage after successful login and redirects', async () => {
@@ -128,5 +148,47 @@ describe('LoginPage', () => {
 
     // ensure we did not redirect away
     expect(replaceMock).not.toHaveBeenCalled()
+  })
+
+  test('shows resend verification UI when backend indicates account is unverified', async () => {
+    const attemptedEmail = 'notverified@b.com'
+    ;(authService.login as jest.Mock).mockRejectedValue({ response: { status: 401, data: { message: 'Please verify your account before logging in' } } })
+    ;(authService as any).sendVerification = jest.fn().mockResolvedValue({ otp: '222222' })
+
+    // Also test when the thrown error is a plain Error with the message (some runtimes surface this way)
+    ;(authService.login as jest.Mock).mockRejectedValueOnce(new Error('Please verify your account before logging in'))
+    render(<LoginPage />)
+
+    const emailInput2 = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput2 = screen.getByLabelText(/password/i)
+
+    fireEvent.change(emailInput2, { target: { value: attemptedEmail } })
+    fireEvent.change(passInput2, { target: { value: 'SomePass!1' } })
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+
+    // Wait for the unverified UI to show for this error shape too
+    await waitFor(() => expect(screen.getByText(/Account not verified/i)).toBeInTheDocument())
+
+    // Unmount the previous render before re-rendering to avoid duplicated DOM nodes
+    cleanup()
+    render(<LoginPage />)
+
+    const emailInput = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput = screen.getByLabelText(/password/i)
+
+    fireEvent.change(emailInput, { target: { value: attemptedEmail } })
+    fireEvent.change(passInput, { target: { value: 'SomePass!1' } })
+    const form = document.querySelector('form') as HTMLFormElement
+    fireEvent.submit(form)
+
+    // Wait for the unverified UI to show
+    await waitFor(() => expect(screen.getByText(/Account not verified/i)).toBeInTheDocument())
+
+    const resendBtn = screen.getByRole('button', { name: /Resend verification/i })
+    fireEvent.click(resendBtn)
+
+    await waitFor(() => expect((authService as any).sendVerification).toHaveBeenCalledWith(attemptedEmail))
+    // And the dev OTP info should be shown in the UI
+    await waitFor(() => expect(screen.getByText(/Dev code: 222222/i)).toBeInTheDocument())
   })
 })

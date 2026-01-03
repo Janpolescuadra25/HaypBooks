@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client'
-import * as bcrypt from 'bcrypt'
+// Prefer native bcrypt when available, otherwise fall back to bcryptjs to avoid native build issues in dev/test environments.
+let bcrypt: any
+try { bcrypt = require('bcrypt') } catch (e) { bcrypt = require('bcryptjs') }
 import * as dotenv from 'dotenv'
 
 dotenv.config({ path: process.cwd() + '/.env' })

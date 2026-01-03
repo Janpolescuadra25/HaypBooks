@@ -1,27 +1,30 @@
 import { test, expect } from '@playwright/test'
 
-// Smoke test: signup -> receive dev-only _devOtp -> verify-otp succeeds
-// Uses the backend directly (127.0.0.1:4000) to avoid intermittent frontend proxy 404s
+// Smoke test: pre-signup -> complete-signup (email OTP) -> login succeeds
 
-test('smoke: signup → dev OTP → verify', async ({ request }) => {
+test('smoke: pre-signup → complete-signup (email) → login', async ({ request }) => {
   const email = `e2e-smoke-${Date.now()}@haypbooks.test`
-  // Create a user via test helper endpoint (avoids dependency on the signup behavior)
-  const createRes = await request.post('http://127.0.0.1:4000/api/test/create-user', { data: { email, password: 'Abcd1234', name: 'Smoke' } })
-  expect(createRes.ok()).toBeTruthy()
+  const password = 'Abcd1234'
 
-  // Create deterministic OTP for this email using the test helper endpoint
-  const createOtpRes = await request.post('http://127.0.0.1:4000/api/test/create-otp', { data: { email, otp: '654321', purpose: 'VERIFY' } })
-  expect(createOtpRes.ok()).toBeTruthy()
-  const otpJson = await createOtpRes.json()
-  const devOtp = otpJson?.otp || '654321'
+  const pre = await request.post('http://127.0.0.1:4000/api/auth/pre-signup', { data: { email, password, name: 'Smoke' } })
+  expect(pre.ok()).toBeTruthy()
+  const preJson = await pre.json().catch(() => null)
+  expect(preJson && preJson.signupToken).toBeTruthy()
 
-  expect(devOtp, 'expected a dev OTP from signup or send-verification').toBeTruthy()
+  const signupToken = preJson.signupToken
+  let otp = preJson.otpEmail || preJson.otp || null
+  if (!otp) {
+    const otpRes = await request.get(`http://127.0.0.1:4000/api/test/otp/latest?email=${encodeURIComponent(email)}&purpose=VERIFY_EMAIL`).catch(() => null)
+    const otpJson = otpRes ? await otpRes.json().catch(() => null) : null
+    otp = otpJson?.otpCode || null
+  }
+  expect(otp).toBeTruthy()
 
-  // Verify the OTP
-  const verifyRes = await request.post('http://127.0.0.1:4000/api/auth/verify-otp', {
-    data: { email, otpCode: String(devOtp) },
-  })
-  expect(verifyRes.ok()).toBeTruthy()
-  const verifyBody = await verifyRes.json()
-  expect(verifyBody.success).toBeTruthy()
+  const complete = await request.post('http://127.0.0.1:4000/api/auth/complete-signup', { data: { signupToken, code: String(otp), method: 'email' } })
+  expect(complete.ok()).toBeTruthy()
+
+  const login = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } })
+  expect(login.ok()).toBeTruthy()
+  const loginJson = await login.json().catch(() => null)
+  expect(loginJson?.token).toBeTruthy()
 })

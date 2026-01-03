@@ -48,11 +48,20 @@ Add these variables to `.env.local` for local usage if needed.
 
 ## Running against a local backend (optional)
 
-If you want to run the frontend against a real backend running in `Haypbooks/Backend` (dev stub), set mocks to `false` and point the client API base to the backend URL:
+For local development we *prefer same-origin API requests* so cookies are set and sent by the browser reliably. The Next.js dev server proxies `/api/*` to `http://127.0.0.1:4000` via `next.config.js` rewrites (this is enabled automatically when running `npm run dev` in the frontend and the backend is running on `:4000`).
 
+Recommended (same-origin, preferred for E2E):
 ```powershell
 $env:NEXT_PUBLIC_USE_MOCK_API = 'false'
-$env:NEXT_PUBLIC_API_BASE = 'http://localhost:4000'
+# Leave NEXT_PUBLIC_API_URL unset (or blank) so the dev server rewrite proxies /api/* to the backend
+npm run dev
+```
+
+Direct backend (cross-origin, only if you need it):
+```powershell
+$env:NEXT_PUBLIC_USE_MOCK_API = 'false'
+# Set explicit backend origin if you purposely want cross-origin calls
+$env:NEXT_PUBLIC_API_URL = 'http://localhost:4000'
 npm run dev
 ```
 

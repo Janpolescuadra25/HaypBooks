@@ -1,6 +1,6 @@
 import { Injectable, Inject, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from '../utils/bcrypt-fallback'
 import { USER_REPOSITORY, SESSION_REPOSITORY, OTP_REPOSITORY, SECURITY_EVENT_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { ISessionRepository } from '../repositories/interfaces/session.repository.interface'
@@ -20,49 +20,10 @@ export class PrismaAuthService {
   async signup(email: string, password: string, name?: string, role?: string, phone?: string) {
     const existing = await this.userRepo.findByEmail(email)
     if (existing) {
-      // If user already exists and is verified, block duplicate signups
-      if (existing.isEmailVerified) {
-        // Log failed signup attempt
-        await this.logSecurityEvent({ email, type: 'SIGNUP_FAILED_DUPLICATE' })
-        throw new ConflictException('Email already registered')
-      }
-      // If user exists but is not verified, update the existing (idempotent) record
-      // so repeated signup attempts don't create duplicates. We'll replace the
-      // password, name, role flags and phone info with the latest provided values.
-      const hashed = await bcrypt.hash(password, 10)
-      const isAccountant = role === 'accountant' || role === 'both'
-      const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
-      let normalizedPhone: string | undefined = undefined
-      let phoneHmac: string | undefined = undefined
-      try {
-        if (phone) {
-          normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(phone)
-          try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
-        }
-      } catch (e) { throw e }
-
-      const updated = await this.userRepo.update(existing.id, { password: hashed, name, isAccountant, preferredHub, phone: normalizedPhone, phoneHmac, isEmailVerified: false } as any)
-
-      // Log successful (updated) signup attempt
-      await this.logSecurityEvent({ userId: existing.id, email, type: 'SIGNUP_UPDATED' })
-
-      const token = this.jwtService.sign({ sub: updated.id, email: updated.email, role: updated.role })
-      const userResponse = {
-        id: updated.id,
-        email: updated.email,
-        name: updated.name,
-        role: updated.role,
-        isAccountant: updated.isAccountant ?? false,
-        onboardingCompleted: updated.onboardingComplete ?? false,
-        onboardingComplete: updated.onboardingComplete ?? false,
-        onboardingMode: updated.onboardingMode || 'full',
-        isEmailVerified: updated.isEmailVerified ?? false,
-        ownerOnboardingCompleted: (updated as any).ownerOnboardingComplete ?? false,
-        accountantOnboardingCompleted: (updated as any).accountantOnboardingComplete ?? false,
-        preferredHub: updated.preferredHub ?? null,
-        requiresHubSelection: !!(updated.isAccountant && (updated.role !== 'accountant') && !updated.preferredHub),
-      }
-      return { token, user: userResponse }
+      // Block duplicate signups for any existing email (verified or not) to avoid
+      // confusing repeated signup flows and ensure tests/clients see consistent behavior.
+      await this.logSecurityEvent({ email, type: 'SIGNUP_FAILED_DUPLICATE' })
+      throw new ConflictException('Email already registered')
     }
 
     // Defensive validation: require phone at signup
@@ -136,10 +97,28 @@ export class PrismaAuthService {
       throw new UnauthorizedException('Invalid credentials')
     }
 
-    // Check if email is verified (optional enforcement)
-    if (!user.isEmailVerified && process.env.ENFORCE_EMAIL_VERIFICATION === 'true') {
+    // Enforce verification: require at least ONE verified contact method.
+    // If a phone exists, either email verification OR phone verification is sufficient.
+    // If no phone exists, email verification is required.
+    const hasPhone = !!(user as any).phone
+    const emailVerified = !!user.isEmailVerified
+    const phoneVerified = !!(user as any).isPhoneVerified
+    const verifiedOk = hasPhone ? (emailVerified || phoneVerified) : emailVerified
+    
+    // Debug logging to help diagnose verification issues
+    console.log('[auth:login] Verification check:', {
+      email,
+      userId: user.id,
+      hasPhone,
+      emailVerified,
+      phoneVerified,
+      verifiedOk,
+      policy: hasPhone ? 'OR (email OR phone)' : 'email required'
+    })
+    
+    if (!verifiedOk) {
       await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_FAILED_UNVERIFIED_EMAIL', ipAddress, userAgent })
-      throw new UnauthorizedException('Please verify your email before logging in')
+      throw new UnauthorizedException('Please verify your account before logging in')
     }
 
     // Log successful login
@@ -147,7 +126,7 @@ export class PrismaAuthService {
 
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
     // create refresh session (longer lived)
-    const refreshToken = this.jwtService.sign({ sub: user.id }, { expiresIn: '7d' })
+    const refreshToken = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     await this.sessionRepo.create({ userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date() })
 
@@ -185,7 +164,7 @@ export class PrismaAuthService {
     if (!user) return null
 
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
-    const refreshToken = this.jwtService.sign({ sub: user.id }, { expiresIn: '7d' })
+    const refreshToken = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
     try {
@@ -215,27 +194,37 @@ export class PrismaAuthService {
   }
 
   async refresh(refreshToken: string) {
+    try { console.log(`[auth:refresh] incoming token prefix=${String(refreshToken || '').slice(0,12)}`) } catch (e) {}
     // find session
     const session = await this.sessionRepo.findByRefreshToken(refreshToken)
-    if (!session) return null
-    if ((new Date(session.expiresAt)).getTime() < Date.now() || session.revoked) {
-      // expired
+    if (!session) {
+      try { console.log(`[auth:refresh] no session found for token prefix=${String(refreshToken || '').slice(0,12)}`) } catch (e) {}
+      return null
+    }
+    const expired = (new Date(session.expiresAt)).getTime() < Date.now()
+    if (expired || session.revoked) {
+      try { console.log(`[auth:refresh] session invalid: expired=${expired} revoked=${session.revoked} expiresAt=${session.expiresAt}`) } catch (e) {}
       return null
     }
 
     // sign a fresh access token
     const user = await this.userRepo.findById(session.userId)
-    if (!user) return null
+    if (!user) {
+      try { console.log(`[auth:refresh] no user found for session.userId=${session.userId}`) } catch (e) {}
+      return null
+    }
     
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
     // Optional: rotate refresh token
-    const newRefresh = this.jwtService.sign({ sub: user.id }, { expiresIn: '7d' })
+    const newRefresh = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     // delete old session and create new one
     try {
       await this.sessionRepo.delete(session.id)
     } catch {}
     await this.sessionRepo.create({ userId: user.id, refreshToken: newRefresh, expiresAt, ipAddress: session.ipAddress, userAgent: session.userAgent, lastUsedAt: new Date() })
+
+    try { console.log(`[auth:refresh] success for user=${user.id} newRefreshPrefix=${String(newRefresh).slice(0,12)}`) } catch (e) {}
 
     // Return consistent user structure
     const userResponse = {
@@ -287,17 +276,16 @@ export class PrismaAuthService {
     }
 
     // On successful verification: decide whether to consume (delete) OTP.
-    // For email verification (purpose === 'VERIFY') we delete it immediately.
     // For password reset flows we'll only delete when explicitly asked to consume (so reset can still use it).
     try {
-      if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'VERIFY') {
+      if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
     } catch (e) {}
 
     // If this OTP was used to VERIFY an email, mark user as verified
     try {
-      if ((row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'VERIFY') {
+      if ((row as any).purpose === 'VERIFY_EMAIL') {
         const user = await this.userRepo.findByEmail(email)
         if (user) await this.userRepo.update(user.id, { isEmailVerified: true })
       }
@@ -320,7 +308,7 @@ export class PrismaAuthService {
     }
 
     try {
-      if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'VERIFY') {
+      if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
     } catch (e) {}

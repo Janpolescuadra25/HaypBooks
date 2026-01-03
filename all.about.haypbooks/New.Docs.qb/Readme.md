@@ -1,1 +1,0 @@
-This is a new documentation reference for my HaypBooks project. Imitate the QuickBooks strategy for their software, and ensure that everything is logically consistent with the QuickBooks approach.

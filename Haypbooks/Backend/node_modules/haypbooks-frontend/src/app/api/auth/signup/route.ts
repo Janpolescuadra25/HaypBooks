@@ -8,11 +8,15 @@ export async function POST(req: Request) {
   try {
     const bodyText = await req.text()
     const backendBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:4000'
-    const url = `${backendBase.replace(/\/$/, '')}/auth/signup`
+    const url = `${backendBase.replace(/\/$/, '')}/api/auth/signup`
 
     const backendRes = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        // Forward cookies if present (defensive; signup usually doesn't need them)
+        cookie: req.headers.get('cookie') ?? '',
+      },
       body: bodyText,
     })
 
@@ -20,15 +24,14 @@ export async function POST(req: Request) {
     let respJson: any = null
     try { respJson = respText ? JSON.parse(respText) : null } catch (e) { respJson = { raw: respText } }
 
-    // Build Next response with backend body and status
+    // Build Next response with backend body + status, and forward any Set-Cookie headers
+    // so the browser stores cookies against the frontend origin.
     const nextRes = NextResponse.json(respJson || {}, { status: backendRes.status })
 
-    // If backend returned fields useful for cookies, set them on the frontend response.
-    // This mirrors backend behavior when running directly against it.
-    if (respJson?.token) nextRes.cookies.set('token', String(respJson.token), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
-    if (respJson?.user?.email) nextRes.cookies.set('email', String(respJson.user.email), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
-    if (respJson?.user?.id) nextRes.cookies.set('userId', String(respJson.user.id), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
-    if (respJson?.user?.role) nextRes.cookies.set('role', String(respJson.user.role), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
+    const setCookies: string[] = (backendRes.headers as any).getSetCookie?.() ?? []
+    for (const c of setCookies) {
+      nextRes.headers.append('set-cookie', c)
+    }
 
     return nextRes
   } catch (error) {
