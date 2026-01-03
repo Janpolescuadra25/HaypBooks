@@ -126,8 +126,9 @@ export class AuthController {
       phoneOtpVerified: false,
     }, 60 * 30)
 
-    // Start OTP to provided contact(s) — email only during signup to avoid forcing phone verification
+    // Start OTP to provided contact(s)
     let devOtpEmail: string | undefined
+    let devOtpPhone: string | undefined
     try {
       // Always start email OTP and normalize returned shape (Prisma returns `otpCode`)
       const emailOtp = await this.authService.startOtp(email, undefined, 10, 'VERIFY_EMAIL')
@@ -140,14 +141,17 @@ export class AuthController {
         console.log('Failed to send verification email', e?.message || e)
       }
 
-      // NOTE: Do NOT start phone OTP at pre-signup. Phone verification should be requested explicitly by the user
-      // after sign-in or via an explicit 'send phone code' action to reduce friction during signup.
+      // If a phone number exists, also start phone OTP (keep phone OTP creation for dev/test compatibility)
+      if (phone) {
+        const phoneOtp = await this.authService.startOtpByPhone(phone, undefined, 10, 'MFA')
+        if (process.env.NODE_ENV !== 'production') devOtpPhone = (phoneOtp as any).otpCode || (phoneOtp as any).otp
+      }
     } catch (e) {
       // ignore
     }
 
     // Back-compat: return `otp` as the email OTP (first step)
-    return { signupToken: token, otp: devOtpEmail, otpEmail: devOtpEmail, otpPhone: undefined }
+    return { signupToken: token, otp: devOtpEmail, otpEmail: devOtpEmail, otpPhone: devOtpPhone }
   }
 
   @Post('complete-signup')
