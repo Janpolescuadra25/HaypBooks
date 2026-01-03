@@ -126,32 +126,28 @@ export class AuthController {
       phoneOtpVerified: false,
     }, 60 * 30)
 
-    // Start OTP to provided contact(s)
+    // Start OTP to provided contact(s) — email only during signup to avoid forcing phone verification
     let devOtpEmail: string | undefined
-    let devOtpPhone: string | undefined
     try {
-      // Always start email OTP
+      // Always start email OTP and normalize returned shape (Prisma returns `otpCode`)
       const emailOtp = await this.authService.startOtp(email, undefined, 10, 'VERIFY_EMAIL')
-      if (process.env.NODE_ENV !== 'production') devOtpEmail = (emailOtp as any).otp
+      if (process.env.NODE_ENV !== 'production') devOtpEmail = (emailOtp as any).otpCode || (emailOtp as any).otp
       try {
-        const html = this.mailService.buildVerifyEmailOtpHtml(name || email, (emailOtp as any).otp)
-        const text = this.mailService.buildVerifyEmailOtpText(name || email, (emailOtp as any).otp)
+        const html = this.mailService.buildVerifyEmailOtpHtml(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
+        const text = this.mailService.buildVerifyEmailOtpText(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
         await this.mailService.sendEmail(email, `Your Haypbooks verification code`, html, text)
       } catch (e) {
         console.log('Failed to send verification email', e?.message || e)
       }
 
-      // If a phone number exists, also start phone OTP
-      if (phone) {
-        const phoneOtp = await this.authService.startOtpByPhone(phone, undefined, 10, 'MFA')
-        if (process.env.NODE_ENV !== 'production') devOtpPhone = (phoneOtp as any).otp
-      }
+      // NOTE: Do NOT start phone OTP at pre-signup. Phone verification should be requested explicitly by the user
+      // after sign-in or via an explicit 'send phone code' action to reduce friction during signup.
     } catch (e) {
       // ignore
     }
 
     // Back-compat: return `otp` as the email OTP (first step)
-    return { signupToken: token, otp: devOtpEmail, otpEmail: devOtpEmail, otpPhone: devOtpPhone }
+    return { signupToken: token, otp: devOtpEmail, otpEmail: devOtpEmail, otpPhone: undefined }
   }
 
   @Post('complete-signup')

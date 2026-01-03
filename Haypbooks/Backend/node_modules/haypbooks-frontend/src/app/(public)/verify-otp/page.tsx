@@ -50,7 +50,17 @@ export default function VerifyOtpPage() {
   const [phoneInputCountry, setPhoneInputCountry] = useState('PH')
   const [serverPhone, setServerPhone] = useState('')
   const effectivePhone = serverPhone || phone
+  // During signup, automatically send an email verification (do not force phone verification at signup)
   const [selectedMethod, setSelectedMethod] = useState<'email'|'phone'|undefined>(() => (flow === 'signup' && !method ? 'email' : undefined))
+  const [autoSent, setAutoSent] = useState(false)
+
+  useEffect(() => {
+    // Auto-send email when arriving to signup verify page without an explicit method and no initialCode.
+    if (flow === 'signup' && !method && !initialCode && !autoSent) {
+      setAutoSent(true)
+      requestMethodSend('email').catch(() => setAutoSent(false))
+    }
+  }, [flow, method, initialCode, autoSent])
 
   useEffect(() => {
     try {
@@ -119,10 +129,10 @@ export default function VerifyOtpPage() {
             )
           )}
 
-          {/* If we're in a signup flow and no method has been chosen yet, show a selection UI */}
-          {flow === 'signup' && !method ? (
+          {/* If we're in a signup flow and no method has been chosen yet, send email verification automatically (don't force phone) */}
+          {flow === 'signup' && !method && !autoSent ? (
             <div className="mt-4">
-              <p className="text-sm text-slate-600 mb-4">Almost done! Enter the code we sent to confirm it's you and secure your new account.</p>
+              <p className="text-sm text-slate-600 mb-4">Almost done! Select how you'd like to receive your verification code.</p>
               <div className="space-y-3 text-left">
                 {/* Email option acts as a button and sends immediately */}
                 <button onClick={() => requestMethodSend('email')} className="w-full text-left p-3 border border-blue-100 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-emerald-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus:border-emerald-500 transition-shadow transition-colors transition-transform">
