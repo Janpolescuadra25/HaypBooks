@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException, ConflictException, Inject, BadRequestException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from '../utils/bcrypt-fallback'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { USER_REPOSITORY } from '../repositories/mock/mock-repositories.module'
 import { LoginDto, SignupDto } from './dto/auth.dto'

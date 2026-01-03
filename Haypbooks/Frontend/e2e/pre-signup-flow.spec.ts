@@ -62,7 +62,7 @@ test('pre-signup -> complete-signup creates user only after verification', async
 
   // Click verify (with fallback)
   try {
-    await page.getByRole('button', { name: /Verify OTP|Verify code/i }).click()
+    await page.getByRole('button', { name: /Continue/i }).click()
     // Wait for complete-signup API to be called
     await page.waitForResponse(r => r.url().includes('/api/auth/complete-signup') && r.request().method() === 'POST', { timeout: 7000 }).catch(() => null)
   } catch (e) {
@@ -95,4 +95,8 @@ test('pre-signup -> complete-signup creates user only after verification', async
   }
   expect(pAfter).toBeTruthy()
   expect(pAfter.isEmailVerified).toBe(true)
+
+  // After verification completes and user exists, login must succeed
+  const loginRes = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } }).catch(() => null)
+  expect(loginRes && loginRes.ok()).toBeTruthy()
 })

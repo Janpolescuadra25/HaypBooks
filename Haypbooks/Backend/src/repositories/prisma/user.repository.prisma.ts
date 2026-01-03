@@ -6,8 +6,22 @@ import { IUserRepository, User } from '../interfaces/user.repository.interface'
 export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private normalizeEmail(email: string): string {
+    return String(email || '').trim().toLowerCase()
+  }
+
   async findByEmail(email: string): Promise<User | null> {
-    const u = await this.prisma.user.findUnique({ where: { email } })
+    const normalized = this.normalizeEmail(email)
+    if (!normalized) return null
+    // Use case-insensitive match so users can sign in regardless of email casing.
+    const u = await this.prisma.user.findFirst({
+      where: {
+        email: {
+          equals: normalized,
+          mode: 'insensitive',
+        },
+      },
+    })
     return u as any
   }
 
@@ -17,13 +31,17 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async create(data: Partial<User>): Promise<User> {
-    const created = await this.prisma.user.create({ data: data as any })
+    const toCreate: any = { ...(data as any) }
+    if (toCreate.email) toCreate.email = this.normalizeEmail(toCreate.email)
+    const created = await this.prisma.user.create({ data: toCreate })
     return created as any
   }
 
   async update(id: string, data: Partial<User>): Promise<User> {
     // Use the generated Prisma client for updates now that `prisma generate` has been run.
-    const updated = await this.prisma.user.update({ where: { id }, data: data as any })
+    const toUpdate: any = { ...(data as any) }
+    if (toUpdate.email) toUpdate.email = this.normalizeEmail(toUpdate.email)
+    const updated = await this.prisma.user.update({ where: { id }, data: toUpdate })
     return updated as any
   }
 

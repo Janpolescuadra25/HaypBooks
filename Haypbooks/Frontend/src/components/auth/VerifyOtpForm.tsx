@@ -38,8 +38,15 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
   const router = useRouter()
   const [code, setCode] = useState(initialCode)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [resendTimer, setResendTimer] = useState<number>(0)
+  const [signupMethod, setSignupMethod] = useState<'email'|'phone'>(() => {
+    // If both are present during signup, verify email first, then phone.
+    if (email && phone) return 'email'
+    if (phone) return 'phone'
+    return 'email'
+  })
 
   useEffect(() => {
     if (initialCode) setCode(initialCode)
@@ -50,13 +57,13 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
   async function handleVerify() {
     setLoading(true)
     setError(null)
+    setInfo(null)
     try {
       let res
       if (signupToken && flow === 'signup') {
         // Complete the pending signup; server creates the user on success
-        const method = phone ? 'phone' : 'email'
-        res = await authService.completeSignup(signupToken, code, method as any)
-        // Backend returns token+user on success
+        res = await authService.completeSignup(signupToken, code, signupMethod as any)
+        // Backend returns token+user only when ALL required verification steps are completed
         if (res && (res as any).token) {
           // Navigate into onboarding same as previously
           if (role === 'accountant') router.push('/onboarding/accountant')
@@ -64,6 +71,22 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
           else router.push('/signup/choose-role')
           return
         }
+
+        // Partial progress (e.g. email verified, still need phone)
+        const nextMethod = (res as any)?.nextMethod as ('email'|'phone'|undefined)
+        if (nextMethod) {
+          setSignupMethod(nextMethod)
+          setCode('')
+          setResendTimer(0)
+          setInfo(nextMethod === 'phone'
+            ? 'Email confirmed. Now enter the code sent to your phone.'
+            : 'Phone confirmed. Now enter the code sent to your email.'
+          )
+          return
+        }
+
+        setError('Verification incomplete. Please try again.')
+        return
       } else if (phone) {
         // verify by phone
         const verification = require('@/services/verification.service').default
@@ -93,7 +116,19 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
   async function handleResend() {
     if (resendTimer > 0) return
     try {
-      if (phone) {
+      // During signup, resend based on the current step
+      if (flow === 'signup' && signupToken && email && phone) {
+        if (signupMethod === 'phone') {
+          const verification = require('@/services/verification.service').default
+          const resp = await verification.prototype.sendPhoneCode(phone)
+          const devOtp = (resp as any)?.otp
+          if (devOtp) setCode(devOtp)
+        } else {
+          const resp = await authService.sendVerification(email || '')
+          const devOtp = (resp as any)?.otp
+          if (devOtp) setCode(devOtp)
+        }
+      } else if (phone) {
         const verification = require('@/services/verification.service').default
         const resp = await verification.prototype.sendPhoneCode(phone)
         const devOtp = (resp as any)?.otp
@@ -124,8 +159,18 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
         </>
       )}
 
-      <div className="text-sm font-medium text-slate-800">Sent to <strong className="text-slate-800">{phone ? maskPhone(phone) : maskEmail(email)}</strong></div>
+      <div className="text-sm font-medium text-slate-800">Sent to <strong className="text-slate-800">{
+        (flow === 'signup' && signupToken && email && phone)
+          ? (signupMethod === 'phone' ? maskPhone(phone) : maskEmail(email))
+          : (phone ? maskPhone(phone) : maskEmail(email))
+      }</strong></div>
       <div className="text-xs text-slate-400 mb-6 mt-2">The code expires in 5 minutes.</div>
+
+      {info && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-sm mb-3 max-w-md mx-auto">
+          {info}
+        </div>
+      )}
 
       <div className="mb-6">
         <div className="overflow-visible">
@@ -150,7 +195,22 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
 
       <div className="flex flex-col items-center gap-2 text-sm">
         <button disabled={resendTimer > 0} onClick={handleResend} className="text-emerald-600 hover:underline disabled:opacity-50">{resendTimer > 0 ? `Resend code (available in ${resendTimer}s)` : 'Resend code'}</button>
-        <button onClick={() => {/* fallback to allow user to change method */ router.push('/verify-otp?flow=signup') }} className="text-emerald-600 hover:underline">Try another method</button>
+        <button
+          onClick={() => {
+            // For signup with both email+phone present, allow switching between steps.
+            if (flow === 'signup' && signupToken && email && phone) {
+              setSignupMethod(m => (m === 'email' ? 'phone' : 'email'))
+              setCode('')
+              setInfo(null)
+              setError(null)
+              return
+            }
+            router.push('/verify-otp?flow=signup')
+          }}
+          className="text-emerald-600 hover:underline"
+        >
+          Try another method
+        </button>
       </div>
 
       <style>{`

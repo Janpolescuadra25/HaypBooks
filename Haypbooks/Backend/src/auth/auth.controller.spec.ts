@@ -93,4 +93,36 @@ describe('AuthController pre-signup/complete-signup', () => {
     expect(mockUserRepo.update).toHaveBeenCalled()
     expect(mockUserRepo.create).not.toHaveBeenCalled()
   })
+
+  test('PendingSignupService falls back to in-memory when Redis operations fail', async () => {
+    // Mock redis client that rejects on commands
+    const failingRedis: any = {
+      set: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+      get: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+      ttl: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+      del: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+    }
+    const svc = new PendingSignupService(failingRedis)
+
+    // create should not throw and should return a token
+    const token = await svc.create({ email: 'fall@e.test', hashedPassword: 'h' }, 5) as string
+    expect(typeof token).toBe('string')
+
+    // get returns the stored payload
+    const got = await svc.get(token)
+    expect(got).not.toBeNull()
+    expect((got as any).email).toBe('fall@e.test')
+
+    // update should merge and reflect changes
+    const updated = await svc.update(token, { name: 'Fallback' })
+    expect(updated).not.toBeNull()
+    expect((updated as any).name).toBe('Fallback')
+
+    // delete should succeed
+    const delRes = await svc.delete(token)
+    expect(delRes).toBe(true)
+
+    const after = await svc.get(token)
+    expect(after).toBeNull()
+  })
 })

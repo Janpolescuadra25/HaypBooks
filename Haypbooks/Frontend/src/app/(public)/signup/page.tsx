@@ -103,7 +103,7 @@ export default function SignupPage() {
       const payload: any = {
         firstName: data.firstName,
         lastName: data.lastName,
-        email: data.email,
+        email: String(data.email || '').trim().toLowerCase(),
         password: data.password,
       }
       if (data.companyName && String(data.companyName).trim()) payload.companyName = data.companyName
@@ -124,7 +124,8 @@ export default function SignupPage() {
       // Navigate to verify OTP UI with the signup token
       const emailParam = encodeURIComponent(payload.email)
       const roleParam = role ? `&role=${encodeURIComponent(role)}` : ''
-      const codeParam = pre?.otp ? `&code=${encodeURIComponent(pre.otp)}` : ''
+      const firstOtp = (pre as any)?.otpEmail || (pre as any)?.otp
+      const codeParam = firstOtp ? `&code=${encodeURIComponent(firstOtp)}` : ''
       const phoneParam = payload.phone ? `&phone=${encodeURIComponent(payload.phone)}` : ''
       const tokenParam = `&signupToken=${encodeURIComponent(pre.signupToken)}`
       location.href = `/verify-otp?email=${emailParam}&flow=signup${roleParam}${phoneParam}${codeParam}${tokenParam}`

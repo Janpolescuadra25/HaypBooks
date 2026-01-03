@@ -1,0 +1,20 @@
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWp4eWxpdWkwMDFxNTVsa21hOXBmMHJ1IiwiZW1haWwiOiJlMmUtZnVsbC0xNzY3NDIzOTY5MzMzQGhheXBib29rcy50ZXN0Iiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzY3NDIzOTY5LCJleHAiOjE3Njc0MjQ4Njl9.Z4k5ROUuI7HXREF-6MGEm1cLaEvAa9XnhbrkRtdY5CY",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWp4eWxpdWkwMDFxNTVsa21hOXBmMHJ1Iiwibm9uY2UiOiI5ZjhhYjQ5YS1mYzkwLTQ1NGUtOTg5Ni1kODc5NTc2OWI3MTkiLCJpYXQiOjE3Njc0MjM5NjksImV4cCI6MTc2ODAyODc2OX0.k_FWITCweD9aLj_dIN-wlpIrpTVQAyM5Nl4Bwwfrqw4",
+  "user": {
+    "id": "cmjxyliui001q55lkma9pf0ru",
+    "email": "e2e-full-1767423969333@haypbooks.test",
+    "name": "E2E Full Flow",
+    "role": "owner",
+    "isAccountant": false,
+    "onboardingCompleted": false,
+    "onboardingComplete": false,
+    "onboardingMode": "full",
+    "isEmailVerified": true,
+    "ownerOnboardingCompleted": false,
+    "accountantOnboardingCompleted": false,
+    "preferredHub": "OWNER",
+    "requiresHubSelection": false
+  },
+  "redirect": "/hub/companies"
+}

@@ -61,6 +61,7 @@
     "generate:cleanup-tenantid-columns": "node ./scripts/generate-cleanup-tenantid-columns.js",
     "test:e2e": "cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test npm run migrate:init && cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test node ./scripts/migrate/run-sql.js && cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test npm run db:seed:dev && cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test jest --runInBand --config jest.e2e.config.js",
     "test:serial": "cross-env DATABASE_URL=postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test npx jest --runInBand --config jest.e2e.config.js",
+    "test:unit": "npx jest --runInBand --config jest.unit.config.js",
     "test:quick-verify": "node ./scripts/test/quick-verify.js",
     "db:seed:smoke": "npm run db:seed:dev && npm run db:seed:inventory",
     "db:seed:export": "ts-node ./scripts/db/export-seed-snapshot.ts",
@@ -102,7 +103,9 @@
     "prisma": "^4.15.0",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1",
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "cookie-parser": "^1.4.6",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "@nestjs/testing": "^10.4.20",
@@ -121,6 +124,7 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/cookie-parser": "^1.4.3"
   }
 }

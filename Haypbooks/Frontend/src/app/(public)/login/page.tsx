@@ -1,5 +1,4 @@
 "use client"
-"use client"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth.service'
@@ -59,6 +58,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showHubSelection, setShowHubSelection] = useState(false)
   const [hubSelectionUser, setHubSelectionUser] = useState<any | null>(null)
+  // Support helpful resend flow when login fails due to unverified account
+  const [unverifiedEmail, setUnverifiedEmail] = useState(false)
+  const [lastTriedEmail, setLastTriedEmail] = useState<string | null>(null)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendInfo, setResendInfo] = useState<string | null>(null)
   // Login page no longer allows choosing Accountant/Owner — default to Owner flow here.
   const loginAsAccountant = false
 
@@ -68,21 +72,18 @@ export default function LoginPage() {
     
     let timeoutId: NodeJS.Timeout | undefined
     const controller = new AbortController()
+    let didTimeout = false
     
     try {
       timeoutId = setTimeout(() => {
+        didTimeout = true
         controller.abort()
-        setError('Request timed out. Please check your connection and try again.')
-        setLoading(false)
       }, 10000)
       
       const response = await authService.login(
-        { email: values.email, password: values.password, loginAsAccountant }, 
+        { email: String(values.email || '').trim().toLowerCase(), password: values.password, loginAsAccountant }, 
         { signal: controller.signal }
       )
-      
-      // Clear timeout immediately on success
-      if (timeoutId) clearTimeout(timeoutId)
       
       // Validate and save user data
       if (typeof window !== 'undefined' && response?.user) {
@@ -127,19 +128,21 @@ export default function LoginPage() {
       // (Do not auto-redirect to a preferred hub immediately after login.)
       router.replace('/hub/selection')
     } catch (e: any) {
-      // Clear timeout on error
-      if (timeoutId) clearTimeout(timeoutId)
-      
-      // Skip if already aborted by timeout
+      // If aborted (either by our timeout or user navigation), show a consistent message
       if (e?.name === 'CanceledError' || e?.name === 'AbortError') {
+        setLoading(false)
+        if (didTimeout) setError('Request timed out. Please check your connection and try again.')
         return
       }
-      
+
       setLoading(false)
       
       // Map backend error codes to user-friendly messages
       const errorCode = e?.response?.data?.code
-      const errorMsg = e?.response?.data?.error || e?.response?.data?.message || e?.message
+      // Prefer a message from the response but also fallback to error.message; make a combined string to robustly detect verification responses
+      const responseMessage = e?.response?.data?.message || e?.response?.data?.error
+      const errorMsg = responseMessage || e?.message
+      const backendMsgFull = String(responseMessage || e?.message || '')
       
       const errorMessages: Record<string, string> = {
         'invalid_credentials': 'Invalid email or password. Please check your credentials and try again.',
@@ -148,6 +151,19 @@ export default function LoginPage() {
         'mfa_invalid': 'The authentication code you entered is invalid or has expired.',
         'rate_limit': 'Too many login attempts. Please wait a few minutes before trying again.',
         'session_expired': 'Your session has expired for security. Please sign in again.'
+      }
+
+      // Detect explicit "Please verify your account before logging in" message from backend
+      const backendMsg: string | undefined = e?.response?.data?.message
+      if ((e?.response?.status === 401 && backendMsg && backendMsg.includes('Please verify')) || backendMsgFull.includes('Please verify')) {
+        // Surface a helpful message and show a resend option
+        const attemptedEmail = String(values.email || '').trim().toLowerCase()
+        setError('Your account is not verified. Check your email/phone for a verification code, or resend it below.')
+        setUnverifiedEmail(true)
+        setLastTriedEmail(attemptedEmail)
+        // Ensure loading state is cleared so UI is interactive
+        setLoading(false)
+        return
       }
       
       if (errorCode && errorMessages[errorCode]) {
@@ -165,6 +181,8 @@ export default function LoginPage() {
       } else {
         setError(errorMsg || 'Sign in failed. Please check your connection and try again.')
       }
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
     }
   }
 
@@ -254,6 +272,50 @@ export default function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>{error}</span>
+            </div>
+          )}
+
+          {/* Show resend verification action when the backend indicates account is unverified */}
+          {unverifiedEmail && lastTriedEmail && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mt-3 flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h4.5M21 14h-4.5M7 10l5-6 5 6"/></svg>
+                <div className="flex-1">
+                  <div className="font-medium">Account not verified</div>
+                  <div className="text-xs text-amber-800">We can resend a verification code to <strong>{lastTriedEmail}</strong>.</div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <button
+                  className="px-3 py-2 bg-emerald-600 text-white rounded-md disabled:opacity-50"
+                  onClick={async () => {
+                    setResendLoading(true)
+                    setResendInfo(null)
+                    try {
+                      const resp: any = await authService.sendVerification(lastTriedEmail)
+                      const devOtp = resp?.otp || resp?.otpCode || resp?.code || resp?.otp?.otpCode
+                      if (devOtp) {
+                        setResendInfo(`Verification sent. Dev code: ${String(devOtp).padStart(6,'0')}`)
+                        // navigate to verification page and pre-fill code for convenience
+                        router.push(`/verify-otp?email=${encodeURIComponent(lastTriedEmail)}&flow=signup&code=${encodeURIComponent(String(devOtp).padStart(6,'0'))}`)
+                        return
+                      }
+                      setResendInfo('Verification sent. Check your email or phone for the code.')
+                      router.push(`/verify-otp?email=${encodeURIComponent(lastTriedEmail)}&flow=signup`)
+                    } catch (err) {
+                      setResendInfo('Unable to send verification now. Please try again later.')
+                    } finally { setResendLoading(false) }
+                  }}
+                  disabled={resendLoading}
+                >
+                  {resendLoading ? 'Sending…' : 'Resend verification'}
+                </button>
+
+                <button className="px-3 py-2 bg-white border border-slate-200 rounded-md" onClick={() => { setUnverifiedEmail(false); setResendInfo(null) }}>Dismiss</button>
+              </div>
+
+              {resendInfo ? <div className="text-xs text-slate-700 mt-2">{resendInfo}</div> : null}
             </div>
           )}
 

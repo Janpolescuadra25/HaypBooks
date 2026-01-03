@@ -44,6 +44,7 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
 
   function openLogoutConfirm() {
     setShowLogoutConfirm(true)
+    setShowUserMenu(false)
   }
 
   useEffect(() => {
@@ -197,21 +198,6 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                           <span>{isLoggingOut ? 'Signing out…' : 'Log out'}</span>
                         </button>
                       </div>
-
-                      {/* Logout confirmation modal */}
-                      {showLogoutConfirm && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                          <div className="absolute inset-0 bg-black/40" onClick={() => setShowLogoutConfirm(false)} aria-hidden="true"></div>
-                          <div role="dialog" aria-modal="true" aria-labelledby="logout-title" className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-                            <h3 id="logout-title" className="text-lg font-semibold text-slate-800">Confirm sign out</h3>
-                            <p className="text-sm text-slate-600 mt-2">Are you sure you want to sign out? You will be returned to the sign in page.</p>
-                            <div className="mt-4 flex justify-end gap-3">
-                              <button onClick={() => setShowLogoutConfirm(false)} className="px-3 py-1.5 rounded-md text-sm text-slate-600 bg-slate-50 hover:bg-slate-100">Cancel</button>
-                              <button ref={logoutConfirmRef} onClick={confirmLogout} className="px-3 py-1.5 rounded-md text-sm text-white bg-rose-600 hover:bg-rose-700">Sign out</button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -220,6 +206,21 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
           </div>
         </div>
       </header>
+
+      {/* Logout confirmation modal (mounted outside the user menu so it can't be unmounted when the menu closes) */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowLogoutConfirm(false)} aria-hidden="true"></div>
+          <div role="dialog" aria-modal="true" aria-labelledby="logout-title" className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 id="logout-title" className="text-lg font-semibold text-slate-800">Confirm sign out</h3>
+            <p className="text-sm text-slate-600 mt-2">Are you sure you want to sign out? You will be returned to the sign in page.</p>
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => setShowLogoutConfirm(false)} className="px-3 py-1.5 rounded-md text-sm text-slate-600 bg-slate-50 hover:bg-slate-100">Cancel</button>
+              <button ref={logoutConfirmRef} onClick={confirmLogout} className="px-3 py-1.5 rounded-md text-sm text-white bg-rose-600 hover:bg-rose-700">Sign out</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="h-12"></div>
     </>
   )
