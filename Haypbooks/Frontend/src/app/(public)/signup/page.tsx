@@ -64,7 +64,7 @@ export default function SignupPage() {
     lastName: z.string().min(1, 'Last name is required'),
     companyName: z.string().optional(), // role-specific validation done at submit
     email: z.string().email('Invalid email address'),
-    phone: z.string().min(1, 'Phone number is required'),
+    phone: z.string().optional(),
     phoneCountry: z.string().optional(),
     password: z.string().min(8, 'Password must be at least 8 characters').regex(/(?=.*[A-Z])(?=.*\d)/, 'Include an uppercase letter and a number'),
     confirmPassword: z.string().min(1)
@@ -251,7 +251,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">
-                Phone number
+                Phone number <span className="text-xs text-slate-400">(optional)</span>
               </label>
               <div className="flex gap-0 items-stretch">
                 <select {...register('phoneCountry')} defaultValue="PH" aria-label="Country code" className="w-20 h-10 px-2 pr-6 py-2 border border-slate-700 rounded-l-lg bg-white text-sm text-slate-900 text-left" title="+63 Philippines">
@@ -266,8 +266,6 @@ export default function SignupPage() {
                   id="phone"
                   type="tel"
                   {...register('phone')}
-                  required
-                  aria-required="true"
                   className="flex-1 min-w-0 h-10 px-3 py-2 border border-slate-700 rounded-r-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white placeholder-slate-400 text-sm text-slate-900"
                   placeholder="0916 123 4567"
                 />
@@ -360,14 +358,12 @@ export default function SignupPage() {
               </button>
             </div>
 
-            {/* Live confirm status for accessibility */}
-            {(confirmValue && confirmValue.length > 0) ? (
-              <div id="confirmStatus" role="status" aria-live="polite" className={`${confirmValue === passwordValue ? 'text-emerald-600' : 'text-red-600'} mt-2 text-sm`}>{confirmValue === passwordValue ? 'Passwords match' : 'Passwords do not match'}</div>
+            {/* Prefer form-level validation message when available; otherwise show positive match indicator */}
+            {errors.confirmPassword ? (
+              <p id="confirmStatus" role="status" aria-live="polite" className="mt-1 text-sm text-red-600 animate-shake">{String(errors.confirmPassword?.message)}</p>
+            ) : (passwordValue && confirmValue) ? (
+              <div id="confirmStatus" role="status" aria-live="polite" className="text-emerald-600 mt-2 text-sm">Passwords match</div>
             ) : null}
-
-            {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-600 animate-shake">{String(errors.confirmPassword?.message)}</p>
-            )}
           </div>
 
           {formError && (
