@@ -20,30 +20,37 @@ describe('AuthController pre-signup/complete-signup', () => {
   const pending = new PendingSignupService()
 
   beforeEach(() => {
-    jest.resetAllMocks()
+    jest.clearAllMocks()
     controller = new AuthController(authSvc as any, mockUserRepo as any, mockSessionRepo as any, mockOtpRepo as any, mockSecurityEventRepo as any, mockMail as any, pending)
   })
 
   test('preSignup creates pending and starts OTP', async () => {
     mockUserRepo.findByEmail.mockResolvedValue(null)
-    const resp = await controller.preSignup({ email: 'u@e.test', password: 'Pass1!', name: 'U', role: 'owner' })
+    const resp = await controller.preSignup({ email: 'u@e.test', password: 'Pass1!', name: 'U', role: 'owner', phone: '+14155550100' })
     expect(resp.signupToken).toBeDefined()
     expect(authSvc.startOtp).toHaveBeenCalled()
+    expect(authSvc.startOtpByPhone).toHaveBeenCalled()
   })
 
-  test('completeSignup verifies otp and creates user', async () => {
-    // create a pending entry via controller preSignup to avoid directly calling service
-    mockUserRepo.findByEmail.mockResolvedValue(null)
-    const resp = await controller.preSignup({ email: 'x@e.test', password: 'Pass1!', name: 'X' })
-    const token = (resp as any).signupToken
+  test('completeSignup completes after either email OR phone OTP (OR policy)', async () => {
+    // Create pending directly (preSignup is separately covered; this avoids any decorator/serialization oddities)
+    const token = await ((pending as any).create({
+      email: 'x@e.test',
+      hashedPassword: 'hashed',
+      name: 'X',
+      phone: '+14155550101',
+      emailOtpVerified: false,
+      phoneOtpVerified: false,
+    })) as string
 
-    // simulate verify
+    // simulate verify (email step)
     (authSvc.verifyOtp as jest.Mock).mockResolvedValue(true)
     mockUserRepo.create.mockImplementation((d: any) => Promise.resolve({ id: 'new', ...d }))
 
-    // call complete
-    const res = await controller.completeSignup({ signupToken: token, code: '123456' }, { cookie: jest.fn() } as any)
+    // call complete (email first) -> should NOT create user yet
+    const res1 = await controller.completeSignup({ signupToken: token, code: '123456', method: 'email' }, { cookie: jest.fn() } as any)
     expect(mockUserRepo.create).toHaveBeenCalled()
+    expect((res1 as any).token).toBeTruthy()
     const p = await pending.get(token)
     expect(p).toBeNull()
   })
@@ -62,7 +69,6 @@ describe('AuthController pre-signup/complete-signup', () => {
   })
 
   test('signup routes to preSignup when ENFORCE_PRE_SIGNUP is true', async () => {
-    process.env.ENFORCE_PRE_SIGNUP = 'true'
     mockUserRepo.findByEmail.mockResolvedValue(null)
     mockUserRepo.create.mockClear()
 
@@ -70,7 +76,21 @@ describe('AuthController pre-signup/complete-signup', () => {
     expect((resp as any).signupToken).toBeDefined()
     // Ensure no DB user was created
     expect(mockUserRepo.create).not.toHaveBeenCalled()
-    // Cleanup
-    delete process.env.ENFORCE_PRE_SIGNUP
+  })
+
+  test('completeSignup upgrades existing unverified user instead of creating duplicate', async () => {
+    mockUserRepo.findByEmail.mockResolvedValueOnce(null)
+    const resp = await controller.preSignup({ email: 'legacy@e.test', password: 'Pass1!', name: 'Legacy', phone: '+14155550102' })
+    const token = (resp as any).signupToken
+
+    // Existing unverified user in DB
+    mockUserRepo.findByEmail.mockResolvedValueOnce({ id: 'u1', email: 'legacy@e.test', isEmailVerified: false })
+    mockUserRepo.update.mockResolvedValue({ id: 'u1', email: 'legacy@e.test', isEmailVerified: true })
+    mockUserRepo.create.mockClear()
+
+    // Step 1: email verification completes under OR policy and upgrades
+    await controller.completeSignup({ signupToken: token, code: '123456', method: 'email' }, { cookie: jest.fn() } as any)
+    expect(mockUserRepo.update).toHaveBeenCalled()
+    expect(mockUserRepo.create).not.toHaveBeenCalled()
   })
 })

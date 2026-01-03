@@ -53,18 +53,42 @@ test('full auth flow: signup, verify (PIN), hub selection, switch hub, logout', 
   const password = 'FullFlow!23'
   const pin = '112233'
 
-  // Create user via signup API
+  // Pre-signup (does not create DB user) and verify email+phone OTP before login.
   const phone = '+15550009999'
-  const signupRes = await request.post('http://127.0.0.1:4000/api/auth/signup', { data: { email, password, name: 'E2E Full Flow', phone } })
-  expect(signupRes.ok()).toBeTruthy()
+  const pre = await request.post('http://127.0.0.1:4000/api/auth/pre-signup', { data: { email, password, name: 'E2E Full Flow', phone } })
+  expect(pre.ok()).toBeTruthy()
+  const preJson = await pre.json().catch(() => null)
+  expect(preJson && preJson.signupToken).toBeTruthy()
+  const signupToken = preJson.signupToken
 
-  // Make sure email verified and no PIN so we deterministically hit setup
-  let updateRes: any = null
-  let skipFullFlow = false
-  try {
-    updateRes = await request.post('http://127.0.0.1:4000/api/test/update-user', { data: { email, data: { isEmailVerified: true, hasPin: false } } }).catch(() => null)
-    try { require('fs').writeFileSync(`e2e/logs/full-auth-${ts}-update-user.json`, JSON.stringify({ status: updateRes ? updateRes.status() : null, body: updateRes ? await updateRes.json().catch(()=>null) : null }, null, 2)) } catch (e) {}
-  } catch (e) { /* ignore */ }
+  // Prefer dev OTPs returned by pre-signup; otherwise fall back to test endpoint.
+  let otpEmail: string | null = preJson?.otpEmail || preJson?.otp || null
+  let otpPhone: string | null = preJson?.otpPhone || null
+  if (!otpEmail) {
+    const otpRes = await request.get(`http://127.0.0.1:4000/api/test/otp/latest?email=${encodeURIComponent(email)}&purpose=VERIFY_EMAIL`).catch(() => null)
+    const otpJson = otpRes ? await otpRes.json().catch(() => null) : null
+    otpEmail = otpJson?.otpCode ? String(otpJson.otpCode).padStart(6, '0') : null
+  }
+  if (!otpPhone) {
+    const otpRes = await request.get(`http://127.0.0.1:4000/api/test/otp/latest?phone=${encodeURIComponent(phone)}&purpose=MFA`).catch(() => null)
+    const otpJson = otpRes ? await otpRes.json().catch(() => null) : null
+    otpPhone = otpJson?.otpCode ? String(otpJson.otpCode).padStart(6, '0') : null
+  }
+  expect(otpEmail).toBeTruthy()
+  expect(otpPhone).toBeTruthy()
+
+  // Complete signup: email step; under OR policy this should return a token immediately.
+  // Keep a fallback phone step for compatibility if server still requires it.
+  const c1 = await request.post('http://127.0.0.1:4000/api/auth/complete-signup', { data: { signupToken, code: otpEmail, method: 'email' } })
+  expect(c1.ok()).toBeTruthy()
+  const c1j = await c1.json().catch(() => null)
+  expect(c1j?.success).toBeTruthy()
+  if (!c1j?.token) {
+    const c2 = await request.post('http://127.0.0.1:4000/api/auth/complete-signup', { data: { signupToken, code: otpPhone, method: 'phone' } })
+    expect(c2.ok()).toBeTruthy()
+    const c2j = await c2.json().catch(() => null)
+    expect(c2j?.token).toBeTruthy()
+  }
 
   // Login via API and set cookies for deterministic session
   const loginRes = await request.post('http://127.0.0.1:4000/api/auth/login', { data: { email, password } })
@@ -116,7 +140,7 @@ test('full auth flow: signup, verify (PIN), hub selection, switch hub, logout', 
     try {
       const url = req.url()
       if (url.includes('/api/auth') || url.includes('/api/users/me') || url.includes('/api/test/otp') || url.includes('/api/auth/pin')) {
-        const res = req.response()
+        const res = await req.response().catch(() => null)
         const entry: any = { url, method: req.method(), status: res ? res.status() : null }
         try { entry.body = res ? await res.json().catch(() => null) : null } catch (e) { entry.body = 'unreadable' }
         try {
@@ -138,17 +162,7 @@ test('full auth flow: signup, verify (PIN), hub selection, switch hub, logout', 
       try { fs.writeFileSync(`${diagPrefix}-users-me-after-pin-1.json`, JSON.stringify({ status: meRes ? meRes.status() : null, body: meJson }, null, 2)) } catch (e) {}
     } catch(e) { /* ignore */ }
 
-    // If environment lacks both test update and pin setup capabilities, skip this full flow test (not supported)
-    try {
-      const updateJson = updateRes ? await updateRes.json().catch(() => null) : null
-      const pinStatus = pinRes ? pinRes.status() : null
-      if ((updateJson && updateJson.error === 'no allowed fields to update') && (pinStatus === 404 || pinStatus === null)) {
-        console.warn('Skipping full auth flow: test-only endpoints disabled (update-user/pin/setup not available)')
-        skipFullFlow = true
-        test.skip()
-        return
-      }
-    } catch (e) { /* ignore */ }
+    // If environment lacks pin setup endpoint, keep going (UI may handle setup/entry flows)
   } catch (e) {
     // ignore - some environments may not expose this endpoint
   }
@@ -341,17 +355,6 @@ test('full auth flow: signup, verify (PIN), hub selection, switch hub, logout', 
       fs.writeFileSync(`e2e/logs/full-auth-no-hub-${Date.now()}.json`, JSON.stringify({ url, companiesCount, practiceCount, html: html.slice(0, 10000) }, null, 2))
       console.log('Captured diagnostic snapshot at', snap)
     } catch (e) { console.warn('diagnostic capture failed', e) }
-  }
-
-  // If we decided earlier to skip full flow because the environment lacks test endpoints, return early.
-  if (skipFullFlow) {
-    console.warn('Environment lacks test-only endpoints; skipping final assertions and cleanup')
-    // best-effort cleanup: attempt to delete user if backend supports it
-    try {
-      const del = await request.post('http://127.0.0.1:4000/api/test/delete-user', { data: { email } }).catch(() => null)
-      writeLog(`e2e/logs/full-auth-${ts}-delete-user.json`, { status: del ? del.status() : null, body: del ? await del.json().catch(()=>null) : null })
-    } catch (e) { /* ignore */ }
-    return
   }
 
   expect(redirected || (companiesCount + practiceCount) > 0).toBeTruthy()
