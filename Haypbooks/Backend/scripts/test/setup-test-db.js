@@ -106,3 +106,14 @@ try {
   console.error('✖ Test DB setup failed:', e && e.message ? e.message : e)
   process.exit(1)
 }
+// Verify subscription schema before returning (optional; set SKIP_SUBS_SCHEMA_VERIFY=1 to skip)
+if (process.env.SKIP_SUBS_SCHEMA_VERIFY !== '1') {
+  try {
+    runWithRetry('npm run db:verify:subscription-schema', 2, 500)
+  } catch (e) {
+    console.error('Subscription schema verification failed (aborting):', e && e.message ? e.message : e)
+    process.exit(1)
+  }
+} else {
+  console.log('SKIP_SUBS_SCHEMA_VERIFY=1 set — skipping subscription schema verification')
+}

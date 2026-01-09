@@ -3,6 +3,7 @@ import * as bcrypt from '../utils/bcrypt-fallback'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { PendingSignupService } from '../auth/pending-signup.service'
 import { PrismaAuthService } from '../auth/prisma-auth.service'
+import { CompanyRepository } from '../companies/company.repository.prisma'
 
 @Controller('api/test')
 export class TestController {
@@ -288,8 +289,10 @@ export class TestController {
     const existing = await this.prisma.company.findFirst({ where: { tenantId, name: body.name } })
     if (existing) return { created: false, company: existing }
 
-    // Use repository method so trial activation logic is applied for first-company trials
-    const company = await this.companyRepo.createCompanyRecord({ tenantId, name: body.name, currency: body.currency || 'USD' })
+    // Use the repository method so trial activation logic is applied for first-company trials
+    // The test controller may not have CompanyRepository injected in all test contexts; fall back to a manual instance
+    const companyRepo: any = (this as any).companyRepo || new CompanyRepository(this.prisma as any)
+    const company = await companyRepo.createCompanyRecord({ tenantId, name: body.name, currency: body.currency || 'USD' })
     return { created: true, company }
   }
 
