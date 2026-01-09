@@ -67,7 +67,19 @@ export default function EntityCard({ id, name, subtitle, members, connected, var
   const planColorClass = getPlanColor(subtitle)
 
   return (
-    <div className="company-card bg-white rounded-3xl border border-slate-100 px-6 py-8 h-[300px] flex flex-col shadow-[0_4px_18px_rgba(2,6,23,0.04)]">
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${name || 'company'} dashboard`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`)
+        }
+      }}
+      onClick={() => onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`)}
+      className="company-card bg-white rounded-3xl border border-slate-100 px-6 py-8 h-[300px] flex flex-col shadow-[0_4px_18px_rgba(2,6,23,0.04)] cursor-pointer hover:shadow-lg transition"
+    >
       {/* Avatar - Centered */}
       <div className="flex flex-col items-center mb-4">
         <div className={`w-20 h-20 ${colorClass} rounded-[20px] shadow-[0_6px_18px_rgba(2,6,23,0.06)] flex items-center justify-center text-white font-bold text-2xl mb-3`}>
@@ -95,10 +107,10 @@ export default function EntityCard({ id, name, subtitle, members, connected, var
         </span>
       </div>
 
-      {/* Footer: Button */}
+      {/* Footer: Button (stops propagation so click only fires once) */}
       <div className="mt-auto">
         <button 
-          onClick={() => onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`)} 
+          onClick={(e) => { e.stopPropagation(); onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`) }} 
           className="w-full py-2 bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-lg hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition text-sm"
         >
           Open Dashboard

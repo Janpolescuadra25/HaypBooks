@@ -104,8 +104,8 @@ export class AuthController {
 
   @Post('pre-signup')
   @HttpCode(HttpStatus.OK)
-  async preSignup(@Body() body: { email: string; password: string; name?: string; role?: string; phone?: string; phoneCountry?: string }) {
-    const { password, name, role, phone, phoneCountry } = body
+  async preSignup(@Body() body: { email: string; password: string; name?: string; role?: string; phone?: string; phoneCountry?: string; companyName?: string; firmName?: string }) {
+    const { password, name, role, phone, phoneCountry, companyName, firmName } = body
     const email = normalizeEmail(body.email)
     // Ensure no verified user exists with that email
     const existing = await this.userRepository.findByEmail(email)
@@ -122,6 +122,8 @@ export class AuthController {
       role,
       phone,
       phoneCountry,
+      companyName: companyName || undefined,
+      firmName: firmName || undefined,
       emailOtpVerified: false,
       phoneOtpVerified: false,
     }, 60 * 30)
@@ -254,6 +256,8 @@ export class AuthController {
         phone: normalizedPhone,
         ...(phoneHmac ? { phoneHmac } : {}),
         ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
+        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
+        ...(pendingAfter.firmName ? { firmName: pendingAfter.firmName } : {}),
       } as any)
     } else {
       // Create final user record
@@ -268,6 +272,8 @@ export class AuthController {
         phone: normalizedPhone,
         ...(phoneHmac ? { phoneHmac } : {}),
         ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
+        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
+        ...(pendingAfter.firmName ? { firmName: pendingAfter.firmName } : {}),
       } as any)
     }
 

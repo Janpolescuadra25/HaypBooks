@@ -52,6 +52,48 @@ To ensure the pre-signup flow is validated in CI, add a Redis service to the CI 
 - `ALLOW_TEST_ENDPOINTS=true`
 
 This makes the E2E `e2e/pre-signup-flow.spec.ts` run reliably in CI and validates that unverified signups are not persisted to the database until verification completes.
+
+CI: Onboarding E2E workflow
+--------------------------
+We include a GitHub Actions workflow that runs the full onboarding → Owner Hub E2E test (Playwright) as a recommended job. The workflow is at:
+
+- `.github/workflows/e2e-onboarding.yml`
+
+Before enabling it in Actions, **add the required secret** to your repository:
+
+- `E2E_DB_PASSWORD` — password for the `postgres` test user used by the workflow (example: `Ninetails45`).
+
+Optional:
+- `REDIS_URL` — if you prefer to point the backend at a managed Redis instance.
+- Set `E2E_ASSERT_COMPANY=true` in the workflow/CI environment to make the test strictly assert that the backend created the Company row (useful for strict verification).
+
+Badge (optional): Add a status badge to this README to display the workflow status. Replace `<owner>` and `<repo>` below with your GitHub repo information:
+
+```md
+[![E2E Onboarding](https://github.com/<owner>/<repo>/actions/workflows/e2e-onboarding.yml/badge.svg)](https://github.com/<owner>/<repo>/actions/workflows/e2e-onboarding.yml)
+```
+
+For more details see `.github/E2E-SECRETS.md` which documents how to set required secrets and optional flags.
+
+Run E2E locally
+---------------
+To reproduce the onboarding → Owner Hub E2E locally (mirrors CI):
+
+1. Start Postgres and Redis locally (for parity):
+   - `docker compose up -d`
+2. Start backend in dev mode (ensure `DATABASE_URL` points to your local test DB):
+   - `npm run start:dev --prefix Haypbooks/Backend`
+3. Start the frontend dev server:
+   - `npm run dev --prefix Haypbooks/Frontend`
+4. Set `E2E_FULL_AUTH=true` in your shell, then run the Playwright spec:
+   - `E2E_FULL_AUTH=true npx playwright test e2e/onboarding.ui-and-hub.spec.ts --project=chromium`
+
+Notes:
+- When running locally, you can use `Ninetails45` as the test DB password for convenience, but **do not check secrets into source control**.
+- If you want the test to strictly fail when the backend doesn't auto-create the company, set `E2E_ASSERT_COMPANY=true` in your environment before running the test.
+
+CI tips:
+- After adding `E2E_DB_PASSWORD` to repository secrets, run the workflow from Actions → Workflows → "E2E — Onboarding → Owner Hub" → Run workflow (select main branch) and watch logs/artifacts for failures.
 │   ├── dto/                # Data transfer objects
 │   ├── strategies/         # Passport JWT strategy
 │   └── guards/             # JWT auth guard

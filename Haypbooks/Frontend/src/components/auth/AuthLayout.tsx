@@ -19,7 +19,7 @@ export default function AuthLayout({ children, innerClassName = 'max-w-md w-full
         {children}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
           33% { transform: translate(30px, -30px) rotate(5deg); }

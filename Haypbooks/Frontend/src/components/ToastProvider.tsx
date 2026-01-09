@@ -59,6 +59,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useToast() {
+  // Early return during SSR to avoid invoking React hooks in a non-react render context
+  if (typeof window === 'undefined') {
+    return { push: () => {} } as ToastContextValue
+  }
+
   try {
     const ctx = useContext(ToastContext);
     // Return a no-op push when a provider is not present (helps tests and non-critical render paths)

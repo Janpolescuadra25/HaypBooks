@@ -37,7 +37,7 @@ describe('Purchase Orders (e2e)', () => {
 
     // create a test user and login to receive JWT
     const testEmail = `po-${Math.random().toString(36).slice(2, 7)}@example.com`
-    await request(app.getHttpServer()).post('/api/test/create-user').send({ email: testEmail, password: 'secret', name: 'PO Tester' }).expect(201)
+    await request(app.getHttpServer()).post('/api/test/create-user').send({ email: testEmail, password: 'secret', name: 'PO Tester', isEmailVerified: true }).expect(201)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: testEmail, password: 'secret' }).expect(200)
     authToken = login.body.token
   })

@@ -6,8 +6,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 export class CompaniesController {
   constructor(private readonly svc: CompanyService) {}
 
+  // Require authentication for company creation so we can attach the creating user
   @Post()
-  async create(@Body() body: any) {
+  @UseGuards(JwtAuthGuard)
+  async create(@Req() req: any, @Body() body: any) {
+    const userId = req.user?.userId
+    // If caller didn't include a user association, attach the creating user as the owner
+    if (!body.users && userId) {
+      body = { ...(body || {}), users: { create: [{ userId, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' }] } }
+    }
     return this.svc.createCompany(body)
   }
 

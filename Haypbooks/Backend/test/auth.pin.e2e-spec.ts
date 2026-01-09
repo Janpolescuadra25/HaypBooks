@@ -38,7 +38,7 @@ describe('PIN endpoints removed', () => {
     const email = `pin-test-${Date.now()}@haypbooks.test`
     const password = 'TestPass!23'
 
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pin Tester', phone: '+1 555 000 0000' }).expect(201)
+    await request(app.getHttpServer()).post('/api/test/create-user').send({ email, password, name: 'Pin Tester', isEmailVerified: true }).expect(201)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token
 
@@ -49,7 +49,7 @@ describe('PIN endpoints removed', () => {
     const email = `pin-verify-${Date.now()}@haypbooks.test`
     const password = 'TestPass!23'
 
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Pin Verify', phone: '+1 555 000 0000' }).expect(201)
+    await request(app.getHttpServer()).post('/api/test/create-user').send({ email, password, name: 'Pin Verify', isEmailVerified: true }).expect(201)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token
 

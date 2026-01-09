@@ -32,6 +32,31 @@ describe('AuthController pre-signup/complete-signup', () => {
     expect(authSvc.startOtpByPhone).toHaveBeenCalled()
   })
 
+  test('preSignup accepts companyName and firmName and completeSignup persists them to user', async () => {
+    mockUserRepo.findByEmail.mockResolvedValue(null)
+
+    // Create pending directly to avoid any runtime shape oddities in preSignup wrapper
+    const token = await (pending as any).create({
+      email: 'biz@e.test',
+      hashedPassword: 'hashed',
+      name: 'Biz',
+      companyName: 'Biz Co',
+      firmName: 'Biz Firm',
+      emailOtpVerified: false,
+      phoneOtpVerified: false,
+    }) as string
+
+    // simulate OTP verification
+    (authSvc.verifyOtp as jest.Mock).mockResolvedValue(true)
+    mockUserRepo.create.mockImplementation((d: any) => Promise.resolve({ id: 'new', ...d }))
+
+    const result = await controller.completeSignup({ signupToken: token, code: '123456', method: 'email' }, { cookie: jest.fn() } as any)
+    expect(mockUserRepo.create).toHaveBeenCalled()
+    const created = (mockUserRepo.create as jest.Mock).mock.calls[0][0]
+    expect(created.companyName).toBe('Biz Co')
+    expect(created.firmName).toBe('Biz Firm')
+    expect((result as any).token).toBeTruthy()
+  })
   test('completeSignup completes after either email OR phone OTP (OR policy)', async () => {
     // Create pending directly (preSignup is separately covered; this avoids any decorator/serialization oddities)
     const token = await ((pending as any).create({

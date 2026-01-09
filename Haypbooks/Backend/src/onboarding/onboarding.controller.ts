@@ -30,7 +30,8 @@ export class OnboardingController {
     const userId = req.user.userId
     const type = body?.type || 'full'
     const hub = body?.hub || 'OWNER'
-    await this.onboardingService.complete(userId, type, hub)
+    // Return the result from the service so callers can access the created company (if any)
+    const result = await this.onboardingService.complete(userId, type, hub)
 
     // Set per-hub cookie
     if (hub === 'ACCOUNTANT') {
@@ -43,6 +44,6 @@ export class OnboardingController {
     res.cookie('onboardingComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
     res.cookie('onboardingMode', type, { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
 
-    return { success: true }
+    return { success: true, company: result?.company || null }
   }
 }

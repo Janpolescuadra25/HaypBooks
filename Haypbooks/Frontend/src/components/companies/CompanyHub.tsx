@@ -1,8 +1,11 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import EntityCard from '@/components/cards/EntityCard'
-import TopBar from '@/components/TopBar'
+import dynamic from 'next/dynamic'
+const TopBar = dynamic(() => import('@/components/TopBar'), { ssr: false })
+import useViewportZoom from '@/hooks/useViewportZoom'
+import { useToast } from '@/components/ToastProvider'
 
 type Company = { id: string; name: string; status?: string; plan?: string; lastAccessedAt?: string }
 
@@ -19,6 +22,9 @@ export default function CompanyHub() {
   // Permanent vertical offset (px)
   const verticalOffset = -62
 
+  const [me, setMe] = useState<any | null>(null)
+  const [autoCreateAttempted, setAutoCreateAttempted] = useState(false)
+
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -31,6 +37,17 @@ export default function CompanyHub() {
         if (!mounted) return
         if (r1.ok) setOwned(await r1.json())
         if (r2.ok) setInvited(await r2.json())
+
+        // Also fetch current user profile so we can auto-create a company if needed
+        try {
+          const meRes = await fetch('/api/users/me', { cache: 'no-store' })
+          if (meRes.ok) {
+            const j = await meRes.json()
+            if (mounted) setMe(j)
+          }
+        } catch (e) {
+          // ignore
+        }
       } catch (e) {
         // ignore
       } finally {
@@ -41,6 +58,55 @@ export default function CompanyHub() {
     return () => { mounted = false }
   }, [])
 
+  const { push } = useToast()
+
+  // If there are no owned companies but the user's profile has a companyName (from signup/get-started),
+  // attempt a best-effort creation so the Owner Hub will immediately show the card.
+  useEffect(() => {
+    async function ensureCompany() {
+      if (autoCreateAttempted) return
+      if (loading) return
+      if (!me) return
+      if (owned && owned.length > 0) return
+      const companyName = me.companyName
+      if (!companyName) return
+
+      setAutoCreateAttempted(true)
+      try {
+        // Best-effort: request backend to create a company and attach the current user as owner.
+        const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: companyName }) })
+        if (res.ok) {
+          push({ type: 'success', message: `Your company ${companyName} was added to your Hub` })
+          // Refresh the owned list
+          const r = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
+          if (r.ok) setOwned(await r.json())
+        }
+      } catch (e) {
+        // ignore non-fatal
+        console.warn('auto-create company failed', e)
+      }
+    }
+
+    ensureCompany()
+  }, [loading, me, owned, autoCreateAttempted, push])
+
+  // Offer an explicit CTA for users who already have a companyName in their profile
+  async function handleCreateFromProfile() {
+    if (!me || !me.companyName) return
+    try {
+      const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: me.companyName }) })
+      if (res.ok) {
+        push({ type: 'success', message: `Your company ${me.companyName} was added to your Hub` })
+        const r = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
+        if (r.ok) setOwned(await r.json())
+      } else {
+        push({ type: 'error', message: 'Failed to create company — try again' })
+      }
+    } catch (e) {
+      push({ type: 'error', message: 'Failed to create company — try again' })
+    }
+  }
+
   // debounce search input
   useEffect(() => {
     const t = setTimeout(() => setSearchTerm(searchInput.trim()), 300)
@@ -48,6 +114,8 @@ export default function CompanyHub() {
   }, [searchInput])
 
   const companyCount = owned.length + invited.length
+
+  const { isWide, isCompact } = useViewportZoom()
 
   // Advanced container settings (finalized)
   const outerWidthOption: 'match'|'wider'|'full'|'custom' = 'custom'
@@ -64,16 +132,11 @@ export default function CompanyHub() {
 
       {/* Main Content */}
       <main className="flex-1 py-8">
-        <div style={{
-            maxWidth: `${customWidth}px`,
-            paddingLeft: `${outerPadding}px`,
-            paddingRight: `${outerPadding}px`,
-            marginLeft: alignment === 'center' ? 'auto' : (alignment === 'left' ? `${offset}px` : undefined),
-            marginRight: alignment === 'center' ? 'auto' : (alignment === 'right' ? `${offset}px` : undefined),
-          }}>
+        <div className={`${isWide ? 'w-full px-0' : 'max-w-[1800px] mx-auto'} ${isCompact ? 'px-4' : 'px-16'}`}>
 
           {/* White Container (expanded: wider, taller; inner content sizes unchanged) */}
-          <div className="relative overflow-visible bg-white rounded-[64px] shadow-[0_6px_18px_rgba(2,6,23,0.04)] ring-1 ring-emerald-50 border border-emerald-100 px-6 pt-4 pb-10 min-h-[460px]" style={{ transform: `translateY(${verticalOffset}px)` }}>
+          <div className={`relative overflow-visible bg-white rounded-[64px] shadow-[0_6px_18px_rgba(2,6,23,0.04)] ring-1 ring-emerald-50 border border-emerald-100 ${isWide ? 'mx-4 lg:mx-8' : ''} px-6 pt-4 pb-10 min-h-[460px] transform -translate-y-[62px]`}>
+
 
 
 
@@ -98,7 +161,7 @@ export default function CompanyHub() {
               <div className="text-slate-500 text-center py-12">Loading…</div>
             ) : (
               <div>
-                <CompanyGrid companies={owned} searchTerm={searchTerm} emptyMessage="No companies yet — create your first one!" />
+                <CompanyGrid companies={owned} searchTerm={searchTerm} emptyMessage="No companies yet — create your first one!" me={me} onCreateFromProfile={handleCreateFromProfile} />
               </div>
             )}
           </div>
@@ -108,15 +171,31 @@ export default function CompanyHub() {
   )
 }
 
-function CompanyGrid({ companies, emptyMessage, searchTerm }: { companies: Company[]; emptyMessage: string; searchTerm?: string }) {
+function CompanyGrid({ companies, emptyMessage, searchTerm, me, onCreateFromProfile }: { companies: Company[]; emptyMessage: string; searchTerm?: string; me?: any; onCreateFromProfile?: () => void }) {
   const q = (searchTerm || '').trim().toLowerCase()
   const filtered = q ? companies.filter((c) => c.name.toLowerCase().includes(q)) : companies
 
   if (!filtered || filtered.length === 0) {
     return (
       <div className="py-20 text-center text-slate-500">
-        <div className="mb-3 text-lg">{q ? 'No companies match that search' : emptyMessage}</div>
-        <div className="mb-6"><a className="inline-block px-3 py-1.5 rounded-md text-sm text-emerald-700 bg-emerald-50" href="#">Get started</a></div>
+        {q ? <div className="mb-3 text-lg">No companies match that search</div> : null}
+
+        {/* If we detect a companyName in the user's profile, show a create button */}
+        {me?.companyName && onCreateFromProfile ? (
+          <div className="mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 p-8 rounded-2xl max-w-md mx-auto border border-emerald-100">
+            <div className="text-lg font-semibold text-slate-800 mb-3">🏢 Your Company is Ready!</div>
+            <div className="text-sm text-slate-600 mb-4">
+              We detected <strong className="text-emerald-600">{me.companyName}</strong> from your onboarding.
+            </div>
+            <button 
+              onClick={onCreateFromProfile}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-lg font-medium hover:from-emerald-600 hover:to-teal-600 transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              ✨ Add to Owner Hub
+            </button>
+          </div>
+        ) : null}
+
         {/* show register card when empty */}
         <div className="mx-auto max-w-md">
           <EntityCard variant="register" />

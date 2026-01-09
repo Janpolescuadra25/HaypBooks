@@ -24,6 +24,9 @@ describe('AccountantOnboarding', () => {
 
   it('posts to API and navigates on success', async () => {
     mockPost.mockResolvedValueOnce({ status: 200 })
+    const mockPatch = apiClient.patch as jest.Mock
+    mockPatch.mockResolvedValueOnce({ data: {} })
+
     const pushMock = jest.fn()
     ;(useRouter as jest.Mock).mockReturnValue({ push: pushMock })
     render(<AccountantOnboarding />)
@@ -32,6 +35,7 @@ describe('AccountantOnboarding', () => {
     const btn = screen.getByRole('button', { name: /finish setup/i })
     fireEvent.click(btn)
     await waitFor(() => expect(mockPost).toHaveBeenCalled())
+    expect(mockPatch).toHaveBeenCalledWith('/api/users/profile', { firmName: 'Rivera CPA' })
     expect(pushMock).toHaveBeenCalledWith('/hub/accountant')
   })
 })

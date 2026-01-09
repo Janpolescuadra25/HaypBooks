@@ -46,6 +46,15 @@ jobs:
           npm run e2e:full-auth:ci
         continue-on-error: true
 
+      - name: Run onboarding company & firm e2e
+        working-directory: Haypbooks/frontend
+        env:
+          E2E_FULL_AUTH: 'true'
+          ALLOW_TEST_ENDPOINTS: 'true'
+        run: |
+          npx playwright test e2e/onboarding.company-and-firm.spec.ts --project=chromium --reporter=list
+        continue-on-error: false
+
       - name: Collect e2e artifacts
         working-directory: Haypbooks/frontend
         run: |

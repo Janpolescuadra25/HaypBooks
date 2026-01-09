@@ -56,4 +56,13 @@ export class UsersService {
     const { password, ...result } = updated
     return result
   }
+
+  async updateProfile(userId: string, data: { companyName?: string; firmName?: string }) {
+    const payload: any = {}
+    if (typeof data.companyName === 'string') payload.companyName = String(data.companyName).trim() || null
+    if (typeof data.firmName === 'string') payload.firmName = String(data.firmName).trim() || null
+    const updated = await this.userRepository.update(userId, payload)
+    const { password, ...result } = updated
+    return result
+  }
 }

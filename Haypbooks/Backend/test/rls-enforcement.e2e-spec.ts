@@ -14,6 +14,8 @@ describe('RLS Enforcement', () => {
     const client = new Client({ connectionString: DATABASE_URL })
     await client.connect()
 
+    // Ensure tenantId columns are uuid and Task.archivedAt exists before applying RLS
+    execSync('node ./scripts/ensure_tenantid_uuid.js', { cwd: BACKEND_DIR, stdio: 'inherit', env: { DATABASE_URL } })
     // Ensure Phase 1 RLS is applied (Task, Attachment, Invoice)
     execSync('node ./scripts/db/apply-rls-phase1.js', { cwd: BACKEND_DIR, stdio: 'inherit', env: { DATABASE_URL } })
 

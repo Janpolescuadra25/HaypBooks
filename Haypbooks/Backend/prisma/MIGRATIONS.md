@@ -50,6 +50,14 @@ CI enforcement
 
 - `lint:migrations:rls` is run in CI to ensure migrations enabling tenant-scoped tables include RLS policy creation.
 
+Integrity checks & CI integration
+--------------------------------
+- Added `scripts/db/integrity-checks.ts` which runs a set of lightweight but important integrity queries (examples include: users with `companyName` but no `TenantUser` link, tenants with no owner, orphaned `TenantUser` rows, duplicate tenant subdomains). The script prints results and exits non-zero when `STRICT_DB_INTEGRITY` is set to `true`.
+
+- The `Backend` CI workflows (`.github/workflows/db-verify.yml` for PRs touching DB/migrations and `.github/workflows/db-validate.yml` on pushes to `main`) are configured to run this script. For PRs the job is strict (PRs will fail on integrity issues), and on `main` the validation is also performed as part of the pipeline. This prevents schema or data drift from being merged unnoticed.
+
+- Operational note: Integrity checks are intentionally non-destructive and provide example rows for triage. For any detected issues, run the relevant backfill scripts (e.g., `scripts/db/backfill-create-tenants-from-users.js`) in a staging environment first and monitor metrics/alerts during a production run.
+
 PR checklist & contributor guidance
 -------------------------------
 - When adding a new model or migration that adds tenant scoping, ensure it includes: `tenantId` column, FK to tenant, `@@index([tenantId])` on the Prisma model, and an RLS policy enabled in the SQL migration.
@@ -67,4 +75,27 @@ If you must intentionally keep a model global (no `tenantId`), add it to the acc
 If you want any of the above to be tenant-scoped, we should plan a migration that:
 1) Adds `tenantId` to the model; 2) Populates it from referencing tenant-scoped models where appropriate; 3) Adds index, FK and RLS; 4) Updates seeds/services to create tenant-specific entries.
 
+---
+
+## 2026-01-10: remove tenant onboarding fields
+We removed onboarding-related columns from the `Tenant` table and keep onboarding inputs in the `OnboardingStep` table instead.
+
+Dropped columns (idempotent SQL migration):
+- businessType, industry, startDate, country, address, taxId
+- vatRegistered, vatRate, pricesInclusive, taxFilingFrequency, taxExempt
+- logoUrl, invoicePrefix, defaultPaymentTerms, accountingMethod
+
+Use `scripts/db/verify-tenant-columns.js` to confirm the columns are absent in a given database:
+
+  DATABASE_URL="..." node scripts/db/verify-tenant-columns.js
+
+Apply the migration locally with:
+
+  npx prisma migrate deploy
+
+Or using dev mode (will generate migration state):
+
+  npx prisma migrate dev --name remove-tenant-onboarding-fields
+
+---
 

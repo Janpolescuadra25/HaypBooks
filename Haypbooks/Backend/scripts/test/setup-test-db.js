@@ -10,7 +10,9 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 function run(cmd) {
   console.log(`> ${cmd}`)
-  execSync(cmd, { cwd, stdio: 'inherit', env: { ...process.env, DATABASE_URL } })
+  // Use the current process.env.DATABASE_URL at runtime, falling back to top-level DATABASE_URL
+  const envForChild = { ...process.env, DATABASE_URL: (process.env.DATABASE_URL || DATABASE_URL) }
+  execSync(cmd, { cwd, stdio: 'inherit', env: envForChild })
 }
 
 function runWithRetry(cmd, maxAttempts = 3, backoffMs = 500) {
@@ -39,14 +41,40 @@ try {
   const initCmd = `node ./scripts/migrate/init-db.js ${recreate ? '--recreate' : ''}`.trim()
   runWithRetry(initCmd, 3, 500)
   runWithRetry('node ./scripts/migrate/run-sql.js', 3, 500)
+  // Ensure tenantId columns are UUID and Task.archivedAt exists before seeding / applying RLS
+  try {
+    runWithRetry('node ./scripts/ensure_tenantid_uuid.js', 3, 500)
+  } catch (e) {
+    console.warn('ensure_tenantid_uuid failed (continuing):', e && e.message ? e.message : e)
+  }
   if (!process.argv.includes('--no-seed')) {
     try {
+      // Ensure onboarding columns exist before seeding (idempotent)
+      try {
+        runWithRetry('node ./scripts/db/add-onboarding-tenant-columns.js', 3, 500)
+      } catch (e) {
+        console.warn('Adding onboarding tenant columns failed (continuing):', e && e.message ? e.message : e)
+      }
+
       runWithRetry('npm run db:seed:dev', 3, 500)
+      // Ensure tenantId columns and Task.archivedAt again post-seed (idempotent)
+      try {
+        runWithRetry('node ./scripts/ensure_tenantid_uuid.js', 3, 500)
+      } catch (e) {
+        console.warn('Post-seed ensure_tenantid_uuid failed (continuing):', e && e.message ? e.message : e)
+      }
       // After seeding, enable RLS policies needed by e2e tests (idempotent)
       try {
         runWithRetry('node ./scripts/test/enable-test-rls.js', 3, 500)
       } catch (e) {
         console.warn('Enabling test RLS policies failed (continuing):', e && e.message ? e.message : e)
+      }
+      // Quick DB assertions: ensure Task.archivedAt exists and at least one tenantId is uuid
+      try {
+        runWithRetry('node ./scripts/test/db-assertions.js', 3, 500)
+      } catch (e) {
+        console.error('DB assertions failed (aborting):', e && e.message ? e.message : e)
+        process.exit(1)
       }
     } catch (e) {
       console.warn('Skipping db:seed:dev due to error (possibly missing generated Prisma client):', e && e.message ? e.message : e)

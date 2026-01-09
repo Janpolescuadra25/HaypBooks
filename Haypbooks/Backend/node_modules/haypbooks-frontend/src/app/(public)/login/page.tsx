@@ -95,13 +95,30 @@ export default function LoginPage() {
           throw new Error('Invalid response from server')
         }
       }
+
+      // Lightweight, non-sensitive logging to aid debugging in environments where
+      // the verification redirect does not occur as expected. We intentionally
+      // avoid logging tokens or full objects – only essential flags and identifiers.
+      try {
+        const summary = {
+          mfaRequired: !!(response as any)?.mfaRequired,
+          requiresVerification: !!(response?.user as any)?.requiresVerification,
+          requiresPinSetup: !!(response?.user as any)?.requiresPinSetup,
+          requiresHubSelection: !!(response?.user as any)?.requiresHubSelection,
+          email: (response?.user as any)?.email || String(values.email || ''),
+          userId: (response?.user as any)?.id || null
+        }
+        // eslint-disable-next-line no-console
+        console.info('[login] response summary', summary)
+      } catch (e) { /* swallow logging errors */ }
       
       const params = new URLSearchParams(window.location.search)
   const next = params.get('next') || '/hub/companies'
       // If server indicates MFA/verification is required, redirect to verification flow
       if ((response as any)?.mfaRequired || (response.user as any)?.requiresVerification) {
-        // pass email in query so email code form can default to it
+        // pass email in query so email code form can default to it; include origin
         const q = new URLSearchParams({ email: response.user.email })
+        q.set('from', 'signin')
         router.replace(`/verification?${q.toString()}`)
         setLoading(false)
         return
@@ -111,6 +128,7 @@ export default function LoginPage() {
       // but do NOT force the setup view - show the options first and let the user choose.
       if ((response.user as any)?.requiresPinSetup) {
         const q = new URLSearchParams({ email: response.user.email })
+        q.set('from', 'signin')
         router.replace(`/verification?${q.toString()}`)
         setLoading(false)
         return
@@ -120,6 +138,51 @@ export default function LoginPage() {
       if ((response.user as any)?.requiresHubSelection) {
         // Redirect to dedicated hub selection page to allow an explicit choice after sign-in
         router.replace('/hub/selection')
+        setLoading(false)
+        return
+      }
+
+      // Dev-only forced redirect: when running locally you can set
+      // NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN=1 to always land on the verification
+      // selection screen after sign-in for easy testing.
+      const forceRedirect = typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN === '1' || process.env.NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN === 'true')
+      if (forceRedirect) {
+        const q = new URLSearchParams({ email: response.user?.email || String(values.email || '') })
+        q.set('from', 'signin')
+        // eslint-disable-next-line no-console
+        console.warn('[login] DEV FORCE: redirecting to verification due to NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN')
+        router.replace(`/verification?${q.toString()}`)
+        setLoading(false)
+        return
+      }
+
+      // Before redirecting to hub selection, confirm server-side verification state.
+      // Some servers may not include mfaRequires/requiresVerification in the login response,
+      // so probe /api/users/me for authoritative state and redirect to verification if needed.
+      try {
+        const me = await authService.getCurrentUser()
+        // Consider the user needing verification if either channel is unverified or unknown.
+        // We only skip redirect when both email and phone are explicitly verified.
+        const bothVerified = !!me && ((me as any).isEmailVerified === true && (me as any).isPhoneVerified === true)
+        const needsVerification = !!(me && !bothVerified)
+        if (needsVerification) {
+          const q = new URLSearchParams({ email: me.email || response.user.email || '' })
+          q.set('from', 'signin')
+          router.replace(`/verification?${q.toString()}`)
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        // If the getCurrentUser probe fails, redirect to verification selection.
+        // This is a safer default than proceeding to hub selection because it
+        // ensures users who may be missing verification steps (or have cookie
+        // scoping issues) are not silently sent to the hub where they may be
+        // unable to proceed. Log the failure for diagnostics as well.
+        // eslint-disable-next-line no-console
+        console.warn('[login] getCurrentUser probe failed; redirecting to verification for diagnostics')
+        const q = new URLSearchParams({ email: response.user?.email || String(values.email || '') })
+        q.set('from', 'signin')
+        router.replace(`/verification?${q.toString()}`)
         setLoading(false)
         return
       }
@@ -155,13 +218,27 @@ export default function LoginPage() {
 
       // Detect explicit "Please verify your account before logging in" message from backend
       const backendMsg: string | undefined = e?.response?.data?.message
-      if ((e?.response?.status === 401 && backendMsg && backendMsg.includes('Please verify')) || backendMsgFull.includes('Please verify')) {
-        // Surface a helpful message and show a resend option
+      // Broaden detection of "unverified" responses so we reliably redirect to the
+      // verification selection screen when the backend indicates the account needs
+      // verification. Match message shapes like 'Please verify', 'not verified', or
+      // 'account not verified' in a case-insensitive manner.
+      // Match 'verify', 'confirm', 'unverified', or 'not verified' to be robust to server message variations
+      const unverifiedRegex = /verify|confirm|unverif|not verif/i
+      // Consider either an explicit 401 *or* a plain Error with matching message as
+      // indicators that the account is unverified. This lets us handle different
+      // server/client transport layers that surface errors differently.
+      const has401 = e?.response?.status === 401
+      const hasMatchingMessage = unverifiedRegex.test(backendMsgFull || '') || unverifiedRegex.test(backendMsg || '') || unverifiedRegex.test(String(e?.message || ''))
+      const isUnverifiedResp = (has401 || !!String(e?.message || '').length) && hasMatchingMessage
+      if (isUnverifiedResp) {
         const attemptedEmail = String(values.email || '').trim().toLowerCase()
-        setError('Your account is not verified. Check your email/phone for a verification code, or resend it below.')
-        setUnverifiedEmail(true)
-        setLastTriedEmail(attemptedEmail)
-        // Ensure loading state is cleared so UI is interactive
+        // Log so we can diagnose message shapes in prod/dev quickly
+        // eslint-disable-next-line no-console
+        console.warn(`[login] detected unverified response; redirecting to verification for ${attemptedEmail}. message="${String(backendMsgFull).slice(0,200)}"`)
+        // pass email and origin so verification page can show a contextual banner
+        const q = new URLSearchParams({ email: attemptedEmail })
+        q.set('from', 'signin')
+        router.replace(`/verification?${q.toString()}`)
         setLoading(false)
         return
       }
@@ -297,12 +374,12 @@ export default function LoginPage() {
                       const devOtp = resp?.otp || resp?.otpCode || resp?.code || resp?.otp?.otpCode
                       if (devOtp) {
                         setResendInfo(`Verification sent. Dev code: ${String(devOtp).padStart(6,'0')}`)
-                        // navigate to verification page and pre-fill code for convenience
-                        router.push(`/verify-otp?email=${encodeURIComponent(lastTriedEmail)}&flow=signup&code=${encodeURIComponent(String(devOtp).padStart(6,'0'))}`)
+                        // navigate to verification UI (sign-in flow) and pre-fill code for convenience
+                        router.push(`/verification?email=${encodeURIComponent(lastTriedEmail)}&code=${encodeURIComponent(String(devOtp).padStart(6,'0'))}`)
                         return
                       }
                       setResendInfo('Verification sent. Check your email or phone for the code.')
-                      router.push(`/verify-otp?email=${encodeURIComponent(lastTriedEmail)}&flow=signup`)
+                      router.push(`/verification?email=${encodeURIComponent(lastTriedEmail)}`)
                     } catch (err) {
                       setResendInfo('Unable to send verification now. Please try again later.')
                     } finally { setResendLoading(false) }

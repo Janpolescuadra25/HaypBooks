@@ -34,6 +34,13 @@ export default function VerificationPage() {
         const emailFromQuery = params?.get('email') || null
         setUserEmail(emailFromQuery)
 
+        // If we arrived from sign-in, show a short contextual banner so user understands why
+        // they were taken here automatically.
+        const from = params?.get('from') || null
+        if (from === 'signin') {
+          setCookieHint('You were redirected here after signing in. Choose Email or Text Message (SMS) to receive your verification code.')
+        }
+
         // Developer hint: some browsers don't expose httpOnly auth cookies via document.cookie.
         // Instead, do a small authenticated probe to /api/users/me to check whether cookies are
         // being sent; if the probe returns 401 and we're on `localhost` suggest opening 127.0.0.1
@@ -134,24 +141,27 @@ export default function VerificationPage() {
               </div>
             </button>
 
-            {userPhone && (
-              <button type="button" data-testid="option-phone" className="option-card flex items-center p-3 md:p-4 w-full border-2 border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-500 transition focus:outline-none mx-auto" onClick={() => setView('phone')}>
-                <div className="flex items-start gap-4 w-full">
-                  <div className="flex-none w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M21 15a2 2 0 0 1-2 2H8l-5 3V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      <circle cx="8.5" cy="11.5" r="0.6" fill="currentColor" />
-                      <circle cx="12" cy="11.5" r="0.6" fill="currentColor" />
-                      <circle cx="15.5" cy="11.5" r="0.6" fill="currentColor" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <div className="font-bold text-lg md:text-lg text-slate-900 leading-tight">Text Message (SMS)</div>
-                    <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold">{maskPhoneForDisplay(userPhone)}</span></div>
-                  </div>
+            {/* Always show phone option — if user has no phone, allow adding it */}
+            <button type="button" data-testid="option-phone" className="option-card flex items-center p-3 md:p-4 w-full border-2 border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-500 transition focus:outline-none mx-auto" onClick={() => setView('phone')}>
+              <div className="flex items-start gap-4 w-full">
+                <div className="flex-none w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H8l-5 3V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    <circle cx="8.5" cy="11.5" r="0.6" fill="currentColor" />
+                    <circle cx="12" cy="11.5" r="0.6" fill="currentColor" />
+                    <circle cx="15.5" cy="11.5" r="0.6" fill="currentColor" />
+                  </svg>
                 </div>
-              </button>
-            )}
+                <div className="flex flex-col items-start text-left">
+                  <div className="font-bold text-lg md:text-lg text-slate-900 leading-tight">Text Message (SMS)</div>
+                  {userPhone ? (
+                    <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold">{maskPhoneForDisplay(userPhone)}</span></div>
+                  ) : (
+                    <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Add a phone number to receive a verification code</div>
+                  )}
+                </div>
+              </div>
+            </button>
 
 
 
@@ -167,9 +177,13 @@ export default function VerificationPage() {
           </div>
         )}
 
-        {view === 'phone' && userPhone && (
+        {view === 'phone' && (
           <div>
-            <PhoneCodeForm phone={userPhone} onSuccess={() => { onVerified() }} onBack={() => setView('options')} />
+            {userPhone ? (
+              <PhoneCodeForm phone={userPhone} onSuccess={() => { onVerified() }} onBack={() => setView('options')} />
+            ) : (
+              <AddPhoneForm onSaved={(p) => { setUserPhone(p); setView('phone') }} onCancel={() => setView('options')} />
+            )}
           </div>
         )}
 

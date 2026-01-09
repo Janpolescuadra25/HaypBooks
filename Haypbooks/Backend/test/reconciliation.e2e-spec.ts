@@ -56,7 +56,7 @@ describe('Bank Reconciliation invariants e2e', () => {
     await prisma.bankReconciliationLine.create({ data: { tenantId: tenant!.id, bankReconciliationId: recon.id, bankTransactionId: tx2.id, matched: true } })
 
     // Calculate bookBalance from journalEntryLines for debit and credit difference
-    const bookBalanceRow = await prisma.$queryRawUnsafe(`SELECT COALESCE(SUM(jl.debit) - SUM(jl.credit), 0) as book_balance FROM "JournalEntryLine" jl WHERE jl."tenantId" = $1 AND jl."accountId" = $2`, tenant!.id, account.id)
+    const bookBalanceRow = await prisma.$queryRawUnsafe(`SELECT COALESCE(SUM(jl.debit) - SUM(jl.credit), 0) as book_balance FROM "JournalEntryLine" jl WHERE jl."tenantId" = $1::uuid AND jl."accountId" = $2`, tenant!.id, account.id)
     const bookBalance = Number((bookBalanceRow as any[])[0].book_balance || 0)
 
     // clearedDelta sum from bank transactions matched in reconciliation

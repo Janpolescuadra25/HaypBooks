@@ -2,6 +2,11 @@
 const { Client } = require('pg')
 
 ;(async () => {
+  if (typeof process.env.DATABASE_URL !== 'string') {
+    console.error('DATABASE_URL is not a string:', typeof process.env.DATABASE_URL)
+    console.error('DATABASE_URL present:', !!process.env.DATABASE_URL, 'length:', process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0)
+    process.exit(1)
+  }
   const c = new Client({ connectionString: process.env.DATABASE_URL })
   try {
     await c.connect()
@@ -31,7 +36,7 @@ const { Client } = require('pg')
     );`)
 
     // Add policies if missing
-    await q(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantClient' AND p.polname = 'rls_tenant') THEN EXECUTE $p$ CREATE POLICY rls_tenant ON public."AccountantClient" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)); $p$; END IF; END$$;`)
+    await q(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantClient' AND p.polname = 'rls_tenant') THEN EXECUTE $p$ CREATE POLICY rls_tenant ON public."AccountantClient" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR ("tenantId")::text = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR ("tenantId")::text = current_setting('haypbooks.tenant_id', true)); $p$; END IF; END$$;`)
     await q(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantActivity' AND p.polname = 'rls_tenant') THEN EXECUTE $p$ CREATE POLICY rls_tenant ON public."AccountantActivity" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)); $p$; END IF; END$$;`)
 
     // Create indexes and unique constraint

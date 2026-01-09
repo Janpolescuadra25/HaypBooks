@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth.service'
+import useViewportZoom from '@/hooks/useViewportZoom'
 
 type Props = {
   searchValue?: string
@@ -73,48 +74,61 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
     }
   }, [])
 
+  // keep DOM aria-expanded synced (eslint wants literal JSX; update via DOM)
+  useEffect(() => {
+    if (userMenuRef.current) userMenuRef.current.setAttribute('aria-expanded', showUserMenu ? 'true' : 'false')
+  }, [showUserMenu])
+
+  // use hook to determine compact and wide states
+  const { isCompact, isWide } = useViewportZoom()
+
+  const logoSizeClass = isCompact ? 'w-7 h-7' : 'w-8 h-8'
+  const titleClass = isCompact ? 'text-xs font-semibold' : 'text-sm font-bold'
+  const subtitleClass = isCompact ? 'text-[9px]' : 'text-[10px]'
+  const navButtonClass = isCompact ? 'flex items-center gap-1 px-1 py-0.5 text-xs' : 'flex items-center gap-2 px-2 py-1 text-xs'
+
   return (
     <>
       <header className="w-full fixed top-0 left-0 right-0 z-50 bg-transparent py-1">
-        <div className="max-w-[1800px] mx-auto" style={{ paddingLeft: '63px', paddingRight: '63px' }}>
-          <div className="bg-white rounded-3xl relative shadow-[0_6px_18px_rgba(2,6,23,0.04)] border border-emerald-100 px-6 py-1" ref={null}>
+        <div className={`${isWide ? 'w-full px-0' : 'max-w-[1800px] mx-auto'} ${isCompact ? 'px-4' : 'px-16'}`}>
+          <div className={`bg-white rounded-3xl relative shadow-[0_6px_18px_rgba(2,6,23,0.04)] border border-emerald-100 ${isWide ? 'mx-4 lg:mx-8' : ''} px-6 py-1`} ref={null}>
             {/* Top row: Logo, Navigation and User */}
             <div className="flex items-center justify-between">
 {/* Left: Logo + Navigation */}
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+                <div className={`${logoSizeClass} bg-emerald-600 rounded-lg flex items-center justify-center`}>
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-sm font-bold text-slate-800">HAYPBOOKS</h1>
-                  <p className="text-[10px] text-slate-500">OWNER HUB</p>
+                  <h1 className={`${titleClass} text-slate-800`}>HAYPBOOKS</h1>
+                  <p className={`${subtitleClass} text-slate-500`}>OWNER HUB</p>
                 </div>
               </div>
 
               {/* Navigation (left) */}
               <nav className="flex items-center gap-3 ml-3">
-                <button className="flex items-center gap-2 px-2 py-1 bg-emerald-600 text-white rounded-full text-xs font-semibold shadow-sm">
+                <button className={`${navButtonClass} bg-emerald-600 text-white rounded-full font-semibold shadow-sm`}>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                   </svg>
-                  PORTFOLIO
+                  <span className={`${isCompact ? 'sr-only' : ''}`}>PORTFOLIO</span>
                 </button>
 
-                <button className="flex items-center gap-2 px-2 py-1 text-slate-600 hover:text-slate-800 text-xs font-medium">
+                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`}>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
-                  TASK REMINDER
+                  <span className={`${isCompact ? 'sr-only' : ''}`}>TASK REMINDER</span>
                 </button>
 
-                <button className="flex items-center gap-2 px-2 py-1 text-slate-600 hover:text-slate-800 text-xs font-medium">
+                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`}>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                   </svg>
-                  RECONCILE ACCOUNTS
+                  <span className={`${isCompact ? 'sr-only' : ''}`}>RECONCILE ACCOUNTS</span>
                 </button>
               </nav>
               </div>
@@ -133,9 +147,9 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                 </button>
                 {/* User menu (avatar + dropdown) */}
                 <div className="relative">
-                  <button aria-haspopup="true" aria-expanded={showUserMenu} onClick={() => setShowUserMenu((s) => !s)} ref={userMenuRef as any} className="flex items-center gap-2">
+                  <button aria-haspopup="true" onClick={() => setShowUserMenu((s) => !s)} ref={userMenuRef as any} className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-emerald-600 rounded-full flex items-center justify-center text-white font-medium text-xs">DU</div>
-                    <div className="hidden sm:block text-left">
+                    <div className={`${isCompact ? 'hidden' : 'hidden sm:block'} text-left`}>
                       <p className="text-xs font-medium text-slate-700">Demo User</p>
                       <p className="text-[9px] text-slate-500">ADMIN ACCESS</p>
                     </div>
@@ -221,7 +235,7 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
           </div>
         </div>
       )}
-      <div className="h-12"></div>
+      <div className={isCompact ? 'h-10' : 'h-12'}></div>
     </>
   )
 }

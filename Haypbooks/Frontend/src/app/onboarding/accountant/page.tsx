@@ -15,6 +15,13 @@ export default function AccountantOnboarding() {
     setError('')
     setLoading(true)
     try {
+      // Persist firm name to user profile (best-effort)
+      try {
+        await apiClient.patch('/api/users/profile', { firmName: firm })
+      } catch (e) {
+        console.warn('Failed to persist firm name', e)
+      }
+
       // Save a business step for the accountant hub if needed
       await apiClient.post('/api/onboarding/save', { step: 'accountant_firm', data: { firmName: firm } })
       const res = await apiClient.post('/api/onboarding/complete', { type: 'full', hub: 'ACCOUNTANT' })

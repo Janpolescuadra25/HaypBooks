@@ -1,0 +1,46 @@
+name: Verify subscription schema
+
+on:
+  pull_request:
+    paths:
+      - 'prisma/**'
+      - 'scripts/db/**'
+      - 'src/**'
+
+jobs:
+  verify-schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: haypbooks_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -q -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Wait for Postgres
+        run: |
+          for i in `seq 1 20`; do
+            pg_isready -h 127.0.0.1 -p 5432 && break || sleep 1
+          done
+      - name: Prepare DB
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/haypbooks_test
+        run: |
+          npm run migrate:init
+          node ./scripts/migrate/run-sql.js
+          npm run db:seed:dev
+      - name: Verify subscription schema
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/haypbooks_test
+        run: npm run db:verify:subscription-schema

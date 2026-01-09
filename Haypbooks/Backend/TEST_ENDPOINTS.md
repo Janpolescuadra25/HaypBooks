@@ -17,6 +17,15 @@ Available endpoints (all under /api/test):
 - GET /api/test/user?email={email}
   - Returns a single user row (including password hash in dev) for that email. Use only in dev. Example: http://localhost:4000/api/test/user?email=demo@haypbooks.test
 
+- GET /api/test/companies?email={email}
+  - Returns a list of `Company` rows for the tenant(s) associated with the provided user's email (useful to assert a company was created during onboarding). Example: http://localhost:4000/api/test/companies?email=demo@haypbooks.test
+
+- POST /api/test/create-company
+  - Creates a `Company` for the tenant associated with the provided user's email. If the user is not associated with any tenant, the endpoint will optionally create a new Tenant and link the user (test-only convenience). Payload: `{ email: string, name: string, currency?: string, createTenant?: boolean }`. Example: `POST http://localhost:4000/api/test/create-company` with JSON body `{ "email": "e2e-owner-123@haypbooks.test", "name": "OwnerCo E2E 123" }` — returns `{ created: true, company: { id, tenantId, name, ... } }`
+
+- POST /api/test/delete-company
+  - Deletes `Company` rows matching the provided `companyId` or `email` + `name` if they appear to be test-created. The endpoint is conservative: it only deletes companies where `name` contains `E2E`, or the associated tenant has a `subdomain` starting with `e2e-`, or the tenant `name` contains `(E2E)`. Optional payload: `{ companyId?: string, email?: string, name?: string, deleteTenant?: boolean }`. Example: `POST http://localhost:4000/api/test/delete-company` with `{ "email": "e2e-owner-123@haypbooks.test", "name": "OwnerCo E2E 123", "deleteTenant": true }` — returns `{ deleted: N }` (number of companies deleted).
+
 - GET /api/test/otp/latest?email={email}&purpose={RESET|VERIFY}
 - POST /api/test/force-complete-signup { signupToken } (dev/CI only) - force finalize a pending pre-signup into a verified user
 - POST /api/test/force-verify-user { email|phone, type } (dev/CI only) - mark an existing user's email or phone as verified for deterministic tests

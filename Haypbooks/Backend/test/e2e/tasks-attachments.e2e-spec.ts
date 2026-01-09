@@ -33,7 +33,7 @@ describe('Tasks & Attachments API (e2e)', () => {
   it('archive/unarchive a task via API', async () => {
     const email = `e2e-task-${Date.now()}@haypbooks.test`
     const password = 'e2e-pass'
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'E2E Task', phone: '+1 555 000 0000' }).expect(201)
+    await request(app.getHttpServer()).post('/api/test/create-user').send({ email, password, name: 'E2E Task', isEmailVerified: true }).expect(201)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token || login.body.accessToken || login.body.accessToken
 

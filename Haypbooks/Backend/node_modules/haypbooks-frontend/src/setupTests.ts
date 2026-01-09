@@ -61,3 +61,31 @@ jest.mock('next/navigation', () => ({
 	useSearchParams: () => new URLSearchParams(''),
 	usePathname: () => '/',
 }))
+
+// Stub `window.location` navigation methods so assigning `href` doesn't trigger
+// jsdom's "Not implemented: navigation" error during tests. Individual tests can override if needed.
+try {
+	const originalLocation = window.location
+	// Create a fake location object that intercepts href assignments.
+	const fakeLocation: any = {
+		assign: jest.fn(),
+		replace: jest.fn(),
+		// Keep other original properties accessible
+		...originalLocation,
+		// internal storage for href
+		_isHref: originalLocation?.href || '',
+		get href() {
+			return this._isHref
+		},
+		set href(val) {
+			this._isHref = String(val)
+		},
+	}
+	Object.defineProperty(window, 'location', {
+		configurable: true,
+		value: fakeLocation,
+	})
+} catch (err) {
+	// Best-effort; some environments may not allow redefining location during setup.
+	/* noop */
+} 

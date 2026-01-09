@@ -15,7 +15,26 @@ export class CompanyRepository {
     try {
       const tenant = await this.prisma.tenant.create({ data })
       // eslint-disable-next-line no-console
-      console.debug('[CompanyRepository] prisma.tenant.create succeeded', { id: tenant.id })
+      console.info('[COMPANY-CREATE] ✅ prisma.tenant.create succeeded', {
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+        hasUserPayload: !!data.users
+      })
+
+      // Verify TenantUser was created
+      try {
+        const tenantUsers = await this.prisma.tenantUser.findMany({ where: { tenantId: tenant.id } })
+        // eslint-disable-next-line no-console
+        console.info('[COMPANY-CREATE] TenantUser records:', {
+          tenantId: tenant.id,
+          count: tenantUsers.length,
+          users: tenantUsers.map(tu => ({ userId: tu.userId, isOwner: tu.isOwner, role: tu.role }))
+        })
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('[COMPANY-CREATE] ❌ Failed to query TenantUser:', e?.message)
+      }
 
       try {
         await this.prisma.$executeRaw`UPDATE public."Tenant" SET "id_old" = ${tenant.id} WHERE id = ${tenant.id}`
@@ -29,6 +48,25 @@ export class CompanyRepository {
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn('seedDefaultRolesForTenant failed', e)
+      }
+
+      // After successful tenant creation, attempt to activate per-tenant trial
+      // (best-effort: do not block tenant creation if this fails)
+      try {
+        if (!tenant.trialUsed) {
+          const trialEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          // Create subscription tied to this company (tenant-as-company) and mark tenant trial used
+          await this.prisma.$transaction([
+            this.prisma.subscription.create({ data: { tenantId: tenant.id, companyId: tenant.id, plan: 'FREE', status: 'TRIAL' } }),
+            this.prisma.tenant.update({ where: { id: tenant.id }, data: { trialEndsAt: trialEnds, trialUsed: true } }),
+          ])
+          // eslint-disable-next-line no-console
+          console.info('[COMPANY-CREATE] Activated trial for tenant', { tenantId: tenant.id, trialEnds })
+        }
+      } catch (e) {
+        // best-effort only
+        // eslint-disable-next-line no-console
+        console.error('[COMPANY-CREATE] Failed to activate trial for tenant (non-fatal):', e?.message || e)
       }
 
       return tenant
@@ -84,11 +122,22 @@ export class CompanyRepository {
   }
 
   async findForUser(userId: string, filter?: string, email?: string) {
+    // eslint-disable-next-line no-console
+    console.info('[COMPANY-QUERY] Fetching companies for user', { userId, filter, email })
+    
     // Default: return tenants where the user is a member
-    if (!filter) return this.prisma.tenant.findMany({ where: { users: { some: { userId } } } })
+    if (!filter) {
+      const results = await this.prisma.tenant.findMany({ where: { users: { some: { userId } } } })
+      // eslint-disable-next-line no-console
+      console.info('[COMPANY-QUERY] Results (no filter):', { count: results.length, tenants: results.map(t => ({ id: t.id, name: t.name })) })
+      return results
+    }
 
     if (filter === 'owned') {
-      return this.prisma.tenant.findMany({ where: { users: { some: { userId, isOwner: true } } } })
+      const results = await this.prisma.tenant.findMany({ where: { users: { some: { userId, isOwner: true } } } })
+      // eslint-disable-next-line no-console
+      console.info('[COMPANY-QUERY] Results (owned):', { count: results.length, tenants: results.map(t => ({ id: t.id, name: t.name })) })
+      return results
     }
 
     if (filter === 'invited' && email) {
@@ -133,6 +182,30 @@ export class CompanyRepository {
 
   async update(id: string, data: any) {
     return this.prisma.tenant.update({ where: { id }, data })
+  }
+
+  // Create a child Company record (for multi-company tenants) and activate
+  // the tenant trial (best-effort) when appropriate.
+  async createCompanyRecord(data: { tenantId: string; name: string; currency?: string }) {
+    const company = await this.prisma.company.create({ data })
+    try {
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: data.tenantId } })
+      if (tenant && !tenant.trialUsed) {
+        const trialEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        await this.prisma.$transaction([
+          this.prisma.subscription.create({ data: { tenantId: tenant.id, companyId: company.id, plan: 'FREE', status: 'TRIAL' } }),
+          this.prisma.tenant.update({ where: { id: tenant.id }, data: { trialEndsAt: trialEnds, trialUsed: true } }),
+        ])
+        // eslint-disable-next-line no-console
+        console.info('[COMPANY-CHILD-CREATE] Activated trial for tenant', { tenantId: tenant.id, trialEnds })
+      }
+    } catch (e) {
+      // best-effort only
+      // eslint-disable-next-line no-console
+      console.error('[COMPANY-CHILD-CREATE] Failed to activate trial for tenant (non-fatal):', e?.message || e)
+    }
+
+    return company
   }
 
   // Accept a pending TenantInvite for a user: create TenantUser and mark invite accepted

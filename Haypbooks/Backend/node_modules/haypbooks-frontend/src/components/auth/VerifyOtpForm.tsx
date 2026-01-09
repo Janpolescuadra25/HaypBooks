@@ -31,10 +31,11 @@ type Props = {
   role?: 'business' | 'accountant' | string
   initialCode?: string
   signupToken?: string
+  initialMethod?: 'email'|'phone'
   showHeader?: boolean
 }
 
-export default function VerifyOtpForm({ email, phone, flow = 'reset', role, initialCode = '', signupToken, showHeader = true }: Props) {
+export default function VerifyOtpForm({ email, phone, flow = 'reset', role, initialCode = '', signupToken, initialMethod, showHeader = true }: Props) {
   const router = useRouter()
   const [code, setCode] = useState(initialCode)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +43,8 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
   const [loading, setLoading] = useState(false)
   const [resendTimer, setResendTimer] = useState<number>(0)
   const [signupMethod, setSignupMethod] = useState<'email'|'phone'>(() => {
+    // Allow an explicit initialMethod prop to override defaults (used for signup flows)
+    if ((initialMethod as any) === 'email' || (initialMethod as any) === 'phone') return initialMethod as any
     // If both are present during signup, verify email first, then phone.
     if (email && phone) return 'email'
     if (phone) return 'phone'
@@ -116,18 +119,11 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
   async function handleResend() {
     if (resendTimer > 0) return
     try {
-      // During signup, resend based on the current step
-      if (flow === 'signup' && signupToken && email && phone) {
-        if (signupMethod === 'phone') {
-          const verification = require('@/services/verification.service').default
-          const resp = await verification.prototype.sendPhoneCode(phone)
-          const devOtp = (resp as any)?.otp
-          if (devOtp) setCode(devOtp)
-        } else {
-          const resp = await authService.sendVerification(email || '')
-          const devOtp = (resp as any)?.otp
-          if (devOtp) setCode(devOtp)
-        }
+      // During signup, always resend email (we force email-first signup verify)
+      if (flow === 'signup' && email) {
+        const resp = await authService.sendVerification(email || '')
+        const devOtp = (resp as any)?.otp
+        if (devOtp) setCode(devOtp)
       } else if (phone) {
         const verification = require('@/services/verification.service').default
         const resp = await verification.prototype.sendPhoneCode(phone)
@@ -160,8 +156,8 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
       )}
 
       <div className="text-sm font-medium text-slate-800">Sent to <strong className="text-slate-800">{
-        (flow === 'signup' && signupToken && email && phone)
-          ? (signupMethod === 'phone' ? maskPhone(phone) : maskEmail(email))
+        (flow === 'signup' && email)
+          ? maskEmail(email)
           : (phone ? maskPhone(phone) : maskEmail(email))
       }</strong></div>
       <div className="text-xs text-slate-400 mb-6 mt-2">The code expires in 5 minutes.</div>
@@ -195,22 +191,6 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
 
       <div className="flex flex-col items-center gap-2 text-sm">
         <button disabled={resendTimer > 0} onClick={handleResend} className="text-emerald-600 hover:underline disabled:opacity-50">{resendTimer > 0 ? `Resend code (available in ${resendTimer}s)` : 'Resend code'}</button>
-        <button
-          onClick={() => {
-            // For signup with both email+phone present, allow switching between steps.
-            if (flow === 'signup' && signupToken && email && phone) {
-              setSignupMethod(m => (m === 'email' ? 'phone' : 'email'))
-              setCode('')
-              setInfo(null)
-              setError(null)
-              return
-            }
-            router.push('/verify-otp?flow=signup')
-          }}
-          className="text-emerald-600 hover:underline"
-        >
-          Try another method
-        </button>
       </div>
 
       <style>{`

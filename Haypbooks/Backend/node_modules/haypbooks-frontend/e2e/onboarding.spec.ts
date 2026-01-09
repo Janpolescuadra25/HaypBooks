@@ -76,9 +76,9 @@ test('signup -> verify OTP -> full onboarding flow -> complete', async ({ page, 
   try { await page.check('label:has-text("Products") input[type=checkbox]') } catch (e) { console.warn('Could not check Products checkbox; continuing') }
   try { await page.check('label:has-text("Track inventory") input[type=checkbox]') } catch (e) { console.warn('Could not check Track inventory checkbox; continuing') }
 
-  // Click Save and accept any confirmation dialog
+  // Click Save and accept any confirmation dialog (use global Save and continue)
   const dialogPromise2 = page.waitForEvent('dialog').catch(() => null)
-  try { await page.click('text=Save step') } catch (e) { console.warn('Save step button not found on Products; continuing') }
+  try { await page.click('text=Save and continue') } catch (e) { console.warn('Save and continue button not found on Products; continuing') }
   const dialog2 = await dialogPromise2
   if (dialog2) await dialog2.accept()
 
@@ -87,29 +87,54 @@ test('signup -> verify OTP -> full onboarding flow -> complete', async ({ page, 
   await page.selectOption('select[aria-label="Fiscal year start"]', 'Jan')
   await page.selectOption('select[aria-label="Accounting method"]', 'accrual')
   await page.selectOption('select[aria-label="Default currency"]', 'USD')
-  // Click Save and accept any confirmation dialog
-  const dialogPromise3 = page.waitForEvent('dialog').catch(() => null)
-  await page.click('text=Save step')
-  const dialog3 = await dialogPromise3
-  if (dialog3) await dialog3.accept()
+  // Use global Save and continue if present, otherwise fallback to Save step or Next
+  if (await page.locator('text=Save and continue').count() > 0) {
+    const dialogPromise3 = page.waitForEvent('dialog').catch(() => null)
+    await page.click('text=Save and continue')
+    const dialog3 = await dialogPromise3
+    if (dialog3) await dialog3.accept()
+  } else if (await page.locator('text=Save step').count() > 0) {
+    const dialogPromise3 = page.waitForEvent('dialog').catch(() => null)
+    await page.click('text=Save step')
+    const dialog3 = await dialogPromise3
+    if (dialog3) await dialog3.accept()
+  } else {
+    await page.click('text=Next')
+  }
 
   // Next -> Tax (leave defaults)
   await page.click('text=Next')
-  // Click Save and accept any confirmation dialog
-  const dialogPromise4 = page.waitForEvent('dialog').catch(() => null)
-  await page.click('text=Save step')
-  const dialog4 = await dialogPromise4
-  if (dialog4) await dialog4.accept()
+  // Click Save and continue if present, otherwise Save step or Next
+  if (await page.locator('text=Save and continue').count() > 0) {
+    const dialogPromise4 = page.waitForEvent('dialog').catch(() => null)
+    await page.click('text=Save and continue')
+    const dialog4 = await dialogPromise4
+    if (dialog4) await dialog4.accept()
+  } else if (await page.locator('text=Save step').count() > 0) {
+    const dialogPromise4 = page.waitForEvent('dialog').catch(() => null)
+    await page.click('text=Save step')
+    const dialog4 = await dialogPromise4
+    if (dialog4) await dialog4.accept()
+  } else {
+    await page.click('text=Next')
+  }
 
   // Next -> Branding
   await page.click('text=Next')
   await page.waitForSelector('text=Branding & Defaults', { timeout: 15000 })
   await page.getByPlaceholder('INV-').fill('E2E-')
-  // Click Save and accept any confirmation dialog
-  const dialogPromise5 = page.waitForEvent('dialog').catch(() => null)
-  await page.click('text=Save step')
-  const dialog5 = await dialogPromise5
-  if (dialog5) await dialog5.accept()
+  // Click Save and continue if present otherwise Save step
+  if (await page.locator('text=Save and continue').count() > 0) {
+    const dialogPromise5 = page.waitForEvent('dialog').catch(() => null)
+    await page.click('text=Save and continue')
+    const dialog5 = await dialogPromise5
+    if (dialog5) await dialog5.accept()
+  } else if (await page.locator('text=Save step').count() > 0) {
+    const dialogPromise5 = page.waitForEvent('dialog').catch(() => null)
+    await page.click('text=Save step')
+    const dialog5 = await dialogPromise5
+    if (dialog5) await dialog5.accept()
+  }
 
   // Next -> Banking
   await page.click('text=Next')
@@ -117,29 +142,25 @@ test('signup -> verify OTP -> full onboarding flow -> complete', async ({ page, 
   await page.waitForSelector('text=Banking', { timeout: 15000 })
   // Accept bank payment option (label copy may vary)
   await page.check('label:has-text("bank") input[type=checkbox]')
-  // Click Save and accept any confirmation dialog
-  const dialogPromise6 = page.waitForEvent('dialog').catch(() => null)
-  await page.click('text=Save step')
-  const dialog6 = await dialogPromise6
-  if (dialog6) await dialog6.accept()
-
-  // Next -> Opening balances
-  await page.click('text=Next')
-  await page.waitForSelector('text=Opening balances', { timeout: 15000 })
-  // Some environments may skip starting balances inputs; fill if present otherwise continue
-  if (await page.locator('input[placeholder="Starting cash"]').count() > 0) {
-    await page.waitForSelector('input[placeholder="Starting cash"]', { timeout: 15000 })
-    await page.fill('input[placeholder="Starting cash"]', '1000')
-    await page.fill('input[placeholder="Starting bank"]', '1000')
+  // Click Save and continue if present otherwise Save step
+  if (await page.locator('text=Save and continue').count() > 0) {
+    const dialogPromise6 = page.waitForEvent('dialog').catch(() => null)
+    await page.click('text=Save and continue')
+    const dialog6 = await dialogPromise6
+    if (dialog6) await dialog6.accept()
+  } else if (await page.locator('text=Save step').count() > 0) {
+    const dialogPromise6 = page.waitForEvent('dialog').catch(() => null)
     await page.click('text=Save step')
-  } else {
-    // No inputs on this step in this environment; click Save or Next to proceed
-    if (await page.locator('text=Save step').count() > 0) await page.click('text=Save step')
-    else await page.click('text=Next')
+    const dialog6 = await dialogPromise6
+    if (dialog6) await dialog6.accept()
   }
 
-  // Next -> Review
+  // Next -> Review (Opening balances step removed)
   await page.click('text=Next')
+  // Wait for the Review step heading to appear
+  await page.waitForSelector('text=Review your settings', { timeout: 15000 })
+  // Optionally, verify snapshot content is shown
+  await page.waitForSelector('text=Edit Business', { timeout: 15000 })
   // Finish onboarding - wait for the backend call to complete
   // Wait for Finish button, or for the Completing… spinner to finish
   if ((await page.locator('text=Finish onboarding').count()) === 0) {

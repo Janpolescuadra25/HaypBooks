@@ -261,4 +261,119 @@ export class TestController {
     const sessions = await this.prisma.session.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } })
     return sessions
   }
+
+  @Post('create-company')
+  async createCompany(@Body() body: { email?: string; name?: string; currency?: string; createTenant?: boolean }) {
+    this.ensureEnabled()
+    if (!body || !body.email || !body.name) return { error: 'missing email or name' }
+
+    const user = await this.prisma.user.findUnique({ where: { email: body.email } })
+    if (!user) return { error: 'user not found' }
+
+    // Find tenant associations for the user
+    let tenantUsers = await this.prisma.tenantUser.findMany({ where: { userId: user.id }, select: { tenantId: true } })
+    let tenantId: string | null = null
+
+    if (!tenantUsers || tenantUsers.length === 0) {
+      // Optionally create a tenant and associate the user if none exist (test-only convenience)
+      if (body.createTenant === false) return { error: 'user not associated with any tenant' }
+      const t = await this.prisma.tenant.create({ data: { name: `${body.name} (E2E)`, subdomain: `e2e-${Date.now()}` } })
+      await this.prisma.tenantUser.create({ data: { tenantId: t.id, userId: user.id, role: 'owner', isOwner: true } as any })
+      tenantId = t.id
+    } else {
+      tenantId = tenantUsers[0].tenantId
+    }
+
+    // Check if company already exists
+    const existing = await this.prisma.company.findFirst({ where: { tenantId, name: body.name } })
+    if (existing) return { created: false, company: existing }
+
+    // Use repository method so trial activation logic is applied for first-company trials
+    const company = await this.companyRepo.createCompanyRecord({ tenantId, name: body.name, currency: body.currency || 'USD' })
+    return { created: true, company }
+  }
+
+  @Post('delete-company')
+  async deleteCompany(@Body() body: { email?: string; name?: string; companyId?: string; deleteTenant?: boolean }) {
+    this.ensureEnabled()
+    if (!body || (!body.companyId && (!body.email || !body.name))) return { error: 'missing companyId or (email and name)' }
+
+    // Resolve company by id OR by email+name
+    let companies = [] as any[]
+    if (body.companyId) {
+      const c = await this.prisma.company.findUnique({ where: { id: body.companyId }, include: { tenant: true } })
+      if (c) companies = [c]
+    } else {
+      // Find user and tenant(s)
+      const user = await this.prisma.user.findUnique({ where: { email: body.email } })
+      if (!user) return { deleted: 0, message: 'user not found' }
+      const tenantUsers = await this.prisma.tenantUser.findMany({ where: { userId: user.id }, select: { tenantId: true } })
+      const tenantIds = tenantUsers.map(t => t.tenantId)
+      if (tenantIds.length === 0) return { deleted: 0, message: 'user not associated with any tenant' }
+      companies = await this.prisma.company.findMany({ where: { tenantId: { in: tenantIds }, name: body.name }, include: { tenant: true } })
+    }
+
+    if (!companies || companies.length === 0) return { deleted: 0, message: 'no matching company found' }
+
+    // Safety: ensure companies look test-created (name contains 'E2E' or tenant.subdomain startsWith 'e2e-' or tenant.name contains '(E2E)')
+    const safeToDelete = companies.filter(c => (c.name && c.name.includes('E2E')) || (c.tenant && c.tenant && typeof c.tenant.subdomain === 'string' && c.tenant.subdomain.startsWith('e2e-')) || (c.tenant && c.tenant.name && c.tenant.name.includes('(E2E)')))
+
+    if (safeToDelete.length === 0) return { deleted: 0, message: 'matching companies found but none appear to be test-created (skipping)' }
+
+    let deletedCount = 0
+    for (const c of safeToDelete) {
+      try {
+        // delete company record (Prisma will enforce cascade/null behavior per schema)
+        await this.prisma.company.delete({ where: { id: c.id } })
+        deletedCount++
+        // optionally delete tenant if requested and tenant appears test-created and has no other companies/users (best-effort)
+        if (body.deleteTenant && c.tenant) {
+          const tenantId = c.tenant.id
+          try {
+            // ensure the tenant looks like a test tenant
+            if ((c.tenant.subdomain && c.tenant.subdomain.startsWith('e2e-')) || (c.tenant.name && c.tenant.name.includes('(E2E)'))) {
+              // check for tenant system accounts; if any exist, skip tenant deletion
+              const hasSystemAccounts = (await this.prisma.account.findMany({ where: { tenantId, isSystem: true }, select: { id: true }, take: 1 })).length > 0
+              if (hasSystemAccounts) {
+                // Skip deleting tenant if system accounts are present (conservative, non-destructive)
+                continue
+              }
+
+              // check if any other non-system rows exist for tenant
+              const users = await this.prisma.tenantUser.findMany({ where: { tenantId } })
+              const otherCompanies = await this.prisma.company.findMany({ where: { tenantId } })
+              if (users.length <= 1 && otherCompanies.length === 0) {
+                await this.prisma.tenant.delete({ where: { id: tenantId } })
+              }
+            }
+          } catch (e) {
+            // ignore tenant deletion errors (best-effort)
+          }
+        }
+      } catch (e) {
+        // ignore failed deletes for individual companies
+      }
+    }
+
+    return { deleted: deletedCount }
+  }
+
+  @Get('companies')
+  async listCompaniesForUser(@Query('email') email: string) {
+    this.ensureEnabled()
+    if (!email) return []
+
+    const user = await this.prisma.user.findUnique({ where: { email } })
+    if (!user) return []
+
+    // Find tenant associations for the user
+    const tenantUsers = await this.prisma.tenantUser.findMany({ where: { userId: user.id }, select: { tenantId: true } })
+    const tenantIds = tenantUsers.map(t => t.tenantId)
+
+    if (tenantIds.length === 0) return []
+
+    const companies = await this.prisma.company.findMany({ where: { tenantId: { in: tenantIds } }, select: { id: true, tenantId: true, name: true, createdAt: true } })
+    return companies
+  }
 }
+

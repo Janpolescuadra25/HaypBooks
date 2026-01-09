@@ -1,4 +1,5 @@
-import DashboardTopBar from '@/components/DashboardTopBar'
+import dynamic from 'next/dynamic'
+const DashboardTopBar = dynamic(() => import('@/components/DashboardTopBar'), { ssr: false })
 
 export const metadata = { title: 'Workflow Overview' }
 

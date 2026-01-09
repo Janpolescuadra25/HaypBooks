@@ -83,6 +83,43 @@ npm test
 npm run test:serial -- src/__tests__/your.file.test.ts
 ```
 
+## Running Playwright E2E locally (recommended for full flow verification)
+
+This repository includes Playwright E2E specs that exercise signup -> onboarding -> Owner Hub end-to-end. These specs use backend test helper endpoints (OTP retrieval, create/delete test users/companies), so you must run a local backend with test endpoints enabled to run them locally.
+
+Steps to run locally:
+
+1) Start the backend (with test endpoints available). From the `Haypbooks/Backend` folder:
+
+```powershell
+cd C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Backend
+npm ci
+# apply migrations/seeds if necessary (project-specific command; e.g. npm run db:up)
+# then start the dev server
+npm run dev
+```
+
+2) Start the frontend in non-mock mode so it calls the local backend (same-origin proxy):
+
+```powershell
+$env:NEXT_PUBLIC_USE_MOCK_API = 'false'
+npm run dev
+```
+
+3) Run the Playwright test (set E2E_FULL_AUTH so the spec doesn't auto-skip). You can run a single spec locally:
+
+```powershell
+$env:E2E_FULL_AUTH = 'true'
+# Run the specific onboarding->hub spec in Chromium
+npx playwright test e2e/onboarding.ui-and-hub.spec.ts --project=chromium -g "onboarding: shows"
+```
+
+Notes & tips:
+- The spec will attempt to detect the company in the Owner Hub UI; if it's not present (backend did not auto-create it during onboarding), the test will call the backend test helper `POST /api/test/create-company` to deterministically create the company and re-check the UI.
+- If you prefer a strict assertion that a Company row must exist server-side, set `E2E_ASSERT_COMPANY=true` in the environment when running the tests in CI.
+- Ensure the backend exposes the necessary `/api/test/*` endpoints (OTP retrieval, create-company, delete-user, delete-company) for tests to operate deterministically.
+- If a Playwright spec is skipped locally, check that `E2E_FULL_AUTH` is set and that your backend test endpoints are reachable at `http://127.0.0.1:4000`.
+
 Notes:
 - The test environment uses deterministic seed data so most tests are reproducible. If a test needs a special dataset, see the `src/mock` folder.
 
