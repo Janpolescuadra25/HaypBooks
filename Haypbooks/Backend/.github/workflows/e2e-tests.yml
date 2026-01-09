@@ -52,10 +52,16 @@ jobs:
         working-directory: ./Haypbooks/Backend
         env:
           DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
-          run: | 
+        run: |
           npm run migrate:init
           node ./scripts/migrate/run-sql.js
           npm run db:seed:dev
+
+      - name: Verify subscription schema
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+        run: npm run db:verify:subscription-schema
 
       - name: Run e2e tests
         working-directory: ./Haypbooks/Backend
