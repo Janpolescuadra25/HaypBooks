@@ -192,12 +192,23 @@ export class CompanyRepository {
       const tenant = await this.prisma.tenant.findUnique({ where: { id: data.tenantId } })
       if (tenant && !tenant.trialUsed) {
         const trialEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        await this.prisma.$transaction([
-          this.prisma.subscription.create({ data: { tenantId: tenant.id, companyId: company.id, plan: 'FREE', status: 'TRIAL' } }),
-          this.prisma.tenant.update({ where: { id: tenant.id }, data: { trialEndsAt: trialEnds, trialUsed: true } }),
-        ])
-        // eslint-disable-next-line no-console
-        console.info('[COMPANY-CHILD-CREATE] Activated trial for tenant', { tenantId: tenant.id, trialEnds })
+        // Best-effort: ensure a subscription exists; handle races gracefully
+        try {
+          await this.ensureSubscriptionForCompany(tenant.id, company.id, { tenantId: tenant.id, companyId: company.id, plan: 'FREE', status: 'TRIAL' })
+        } catch (e) {
+          // Log and continue; subscription race or DB error should not block onboarding
+          // eslint-disable-next-line no-console
+          console.error('[COMPANY-CHILD-CREATE] Subscription create check failed (non-fatal):', e?.message || e)
+        }
+
+        try {
+          await this.prisma.tenant.update({ where: { id: tenant.id }, data: { trialEndsAt: trialEnds, trialUsed: true } })
+          // eslint-disable-next-line no-console
+          console.info('[COMPANY-CHILD-CREATE] Activated trial for tenant', { tenantId: tenant.id, trialEnds })
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('[COMPANY-CHILD-CREATE] Failed to mark tenant trialUsed (non-fatal):', e?.message || e)
+        }
       }
     } catch (e) {
       // best-effort only
@@ -206,6 +217,33 @@ export class CompanyRepository {
     }
 
     return company
+  }
+
+  async ensureSubscriptionForCompany(tenantId: string, companyId: string, data: any) {
+    if (!companyId) throw new Error('companyId required')
+
+    // Check for existing subscription first
+    try {
+      const existing = await this.prisma.subscription.findUnique({ where: { companyId } })
+      if (existing) return existing
+
+      // Attempt to create; if a race occurs (unique constraint), fetch and return existing
+      try {
+        const created = await this.prisma.subscription.create({ data })
+        return created
+      } catch (ce) {
+        // Prisma unique violation code
+        const code = (ce && (ce.code || ce?.meta?.code)) as string | undefined
+        if (code === 'P2002') {
+          const existingAfterRace = await this.prisma.subscription.findUnique({ where: { companyId } })
+          if (existingAfterRace) return existingAfterRace
+        }
+        throw ce
+      }
+    } catch (e) {
+      // Re-throw for caller to decide (best-effort usage will catch)
+      throw e
+    }
   }
 
   // Accept a pending TenantInvite for a user: create TenantUser and mark invite accepted

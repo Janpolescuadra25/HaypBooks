@@ -18,6 +18,7 @@ describe('CompanyRepository.createCompanyRecord', () => {
     const company = { id: 'c1', tenantId: 't1', name: 'ChildCo' }
     mockPrisma.company.create.mockResolvedValueOnce(company)
     mockPrisma.tenant.findUnique.mockResolvedValueOnce({ id: 't1', trialUsed: false })
+    mockPrisma.subscription.findUnique = jest.fn().mockResolvedValueOnce(null)
     mockPrisma.subscription.create.mockResolvedValueOnce({ id: 's1' })
     mockPrisma.tenant.update.mockResolvedValueOnce({ id: 't1', trialUsed: true })
 
