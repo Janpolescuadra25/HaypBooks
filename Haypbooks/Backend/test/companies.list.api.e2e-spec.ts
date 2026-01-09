@@ -39,8 +39,8 @@ describe('Companies list API (e2e)', () => {
     // Create a new tenant and link demo user as owner
     const tenantId = require('crypto').randomUUID()
     const sub = `owned-${Math.random().toString(36).slice(2,6)}`
-    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}, ${'Owned Tenant'}, ${sub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
-    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt") VALUES (${tenantId}, ${demoUser!.id}, ${'OWNER'}, ${true}, now()) ON CONFLICT ("tenantId","userId") DO NOTHING`
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Owned Tenant'}, ${sub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt") VALUES (${tenantId}::uuid, ${demoUser!.id}, ${'OWNER'}, ${true}, now()) ON CONFLICT ("tenantId","userId") DO NOTHING`
 
     const res = await request(app.getHttpServer()).get('/api/companies?filter=owned').set('Authorization', `Bearer ${token}`).expect(200)
     expect(Array.isArray(res.body)).toBe(true)
@@ -59,12 +59,14 @@ describe('Companies list API (e2e)', () => {
     // Create a tenant and an invite for demo@haypbooks.test
     const tenantId = require('crypto').randomUUID()
     const sub = `invited-${Math.random().toString(36).slice(2,6)}`
-    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}, ${'Invited Tenant'}, ${sub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Invited Tenant'}, ${sub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
     const inviteId = require('crypto').randomUUID()
     // Ensure invitedBy references a seeded user instead of 'system' to satisfy FK constraints
     const inviter = await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
     const inviterId = inviter ? inviter.id : null
-    await prisma.$executeRaw`INSERT INTO public."TenantInvite" ("id","tenantId","email","invitedBy","invitedAt","status") VALUES (${inviteId}, ${tenantId}, ${'demo@haypbooks.test'}, ${inviterId}, now(), ${'PENDING'}) ON CONFLICT ("tenantId","email") DO NOTHING`
+    // Ensure unique index exists so ON CONFLICT (tenantId,email) works in tests
+    await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "TenantInvite_tenantId_email_uq" ON public."TenantInvite" ("tenantId","email")`
+    await prisma.$executeRaw`INSERT INTO public."TenantInvite" ("id","tenantId","email","invitedBy","invitedAt","status") VALUES (${inviteId}, ${tenantId}::uuid, ${'demo@haypbooks.test'}, ${inviterId}, now(), ${'PENDING'}) ON CONFLICT ("tenantId","email") DO NOTHING`
 
     const res = await request(app.getHttpServer()).get('/api/companies?filter=invited').set('Authorization', `Bearer ${token}`).expect(200)
     expect(Array.isArray(res.body)).toBe(true)

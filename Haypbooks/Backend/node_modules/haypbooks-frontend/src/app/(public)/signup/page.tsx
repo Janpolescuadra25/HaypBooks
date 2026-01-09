@@ -128,7 +128,8 @@ export default function SignupPage() {
       const codeParam = firstOtp ? `&code=${encodeURIComponent(firstOtp)}` : ''
       const phoneParam = payload.phone ? `&phone=${encodeURIComponent(payload.phone)}` : ''
       const tokenParam = `&signupToken=${encodeURIComponent(pre.signupToken)}`
-      location.href = `/verify-otp?email=${emailParam}&flow=signup${roleParam}${phoneParam}${codeParam}${tokenParam}`
+      // Use router.push so tests can mock navigation (avoids jsdom navigation errors)
+      router.push(`/verify-otp?email=${emailParam}&flow=signup${roleParam}${phoneParam}${codeParam}${tokenParam}`)
       return
     } catch (e: any) {
       const status = e?.response?.status
@@ -166,7 +167,7 @@ export default function SignupPage() {
                   data-testid="signup-role-business"
                   aria-pressed={role === 'business'}
                   onClick={() => { setRole('business'); setStep('form') }}
-                  className={`option-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-102 hover:-translate-y-0.5 hover:shadow-sm hover:border-emerald-600 hover:ring-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'business' ? 'bg-emerald-50 shadow-sm breatheRole border-emerald-500' : ''}`}
+className={`option-card text-center p-3 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-102 hover:-translate-y-0.5 hover:shadow-sm hover:border-emerald-600 hover:ring-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'business' ? 'bg-emerald-50 shadow-sm breatheRole border-emerald-500' : ''}` }
                 >
                   <div className="font-medium">My Business</div>
                   <div className="text-sm text-slate-500">I’m the owner running and managing my business</div>
@@ -177,7 +178,7 @@ export default function SignupPage() {
                   data-testid="signup-role-accountant"
                   aria-pressed={role === 'accountant'}
                   onClick={() => { setRole('accountant'); setStep('form') }}
-                  className={`option-card text-left p-4 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-105 hover:-translate-y-1 hover:shadow-md hover:border-emerald-600 hover:ring-4 hover:ring-emerald-100 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'accountant' ? 'bg-teal-50 shadow-md breatheRole border-emerald-500' : ''}`}
+className={`option-card text-center p-4 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-105 hover:-translate-y-1 hover:shadow-md hover:border-emerald-600 hover:ring-4 hover:ring-emerald-100 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'accountant' ? 'bg-teal-50 shadow-md breatheRole border-emerald-500' : ''}` }
                 >
                   <div className="font-medium">Accountant</div>
                   <div className="text-sm text-slate-500">I support clients by managing their accounts</div>
@@ -255,12 +256,12 @@ export default function SignupPage() {
               </label>
               <div className="flex gap-0 items-stretch">
                 <select {...register('phoneCountry')} defaultValue="PH" aria-label="Country code" className="w-20 h-10 px-2 pr-6 py-2 border border-slate-700 rounded-l-lg bg-white text-sm text-slate-900 text-left" title="+63 Philippines">
-                  <option value="PH">+63 Philippines</option>
-                  <option value="US">+1 United States</option>
-                  <option value="GB">+44 United Kingdom</option>
-                  <option value="AU">+61 Australia</option>
-                  <option value="IN">+91 India</option>
-                  <option value="SG">+65 Singapore</option>
+                  <option value="PH" title="+63 Philippines">+63</option>
+                  <option value="US" title="+1 United States">+1</option>
+                  <option value="GB" title="+44 United Kingdom">+44</option>
+                  <option value="AU" title="+61 Australia">+61</option>
+                  <option value="IN" title="+91 India">+91</option>
+                  <option value="SG" title="+65 Singapore">+65</option>
                 </select>
                 <input
                   id="phone"

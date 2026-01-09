@@ -40,7 +40,7 @@ async function main() {
       const polRes = await client.query(`SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = $1 AND p.polname = 'rls_tenant'`, [t])
       if (polRes.rowCount === 0) {
         try {
-          const policySql = `CREATE POLICY rls_tenant ON \"${t}\" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR \"tenantId\" = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR \"tenantId\" = current_setting('haypbooks.tenant_id', true))`
+          const policySql = `CREATE POLICY rls_tenant ON \"${t}\" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR (\"tenantId\")::text = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR (\"tenantId\")::text = current_setting('haypbooks.tenant_id', true))`
           await ensure(client, policySql)
           console.log(`${t}: policy created`)
         } catch (e) { console.log(`${t}: could not create policy - ${e.message}`) }

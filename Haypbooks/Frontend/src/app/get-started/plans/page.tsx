@@ -1,12 +1,44 @@
 "use client"
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import apiClient from '@/lib/api-client'
 
 export default function GetStartedPlansPage() {
   const router = useRouter()
+  const [companyName, setCompanyName] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function persistCompanyAndNavigate(next: string) {
+    setError('')
+    if (!companyName.trim()) { setError('Company name is required'); return }
+    setLoading(true)
+    try {
+      // Persist company name to backend for current user (best-effort)
+      try {
+        await apiClient.patch('/api/users/profile', { companyName: companyName.trim() })
+      } catch (e) {
+        console.warn('Failed to persist companyName to backend', e)
+      }
+
+      // Attempt to create a company server-side so the Owner Hub will show a card immediately.
+      // The server will attach the creating user as owner when authenticated.
+      try {
+        await apiClient.post('/api/companies', { name: companyName.trim() })
+      } catch (e) {
+        // non-fatal: if company creation fails, onboarding completion will still attempt creation server-side
+        console.warn('Failed to create company at Get Started (non-fatal)', e)
+      }
+
+      router.push(next)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   function handleGetStarted() {
     // proceed into the 3-step subscribe flow
-    router.push('/get-started/subscribe')
+    persistCompanyAndNavigate('/get-started/subscribe')
   }
 
   return (
@@ -31,14 +63,14 @@ export default function GetStartedPlansPage() {
 
           <div className="max-w-md mx-auto">
             <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 mb-2">Company name</label>
-            <input id="company-name" type="text" placeholder="e.g., Acme Widgets LLC" className="w-full px-4 py-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90" required />
-            <p className="mt-2 text-xs text-slate-500">This will be the name of the new company you're adding to your HaypBooks account.</p>
+            <input id="company-name" value={companyName} onChange={(e)=>{ setCompanyName(e.target.value); setError('') }} type="text" placeholder="e.g., Acme Widgets LLC" className={`w-full px-4 py-3 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90 ${error ? 'border-red-500' : 'border-slate-300'}`} required aria-required="true" />
+            {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : <p className="mt-2 text-xs text-slate-500">This will be the name of the new company you're adding to your HaypBooks account.</p>}
           </div>
 
           <div className="mt-6">
             <div className="flex items-center justify-center gap-3 flex-col sm:flex-row">
               {/* Primary: Start Free Trial (solid) */}
-              <a href="/get-started/trial" aria-label="Start free trial" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow">Start Free Trial</a>
+              <button onClick={() => persistCompanyAndNavigate('/get-started/trial')} aria-label="Start free trial" disabled={loading} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow">{loading ? 'Saving…' : 'Start Free Trial'}</button>
 
               {/* Secondary: Get Started with Plans (outlined) */}
               <button onClick={handleGetStarted} className="w-full sm:w-auto px-5 py-3 border border-emerald-600 text-emerald-600 rounded-lg text-sm font-semibold bg-white hover:bg-emerald-50">Get Started with Plans</button>

@@ -22,7 +22,8 @@ describe('Accountant API (e2e)', () => {
       class MockAuthGuard implements CanActivate {
         canActivate(context: ExecutionContext) {
           const req = context.switchToHttp().getRequest()
-          req.user = { id: `test-user-${Date.now()}`, token: 'test-token', email: 'test@example.com' }
+          // use UUIDs for IDs now that Tenant.id is a UUID
+          req.user = { id: require('crypto').randomUUID(), token: 'test-token', email: 'test@example.com' }
           return true
         }
       }
@@ -41,7 +42,8 @@ describe('Accountant API (e2e)', () => {
 
   it('/api/accountants/clients (POST) -> creates, GET returns it, DELETE removes', async () => {
     // use the mocked user provided by the guard
-    const fakeUserId = `test-user-${Date.now()}`
+    // IDs must be UUIDs now that Tenant.id is UUID
+    const fakeUserId = require('crypto').randomUUID()
     const client = request(app.getHttpServer())
 
     // ensure a user exists for the fake id so FK constraints pass

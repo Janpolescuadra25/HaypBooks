@@ -38,8 +38,10 @@ describe('LoginPage', () => {
     expect(screen.queryByText(/request timed out/i)).not.toBeInTheDocument()
   })
 
-  test('stores user in localStorage after successful login and redirects', async () => {
+  test('stores user in localStorage after successful login and redirects (or verification when probe indicates)', async () => {
+    // Case A: login returns user and getCurrentUser indicates verified -> hub selection
     (authService.login as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'a@b.com', onboardingCompleted: true } })
+    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ id: 'u1', email: 'a@b.com', isEmailVerified: true, isPhoneVerified: true })
 
     render(<LoginPage />)
 
@@ -54,6 +56,48 @@ describe('LoginPage', () => {
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/selection'))
     expect(localStorage.getItem('user')).toBeTruthy()
+
+    // Case B: login returns user but getCurrentUser probe reports unverified -> verification
+    replaceMock.mockReset()
+    // Some test environments may not have a clear() helper; be defensive
+    if (typeof localStorage.clear === 'function') { localStorage.clear() } else { Object.keys(localStorage).forEach((k) => localStorage.removeItem(k)) }
+    (authService.login as jest.Mock).mockResolvedValueOnce({ user: { id: 'u2', email: 'b@b.com', onboardingCompleted: true } })
+    ;(authService.getCurrentUser as jest.Mock).mockResolvedValueOnce({ id: 'u2', email: 'b@b.com', isEmailVerified: false, isPhoneVerified: false })
+
+    fireEvent.change(emailInput, { target: { value: 'b@b.com' } })
+    fireEvent.change(passInput, { target: { value: 'Pass1!' } })
+    fireEvent.submit(form)
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('from=signin')))
+  })
+
+  test('DEV mode: force redirect to verification when NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN=1', async () => {
+    const original = process.env.NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN
+    try {
+      process.env.NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN = '1'
+    } catch (err) {
+      // Some test harnesses may lock process.env; fall back to defining the property
+      try { Object.defineProperty(process.env, 'NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN', { value: '1', configurable: true }) } catch (e) { /* ignore */ }
+    }
+
+    (authService.login as jest.Mock).mockResolvedValue({ user: { id: 'u3', email: 'dev@b.com', onboardingCompleted: true } })
+
+    render(<LoginPage />)
+
+    const emailInput = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput = screen.getByLabelText(/password/i)
+
+    fireEvent.change(emailInput, { target: { value: 'dev@b.com' } })
+    fireEvent.change(passInput, { target: { value: 'Pass1!' } })
+    const form = document.querySelector('form') as HTMLFormElement
+    fireEvent.submit(form)
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('from=signin')))
+
+    // restore original
+    try { process.env.NEXT_PUBLIC_FORCE_VERIFY_AFTER_SIGNIN = original } catch (e) { /* ignore */ }
   })
 
   test('redirects to /accountant when server suggests it', async () => {
@@ -109,6 +153,7 @@ describe('LoginPage', () => {
     fireEvent.submit(form)
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('from=signin')))
     expect(authService.login).toHaveBeenCalled()
   })
 
@@ -127,6 +172,7 @@ describe('LoginPage', () => {
     fireEvent.submit(form)
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('from=signin')))
     expect(authService.login).toHaveBeenCalled()
   })
 
@@ -150,10 +196,9 @@ describe('LoginPage', () => {
     expect(replaceMock).not.toHaveBeenCalled()
   })
 
-  test('shows resend verification UI when backend indicates account is unverified', async () => {
+  test('redirects to /verification when backend indicates account is unverified', async () => {
     const attemptedEmail = 'notverified@b.com'
     ;(authService.login as jest.Mock).mockRejectedValue({ response: { status: 401, data: { message: 'Please verify your account before logging in' } } })
-    ;(authService as any).sendVerification = jest.fn().mockResolvedValue({ otp: '222222' })
 
     // Also test when the thrown error is a plain Error with the message (some runtimes surface this way)
     ;(authService.login as jest.Mock).mockRejectedValueOnce(new Error('Please verify your account before logging in'))
@@ -166,11 +211,33 @@ describe('LoginPage', () => {
     fireEvent.change(passInput2, { target: { value: 'SomePass!1' } })
     fireEvent.submit(document.querySelector('form') as HTMLFormElement)
 
-    // Wait for the unverified UI to show for this error shape too
-    await waitFor(() => expect(screen.getByText(/Account not verified/i)).toBeInTheDocument())
+    // We expect the login page to navigate to the verification selection screen and include origin
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('from=signin')))
+  })
 
-    // Unmount the previous render before re-rendering to avoid duplicated DOM nodes
-    cleanup()
+  test('redirects to verification when probe returns ambiguous verification state (missing phone)', async () => {
+    (authService.login as jest.Mock).mockResolvedValue({ user: { id: 'u7', email: 'amb@b.com', onboardingCompleted: true } })
+    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ id: 'u7', email: 'amb@b.com', isEmailVerified: true })
+
+    render(<LoginPage />)
+
+    const emailInput = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput = screen.getByLabelText(/password/i)
+    const form = document.querySelector('form') as HTMLFormElement
+
+    fireEvent.change(emailInput, { target: { value: 'amb@b.com' } })
+    fireEvent.change(passInput, { target: { value: 'Pass1!' } })
+    fireEvent.submit(form)
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('from=signin')))
+  })
+
+  test('redirects to /verification when backend message uses "confirm" wording', async () => {
+    const attemptedEmail = 'confirmme@b.com'
+    ;(authService.login as jest.Mock).mockRejectedValue({ response: { status: 401, data: { message: 'Please confirm your account' } } })
+
     render(<LoginPage />)
 
     const emailInput = screen.getByPlaceholderText(/name@company.com/i)
@@ -178,17 +245,32 @@ describe('LoginPage', () => {
 
     fireEvent.change(emailInput, { target: { value: attemptedEmail } })
     fireEvent.change(passInput, { target: { value: 'SomePass!1' } })
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('from=signin')))
+  })
+
+  test('logs when getCurrentUser probe fails and redirects to verification', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+    // set implementations directly to avoid any issues with jest.resetAllMocks
+    ;(authService as any).login = jest.fn().mockResolvedValue({ user: { id: 'probefail', email: 'probe@b.com', onboardingCompleted: true } })
+    ;(authService as any).getCurrentUser = jest.fn().mockRejectedValue(new Error('probe failure'))
+
+    render(<LoginPage />)
+
+    const emailInput = screen.getByPlaceholderText(/name@company.com/i)
+    const passInput = screen.getByLabelText(/password/i)
+
+    fireEvent.change(emailInput, { target: { value: 'probe@b.com' } })
+    fireEvent.change(passInput, { target: { value: 'Pass1!' } })
     const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
 
-    // Wait for the unverified UI to show
-    await waitFor(() => expect(screen.getByText(/Account not verified/i)).toBeInTheDocument())
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('/verification')))
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[login] getCurrentUser probe failed'))
 
-    const resendBtn = screen.getByRole('button', { name: /Resend verification/i })
-    fireEvent.click(resendBtn)
-
-    await waitFor(() => expect((authService as any).sendVerification).toHaveBeenCalledWith(attemptedEmail))
-    // And the dev OTP info should be shown in the UI
-    await waitFor(() => expect(screen.getByText(/Dev code: 222222/i)).toBeInTheDocument())
+    warnSpy.mockRestore()
   })
 })

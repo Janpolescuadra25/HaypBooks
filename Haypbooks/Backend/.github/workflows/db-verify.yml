@@ -1,0 +1,60 @@
+name: DB verify
+
+on:
+  pull_request:
+    paths:
+      - 'prisma/**'
+      - 'scripts/db/**'
+      - 'scripts/test/**'
+      - '.github/workflows/**'
+
+jobs:
+  verify-db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: haypbooks_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d haypbooks_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Wait for Postgres
+        run: |
+          for i in {1..10}; do
+            pg_isready -h localhost -p 5432 -U postgres -d haypbooks_test && break || sleep 3
+          done
+      - name: Run test DB setup (recreate)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/haypbooks_test
+        run: node ./scripts/test/setup-test-db.js --recreate
+      - name: Verify onboarding columns
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/haypbooks_test
+        run: node ./scripts/db/verify-onboarding-columns.js
+      - name: Check for unvalidated constraints
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/haypbooks_test
+          TS_NODE_TRANSPILE_ONLY: 'true'
+        run: npx ts-node scripts/db/check-unvalidated-constraints.ts
+
+      - name: Run DB integrity checks
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/haypbooks_test
+          STRICT_DB_INTEGRITY: 'true'
+          TS_NODE_TRANSPILE_ONLY: 'true'
+        run: npx ts-node scripts/db/integrity-checks.ts

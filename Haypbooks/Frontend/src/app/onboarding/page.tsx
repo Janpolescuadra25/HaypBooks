@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef, useImperativeHandle } from 'react'
 import BusinessStepComponent from '@/components/Onboarding/BusinessStep'
+import ProductsServicesPage from '@/components/CompanySetup/ProductsServicesPage'
 import apiClient from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ToastProvider'
 
 type BusinessDetails = {
   companyName?: string
@@ -31,7 +33,6 @@ const STEPS = [
   'Tax',
   'Branding',
   'Banking',
-  'Opening balances',
   'Review',
 ]
 
@@ -40,6 +41,9 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [snapshot, setSnapshot] = useState<OnboardingSnapshot>({})
+  const stepRef = useRef<any>(null)
+  const [savingStep, setSavingStep] = useState(false)
+  const STEP_KEYS = ['business','sells','fiscal','tax','branding','banking']
 
   useEffect(() => {
     // load any saved progress
@@ -85,17 +89,53 @@ export default function OnboardingPage() {
     }
   }
 
+  const { push } = useToast()
+
   async function completeOnboarding() {
     setLoading(true)
     try {
+      // We'll capture the server response payload so we can use the created company (if any)
+      let resJson: any = null
       if (USE_MOCK) {
-        const res = await fetch('/api/onboarding/complete', { method: 'POST', body: JSON.stringify({ type: 'full' }), headers: { 'Content-Type': 'application/json' } })
-        if (!res.ok) throw new Error('complete failed')
+        const r = await fetch('/api/onboarding/complete', { method: 'POST', body: JSON.stringify({ type: 'full' }), headers: { 'Content-Type': 'application/json' } })
+        if (!r.ok) throw new Error('complete failed')
+        resJson = await r.json().catch(() => null)
       } else {
-        const res = await apiClient.post('/api/onboarding/complete', { type: 'full', hub: 'OWNER' })
-        if (!(res.status >= 200 && res.status < 300)) throw new Error('complete failed')
+        const r = await apiClient.post('/api/onboarding/complete', { type: 'full', hub: 'OWNER' })
+        if (!(r.status >= 200 && r.status < 300)) throw new Error('complete failed')
+        resJson = r.data || null
       }
-      router.push('/dashboard')
+
+      // Show a short success toast indicating the company was created (use snapshot data if available)
+      try {
+        const companyName = resJson?.company?.name || (snapshot as any)?.business?.companyName
+        if (companyName) {
+          push({ type: 'success', message: `Your company ${companyName} was created` })
+          // Give users a short moment to see the toast before navigating away
+          await new Promise((res) => setTimeout(res, 450))
+        }
+      } catch (e) {
+        // non-fatal
+      }
+
+      // If the backend returned the created company, poll the Owner Hub until it appears (for determinism in E2E/local runs)
+      try {
+        const created = resJson?.company
+        const targetName = created?.name || (snapshot as any)?.business?.companyName
+
+        if (targetName) {
+          const found = await waitForCompanyInHub(targetName, 5000)
+          if (!found) {
+            // Non-fatal: warn that the company wasn't visible within timeout
+            push({ type: 'warning', message: `Created ${targetName} but it didn't show in your Hub right away — you can refresh the Hub.` })
+          }
+        }
+      } catch (e) {
+        // ignore polling errors
+      }
+
+      // Navigate to the Owner Hub so the user sees their company card
+      router.push('/hub/companies')
     } catch (err) {
       console.error(err)
       // If the backend call failed (could be 401 due to cookie SameSite in cross-origin dev),
@@ -140,6 +180,25 @@ export default function OnboardingPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Poll /api/companies?filter=owned until a matching company name appears or timeout
+  async function waitForCompanyInHub(name: string, timeoutMs: number = 5000) {
+    if (!name) return false
+    const start = Date.now()
+    const lower = name.toLowerCase()
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const r = await apiClient.get('/api/companies?filter=owned')
+        const list = Array.isArray(r.data) ? r.data : (r.data && r.data.companies) ? r.data.companies : []
+        const found = list.find((c: any) => (c.name || '').toLowerCase() === lower || (c.name || '').toLowerCase().includes(lower))
+        if (found) return true
+      } catch (e) {
+        // ignore and retry
+      }
+      await new Promise((res) => setTimeout(res, 300))
+    }
+    return false
   }
 
   return (
@@ -198,27 +257,24 @@ export default function OnboardingPage() {
         {/* Body */}
         <div className="mb-6">
           {step === 0 && (
-            <BusinessStepComponent initial={snapshot.business} onSave={(d) => saveStep('business', d)} />
+            <BusinessStepComponent ref={stepRef} initial={snapshot.business} onSave={(d) => saveStep('business', d)} />
           )}
           {step === 1 && (
-            <ProductsStep data={snapshot.sells} onSave={(d) => saveStep('sells', d)} />
+            <ProductsServicesPage ref={stepRef} initial={snapshot.sells} />
           )}
           {step === 2 && (
-            <FiscalStep data={snapshot.fiscal} onSave={(d) => saveStep('fiscal', d)} />
+            <FiscalStep ref={stepRef} data={snapshot.fiscal} onSave={(d) => saveStep('fiscal', d)} />
           )}
           {step === 3 && (
-            <TaxStep data={snapshot.tax} onSave={(d) => saveStep('tax', d)} />
+            <TaxStep ref={stepRef} data={snapshot.tax} fiscal={snapshot.fiscal} onSave={(d) => saveStep('tax', d)} />
           )}
           {step === 4 && (
-            <BrandingStep data={snapshot.branding} onSave={(d) => saveStep('branding', d)} />
+            <BrandingStep ref={stepRef} data={snapshot.branding} onSave={(d) => saveStep('branding', d)} />
           )}
           {step === 5 && (
-            <BankingStep data={snapshot.banking} onSave={(d) => saveStep('banking', d)} />
+            <BankingStep ref={stepRef} data={snapshot.banking} onSave={(d) => saveStep('banking', d)} />
           )}
           {step === 6 && (
-            <OpeningBalancesStep data={snapshot.openingBalances} onSave={(d) => saveStep('openingBalances', d)} />
-          )}
-          {step === 7 && (
             <ReviewStep snapshot={snapshot} onEdit={(idx) => setStep(idx)} />
           )}
         </div>
@@ -235,26 +291,44 @@ export default function OnboardingPage() {
               </svg>
               Back
             </button>
-            {step < STEPS.length-1 && (
-              <button 
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" 
-                onClick={() => setStep((s) => Math.min(STEPS.length-1, s+1))}
-              >
-                Next
-                <svg className="w-4 h-4 inline ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-            )}
           </div>
 
           <div className="flex items-center gap-3">
             <button 
-              className="px-4 py-2 rounded-xl border border-slate-300 text-sm text-slate-600 font-medium hover:bg-slate-50 transition-all" 
+              className={`px-4 py-2 rounded-xl border ${step === 3 ? 'border-emerald-300 text-emerald-700 font-semibold bg-emerald-50' : 'border-slate-300 text-slate-600'} text-sm hover:bg-slate-50 transition-all`} 
               onClick={skipOnboarding}
             >
               Skip for now
             </button>
+            {step < STEPS.length - 1 ? (
+              <button 
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={async () => {
+                  // Save current step then advance
+                  setSavingStep(true)
+                  try {
+                    const key = STEP_KEYS[step]
+                    let data: any = null
+                    if (stepRef.current && typeof stepRef.current.getData === 'function') {
+                      data = stepRef.current.getData()
+                    } else {
+                      // fallback to snapshot value
+                      data = (step === 0 ? snapshot.business : step === 1 ? snapshot.sells : step === 2 ? snapshot.fiscal : step === 3 ? snapshot.tax : step === 4 ? snapshot.branding : step === 5 ? snapshot.banking : {})
+                    }
+                    await saveStep(key, data)
+                    setStep((s) => Math.min(STEPS.length - 1, s + 1))
+                  } catch (err) {
+                    console.error(err)
+                    alert('Failed to save this step')
+                  } finally {
+                    setSavingStep(false)
+                  }
+                }}
+                disabled={savingStep}
+              >
+                {savingStep ? 'Saving…' : 'Save and continue'}
+              </button>
+            ) : null}
             {step === STEPS.length - 1 ? (
               <button 
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.98]" 
@@ -278,15 +352,7 @@ export default function OnboardingPage() {
                   </span>
                 )}
               </button>
-            ) : (
-              <button 
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.98]" 
-                disabled={loading} 
-                onClick={() => { setStep((s) => Math.min(STEPS.length-1, s+1)) }}
-              >
-                {loading ? 'Saving…' : 'Save & Continue'}
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -314,62 +380,33 @@ export default function OnboardingPage() {
   )
 }
 
-// Business step extracted to components/Onboarding/BusinessStep.tsx
 
-function ProductsStep({ data, onSave }: { data?: any, onSave: (d: any) => void }) {
-  const [state, setState] = useState({ sellsProducts: false, inventory: false, sellsServices: true, both: false })
-  useEffect(()=>{ if (data) setState({ ...state, ...data }) }, [])
-  return (
-    <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">What does your business sell?</h3>
-      <div className="flex flex-wrap gap-4 mb-6">
-        <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-300 hover:border-emerald-500 cursor-pointer transition-all bg-white">
-          <input type="checkbox" checked={state.sellsServices} onChange={(e)=>setState({...state, sellsServices: e.target.checked})} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
-          <span className="font-medium text-slate-700">Services</span>
-        </label>
-        <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-300 hover:border-emerald-500 cursor-pointer transition-all bg-white">
-          <input type="checkbox" checked={state.sellsProducts} onChange={(e)=>setState({...state, sellsProducts: e.target.checked})} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
-          <span className="font-medium text-slate-700">Products</span>
-        </label>
-        <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-300 hover:border-emerald-500 cursor-pointer transition-all bg-white">
-          <input type="checkbox" checked={state.inventory} onChange={(e)=>setState({...state, inventory: e.target.checked})} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
-          <span className="font-medium text-slate-700">Track inventory</span>
-        </label>
-      </div>
-      <div className="flex justify-end">
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={()=>onSave(state)}>
-          Save step
-        </button>
-      </div>
-    </div>
-  )
-}
 
-function FiscalStep({ data, onSave }: { data?: any, onSave: (d: any) => void }) {
-  const [form, setForm] = useState({ fiscalStart: 'Jan', accountingMethod: 'accrual', currency: 'USD' })
+const FiscalStep = React.forwardRef(function FiscalStep({ data, onSave }: { data?: any, onSave: (d: any) => void }, ref) {
+  const [form, setForm] = useState({ fiscalStart: 'Apr', accountingMethod: 'accrual', currency: 'USD' })
   useEffect(()=>{ if(data) setForm({...form, ...data}) }, [])
+
+  React.useImperativeHandle(ref, () => ({ getData: () => ({ ...form }) }))
+
   return (
     <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Fiscal & Accounting Setup</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-2">Fiscal & Accounting Setup</h3>
+      <p className="text-sm text-slate-500 mb-4">Define your financial period and accounting methodology. These settings are foundational for your <strong>Tax Compliance</strong> and <strong>Financial Reporting</strong>.</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 items-start">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Fiscal year starts</label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Fiscal Year Start Month</label>
           <select aria-label="Fiscal year start" value={form.fiscalStart} onChange={(e)=>setForm({...form, fiscalStart: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white">
             <option>Jan</option>
             <option>Apr</option>
             <option>Jul</option>
             <option>Oct</option>
           </select>
+          <div className="text-xs text-slate-400 mt-2">Most businesses follow the calendar year (January), but some industries use non-calendar years.</div>
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Accounting method</label>
-          <select aria-label="Accounting method" value={form.accountingMethod} onChange={(e)=>setForm({...form, accountingMethod: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white">
-            <option value="accrual">Accrual</option>
-            <option value="cash">Cash</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Currency</label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Default Currency</label>
           <select aria-label="Default currency" value={form.currency} onChange={(e)=>setForm({...form, currency: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white">
             <option>USD</option>
             <option>PHP</option>
@@ -377,53 +414,175 @@ function FiscalStep({ data, onSave }: { data?: any, onSave: (d: any) => void }) 
           </select>
         </div>
       </div>
-      <div className="flex justify-end">
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={()=>onSave(form)}>
-          Save step
-        </button>
+
+      <div className="mt-4">
+        <div className="mb-3 text-sm font-medium text-slate-700">Primary Accounting Method</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button onClick={()=>setForm({...form, accountingMethod: 'accrual'})} aria-pressed={form.accountingMethod === 'accrual'} className={`relative text-left p-6 rounded-2xl border ${form.accountingMethod === 'accrual' ? 'border-emerald-400 bg-emerald-50 shadow-lg' : 'border-slate-100 bg-white'} transition-all` }>
+            {form.accountingMethod === 'accrual' && (
+              <span className="absolute -top-3 -right-3 bg-white rounded-full p-1 border border-emerald-200 shadow">
+                <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+              </span>
+            )}
+            <div className="font-semibold text-lg">Accrual Basis</div>
+            <div className="text-sm text-slate-500 mt-2">Record income when earned and expenses when incurred, regardless of cash flow. <span className="underline">Recommended for most businesses.</span></div>
+          </button>
+
+          <button onClick={()=>setForm({...form, accountingMethod: 'cash'})} aria-pressed={form.accountingMethod === 'cash'} className={`relative text-left p-6 rounded-2xl border ${form.accountingMethod === 'cash' ? 'border-emerald-400 bg-emerald-50 shadow-lg' : 'border-slate-100 bg-white'} transition-all` }>
+            {form.accountingMethod === 'cash' && (
+              <span className="absolute -top-3 -right-3 bg-white rounded-full p-1 border border-emerald-200 shadow">
+                <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+              </span>
+            )}
+            <div className="font-semibold text-lg">Cash Basis</div>
+            <div className="text-sm text-slate-500 mt-2">Record income when cash is received and expenses when they are paid. Simpler for very small businesses with no inventory.</div>
+          </button>
+        </div>
       </div>
     </div>
   )
-}
+})
 
-function TaxStep({ data, onSave }: { data?: any, onSave: (d: any) => void }) {
-  const [form, setForm] = useState({ taxType: 'VAT', taxRate: 12, inclusive: false })
-  useEffect(()=>{ if(data) setForm({...form, ...data}) }, [])
+const TaxStep = React.forwardRef(function TaxStep({ data, fiscal, onSave }: { data?: any, fiscal?: any, onSave: (d: any) => void }, ref) {
+  // PH-friendly defaults: Collect VAT ON by default, Quarterly filing when collecting VAT, default VAT rate 12%
+  const initial = {
+    tin: '',
+    filingFrequency: 'quarterly',
+    collectTax: true,
+    taxExempt: false,
+    taxRate: 12,
+    inclusive: false,
+  }
+
+  const [form, setForm] = useState(initial)
+
+  useEffect(()=>{
+    // merge incoming saved data
+    if (data) setForm((f) => ({ ...f, ...data }))
+
+    // auto-detect from fiscal/currency if available (e.g., PHP -> PH defaults)
+    if (fiscal && typeof fiscal.currency === 'string') {
+      if (fiscal.currency === 'PHP') {
+        setForm((f) => ({ ...f, collectTax: true, filingFrequency: 'quarterly', taxRate: 12 }))
+      }
+    }
+
+    // try best-effort by locale detection (client-side)
+    try {
+      const lang = navigator?.language || ''
+      if (lang.toLowerCase().includes('ph')) {
+        setForm((f) => ({ ...f, collectTax: true, filingFrequency: 'quarterly', taxRate: 12 }))
+      }
+    } catch (e) {
+      // ignore in server / test env
+    }
+  }, [])
+
+  React.useImperativeHandle(ref, () => ({ getData: () => ({ ...form }) }))
+
   return (
     <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Tax Configuration</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">Tax Setup</h3>
+      <p className="text-sm text-slate-500 mb-4">Quickly set up sales tax or VAT so Haypbooks calculates, tracks, and reminds you about filing deadlines.</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Tax type</label>
-          <select aria-label="Tax type" value={form.taxType} onChange={(e)=>setForm({...form, taxType: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white">
-            <option>VAT</option>
-            <option>GST</option>
-            <option>No tax</option>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Tax Identification Number (TIN)</label>
+          <input aria-label="Tax Identification Number" placeholder="e.g. 123-456-789-000" value={form.tin} onChange={(e)=>setForm({...form, tin: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" />
+          <div className="text-xs text-slate-400 mt-2">Your primary tax registration identifier for government filings. <span className="font-medium">Required for VAT-registered businesses — you can add it later if starting small.</span></div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Sales Tax Filing Frequency</label>
+          <select aria-label="Sales tax filing frequency" value={form.filingFrequency} onChange={(e)=>setForm({...form, filingFrequency: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white">
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
           </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Default tax rate (%)</label>
-          <input value={String(form.taxRate)} onChange={(e)=>setForm({...form, taxRate: Number(e.target.value)})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="Default tax rate" />
-        </div>
-        <div className="flex items-end">
-          <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-300 hover:border-emerald-500 cursor-pointer transition-all bg-white">
-            <input type="checkbox" checked={form.inclusive} onChange={(e)=>setForm({...form, inclusive: e.target.checked})} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
-            <span className="font-medium text-slate-700">Tax inclusive</span>
-          </label>
+          <div className="text-xs text-slate-400 mt-2">Default is <span className="font-medium">Quarterly</span> when collecting VAT (common for VAT-registered businesses in the Philippines).</div>
         </div>
       </div>
-      <div className="flex justify-end">
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={()=>onSave(form)}>
-          Save step
-        </button>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className={`rounded-2xl p-5 border ${form.collectTax ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-white'}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="font-semibold flex items-center gap-2">Collect Sales Tax / VAT <span className="text-xs bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">Recommended</span></div>
+              <div className="text-sm text-slate-500 mt-2">Automatically calculate and track tax on your invoices. Recommended for registered businesses.</div>
+              {form.collectTax && (
+                <div className="text-xs text-slate-500 mt-3">
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium">Default VAT rate:</div>
+                    <div className="text-sm text-slate-700">{form.taxRate ?? 12}%</div>
+                    <label className="ml-4 inline-flex items-center gap-2 text-sm text-slate-500">
+                      <input type="checkbox" aria-label="Tax inclusive pricing" checked={form.inclusive} onChange={(e)=>setForm({...form, inclusive: e.target.checked})} className="w-4 h-4" />
+                      <span>Prices include tax</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" aria-label="Collect Sales Tax" checked={form.collectTax} onChange={(e)=>setForm({...form, collectTax: e.target.checked, filingFrequency: e.target.checked ? 'quarterly' : 'monthly'})} className="sr-only" />
+                <span className={`w-11 h-6 rounded-full inline-flex items-center p-0.5 ${form.collectTax ? 'bg-emerald-600' : 'bg-slate-200'}`} aria-hidden>
+                  <span className={`${form.collectTax ? 'ml-auto' : 'ml-0'} w-5 h-5 bg-white rounded-full shadow transition-all`} />
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className={`rounded-2xl p-5 border ${form.taxExempt ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-white'}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="font-semibold">Tax Exempt Status</div>
+              <div className="text-sm text-slate-500 mt-2">For non-profits or specific industry categories that are not required to pay or collect standard taxes.</div>
+              <div className="text-xs text-slate-400 mt-2">Keep this OFF unless your business is legally tax-exempt.</div>
+            </div>
+            <div>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" aria-label="Tax Exempt Status" checked={form.taxExempt} onChange={(e)=>setForm({...form, taxExempt: e.target.checked})} className="sr-only" />
+                <span className={`w-11 h-6 rounded-full inline-flex items-center p-0.5 ${form.taxExempt ? 'bg-emerald-600' : 'bg-slate-200'}`} aria-hidden>
+                  <span className={`${form.taxExempt ? 'ml-auto' : 'ml-0'} w-5 h-5 bg-white rounded-full shadow transition-all`} />
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-white p-6 border border-slate-100">
+        <div className="flex items-start gap-4">
+          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m0-4h.01"/></svg>
+          </div>
+          <div className="text-sm text-slate-700">
+            <div className="font-semibold mb-2">Why this matters</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-500">
+              <div>
+                <div className="font-medium">Automatic Reports</div>
+                <div className="text-xs text-slate-400 mt-1">Haypbooks generates quarterly VAT/Sales tax reports so you don't have to calculate them manually.</div>
+              </div>
+              <div>
+                <div className="font-medium">Compliance Guard</div>
+                <div className="text-xs text-slate-400 mt-1">We'll alert you <span title="Reminders 5 days before BIR deadlines">5 days before your filing deadline</span> based on your country's fiscal calendar.</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
-}
+})
 
-function BrandingStep({ data, onSave }: { data?: any, onSave: (d: any) => void }) {
+export { FiscalStep, TaxStep, BankingStep }
+
+const BrandingStep = React.forwardRef(function BrandingStep({ data, onSave }: { data?: any, onSave: (d: any) => void }, ref) {
   const [form, setForm] = useState({ logo: '', invoicePrefix: 'HYP-', paymentTerms: 'Net 30' })
   useEffect(()=>{ if(data) setForm({...form, ...data}) }, [])
+
+  React.useImperativeHandle(ref, () => ({ getData: () => ({ ...form }) }))
+
   return (
     <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
       <h3 className="text-lg font-semibold text-slate-900 mb-4">Branding & Defaults</h3>
@@ -441,92 +600,265 @@ function BrandingStep({ data, onSave }: { data?: any, onSave: (d: any) => void }
           <input value={form.paymentTerms} onChange={(e)=>setForm({...form, paymentTerms: e.target.value})} placeholder="Net 30" className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" />
         </div>
       </div>
-      <div className="flex justify-end">
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={()=>onSave(form)}>
-          Save step
-        </button>
-      </div>
     </div>
   )
-}
+})
 
-function BankingStep({ data, onSave }: { data?: any, onSave: (d: any) => void }) {
-  const [form, setForm] = useState({ acceptsBank: true, acceptsCash: true, accounts: [] as any[] })
+const BankingStep = React.forwardRef(function BankingStep({ data, onSave }: { data?: any, onSave: (d: any) => void }, ref) {
+  const [form, setForm] = useState({ acceptsBank: true, acceptsCash: true, accounts: (data?.accounts ?? []) as any[] , automatedFeeds: true })
   useEffect(()=>{ if(data) setForm({...form, ...data}) }, [])
+
+  React.useImperativeHandle(ref, () => ({ getData: () => ({ ...form }) }))
+
   return (
     <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Payment Methods</h3>
-      <div className="flex flex-wrap gap-4 mb-6">
-        <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-300 hover:border-emerald-500 cursor-pointer transition-all bg-white">
-          <input type="checkbox" checked={form.acceptsBank} onChange={(e)=>setForm({...form, acceptsBank: e.target.checked})} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
-          <span className="font-medium text-slate-700">Bank payments</span>
-        </label>
-        <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-300 hover:border-emerald-500 cursor-pointer transition-all bg-white">
-          <input type="checkbox" checked={form.acceptsCash} onChange={(e)=>setForm({...form, acceptsCash: e.target.checked})} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
-          <span className="font-medium text-slate-700">Cash payments</span>
-        </label>
-      </div>
-      <div className="flex justify-end">
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={()=>onSave(form)}>
-          Save step
-        </button>
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">Banking & Bank Feeds</h3>
+      <p className="text-sm text-slate-500 mb-6">Securely connect your bank accounts to automate transaction fetching. This eliminates manual data entry and keeps your books up-to-date.</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button aria-label="Connect Bank Account" onClick={()=>{/* placeholder for connect flow */}} className="text-left p-6 rounded-2xl border-2 border-emerald-300 bg-white shadow-sm hover:shadow-lg transition-all">
+            <div className="inline-flex items-center justify-start gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12h18M3 6h18M3 18h18"/></svg>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900">Connect Bank Account</div>
+                <div className="text-xs text-slate-500 mt-1">Link via secure portal (BPI, BDO, Metrobank, etc.) for automated daily sync.</div>
+                <div className="text-xs text-emerald-600 mt-2 font-medium">SECURED BY BANK-GRADE ENCRYPTION</div>
+              </div>
+            </div>
+          </button>
+
+          <button aria-label="Add Account Manually" onClick={()=>setForm((f)=>({ ...f, accounts: [...f.accounts, { id: Date.now(), name: 'Manual Account', type: 'Checking', last4: '0000', live: false }] }))} className="text-left p-6 rounded-2xl border-2 border-slate-100 bg-white shadow-sm hover:shadow-md transition-all">
+            <div className="inline-flex items-center justify-start gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14M5 12h14"/></svg>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900">Add Manually</div>
+                <div className="text-xs text-slate-500 mt-1">Enter account details manually for accounts that don't support bank feeds. Ideal for petty cash or private banks.</div>
+              </div>
+            </div>
+          </button>
+
+          <div className="md:col-span-2 mt-2 rounded-2xl bg-slate-900 text-white p-6 flex items-center gap-4">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0-1.657 0-3 4-3s4 1.343 4 3v3a4 4 0 01-4 4H8a4 4 0 01-4-4v-3c0-1.657 0-3 4-3s4 1.343 4 3z"/></svg>
+            </div>
+            <div>
+              <div className="font-semibold">Your data is safe with us</div>
+              <div className="text-xs text-slate-200 mt-1">AccuHub uses read-only access to your transactions. We never store your login credentials or have permission to move money.</div>
+            </div>
+          </div>
+        </div>
+
+        <aside className="p-4 rounded-2xl border border-slate-100 bg-white">
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-medium text-slate-700">Added accounts <span className="text-xs text-slate-400">{form.accounts.length} Total</span></div>
+            <div className="text-xs text-slate-400">&nbsp;</div>
+          </div>
+
+          <div className="flex flex-col gap-3 mb-4">
+            {form.accounts.length === 0 ? (
+              <div className="text-xs text-slate-400">No accounts added yet.</div>
+            ) : (
+              form.accounts.map((a:any) => (
+                <div key={a.id} className="p-3 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-slate-50 flex items-center justify-center text-slate-700">🏦</div>
+                    <div>
+                      <div className="font-medium text-slate-700">{a.name} <span className="text-xs text-slate-400">{a.type}</span></div>
+                      <div className="text-xs text-slate-400">**** {a.last4}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-emerald-600 font-medium">{a.live ? 'LIVE' : 'MANUAL'}</div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+            <div className="text-xs text-slate-500">Automated Feeds</div>
+            <label className="inline-flex items-center gap-2">
+              <input aria-label="Automated Feeds" type="checkbox" checked={form.automatedFeeds} onChange={(e)=>setForm({...form, automatedFeeds: e.target.checked})} className="sr-only" />
+              <span className={`w-11 h-6 rounded-full inline-flex items-center p-0.5 ${form.automatedFeeds ? 'bg-emerald-600' : 'bg-slate-200'}`} aria-hidden>
+                <span className={`${form.automatedFeeds ? 'ml-auto' : 'ml-0'} w-5 h-5 bg-white rounded-full shadow transition-all`} />
+              </span>
+            </label>
+          </div>
+        </aside>
       </div>
     </div>
   )
-}
+})
 
-function OpeningBalancesStep({ data, onSave }: { data?: any, onSave: (d: any) => void }) {
-  const [form, setForm] = useState({ cash: 0, bank: 0, ar: 0, ap: 0, equity: 0 })
-  useEffect(()=>{ if(data) setForm({...form, ...data}) }, [])
+
+
+export function ReviewStep({ snapshot, onEdit }: { snapshot: any, onEdit: (idx:number) => void }) {
+  const safe = (v: any, fallback = 'Not specified') => (v === undefined || v === null || v === '' ? fallback : v)
+  const mask = (v: any) => {
+    if (!v) return 'Not specified'
+    const s = String(v)
+    if (s.includes('@')) {
+      const [local, domain] = s.split('@')
+      return `${local[0]}***@${domain}`
+    }
+    if (/^[0-9+\s()-]{6,}$/.test(s)) {
+      return s.replace(/.(?=.{4})/g, '*')
+    }
+    return s
+  }
+
+  const Biz = snapshot?.business || {}
+  const Fiscal = snapshot?.fiscal || {}
+  const Tax = snapshot?.tax || {}
+  const Banking = snapshot?.banking || {}
+  const Sells = snapshot?.sells || {}
+  const Branding = snapshot?.branding || {}
+
   return (
-    <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Opening Balances</h3>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+    <div className="bg-white p-6 rounded-2xl border border-slate-100">
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Cash</label>
-          <input value={String(form.cash)} onChange={(e)=>setForm({...form, cash: Number(e.target.value)})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="0.00" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Bank</label>
-          <input value={String(form.bank)} onChange={(e)=>setForm({...form, bank: Number(e.target.value)})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="0.00" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">A/R</label>
-          <input value={String(form.ar)} onChange={(e)=>setForm({...form, ar: Number(e.target.value)})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="0.00" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">A/P</label>
-          <input value={String(form.ap)} onChange={(e)=>setForm({...form, ap: Number(e.target.value)})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="0.00" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Equity</label>
-          <input value={String(form.equity)} onChange={(e)=>setForm({...form, equity: Number(e.target.value)})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white" placeholder="0.00" />
+          <h2 className="text-2xl font-bold text-slate-900">Configuration Complete</h2>
+          <p className="text-sm text-slate-500 mt-1">Please verify your details before we launch your workspace.</p>
         </div>
       </div>
-      <div className="flex justify-end">
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]" onClick={()=>onSave(form)}>
-          Save step
-        </button>
-      </div>
-    </div>
-  )
-}
 
-function ReviewStep({ snapshot, onEdit }: { snapshot: any, onEdit: (idx:number) => void }) {
-  return (
-    <div className="bg-gradient-to-br from-white to-emerald-50/20 p-6 rounded-2xl border border-emerald-100">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-        <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-        Review your settings
-      </h3>
-      <pre className="bg-slate-100 p-4 rounded-xl max-h-80 overflow-auto mb-6 text-xs font-mono border border-slate-200">{JSON.stringify(snapshot, null, 2)}</pre>
-      <div className="flex flex-wrap gap-3">
-        <button className="px-4 py-2 rounded-xl border-2 border-emerald-300 text-emerald-700 font-medium hover:bg-emerald-50 transition-all" onClick={() => onEdit(0)}>Edit Business</button>
-        <button className="px-4 py-2 rounded-xl border-2 border-emerald-300 text-emerald-700 font-medium hover:bg-emerald-50 transition-all" onClick={() => onEdit(1)}>Edit Products</button>
-        <button className="px-4 py-2 rounded-xl border-2 border-emerald-300 text-emerald-700 font-medium hover:bg-emerald-50 transition-all" onClick={() => onEdit(2)}>Edit Fiscal</button>
-        <button className="px-4 py-2 rounded-xl border-2 border-emerald-300 text-emerald-700 font-medium hover:bg-emerald-50 transition-all" onClick={() => onEdit(3)}>Edit Tax</button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Company Identity */}
+        <div className="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm relative">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700">
+              <svg aria-label="Company Identity icon" role="img" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21V8a1 1 0 011-1h3V3h8v4h3a1 1 0 011 1v13M7 21h10"/></svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">Company Identity</h3>
+                <button aria-label="edit-company" className="text-slate-400 hover:text-slate-700" onClick={() => onEdit(0)}>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.5 3.75l3.75 3.75M4 13.5V18h4.5L20.25 6.75 15.75 2.25 4 13.5z"/></svg>
+                </button>
+              </div>
+              <div className="text-sm text-slate-500 mt-2 grid grid-cols-2 gap-2">
+                <div className="text-xs text-slate-400">Type</div><div>{safe(Biz.businessType)}</div>
+                <div className="text-xs text-slate-400">Industry</div><div>{safe(Biz.industry)}</div>
+                <div className="text-xs text-slate-400">Location</div><div>{safe(Biz.address, 'Philippines')}</div>
+                <div className="text-xs text-slate-400">Contact</div><div>{mask(Biz.businessEmail || Biz.phone)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Products & Services */}
+        <div className="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm relative">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700">
+              <svg aria-label="Products & Services icon" role="img" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="7" height="7" rx="1"/><rect x="14" y="4" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">Products & Services</h3>
+                <button aria-label="edit-products" className="text-slate-400 hover:text-slate-700" onClick={() => onEdit(1)}>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.5 3.75l3.75 3.75M4 13.5V18h4.5L20.25 6.75 15.75 2.25 4 13.5z"/></svg>
+                </button>
+              </div>
+              <div className="text-sm text-slate-500 mt-2">
+                {Sells.sellsProducts ? 'You have products/services configured.' : 'No products added — add products to start invoicing.'}
+              </div> 
+            </div>
+          </div>
+        </div>
+
+        {/* Accounting Profile */}
+        <div className="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm relative">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center text-teal-700">
+              <svg aria-label="Accounting Profile icon" role="img" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 11h8M8 15h5"/></svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">Accounting Profile</h3>
+                <button aria-label="edit-fiscal" className="text-slate-400 hover:text-slate-700" onClick={() => onEdit(2)}>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.5 3.75l3.75 3.75M4 13.5V18h4.5L20.25 6.75 15.75 2.25 4 13.5z"/></svg>
+                </button>
+              </div>
+              <div className="text-sm text-slate-500 mt-2 grid grid-cols-2 gap-2">
+                <div className="text-xs text-slate-400">Method</div><div>{safe(Fiscal.accountingMethod, 'Accrual')}</div>
+                <div className="text-xs text-slate-400">Fiscal Start</div><div>{safe(Fiscal.fiscalStart, 'January')}</div>
+                <div className="text-xs text-slate-400">Reconciliation</div><div>{safe(Fiscal.reconciliation || 'Monthly')}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tax Compliance */}
+        <div className="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm relative">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center text-pink-700">
+              <svg aria-label="Tax Compliance icon" role="img" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l7 4v6a8 8 0 01-7 8 8 8 0 01-7-8V6l7-4z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 10l4 4M14 10l-4 4"/></svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">Tax Compliance</h3>
+                <button aria-label="edit-tax" className="text-slate-400 hover:text-slate-700" onClick={() => onEdit(3)}>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.5 3.75l3.75 3.75M4 13.5V18h4.5L20.25 6.75 15.75 2.25 4 13.5z"/></svg>
+                </button>
+              </div>
+              <div className="text-sm text-slate-500 mt-2 grid grid-cols-2 gap-2">
+                <div className="text-xs text-slate-400">TIN</div><div>{safe(Tax.tin, 'Pending')}</div>
+                <div className="text-xs text-slate-400">Filing</div><div className="capitalize">{safe(Tax.filingFrequency, 'Quarterly')}</div>
+                <div className="text-xs text-slate-400">VAT/TAX RATE</div><div>{Tax.taxRate ? `${Tax.taxRate}%` : '12%'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Branding */}
+        <div className="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm relative">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-sky-50 flex items-center justify-center text-sky-700">
+              <svg aria-label="Branding icon" role="img" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M21 18l-5-5-4 4-3-3-5 5" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">Branding</h3>
+                <button aria-label="edit-branding" className="text-slate-400 hover:text-slate-700" onClick={() => onEdit(4)}>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.5 3.75l3.75 3.75M4 13.5V18h4.5L20.25 6.75 15.75 2.25 4 13.5z"/></svg>
+                </button>
+              </div>
+              <div className="text-sm text-slate-500 mt-2">
+                {Branding.logo ? 'Logo uploaded' : 'No logo uploaded — shown on invoices and receipts.'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Banking Feeds */}
+        <div className="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm relative">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-700">
+              <svg aria-label="Banking Feeds icon" role="img" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10l9-6 9 6M5 10v6a2 2 0 002 2h10a2 2 0 002-2v-6"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21h8"/></svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">Banking Feeds</h3>
+                <button aria-label="edit-banking" className="text-slate-400 hover:text-slate-700" onClick={() => onEdit(5)}>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.5 3.75l3.75 3.75M4 13.5V18h4.5L20.25 6.75 15.75 2.25 4 13.5z"/></svg>
+                </button>
+              </div>
+              <div className="text-sm text-slate-500 mt-2 grid grid-cols-2 gap-2">
+                <div className="text-xs text-slate-400">Bank Feeds</div><div>{Banking.accounts && Banking.accounts.length > 0 ? 'Active' : 'Inactive'}</div>
+                <div className="text-xs text-slate-400">Linked Accounts</div>
+                <div className="flex items-center gap-2">{Banking.accounts ? Banking.accounts.length : 0} Connected
+                </div> 
+                <div className="text-xs text-slate-400">Auto-sync</div><div>Daily at 2:00 AM</div>
+              </div>
+              <div className="text-xs text-slate-400 mt-3">Connect your bank feeds to keep transactions up to date. This enables automatic reconciliation and matching suggestions.</div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   )

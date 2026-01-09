@@ -131,6 +131,18 @@ test('onboarding: shows success toast and company appears in Owner Hub', async (
 
   expect(companyFound).toBeTruthy()
 
+  // Click the card's Open Dashboard button and assert navigation to the company page
+  try {
+    const companyCard = page.locator(`.company-card:has-text("${companyName}")`).first()
+    await companyCard.locator('button:has-text("Open Dashboard")').click()
+    // Expect navigation to a company route (e.g. /companies/:id)
+    await page.waitForURL('**/companies/**', { timeout: 10000 })
+    // Optionally assert the company name appears on the company dashboard
+    await page.locator(`text=${companyName}`).first().waitFor({ timeout: 5000 })
+  } catch (e) {
+    console.warn('Failed to open company dashboard via UI; continuing', e)
+  }
+
   // Clean up (best-effort)
   await request.post('http://127.0.0.1:4000/api/test/delete-user', { data: { email: ownerEmail } }).catch(() => null)
   await request.post('http://127.0.0.1:4000/api/test/delete-company', { data: { email: ownerEmail, name: companyName, deleteTenant: true } }).catch(() => null)

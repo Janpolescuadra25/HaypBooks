@@ -113,9 +113,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
           </a>
           <AppShellHeader />
           <div className="layout-shell w-full mt-0 grid gap-4 md:[grid-template-columns:auto_minmax(0,1fr)]">
-            <div className="hidden md:block">
-              <Sidebar />
-            </div>
+            <Sidebar />
             <main id="main">{children}</main>
           </div>
           <footer className="w-[calc(100%-1rem)] md:w-[calc(100%-2rem)] mx-auto p-6 text-center text-slate-600 site-footer">

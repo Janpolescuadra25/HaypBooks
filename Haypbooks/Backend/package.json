@@ -12,6 +12,7 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "prisma:generate": "npx prisma generate --schema=prisma/schema.prisma",
+    "prisma:dev": "npm run prisma:generate && npx prisma migrate dev --schema=prisma/schema.prisma --name local-init",
     "migrate:init": "node ./scripts/migrate/init-db.js",
     "test:setup-db": "node ./scripts/test/setup-test-db.js",
     "prisma:verify:migrate": "node ./scripts/ci/prisma-migrate-verify.js",
@@ -71,6 +72,8 @@
     "db:smoke": "ts-node ./scripts/db/smoke-tests.ts",
     "db:reset:local": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/db/reset-test-db.ps1",
     "db:validate": "npm run -s check:migrations && npm run -s migrate:run && npm run -s db:smoke",
+    "db:apply:ensure-subscription-index": "node scripts/db/ensure-subscription-company-unique.js",
+    "db:verify:subscription-schema": "node scripts/db/prisma-verify-subscription-schema.js",
     "test:quick": "npm run migrate:init && node ./scripts/migrate/run-sql.js && npm run db:seed:dev && jest --runInBand test/payroll.unit-spec.ts",
     "db:seed": "node dist/prisma/seed.js",
     "prepare": "husky install"

@@ -32,14 +32,14 @@ describe('Bills API (e2e)', () => {
     await prisma.vendor.create({ data: { contactId: vendor.id, tenantId } })
     vendorId = vendor.id
 
-    // Ensure no existing user will conflict, then signup
+    // Ensure no existing user will conflict and create a verified test user
     await prisma.user.deleteMany({ where: { email: 'bills-test@example.com' } })
-    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email: 'bills-test@example.com', password: 'bills-pass', name: 'Bills Tester', phone: '+15550001111' }).expect(201)
-    // login again to obtain a fresh token that the app recognizes
+    const createUser = await request(app.getHttpServer()).post('/api/test/create-user').send({ email: 'bills-test@example.com', password: 'bills-pass', name: 'Bills Tester', isEmailVerified: true }).expect(201)
+    // login to obtain token
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'bills-test@example.com', password: 'bills-pass' }).expect(200)
     authToken = login.body.token
     // ensure this user is part of the test tenant so guarded endpoints work for tenantId
-    await prisma.tenantUser.create({ data: { tenantId, userId: signup.body.user.id, role: 'ADMIN' } })
+    await prisma.tenantUser.create({ data: { tenantId, userId: createUser.body.id, role: 'ADMIN' } })
   })
 
   afterAll(async () => {

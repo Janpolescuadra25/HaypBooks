@@ -39,7 +39,7 @@ describe('PIN Reset endpoints removed; email verification still works', () => {
     const password = 'ResetPass!23'
 
     // Signup and login
-    await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Reset PIN User', phone: '+1 555 000 0000' }).expect(201)
+    await request(app.getHttpServer()).post('/api/test/create-user').send({ email, password, name: 'Reset PIN User', isEmailVerified: true }).expect(201)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token
 

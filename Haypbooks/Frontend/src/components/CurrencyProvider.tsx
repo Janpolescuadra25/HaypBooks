@@ -43,13 +43,25 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useCurrency() {
+  // Early return during SSR to avoid invoking React hooks in a non-react render context
+  if (typeof window === 'undefined') {
+    const base = 'USD'
+    return {
+      baseCurrency: base,
+      setBaseCurrency: () => {},
+      ready: true,
+      formatCurrency: (v: number | null | undefined) => fmtCurrency(v as any, base),
+      formatNumber: (v: number | null | undefined, opts?: Intl.NumberFormatOptions) => fmtNumber(v as any, opts),
+    }
+  }
+
   try {
     const ctx = useContext(Ctx)
     if (ctx) return ctx
   } catch (e) {
     // Defensive fallback if useContext is unavailable during server prerender
   }
-  // Safe fallback when a Provider isn't mounted (e.g., isolated tests or SSR-only render paths)
+  // Safe fallback when a Provider isn't mounted (e.g., isolated tests or other render paths)
   const base = 'USD'
   return {
     baseCurrency: base,

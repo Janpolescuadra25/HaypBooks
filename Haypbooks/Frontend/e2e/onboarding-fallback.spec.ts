@@ -40,7 +40,9 @@ test('fallback: full onboarding complete call fails -> client sets cookies and s
   await page.fill('input[placeholder="Company name"]', 'Fallback Co')
   await page.fill('input[placeholder="Business email"]', email)
   await page.fill('input[placeholder="Business address"]', '123 Example')
-  await page.click('text=Save step')
+  // Use global 'Save and continue' to persist business step
+  if (await page.locator('text=Save and continue').count() > 0) await page.click('text=Save and continue')
+  else await page.click('text=Save step')
   // Move to review quickly
   for (let i = 0; i < 7; i++) await page.click('text=Next')
 

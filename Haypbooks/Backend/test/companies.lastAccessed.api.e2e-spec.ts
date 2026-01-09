@@ -39,10 +39,10 @@ describe('Companies lastAccessed API (e2e)', () => {
     const tenant = await prisma.tenant.findFirst({ where: { subdomain: 'demo' } })
     expect(tenant).toBeTruthy()
     // Try to find a company row for the demo tenant using raw SQL (avoids Prisma schema mismatch)
-    let companyRows: any[] = await prisma.$queryRaw`SELECT id, name FROM public."Company" WHERE "tenantId" = ${tenant!.id} LIMIT 1`
+    let companyRows: any[] = await prisma.$queryRaw`SELECT id, name FROM public."Company" WHERE "tenantId" = ${tenant!.id}::uuid LIMIT 1`
     if (!companyRows || !companyRows.length) {
       const id = 'company-' + tenant!.id
-      await prisma.$executeRaw`INSERT INTO public."Company" ("id","name","tenantId") VALUES (${id}, ${'Demo Company'}, ${tenant!.id}) ON CONFLICT ("id") DO NOTHING`
+      await prisma.$executeRaw`INSERT INTO public."Company" ("id","name","tenantId") VALUES (${id}, ${'Demo Company'}, ${tenant!.id}::uuid) ON CONFLICT ("id") DO NOTHING`
       companyRows = await prisma.$queryRaw`SELECT id, name FROM public."Company" WHERE "id" = ${id} LIMIT 1`
     }
     const company = companyRows && companyRows.length ? companyRows[0] : undefined

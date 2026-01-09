@@ -38,13 +38,27 @@ describe('Verification page behavior', () => {
     expect(await screen.findByText(/Email/i)).toBeInTheDocument()
   })
 
-  test('does not show SMS option when user has no phone on file', async () => {
+  test('shows SMS option even when user has no phone on file (allow add-phone flow)', async () => {
     ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false })
 
     render(<VerificationPage />)
-    // Email is present, SMS should not be in the options
+    // Email is present and SMS option should be visible to allow adding a phone
     expect(await screen.findByText(/Email/i)).toBeInTheDocument()
-    expect(screen.queryByText(/Text Message \(SMS\)/i)).toBeNull()
+    expect(await screen.findByText(/Text Message \(SMS\)/i)).toBeInTheDocument()
+
+    // Clicking SMS when there's no phone shows the AddPhoneForm
+    const phoneBtn = await screen.findByTestId('option-phone')
+    await act(async () => { phoneBtn.click() })
+    expect(await screen.findByText(/Phone number/i)).toBeInTheDocument()
+
+    // New UI: show 'Use another verification method' and Save & Send below the input
+    expect(await screen.findByTestId('add-phone-other')).toBeInTheDocument()
+    expect(await screen.findByTestId('add-phone-save')).toBeInTheDocument()
+
+    // Clicking 'Use another verification method' returns to the options view
+    const otherBtn = await screen.findByTestId('add-phone-other')
+    await act(async () => { otherBtn.click() })
+    expect(await screen.findByTestId('option-email')).toBeInTheDocument()
   })
 
   test('clicking SMS option opens phone form', async () => {
@@ -60,6 +74,17 @@ describe('Verification page behavior', () => {
     expect(await screen.findByText(/Enter the\s*6.*code we sent to/i)).toBeInTheDocument()
   })
 
+  test('shows sign-in banner and both options when arrived from sign-in', async () => {
+    // Simulate being redirected from sign-in with email pre-filled
+    window.history.pushState({}, '', '/verification?from=signin&email=test@b.com')
+    ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'test@b.com', hasPin: false })
+
+    render(<VerificationPage />)
+    expect(await screen.findByText(/You were redirected here after signing in/i)).toBeInTheDocument()
+    expect(await screen.findByTestId('option-email')).toBeInTheDocument()
+    expect(await screen.findByTestId('option-phone')).toBeInTheDocument()
+  })
+
   test('redirects to /hub/selection after successful email verification', async () => {
     ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false })
 
@@ -68,7 +93,7 @@ describe('Verification page behavior', () => {
 
     // Open the email flow by clicking the Email card
     const emailBtn = await screen.findByTestId('option-email')
-    expect(screen.getByText(/Email/i)).toBeInTheDocument()
+    expect(emailBtn).toBeInTheDocument()
     await act(async () => { await user.click(emailBtn) })
 
     // EmailCodeForm should be visible

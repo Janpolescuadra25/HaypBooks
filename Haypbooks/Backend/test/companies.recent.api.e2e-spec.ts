@@ -38,9 +38,9 @@ describe('Companies recent API (e2e)', () => {
     expect(tenant).toBeTruthy()
 
     // Ensure a demo company exists for demo tenant (insert raw if needed)
-    let demoCompanyRows: any[] = await prisma.$queryRaw`SELECT id FROM public."Company" WHERE "tenantId" = ${tenant!.id} LIMIT 1`
+    let demoCompanyRows: any[] = await prisma.$queryRaw`SELECT id FROM public."Company" WHERE "tenantId" = ${tenant!.id}::uuid LIMIT 1`
     if (!demoCompanyRows || !demoCompanyRows.length) {
-      await prisma.$executeRaw`INSERT INTO public."Company" ("id","name","tenantId") VALUES (${ 'company-' + tenant!.id }, ${'Demo Company'}, ${tenant!.id}) ON CONFLICT ("id") DO NOTHING`
+      await prisma.$executeRaw`INSERT INTO public."Company" ("id","name","tenantId") VALUES (${ 'company-' + tenant!.id }, ${'Demo Company'}, ${tenant!.id}::uuid) ON CONFLICT ("id") DO NOTHING`
       demoCompanyRows = await prisma.$queryRaw`SELECT id FROM public."Company" WHERE "id" = ${ 'company-' + tenant!.id } LIMIT 1`
     }
     const demoCompany = demoCompanyRows[0]
@@ -48,15 +48,15 @@ describe('Companies recent API (e2e)', () => {
     // Create a second tenant and company, and set its tenantUser.lastAccessedAt to a day ago
     const secondTenantId = require('crypto').randomUUID()
     const secondSub = `second-${Math.random().toString(36).slice(2,6)}`
-    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${secondTenantId}, ${'Second Tenant'}, ${secondSub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${secondTenantId}::uuid, ${'Second Tenant'}, ${secondSub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
     const secondCompanyId = 'company-' + secondTenantId
-    await prisma.$executeRaw`INSERT INTO public."Company" ("id","name","tenantId") VALUES (${secondCompanyId}, ${'Second Company'}, ${secondTenantId}) ON CONFLICT ("id") DO NOTHING`
+    await prisma.$executeRaw`INSERT INTO public."Company" ("id","name","tenantId") VALUES (${secondCompanyId}, ${'Second Company'}, ${secondTenantId}::uuid) ON CONFLICT ("id") DO NOTHING`
 
     // Link demo user to second tenant with an older lastAccessedAt
     const user = await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
     expect(user).toBeTruthy()
     const oldDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt","lastAccessedAt") VALUES (${secondTenantId}, ${user!.id}, ${'ADMIN'}, ${false}, now(), ${oldDate}) ON CONFLICT ("tenantId","userId") DO UPDATE SET "lastAccessedAt" = EXCLUDED."lastAccessedAt"`
+    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt","lastAccessedAt") VALUES (${secondTenantId}::uuid, ${user!.id}, ${'ADMIN'}, ${false}, now(), ${oldDate}) ON CONFLICT ("tenantId","userId") DO UPDATE SET "lastAccessedAt" = EXCLUDED."lastAccessedAt"`
 
     // Call recent API and assert ordering (demo tenant should be first because seeded with now())
     const res1 = await request(app.getHttpServer()).get('/api/companies/recent').set('Authorization', `Bearer ${token}`).expect(200)

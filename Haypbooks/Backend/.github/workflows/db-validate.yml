@@ -73,4 +73,5 @@ jobs:
         run: |
           npx ts-node scripts/db/check-schema.ts || true
           npx ts-node scripts/db/check-unvalidated-constraints.ts || true
+          npx ts-node scripts/db/integrity-checks.ts || true
           npx ts-node scripts/db/smoke-tests.ts

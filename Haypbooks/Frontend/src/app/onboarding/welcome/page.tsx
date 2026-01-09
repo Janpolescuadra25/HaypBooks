@@ -14,13 +14,10 @@ export default function WelcomePage() {
           <p className="text-lg text-slate-600 mb-3">Your subscription is active.</p>
           <p className="text-base text-slate-600 mb-8">You&#39;ve been charged for your plan today. You can cancel anytime in your account settings.</p>
 
-          <div className="bg-emerald-50 rounded-2xl p-4 mb-8">
-            <p className="text-md font-medium text-slate-900">Ready to get started?</p>
-            <p className="text-sm text-slate-600">Let&#39;s get your books organized in minutes.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mb-8">
-            <a href="/onboarding" className="block px-6 py-4 bg-emerald-600 text-white text-lg font-semibold rounded-2xl hover:bg-emerald-700 transition-all shadow w-full">Complete Quick Setup</a>
+          <div className="mt-6 bg-emerald-50 rounded-xl p-6 text-center mb-8">
+            <h2 className="text-xl font-semibold text-slate-900 mb-2">Ready to get started?</h2>
+            <p className="text-sm text-slate-600 mb-4">Let&#39;s get your books organized in minutes.</p>
+            <a href="/onboarding" aria-label="Complete Quick Setup" className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-full text-lg font-semibold hover:bg-emerald-700 shadow-lg mx-auto">Complete Quick Setup</a>
           </div>
 
           <p className="text-sm text-slate-500 mt-8">Need help? Our support team is here — <a href="/support" className="text-emerald-600 hover:underline">chat with us</a>.</p>

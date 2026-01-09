@@ -51,3 +51,20 @@ test('search filters companies', async () => {
   // Wait for debounce and the no-match message
   await waitFor(() => expect(screen.getByText(/no companies match that search/i)).toBeInTheDocument())
 })
+
+test("shows a company created during signup/onboarding (e.g. \"JP's shop\")", async () => {
+  ;(global.fetch as any).mockImplementation((url: any) => {
+    if (String(url).includes('filter=owned')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: 'c3', name: "JP's shop", plan: 'Free' }]) })
+    }
+    if (String(url).includes('filter=invited')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
+    }
+    return Promise.resolve({ ok: false })
+  })
+
+  render(<CompanyHub />)
+  await waitFor(() => expect(screen.getByText("JP's shop")).toBeInTheDocument())
+  // verify register card still present
+  await waitFor(() => expect(screen.getByText(/new entity/i)).toBeInTheDocument())
+})

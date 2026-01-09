@@ -79,6 +79,9 @@ model User {
   phone              String?  @db.Text
   // HMAC of normalized phone for privacy-safe lookups
   phoneHmac          String?  @map("phone_hmac") @db.Text
+  // Optional company & firm names for user accounts
+  companyName        String?  @map("companyname")
+  firmName           String?  @map("firmname")
 
   // Verified phone state
   isPhoneVerified    Boolean  @default(false) @map("isphoneverified")
@@ -182,8 +185,18 @@ model Tenant {
   name         String
   subdomain    String       @unique
   status       TenantStatus @default(ACTIVE)
-  plan         SubscriptionPlan @default(FREE)
+  // Tenant-level per-firm trial info
+  trialEndsAt DateTime?
+  trialUsed   Boolean @default(false)
+  maxCompanies Int     @default(0)
   baseCurrency String           @default("USD")
+
+  // Onboarding & business profile fields (moved to onboarding store)
+  // These were intentionally removed from the persisted Tenant record to keep
+  // the Tenant table focused on tenancy metadata. For historical onboarding
+  // inputs we retain them in the onboarding steps store (OnboardingStep).
+  fiscalStart  String?
+
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime?
@@ -264,10 +277,9 @@ model Tenant {
 model Subscription {
   id                   String            @id @default(uuid())
   tenantId             String
-  companyId            String?
+  companyId            String
   plan                 SubscriptionPlan  @default(FREE)
-  status               SubscriptionStatus @default(TRIAL)
-  trialEndsAt          DateTime?
+  status               SubscriptionStatus @default(ACTIVE)
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
   stripeCustomerId     String?
@@ -275,10 +287,11 @@ model Subscription {
   createdAt            DateTime          @default(now())
 
   tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company Company? @relation(fields: [companyId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@unique([stripeSubscriptionId])
+  @@unique([companyId])
 }
 
 model Company {

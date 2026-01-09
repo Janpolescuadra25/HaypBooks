@@ -9,6 +9,8 @@ type PendingData = {
   role?: string
   phone?: string
   phoneCountry?: string
+  companyName?: string
+  firmName?: string
   emailOtpVerified?: boolean
   phoneOtpVerified?: boolean
   emailOtpVerifiedAt?: number
