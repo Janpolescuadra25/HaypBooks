@@ -58,23 +58,12 @@ export class OnboardingService {
           const taxStep = steps?.tax || {}
           const brandingStep = steps?.branding || {}
 
-          // Include selected onboarding-provided business details into the created
-          // tenant (company) so UI and tests can observe them. These fields are
-          // still retained in the OnboardingStep store as the source-of-truth
-          // but copying them to the tenant makes onboarding visible and robust.
+          // Keep Tenant lightweight (hub-only). Do NOT copy onboarding business
+          // and branding fields to Tenant to avoid coupling Tenant with Company-level
+          // business/profile data. We still use onboarding steps as the source of
+          // truth and map values into the Company record below.
           if (fiscalStep.fiscalStart) payload.fiscalStart = fiscalStep.fiscalStart
-          // Business step
-          if (businessStep.businessType) payload.businessType = businessStep.businessType
-          if (businessStep.industry) payload.industry = businessStep.industry
-          if (businessStep.address) payload.address = businessStep.address
-          if (taxStep.taxId) payload.taxId = taxStep.taxId
-          // startDate not present on Tenant Prisma model; keep fiscalStart instead
-          // Branding/tax step
-          if (brandingStep.logo) payload.logoUrl = brandingStep.logo
-          if (brandingStep.invoicePrefix) payload.invoicePrefix = brandingStep.invoicePrefix
-          if (taxStep.vatRegistered !== undefined) payload.vatRegistered = !!taxStep.vatRegistered
-          if (taxStep.vatRate !== undefined) payload.vatRate = taxStep.vatRate
-          if (taxStep.pricesInclusive !== undefined) payload.pricesInclusive = !!taxStep.pricesInclusive
+          // NOTE: business/profile fields intentionally NOT copied to Tenant.
         // Create tenant and create TenantUser at creation time (nested create)
         payload.users = { create: [{ userId, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' }] }
         // Capture the created tenant so callers can act deterministically
