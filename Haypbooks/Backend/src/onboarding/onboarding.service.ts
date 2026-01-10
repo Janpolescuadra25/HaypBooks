@@ -58,17 +58,50 @@ export class OnboardingService {
           const taxStep = steps?.tax || {}
           const brandingStep = steps?.branding || {}
 
-          // Keep only non-onboarding tenant properties. The detailed onboarding
-          // fields (businessType, industry, tax details, branding, etc.) are
-          // stored in the OnboardingStep table and are intentionally **not**
-          // copied into the Tenant record to avoid denormalizing ephemeral
-          // onboarding input into the tenancy table.
+          // Include selected onboarding-provided business details into the created
+          // tenant (company) so UI and tests can observe them. These fields are
+          // still retained in the OnboardingStep store as the source-of-truth
+          // but copying them to the tenant makes onboarding visible and robust.
           if (fiscalStep.fiscalStart) payload.fiscalStart = fiscalStep.fiscalStart
+          // Business step
+          if (businessStep.businessType) payload.businessType = businessStep.businessType
+          if (businessStep.industry) payload.industry = businessStep.industry
+          if (businessStep.address) payload.address = businessStep.address
+          if (taxStep.taxId) payload.taxId = taxStep.taxId
+          // startDate not present on Tenant Prisma model; keep fiscalStart instead
+          // Branding/tax step
+          if (brandingStep.logo) payload.logoUrl = brandingStep.logo
+          if (brandingStep.invoicePrefix) payload.invoicePrefix = brandingStep.invoicePrefix
+          if (taxStep.vatRegistered !== undefined) payload.vatRegistered = !!taxStep.vatRegistered
+          if (taxStep.vatRate !== undefined) payload.vatRate = taxStep.vatRate
+          if (taxStep.pricesInclusive !== undefined) payload.pricesInclusive = !!taxStep.pricesInclusive
         // Create tenant and create TenantUser at creation time (nested create)
         payload.users = { create: [{ userId, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' }] }
         // Capture the created tenant so callers can act deterministically
         try {
-          createdTenant = await this.companyService.createCompany(payload)
+          createdTenant = await this.companyService.createCompany(payload)          // Also create a Company row under the tenant so business/profile fields are available
+          try {
+            const companyPayload: any = { name: normalized, currency: payload.baseCurrency || 'USD' }
+            // map onboarding fields into the Company payload
+            if (fiscalStep.fiscalStart) companyPayload.fiscalYearStart = parseInt(fiscalStep.fiscalStart || '') || undefined
+            if (businessStep.businessType) companyPayload.businessType = businessStep.businessType
+            if (businessStep.industry) companyPayload.industry = businessStep.industry
+            if (businessStep.address) companyPayload.address = businessStep.address
+            if (taxStep.taxId) companyPayload.taxId = taxStep.taxId
+            if (brandingStep.logo) companyPayload.logoUrl = brandingStep.logo
+            if (brandingStep.invoicePrefix) companyPayload.invoicePrefix = brandingStep.invoicePrefix
+            if (taxStep.vatRegistered !== undefined) companyPayload.vatRegistered = !!taxStep.vatRegistered
+            if (taxStep.vatRate !== undefined) companyPayload.vatRate = taxStep.vatRate
+            if (taxStep.pricesInclusive !== undefined) companyPayload.pricesInclusive = !!taxStep.pricesInclusive
+
+            const createdCompany = await this.companyService.createCompanyUnderTenant(createdTenant.id, companyPayload)
+            // eslint-disable-next-line no-console
+            console.info(`[ONBOARDING] ✅ Created company record during onboarding:`, { companyId: createdCompany?.id, tenantId: createdTenant?.id })
+          } catch (e) {
+            // Non-fatal; we already created the tenant so onboarding can proceed
+            // eslint-disable-next-line no-console
+            console.warn('[ONBOARDING] Failed to create company record under tenant (non-fatal):', e?.message || e)
+          }
           // eslint-disable-next-line no-console
           console.info(`[ONBOARDING] ✅ Created tenant during onboarding:`, {
             tenantId: createdTenant?.id,

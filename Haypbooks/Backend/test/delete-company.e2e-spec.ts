@@ -4,6 +4,15 @@ import request from 'supertest'
 import { AppModule } from '../src/app.module'
 import { PrismaService } from '../src/repositories/prisma/prisma.service'
 
+// Helper: create a company via raw INSERT to avoid relying on schema parity for new optional columns
+async function createCompanyRaw(prisma: PrismaService, tenantId: string, name: string, currency = 'USD') {
+  const { randomUUID } = require('crypto')
+  const id = randomUUID()
+  await prisma.$executeRawUnsafe('INSERT INTO public."Company" ("id","tenantId","name","currency","createdAt") VALUES ($1, $2::uuid, $3, $4, now())', id, tenantId, name, currency)
+  const row: any[] = await prisma.$queryRawUnsafe('SELECT "id","tenantId","name","currency" FROM public."Company" WHERE "id" = $1 LIMIT 1', id)
+  return row && row.length ? row[0] : { id, tenantId, name, currency }
+}
+
 describe('TestController /api/test/delete-company (E2E)', () => {
   let app: INestApplication
   let prisma: PrismaService
@@ -36,7 +45,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const user = await prisma.user.create({ data: { email, password: 'x', name: 'E', isEmailVerified: true } })
     const tenant = await prisma.tenant.create({ data: { name: tenantName, subdomain } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
-    const company = await prisma.company.create({ data: { tenantId: tenant.id, name: companyName, currency: 'USD' } })
+    const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: user.email, name: companyName, deleteTenant: true })
     expect(res.status).toBe(201)
@@ -61,7 +70,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const user = await prisma.user.create({ data: { email: `e2e-delete2-${Date.now().toString(36)}@local`, password: 'x', name: 'E', isEmailVerified: true } })
     const tenant = await prisma.tenant.create({ data: { name: 'Acme Inc', subdomain: `acct-xyz-${Date.now().toString(36)}` } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
-    const company = await prisma.company.create({ data: { tenantId: tenant.id, name: 'Acme', currency: 'USD' } })
+    const company = await createCompanyRaw(prisma, tenant.id, 'Acme', 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: user.email, name: 'Acme' })
     expect(res.status).toBe(201)
@@ -82,7 +91,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenant = await prisma.tenant.create({ data: { name: `MultiTenant (E2E) ${s}`, subdomain: `e2e-multi-${s}` } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: u1.id, role: 'owner', isOwner: true } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: u2.id, role: 'member', isOwner: false } })
-    const company = await prisma.company.create({ data: { tenantId: tenant.id, name: `Comp A E2E ${s}`, currency: 'USD' } })
+    const company = await createCompanyRaw(prisma, tenant.id, `Comp A E2E ${s}`, 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: u1.email, name: company.name, deleteTenant: true })
     expect(res.status).toBe(201)
@@ -107,8 +116,8 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const user = await prisma.user.create({ data: { email: `multi-co-${s}@local`, password: 'x', name: 'C', isEmailVerified: true } })
     const tenant = await prisma.tenant.create({ data: { name: `OtherCo Tenant (E2E) ${s}`, subdomain: `e2e-other-${s}` } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
-    const companyA = await prisma.company.create({ data: { tenantId: tenant.id, name: `Primary E2E ${s}`, currency: 'USD' } })
-    const companyB = await prisma.company.create({ data: { tenantId: tenant.id, name: `OtherCo ${s}`, currency: 'USD' } })
+    const companyA = await createCompanyRaw(prisma, tenant.id, `Primary E2E ${s}`, 'USD')
+    const companyB = await createCompanyRaw(prisma, tenant.id, `OtherCo ${s}`, 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: user.email, name: companyA.name, deleteTenant: true })
     expect(res.status).toBe(201)
@@ -140,7 +149,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const user = await prisma.user.create({ data: { email, password: 'x', name: 'Sys', isEmailVerified: true } })
     const tenant = await prisma.tenant.create({ data: { name: tenantName, subdomain } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
-    const company = await prisma.company.create({ data: { tenantId: tenant.id, name: companyName, currency: 'USD' } })
+    const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
     // create or reuse an existing account type and a system account for the tenant
     let acctType = await prisma.accountType.findFirst()
@@ -176,7 +185,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const user = await prisma.user.create({ data: { email, password: 'x', name: 'Blk', isEmailVerified: true } })
     const tenant = await prisma.tenant.create({ data: { name: tenantName, subdomain } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
-    const company = await prisma.company.create({ data: { tenantId: tenant.id, name: companyName, currency: 'USD' } })
+    const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
     // Add a JournalEntry row that will cause tenant.delete to fail (FK prevents tenant deletion)
     await prisma.journalEntry.create({ data: { tenantId: tenant.id, date: new Date(), entryNumber: `J-${s}` } })
@@ -205,8 +214,8 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const user = await prisma.user.create({ data: { email: `byid-${s}@local`, password: 'x', name: 'D', isEmailVerified: true } })
     const tenant = await prisma.tenant.create({ data: { name: `ById Tenant (E2E) ${s}`, subdomain: `e2e-byid-${s}` } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
-    const companyA = await prisma.company.create({ data: { tenantId: tenant.id, name: `ToDelete E2E ${s}`, currency: 'USD' } })
-    const companyB = await prisma.company.create({ data: { tenantId: tenant.id, name: `KeepCompany ${s}`, currency: 'USD' } })
+    const companyA = await createCompanyRaw(prisma, tenant.id, `ToDelete E2E ${s}`, 'USD')
+    const companyB = await createCompanyRaw(prisma, tenant.id, `KeepCompany ${s}`, 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ companyId: companyA.id, deleteTenant: true })
     expect(res.status).toBe(201)
