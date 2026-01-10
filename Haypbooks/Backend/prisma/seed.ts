@@ -23,16 +23,21 @@ async function main() {
   const users = await prisma.$queryRaw<any[]>`SELECT id, email, name, "isemailverified" as "isEmailVerified", "createdAt", "updatedAt" FROM public."User" WHERE email = ${ 'demo@haypbooks.test' } LIMIT 1;`
   const user = Array.isArray(users) && users.length ? users[0] : undefined
 
-  // Demo tenant
-  const tenant = await prisma.tenant.upsert({
-    where: { subdomain: 'demo' },
-    update: {},
-    create: {
-      name: 'Demo Tenant',
-      subdomain: 'demo',
-      baseCurrency: 'USD'
-    },
-  })
+  // Demo tenant: use raw SQL upsert to remain compatible when Prisma client and DB schema diverge
+  try {
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}, ${'Demo Tenant'}, ${'demo'}, ${'USD'}, now(), now()) ON CONFLICT ("subdomain") DO UPDATE SET "name" = EXCLUDED."name", "baseCurrency" = EXCLUDED."baseCurrency";`
+  } catch (e) {
+    // ignore — subsequent SELECT will fetch existing row
+  }
+  const tenants = await prisma.$queryRaw<any[]>`SELECT id, name, subdomain, "baseCurrency" FROM public."Tenant" WHERE subdomain = ${'demo'} LIMIT 1;`
+  let tenant: any = tenants && tenants.length ? tenants[0] : undefined
+  if (!tenant) {
+    const fallbackTenantId = require('crypto').randomUUID()
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","createdAt","updatedAt") VALUES (CAST(${fallbackTenantId} AS uuid), ${'Demo Tenant'}, ${'demo'}, now(), now())`;
+    const tenants2 = await prisma.$queryRaw<any[]>`SELECT id, name, subdomain, "baseCurrency" FROM public."Tenant" WHERE subdomain = ${'demo'} LIMIT 1;`
+    tenant = tenants2 && tenants2.length ? tenants2[0] : undefined
+  }
 
   // Link user to tenant (owner)
   const tenantUserHasStatus = await hasColumn('TenantUser', 'status')

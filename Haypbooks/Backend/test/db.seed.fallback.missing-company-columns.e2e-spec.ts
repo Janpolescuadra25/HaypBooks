@@ -39,8 +39,8 @@ ALTER TABLE public."Company" DROP COLUMN IF EXISTS "pricesInclusive";`
     // Run seed (should not throw)
     execSync('npm run db:seed:dev', { cwd: BACKEND_DIR, stdio: 'inherit' })
 
-    // Assert demo tenant exists
-    const tenant = await prisma.tenant.findFirst({ where: { subdomain: 'demo' } })
-    expect(tenant).toBeDefined()
+    // Assert demo tenant exists (use raw query to avoid Prisma/Tenant schema drift)
+    const tenants = await prisma.$queryRawUnsafe(`SELECT id FROM public."Tenant" WHERE subdomain = 'demo' LIMIT 1;`) as any[]
+    expect(tenants && tenants.length).toBeGreaterThan(0)
   }, 60000)
 })
