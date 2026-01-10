@@ -14,6 +14,13 @@ export class CompanyService {
     return this.repo.findById(id)
   }
 
+  // Create a Company record under an existing tenant. This is used during the
+  // transition when onboarding creates a Tenant (legacy behavior) but we also
+  // want a proper Company row representing the business/books entity.
+  async createCompanyUnderTenant(tenantId: string, companyData: { name: string; currency?: string; business?: any }) {
+    return this.repo.createCompanyRecord({ tenantId, name: companyData.name, currency: companyData.currency })
+  }
+
   async listCompaniesForUser(userId: string, filter?: string, email?: string) {
     return this.repo.findForUser(userId, filter, email)
   }

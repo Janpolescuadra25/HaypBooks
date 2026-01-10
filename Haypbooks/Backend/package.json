@@ -29,6 +29,7 @@
     "db:seed:inventory": "ts-node prisma/seed-inventory.ts",
     "db:backfill:companyIds": "ts-node scripts/db/backfill-company-ids.ts",
     "db:backfill:phoneHmac": "ts-node scripts/db/backfill-phone-hmac.ts",
+    "db:backfill:tenant-to-company": "node ./scripts/db/backfill-tenant-to-company.js",
     "db:squash": "node ./scripts/migrate/squash-migrations.js",
     "db:validate:company-fks": "ts-node scripts/db/validate-company-fks.ts",
     "db:check:new-tables": "ts-node scripts/db/check-new-tables.ts",

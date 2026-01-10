@@ -42,6 +42,11 @@ jobs:
           cd Backend
           node ./scripts/test/setup-test-db.js --recreate
 
+      - name: Assert test DB schema
+        run: |
+          cd Backend
+          node ./scripts/test/assert-schema.js
+
       - name: Apply Phase 2 RLS (idempotent)
         run: |
           cd Backend

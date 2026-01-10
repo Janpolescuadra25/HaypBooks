@@ -3,7 +3,12 @@ const { execSync } = require('child_process')
 const path = require('path')
 
 const cwd = path.resolve(__dirname, '..', '..')
-const DATABASE_URL = process.env.DATABASE_URL
+const DEFAULT_DB = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+const DATABASE_URL = process.env.DATABASE_URL || DEFAULT_DB
+if (!process.env.DATABASE_URL) {
+  console.warn('No DATABASE_URL in environment; falling back to default local test DB')
+  process.env.DATABASE_URL = DATABASE_URL
+}
 const recreate = process.argv.includes('--recreate') || process.env.FORCE_RESET_DB === '1'
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
@@ -49,11 +54,16 @@ try {
   }
   if (!process.argv.includes('--no-seed')) {
     try {
-      // Ensure onboarding columns exist before seeding (idempotent)
+      // Ensure onboarding columns and Company profile columns exist before seeding (idempotent)
       try {
         runWithRetry('node ./scripts/db/add-onboarding-tenant-columns.js', 3, 500)
       } catch (e) {
         console.warn('Adding onboarding tenant columns failed (continuing):', e && e.message ? e.message : e)
+      }
+      try {
+        runWithRetry('node ./scripts/db/add-company-profile-columns.js', 3, 500)
+      } catch (e) {
+        console.warn('Adding Company profile columns failed (continuing):', e && e.message ? e.message : e)
       }
 
       runWithRetry('npm run db:seed:dev', 3, 500)
@@ -63,7 +73,36 @@ try {
       } catch (e) {
         console.warn('Post-seed ensure_tenantid_uuid failed (continuing):', e && e.message ? e.message : e)
       }
-      // After seeding, enable RLS policies needed by e2e tests (idempotent)
+
+      // Ensure Company profile columns exist (idempotent)
+      try {
+        runWithRetry('node ./scripts/db/add-company-profile-columns.js', 3, 500)
+      } catch (e) {
+        console.warn('Adding Company profile columns failed (continuing):', e && e.message ? e.message : e)
+      }
+      // Ensure Company profile columns are present via pg client (more robust)
+      try {
+        runWithRetry('node ./scripts/db/ensure_company_profile_columns_pg.js', 3, 500)
+      } catch (e) {
+        console.warn('Ensuring Company profile columns via pg failed (continuing):', e && e.message ? e.message : e)
+      }
+
+      // Backfill tenant onboarding fields into Company records (idempotent)
+      try {
+        runWithRetry('node ./scripts/db/backfill-tenant-to-company.js', 3, 500)
+      } catch (e) {
+        console.warn('Backfill tenant->company failed (continuing):', e && e.message ? e.message : e)
+      }
+
+      // After backfill, run schema assertion to ensure critical columns exist
+      try {
+        runWithRetry('node ./scripts/test/assert-schema.js', 3, 500)
+      } catch (e) {
+        console.error('Schema assertions failed (aborting):', e && e.message ? e.message : e)
+        process.exit(1)
+      }
+
+      // After schema assertion, enable RLS policies needed by e2e tests (idempotent)
       try {
         runWithRetry('node ./scripts/test/enable-test-rls.js', 3, 500)
       } catch (e) {

@@ -191,11 +191,19 @@ model Tenant {
   maxCompanies Int     @default(0)
   baseCurrency String           @default("USD")
 
-  // Onboarding & business profile fields (moved to onboarding store)
-  // These were intentionally removed from the persisted Tenant record to keep
-  // the Tenant table focused on tenancy metadata. For historical onboarding
-  // inputs we retain them in the onboarding steps store (OnboardingStep).
+  // Onboarding & business profile fields. We store detailed onboarding input
+  // in `OnboardingStep`, however certain fields are mirrored here so they
+  // are visible in the Tenant/Company API responses and usable by the UI.
   fiscalStart  String?
+  businessType String?
+  industry     String?
+  address      String?
+  taxId        String?        @db.VarChar(50)
+  logoUrl      String?
+  invoicePrefix String?
+  vatRegistered Boolean?       @default(false)
+  vatRate       Float?
+  pricesInclusive Boolean?     @default(false)
 
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -302,6 +310,24 @@ model Company {
   // Company-specific currency and fiscal year start month (1-12)
   currency  String   @default("USD")
   fiscalYearStart Int?
+
+  // Business/profile fields (migrated from Tenant). These are per-Company so
+  // different companies under the same Tenant can have independent branding
+  // and tax settings.
+  businessType     String?
+  industry         String?
+  address          String?
+  taxId            String?   @db.VarChar(50)
+  logoUrl          String?
+  invoicePrefix    String?
+  vatRegistered    Boolean?  @default(false)
+  vatRate          Decimal?  @db.Decimal(5, 2)
+  pricesInclusive  Boolean?  @default(false)
+  defaultPaymentTerms String?
+  accountingMethod String?   @default("ACCRUAL")
+  inventoryEnabled Boolean?  @default(false)
+  payrollEnabled   Boolean?  @default(false)
+
   createdAt DateTime @default(now())
 
   tenant                   Tenant                     @relation(fields: [tenantId], references: [id])
