@@ -14,11 +14,20 @@ export class CompanyService {
     return this.repo.findById(id)
   }
 
+  // Return company only if the given user is a member of the owning tenant
+  async getCompanyForUser(userId: string, id: string) {
+    if (!userId) return null
+    return this.repo.findByIdForUser(userId, id)
+  }
+
   // Create a Company record under an existing tenant. This is used during the
   // transition when onboarding creates a Tenant (legacy behavior) but we also
   // want a proper Company row representing the business/books entity.
-  async createCompanyUnderTenant(tenantId: string, companyData: { name: string; currency?: string; business?: any }) {
-    return this.repo.createCompanyRecord({ tenantId, name: companyData.name, currency: companyData.currency })
+  async createCompanyUnderTenant(tenantId: string, companyData: any) {
+    return this.repo.createCompanyRecord({ 
+      tenantId, 
+      ...companyData
+    })
   }
 
   async listCompaniesForUser(userId: string, filter?: string, email?: string) {

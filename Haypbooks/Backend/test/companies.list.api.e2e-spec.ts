@@ -38,14 +38,15 @@ describe('Companies list API (e2e)', () => {
 
     // Create a new tenant and link demo user as owner
     const tenantId = require('crypto').randomUUID()
-    const sub = `owned-${Math.random().toString(36).slice(2,6)}`
-    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Owned Tenant'}, ${sub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Owned Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
     await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt") VALUES (${tenantId}::uuid, ${demoUser!.id}, ${'OWNER'}, ${true}, now()) ON CONFLICT ("tenantId","userId") DO NOTHING`
+    // Ensure a Company row exists for this tenant so the companies API returns it
+    await prisma.company.create({ data: { tenantId, name: 'Owned Company', isActive: true } })
 
     const res = await request(app.getHttpServer()).get('/api/companies?filter=owned').set('Authorization', `Bearer ${token}`).expect(200)
     expect(Array.isArray(res.body)).toBe(true)
-    const ids = res.body.map((r: any) => r.id)
-    expect(ids).toContain(tenantId)
+    const tenantIds = res.body.map((r: any) => r.tenantId)
+    expect(tenantIds).toContain(tenantId)
   }, 30000)
 
   it('GET /api/companies?filter=invited returns invited tenants for user email', async () => {
@@ -58,8 +59,7 @@ describe('Companies list API (e2e)', () => {
 
     // Create a tenant and an invite for demo@haypbooks.test
     const tenantId = require('crypto').randomUUID()
-    const sub = `invited-${Math.random().toString(36).slice(2,6)}`
-    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Invited Tenant'}, ${sub}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Invited Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
     const inviteId = require('crypto').randomUUID()
     // Ensure invitedBy references a seeded user instead of 'system' to satisfy FK constraints
     const inviter = await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
@@ -67,10 +67,30 @@ describe('Companies list API (e2e)', () => {
     // Ensure unique index exists so ON CONFLICT (tenantId,email) works in tests
     await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "TenantInvite_tenantId_email_uq" ON public."TenantInvite" ("tenantId","email")`
     await prisma.$executeRaw`INSERT INTO public."TenantInvite" ("id","tenantId","email","invitedBy","invitedAt","status") VALUES (${inviteId}, ${tenantId}::uuid, ${'demo@haypbooks.test'}, ${inviterId}, now(), ${'PENDING'}) ON CONFLICT ("tenantId","email") DO NOTHING`
+    // Ensure a Company exists for the invited tenant so the API can return it
+    await prisma.company.create({ data: { tenantId, name: 'Invited Company', isActive: true } })
 
     const res = await request(app.getHttpServer()).get('/api/companies?filter=invited').set('Authorization', `Bearer ${token}`).expect(200)
     expect(Array.isArray(res.body)).toBe(true)
-    const ids = res.body.map((r: any) => r.id)
-    expect(ids).toContain(tenantId)
+    const tenantIds = res.body.map((r: any) => r.tenantId)
+    expect(tenantIds).toContain(tenantId)
+  }, 30000)
+
+  it('GET /api/companies/:id is scoped to tenant membership', async () => {
+    // Create a tenant and company not linked to demo user
+    const tenantB = require('crypto').randomUUID()
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${tenantB}::uuid, ${'Other Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    const companyB = await prisma.company.create({ data: { tenantId: tenantB, name: 'Other Company', isActive: true } })
+
+    // Demo user should NOT be able to GET this company
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'demo@haypbooks.test', password: 'password' }).expect(200)
+    const token = login.body.token
+    await request(app.getHttpServer()).get(`/api/companies/${companyB.id}`).set('Authorization', `Bearer ${token}`).expect(404)
+
+    // Now add demo user as a TenantUser and try again → expect 200
+    const demoUser = await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
+    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt") VALUES (${tenantB}::uuid, ${demoUser!.id}, ${'MEMBER'}, ${false}, now()) ON CONFLICT ("tenantId","userId") DO NOTHING`
+    const res2 = await request(app.getHttpServer()).get(`/api/companies/${companyB.id}`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res2.body).toBeTruthy()
   }, 30000)
 })
