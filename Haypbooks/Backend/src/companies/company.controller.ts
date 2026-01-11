@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Req, Patch, Query, HttpCode, HttpStatus } from '@nestjs/common'
+import { Controller, Post, Get, Body, Param, UseGuards, Req, Patch, Query, HttpCode, HttpStatus, NotFoundException } from '@nestjs/common'
 import { CompanyService } from './company.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 
@@ -11,6 +11,16 @@ export class CompaniesController {
   @UseGuards(JwtAuthGuard)
   async create(@Req() req: any, @Body() body: any) {
     const userId = req.user?.userId
+    
+    // Support creating additional companies under existing tenant
+    if (body.tenantId) {
+      return this.svc.createCompanyUnderTenant(body.tenantId, {
+        name: body.name,
+        currency: body.currency,
+        business: body.business,
+      })
+    }
+    
     // If caller didn't include a user association, attach the creating user as the owner
     if (!body.users && userId) {
       body = { ...(body || {}), users: { create: [{ userId, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' }] } }
@@ -35,8 +45,14 @@ export class CompaniesController {
   }
 
   @Get(':id')
-  async get(@Param('id') id: string) {
-    return this.svc.getCompany(id)
+  @UseGuards(JwtAuthGuard)
+  async get(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user?.userId
+    const company = await this.svc.getCompanyForUser(userId, id)
+    if (!company) {
+      throw new NotFoundException()
+    }
+    return company
   }
 
   @Patch(':id/last-accessed')
