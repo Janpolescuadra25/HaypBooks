@@ -29,11 +29,15 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
   test('Owner Flow: Signup → Create Company → Add Second Company → Invite Accountant', async ({ page }) => {
     // Step 1: Owner signs up with OWNER hub
     await page.goto('/signup')
-    await page.waitForSelector('[name="email"]', { timeout: 15000 })
-    await page.fill('[name="email"]', ownerEmail)
-    await page.fill('[name="password"]', password)
-    await page.fill('[name="companyName"]', companyName)
-    await page.click('text=Sign Up')
+    // Choose Owner role then fill the form
+    await page.click('text=My Business')
+    await page.waitForSelector('#email', { timeout: 15000 })
+    await page.fill('#firstName', 'Owner')
+    await page.fill('#lastName', 'Test')
+    await page.fill('#email', ownerEmail)
+    await page.fill('#password', password)
+    await page.fill('#confirmPassword', password)
+    await page.click('text=Create account')
 
     // Should redirect to onboarding/get-started
     await expect(page).toHaveURL(/\/onboarding|\/get-started/)
@@ -76,11 +80,15 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
 
     // Step 1: Accountant signs up with ACCOUNTANT hub
     await page.goto('/signup')
-    await page.waitForSelector('[name="email"]', { timeout: 15000 })
-    await page.fill('[name="email"]', accountantEmail)
-    await page.fill('[name="password"]', password)
-    await page.fill('[name="firmName"]', 'Test CPA Firm')
-    await page.click('text=Sign Up')
+    // Choose Accountant role then fill the form
+    await page.click('text=Accountant')
+    await page.waitForSelector('#email', { timeout: 15000 })
+    await page.fill('#firstName', 'Acct')
+    await page.fill('#lastName', 'Test')
+    await page.fill('#email', accountantEmail)
+    await page.fill('#password', password)
+    await page.fill('#confirmPassword', password)
+    await page.click('text=Create account')
 
     // Complete onboarding selecting ACCOUNTANT hub
     await expect(page).toHaveURL(/\/onboarding|\/get-started/)
@@ -122,9 +130,9 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
 
     // Login as owner
     await page.goto('/login')
-    await page.waitForSelector('[name="email"]', { timeout: 15000 })
-    await page.fill('[name="email"]', ownerEmail)
-    await page.fill('[name="password"]', password)
+    await page.waitForSelector('#email', { timeout: 15000 })
+    await page.fill('#email', ownerEmail)
+    await page.fill('#password', password)
     await page.click('text=Login')
 
     await expect(page).toHaveURL('/hub/companies')
