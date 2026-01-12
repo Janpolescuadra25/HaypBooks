@@ -64,6 +64,8 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     const cookies = await page.context().cookies()
     const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ')
     await page.request.post('/api/companies', { data: { name: secondCompanyName }, headers: { cookie: cookieHeader } })
+    // Refresh Owner Hub to pick up the new company
+    await page.reload()
 
     // Verify both companies appear in Owner Hub
     await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
