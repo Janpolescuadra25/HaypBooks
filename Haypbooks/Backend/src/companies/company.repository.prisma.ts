@@ -170,7 +170,7 @@ export class CompanyRepository {
         id,
         isActive: true,
         tenant: {
-          users: { some: { userId } }
+          users: { some: { userId, status: 'ACTIVE' } }
         }
       },
       include: {
@@ -198,7 +198,7 @@ export class CompanyRepository {
         where: {
           isActive: true,
           tenant: {
-            users: { some: { userId } }
+            users: { some: { userId, status: 'ACTIVE' } }
           }
         },
         include: {
@@ -214,9 +214,19 @@ export class CompanyRepository {
           }
         }
       })
+      // Defensive dedupe
+      const seenAll = new Set<string>()
+      const uniqueAll = [] as any[]
+      for (const c of companies || []) {
+        if (!c || !c.id) continue
+        if (!seenAll.has(c.id)) {
+          seenAll.add(c.id)
+          uniqueAll.push(c)
+        }
+      }
       // eslint-disable-next-line no-console
-      console.info('[COMPANY-QUERY] Results (no filter):', { count: companies.length, companies: companies.map(c => ({ id: c.id, name: c.name })) })
-      return companies
+      console.info('[COMPANY-QUERY] Results (no filter):', { count: uniqueAll.length, companies: uniqueAll.map(c => ({ id: c.id, name: c.name })) })
+      return uniqueAll
     }
 
     if (filter === 'owned') {
@@ -227,7 +237,7 @@ export class CompanyRepository {
         where: {
           isActive: true,
           tenant: {
-            users: { some: { userId, isOwner: true } }
+            users: { some: { userId, isOwner: true, status: 'ACTIVE' } }
           }
         },
         include: {
@@ -243,10 +253,20 @@ export class CompanyRepository {
           }
         }
       })
+      // Defensive dedupe in case DB join returned duplicate rows
+      const seen = new Set<string>()
+      const unique = [] as any[]
+      for (const c of companies || []) {
+        if (!c || !c.id) continue
+        if (!seen.has(c.id)) {
+          seen.add(c.id)
+          unique.push(c)
+        }
+      }
       // eslint-disable-next-line no-console
       console.info('[COMPANY-QUERY] ✅ Results (owned):', { 
-        count: companies.length, 
-        companies: companies.map(c => ({ 
+        count: unique.length, 
+        companies: unique.map(c => ({ 
           id: c.id, 
           name: c.name, 
           tenantId: c.tenantId,
@@ -254,7 +274,7 @@ export class CompanyRepository {
           tenantUsers: c.tenant?.users 
         })) 
       })
-      return companies
+      return unique
     }
 
     if (filter === 'invited' && email) {
@@ -280,7 +300,17 @@ export class CompanyRepository {
           }
         }
       })
-      return companies
+      // Defensive dedupe
+      const seenI = new Set<string>()
+      const uniqueI = [] as any[]
+      for (const c of companies || []) {
+        if (!c || !c.id) continue
+        if (!seenI.has(c.id)) {
+          seenI.add(c.id)
+          uniqueI.push(c)
+        }
+      }
+      return uniqueI
     }
 
     // Fallback: no filter matched
