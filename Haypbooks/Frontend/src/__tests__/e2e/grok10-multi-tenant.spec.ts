@@ -137,7 +137,12 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.fill('#password', password)
     await page.click('text=Sign in')
 
-    await expect(page).toHaveURL('/hub/companies')
+    // Wait for successful redirect into Owner Hub (or fail if verification is required)
+    try {
+      await page.waitForURL('/hub/companies', { timeout: 15000 })
+    } catch (e) {
+      throw new Error(`Login did not redirect to Owner Hub; current URL: ${page.url()}`)
+    }
 
     // Open dev tools and check API responses
     const companyRequests: any[] = []
