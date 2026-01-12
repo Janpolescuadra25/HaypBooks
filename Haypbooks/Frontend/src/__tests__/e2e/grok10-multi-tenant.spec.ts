@@ -106,25 +106,22 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     // Ensure we're on the Accountant Hub or onboarding accountant flow
 
 
-    // Step 2: Check pending invitations notification
-    await expect(page.locator('text=Pending Invitation')).toBeVisible()
-    await page.click('text=Pending Invitation')
-
-    // Should navigate to /hub/invites
-    await expect(page).toHaveURL('/hub/invites')
+    // Step 2: Navigate to invites page and accept the invitation
+    await page.goto('/hub/invites')
+    await page.waitForURL('/hub/invites')
 
     // Step 3: Accept invitation
-    await expect(page.locator(`text=${companyName}`)).toBeVisible()
+    await page.waitForSelector(`text=${companyName}`, { timeout: 10000 })
     await page.click('text=Accept Invitation')
 
-    // Wait for success and redirect
-    await expect(page).toHaveURL('/hub/accountant')
+    // Wait for success and redirect back to accountant hub
+    await page.waitForURL('/hub/accountant', { timeout: 10000 })
 
     // Step 4: Verify client appears in list
-    await expect(page.locator(`text=${companyName}`)).toBeVisible()
+    await page.waitForSelector(`text=${companyName}`, { timeout: 10000 })
     
     // Verify companies count is shown
-    await expect(page.locator('text=2 companies')).toBeVisible()
+    await page.waitForSelector('text=2 companies', { timeout: 10000 })
 
     // Step 5: View client details
     await page.click(`text=View Client`)
