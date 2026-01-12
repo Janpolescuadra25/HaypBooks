@@ -37,3 +37,14 @@ Notes:
 - Run this during a maintenance window in production to avoid heavy write contention.
 - After verifying backfill success in staging and production, consider removing the plaintext fallback in user lookups and adding a uniqueness constraint/index if desired.
 
+New utilities added:
+
+- `backfill-tenantid-from-company.ts` — conservative backfill of `tenantId` from related company rows. Dry-run by default; use `--apply` to perform updates (see `package.json` script `db:backfill:tenantid-from-company`).
+- `find-tenantid-orphans.ts` — scans common tables and reports counts and sample rows for records where `tenantId IS NULL`. Use to prioritize manual fixes for rows that cannot be backfilled from companies.
+
+Recommended next steps:
+1. Run `npm run db:find-tenantid-orphans` against a staging copy and review sample rows.
+2. If safe, run `npm run db:backfill:tenantid-from-company -- --apply` in a maintenance window with DB backup.
+3. Re-scan orphans and write tailored backfills for remaining tables that have no company relation.
+4. After all tenantId values are populated, retry generating Prisma client and running final tenant FK migrations.
+

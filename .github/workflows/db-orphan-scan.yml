@@ -1,0 +1,27 @@
+name: DB Tenant Orphan Scan
+
+on:
+  schedule:
+    - cron: '0 4 * * 1' # weekly (UTC Monday 04:00)
+  push:
+    branches: [ main ]
+
+jobs:
+  orphan-scan:
+    runs-on: ubuntu-latest
+    env:
+      ORPHAN_THRESHOLD: 0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+        working-directory: Backend
+      - name: Run orphan check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ORPHAN_THRESHOLD: ${{ env.ORPHAN_THRESHOLD }}
+        run: npm --prefix Backend run ci:check-tenant-orphans

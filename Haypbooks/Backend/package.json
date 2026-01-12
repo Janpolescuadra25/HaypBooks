@@ -30,6 +30,13 @@
     "db:backfill:companyIds": "ts-node scripts/db/backfill-company-ids.ts",
     "db:backfill:phoneHmac": "ts-node scripts/db/backfill-phone-hmac.ts",
     "db:backfill:tenant-to-company": "node ./scripts/db/backfill-tenant-to-company.js",
+    "db:backfill:tenantid-from-company": "ts-node scripts/db/backfill-tenantid-from-company.ts",
+    "db:find-tenantid-orphans": "ts-node scripts/db/find-tenantid-orphans.ts",
+    "db:find-tenantid-orphans-all": "ts-node scripts/db/find-tenantid-orphans-all.ts",
+    "db:inspect-tenant-company": "ts-node scripts/db/inspect-tenant-and-company-columns.ts",
+    "db:check-company-tenant-type": "ts-node scripts/db/check-company-tenant-column-type.ts",
+    "db:backfill:subscription-tenantid": "ts-node scripts/db/backfill-subscription-tenantid.ts",
+    "ci:check-tenant-orphans": "ts-node scripts/ci/check-tenantid-orphans.ts",
     "db:squash": "node ./scripts/migrate/squash-migrations.js",
     "db:validate:company-fks": "ts-node scripts/db/validate-company-fks.ts",
     "db:check:new-tables": "ts-node scripts/db/check-new-tables.ts",
@@ -77,6 +84,9 @@
     "db:verify:subscription-schema": "node scripts/db/prisma-verify-subscription-schema.js",
     "test:quick": "npm run migrate:init && node ./scripts/migrate/run-sql.js && npm run db:seed:dev && jest --runInBand test/payroll.unit-spec.ts",
     "db:seed": "node dist/prisma/seed.js",
+    "db:cleanup:duplicate-companies": "ts-node ./scripts/db/cleanup-duplicate-companies.ts",
+    "diag:tenants-missing-name": "ts-node ./scripts/db/find-tenants-missing-name.ts",
+    "db:backfill:tenant-names": "ts-node ./scripts/db/backfill-tenant-names.ts",
     "prepare": "husky install"
   },
   "husky": {
