@@ -1,5 +1,7 @@
 Central Hub E2E — local dev
 
+Deterministic test strategy: For multi-tenant specs (e.g., Grok.10) we prefer authenticated API-backed operations for state setup (company creation, invite acceptance) to reduce UI timing flakiness. UI interactions are retained when validating UX flows; use API calls for setup unless testing the UI behavior itself.
+
 This test exercises the Central Hub CompanySwitcher end-to-end (login, create companies, click to switch, validate last-accessed behavior).
 
 Requirements
