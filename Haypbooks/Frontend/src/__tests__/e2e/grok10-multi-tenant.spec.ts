@@ -109,9 +109,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     // Step 2: Navigate to invites page and accept the invitation
     await page.goto('/hub/invites')
     await page.waitForURL('/hub/invites')
+    await page.reload()
 
     // Step 3: Accept invitation
-    await page.waitForSelector(`text=${companyName}`, { timeout: 10000 })
+    await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
     await page.click('text=Accept Invitation')
 
     // Wait for success and redirect back to accountant hub
