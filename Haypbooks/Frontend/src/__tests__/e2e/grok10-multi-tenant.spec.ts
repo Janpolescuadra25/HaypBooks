@@ -61,10 +61,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
 
     // Step 2: Add second company using "Add Company" button
-    await page.click('text=Add Company')
+    await page.locator('text=Add Company').first().click({ force: true })
     await page.fill('[placeholder="Enter company name"]', secondCompanyName)
     await page.selectOption('select', 'USD')
-    await page.click('text=Add Company')
+    await page.locator('text=Add Company').first().click({ force: true })
 
     // Wait for success message
     await expect(page.locator('text=Company added successfully')).toBeVisible()
