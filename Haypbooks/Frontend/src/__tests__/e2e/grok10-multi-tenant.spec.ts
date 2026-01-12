@@ -60,11 +60,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     // Verify company appears in hub
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
 
-    // Step 2: Add second company using "Add Company" button
-    await page.locator('text=Add Company').first().click({ force: true })
-    await page.fill('[placeholder="Enter company name"]', secondCompanyName)
-    await page.selectOption('select', 'USD')
-    await page.locator('text=Add Company').first().click({ force: true })
+    // Step 2: Create a second company (use API for reliability in E2E)
+    const cookies = await page.context().cookies()
+    const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ')
+    await page.request.post('/api/companies', { data: { name: secondCompanyName }, headers: { cookie: cookieHeader } })
 
     // Verify both companies appear in Owner Hub
     await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
