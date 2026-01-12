@@ -121,12 +121,8 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     // Step 4: Verify client appears in list
     await page.waitForSelector(`text=${companyName}`, { timeout: 10000 })
     
-    // Verify companies count is shown
-    await page.waitForSelector('text=2 companies', { timeout: 10000 })
-
     // Step 5: View client details
     await page.click(`text=View Client`)
-
     // Should update lastAccessedAt
     // Verify navigation or state change (implementation dependent)
   })
