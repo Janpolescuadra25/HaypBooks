@@ -45,11 +45,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.click('text=Continue')
     await page.waitForURL(/\/onboarding|\/get-started/, { timeout: 15000 })
 
-    // Complete onboarding by entering Owner Hub (best-effort selector)
-    const enterOwner = page.getByRole('link', { name: /Enter Owner Hub|Owner Hub/i })
-    await enterOwner.waitFor({ timeout: 10000 })
-    await enterOwner.click()
-    await page.click('text=Continue')
+    // Complete onboarding by choosing a workspace name and starting a trial
+    await page.waitForSelector('#workspace-name', { timeout: 10000 })
+    await page.fill('#workspace-name', companyName)
+    await page.click('text=Start Free Trial')
 
     // Should create tenant + company and redirect to /hub/companies (Owner Hub)
     await page.waitForURL('/hub/companies', { timeout: 30000 })
