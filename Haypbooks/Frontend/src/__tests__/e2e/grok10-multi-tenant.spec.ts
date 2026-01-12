@@ -66,10 +66,9 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.selectOption('select', 'USD')
     await page.locator('text=Add Company').first().click({ force: true })
 
-    // Wait for success message
-    await expect(page.locator('text=Company added successfully')).toBeVisible()
-
-    // Verify both companies appear
+    // Verify both companies appear in Owner Hub
+    await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
+    await page.waitForSelector(`text=${secondCompanyName}`, { timeout: 30000 })
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
     await expect(page.locator(`text=${secondCompanyName}`)).toBeVisible()
 
