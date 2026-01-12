@@ -135,7 +135,7 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.waitForSelector('#email', { timeout: 15000 })
     await page.fill('#email', ownerEmail)
     await page.fill('#password', password)
-    await page.click('text=Login')
+    await page.click('text=Sign in')
 
     await expect(page).toHaveURL('/hub/companies')
 
@@ -169,10 +169,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
   test('Accountant Hub: Displays tenants (not companies)', async ({ page }) => {
     // Login as accountant
     await page.goto('/login')
-    await page.waitForSelector('[name="email"]', { timeout: 15000 })
-    await page.fill('[name="email"]', accountantEmail)
-    await page.fill('[name="password"]', password)
-    await page.click('text=Login')
+    await page.waitForSelector('#email', { timeout: 15000 })
+    await page.fill('#email', accountantEmail)
+    await page.fill('#password', password)
+    await page.click('text=Sign in')
 
     await expect(page).toHaveURL('/hub/accountant')
 
