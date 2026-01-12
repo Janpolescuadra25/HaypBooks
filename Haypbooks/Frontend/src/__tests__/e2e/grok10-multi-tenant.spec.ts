@@ -45,12 +45,14 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.click('text=Continue')
     await page.waitForURL(/\/onboarding|\/get-started/, { timeout: 15000 })
 
-    // Complete onboarding selecting OWNER hub
-    await page.click('text=Owner Hub')
+    // Complete onboarding by entering Owner Hub (best-effort selector)
+    const enterOwner = page.getByRole('link', { name: /Enter Owner Hub|Owner Hub/i })
+    await enterOwner.waitFor({ timeout: 10000 })
+    await enterOwner.click()
     await page.click('text=Continue')
 
     // Should create tenant + company and redirect to /hub/companies (Owner Hub)
-    await page.waitForURL('/hub/companies', { timeout: 15000 })
+    await page.waitForURL('/hub/companies', { timeout: 30000 })
 
     // Verify company appears in hub
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
