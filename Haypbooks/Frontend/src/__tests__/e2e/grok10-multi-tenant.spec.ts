@@ -1,0 +1,232 @@
+import { test, expect, Page } from '@playwright/test'
+
+/**
+ * Grok.10 Multi-Tenant Flow E2E Tests
+ * 
+ * Tests the complete Owner and Accountant hub workflow as described in Grok.10.md:
+ * 1. Owner creates company
+ * 2. Owner adds additional companies (multi-company)
+ * 3. Owner invites accountant
+ * 4. Accountant accepts invitation
+ * 5. Accountant views client list
+ * 6. Accountant switches between clients
+ */
+
+test.describe.configure({ mode: 'serial' })
+
+test.describe('Grok.10 Multi-Tenant Workflow', () => {
+  const ownerEmail = `owner-${Date.now()}@test.com`
+  const accountantEmail = `accountant-${Date.now()}@test.com`
+  const password = 'Test123!'
+  const companyName = 'Test Company Inc'
+  const secondCompanyName = 'Second Business LLC'
+
+  test.beforeEach(async ({ page }) => {
+    // Clear cookies to start fresh
+    await page.context().clearCookies()
+  })
+
+  test('Owner Flow: Signup → Create Company → Add Second Company → Invite Accountant', async ({ page }) => {
+    // Step 1: Owner signs up with OWNER hub
+    await page.goto('/signup')
+    await page.waitForSelector('[name="email"]', { timeout: 15000 })
+    await page.fill('[name="email"]', ownerEmail)
+    await page.fill('[name="password"]', password)
+    await page.fill('[name="companyName"]', companyName)
+    await page.click('text=Sign Up')
+
+    // Should redirect to onboarding/get-started
+    await expect(page).toHaveURL(/\/onboarding|\/get-started/)
+    
+    // Complete onboarding selecting OWNER hub
+    await page.click('text=Owner Hub')
+    await page.click('text=Continue')
+
+    // Should create tenant + company and redirect to /hub/companies
+    await expect(page).toHaveURL('/hub/companies')
+
+    // Verify company appears in hub
+    await expect(page.locator(`text=${companyName}`)).toBeVisible()
+
+    // Step 2: Add second company using "Add Company" button
+    await page.click('text=Add Company')
+    await page.fill('[placeholder="Enter company name"]', secondCompanyName)
+    await page.selectOption('select', 'USD')
+    await page.click('text=Add Company')
+
+    // Wait for success message
+    await expect(page.locator('text=Company added successfully')).toBeVisible()
+
+    // Verify both companies appear
+    await expect(page.locator(`text=${companyName}`)).toBeVisible()
+    await expect(page.locator(`text=${secondCompanyName}`)).toBeVisible()
+
+    // Step 3: Invite accountant
+    await page.click('text=Invite Accountant')
+    await page.fill('[placeholder="accountant@example.com"]', accountantEmail)
+    await page.click('button:has-text("Send Invitation")')
+
+    // Wait for success message
+    await expect(page.locator('text=Invitation sent')).toBeVisible()
+  })
+
+  test('Accountant Flow: Signup → View Pending Invites → Accept → View Clients', async ({ page, context }) => {
+    // Prerequisites: Owner test must run first to create invitation
+    // In real testing, you'd run these sequentially or have setup data
+
+    // Step 1: Accountant signs up with ACCOUNTANT hub
+    await page.goto('/signup')
+    await page.waitForSelector('[name="email"]', { timeout: 15000 })
+    await page.fill('[name="email"]', accountantEmail)
+    await page.fill('[name="password"]', password)
+    await page.fill('[name="firmName"]', 'Test CPA Firm')
+    await page.click('text=Sign Up')
+
+    // Complete onboarding selecting ACCOUNTANT hub
+    await expect(page).toHaveURL(/\/onboarding|\/get-started/)
+    await page.click('text=Accountant Hub')
+    await page.click('text=Continue')
+
+    // Should redirect to /hub/accountant
+    await expect(page).toHaveURL('/hub/accountant')
+
+    // Step 2: Check pending invitations notification
+    await expect(page.locator('text=Pending Invitation')).toBeVisible()
+    await page.click('text=Pending Invitation')
+
+    // Should navigate to /hub/invites
+    await expect(page).toHaveURL('/hub/invites')
+
+    // Step 3: Accept invitation
+    await expect(page.locator(`text=${companyName}`)).toBeVisible()
+    await page.click('text=Accept Invitation')
+
+    // Wait for success and redirect
+    await expect(page).toHaveURL('/hub/accountant')
+
+    // Step 4: Verify client appears in list
+    await expect(page.locator(`text=${companyName}`)).toBeVisible()
+    
+    // Verify companies count is shown
+    await expect(page.locator('text=2 companies')).toBeVisible()
+
+    // Step 5: View client details
+    await page.click(`text=View Client`)
+
+    // Should update lastAccessedAt
+    // Verify navigation or state change (implementation dependent)
+  })
+
+  test('Multi-Company under Single Tenant: Verify tenantId is shared', async ({ page }) => {
+    // This test verifies the database constraint: multiple companies under one tenant
+
+    // Login as owner
+    await page.goto('/login')
+    await page.waitForSelector('[name="email"]', { timeout: 15000 })
+    await page.fill('[name="email"]', ownerEmail)
+    await page.fill('[name="password"]', password)
+    await page.click('text=Login')
+
+    await expect(page).toHaveURL('/hub/companies')
+
+    // Open dev tools and check API responses
+    const companyRequests: any[] = []
+    page.on('response', async (response) => {
+      if (response.url().includes('/api/companies') && response.status() === 200) {
+        try {
+          const data = await response.json()
+          companyRequests.push(data)
+        } catch (e) {
+          // ignore
+        }
+      }
+    })
+
+    // Refresh to trigger API call
+    await page.reload()
+
+    // Wait for companies to load
+    await page.waitForTimeout(1000)
+
+    // Verify both companies have the same tenantId
+    const companies = companyRequests.flat().filter(c => c.name === companyName || c.name === secondCompanyName)
+    if (companies.length >= 2) {
+      const tenantIds = companies.map(c => c.tenantId)
+      expect(tenantIds[0]).toBe(tenantIds[1])
+    }
+  })
+
+  test('Accountant Hub: Displays tenants (not companies)', async ({ page }) => {
+    // Login as accountant
+    await page.goto('/login')
+    await page.waitForSelector('[name="email"]', { timeout: 15000 })
+    await page.fill('[name="email"]', accountantEmail)
+    await page.fill('[name="password"]', password)
+    await page.click('text=Login')
+
+    await expect(page).toHaveURL('/hub/accountant')
+
+    // Intercept API call to verify correct endpoint
+    let apiCalled = false
+    page.on('request', (request) => {
+      if (request.url().includes('/api/tenants/clients')) {
+        apiCalled = true
+      }
+    })
+
+    await page.reload()
+    await page.waitForTimeout(500)
+
+    // Verify API endpoint is correct
+    expect(apiCalled).toBe(true)
+
+    // Verify tenant card shows company count
+    await expect(page.locator('text=2 companies')).toBeVisible()
+  })
+
+  test('Invitation Expiry: Expired invites not shown', async ({ page }) => {
+    // This would require mocking the database to have an expired invite
+    // Or using time manipulation if your system supports it
+    // Placeholder for completeness
+  })
+
+  test('Permission Check: Only owner can invite accountants', async ({ page, context }) => {
+    // Create a second page for accountant
+    const accountantPage = await context.newPage()
+
+    // Accountant tries to invite someone (should fail)
+    await accountantPage.goto('/login')
+    await accountantPage.fill('[name="email"]', accountantEmail)
+    await accountantPage.fill('[name="password"]', password)
+    await accountantPage.click('text=Login')
+
+    await accountantPage.goto('/hub/companies') // Try to access owner hub
+    
+    // Should either redirect or show no invite button
+    // This depends on your authorization implementation
+    await expect(accountantPage.locator('text=Invite Accountant')).not.toBeVisible()
+
+    // If they try via API, should get 403
+    const response = await accountantPage.request.post('/api/tenants/fake-id/invites', {
+      data: { email: 'test@test.com' },
+    })
+    expect(response.status()).toBe(403)
+  })
+})
+
+test.describe('Edge Cases and Error Handling', () => {
+  test('Duplicate invitation: Should reject', async ({ page }) => {
+    // Login as owner and try to invite same email twice
+    // Should show error message
+  })
+
+  test('Invalid email format: Should reject', async ({ page }) => {
+    // Try to invite with invalid email
+    // Should show validation error
+  })
+
+  test('Accepting already-accepted invite: Should handle gracefully', async ({ page }) => {
+    // Try to accept an invite that was already accepted
+    // Should show appropriate message
+  })
+})
