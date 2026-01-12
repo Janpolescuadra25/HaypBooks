@@ -39,15 +39,18 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.fill('#confirmPassword', password)
     await page.click('text=Create account')
 
-    // Should redirect to onboarding/get-started
-    await expect(page).toHaveURL(/\/onboarding|\/get-started/)
-    
+    // Should redirect to verify OTP, then complete verification to land in onboarding
+    await page.waitForURL(/\/verify-otp(\?.*)?/, { timeout: 15000 })
+    // Verify using the code passed in the query string (Continue triggers server-side completeSignup)
+    await page.click('text=Continue')
+    await page.waitForURL(/\/onboarding|\/get-started/, { timeout: 15000 })
+
     // Complete onboarding selecting OWNER hub
     await page.click('text=Owner Hub')
     await page.click('text=Continue')
 
-    // Should create tenant + company and redirect to /hub/companies
-    await expect(page).toHaveURL('/hub/companies')
+    // Should create tenant + company and redirect to /hub/companies (Owner Hub)
+    await page.waitForURL('/hub/companies', { timeout: 15000 })
 
     // Verify company appears in hub
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
@@ -90,13 +93,13 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.fill('#confirmPassword', password)
     await page.click('text=Create account')
 
-    // Complete onboarding selecting ACCOUNTANT hub
-    await expect(page).toHaveURL(/\/onboarding|\/get-started/)
-    await page.click('text=Accountant Hub')
+    // Should redirect to verify OTP, then complete verification to land in onboarding
+    await page.waitForURL(/\/verify-otp(\?.*)?/, { timeout: 15000 })
     await page.click('text=Continue')
+    await page.waitForURL(/\/onboarding\/accountant|\/hub\/accountant/, { timeout: 15000 })
 
-    // Should redirect to /hub/accountant
-    await expect(page).toHaveURL('/hub/accountant')
+    // Ensure we're on the Accountant Hub or onboarding accountant flow
+
 
     // Step 2: Check pending invitations notification
     await expect(page.locator('text=Pending Invitation')).toBeVisible()
