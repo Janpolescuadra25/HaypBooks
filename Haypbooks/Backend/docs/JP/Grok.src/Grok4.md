@@ -1,83 +1,70 @@
-### Best Practices for Testing Signup + Email Verification Locally (Without Deploying)
+# TenantId Backfill — Runbook & Safe Plan 🔧✅
 
-Since you're not deploying yet, the goal is to **safely and repeatedly test the full signup → verification flow** without relying on real email services or public URLs. Here's the recommended approach based on your current setup (NestJS backend, console-logged emails, dev OTP return).
+Summary
 
-#### **1. Keep Using the Dev Mode "Cheat" (Best for Quick Iteration)**
-Your backend already logs the OTP and returns it in responses during development — this is **perfect** for local testing.
+- Conservative backfill and orphan-detection scripts were added to help populate missing `tenantId` values from related company rows. Both scripts are dry-run by default and are resilient to common table/column naming variants.
+- Local dry-runs showed no mass changes; a staged run against real data is required before any production updates.
 
-**How to test manually**:
-1. Open your app (e.g., `http://localhost:3000` or `/signup`).
-2. Sign up with a new email like `test-local-123@haypbooks.test`.
-3. Open your terminal running the backend.
-4. Look for the log:
-   ```
-   Verification OTP for test-local-123@haypbooks.test: 123456
-   ```
-5. Construct the verification URL manually:
-   ```
-   http://localhost:3000/api/auth/verify-email?email=test-local-123@haypbooks.test&otp=123456
-   ```
-6. Paste it into your browser → you should land on the success page ("Your email has been successfully verified").
+What was added
 
-**Pros**: Fastest feedback loop, no extra setup.  
-**When to use**: Daily development, quick bug fixes.
+- `scripts/db/backfill-tenantid-from-company.ts` — conservative backfill from related `Company.tenantId`. Dry-run default, `--apply` to execute updates.
+- `scripts/db/find-tenantid-orphans.ts` — scans common tables and prints counts + sample rows where `tenantId IS NULL`.
+- package.json scripts:
+  - `db:find-tenantid-orphans`
+  - `db:backfill:tenantid-from-company`
 
-#### **2. Automate It in E2E Tests (What You're Already Doing — Keep It!)**
-Your Playwright test (`verify-email.spec.ts`) already does exactly this programmatically:
-- Signs up via API
-- Extracts the dev OTP from response
-- Navigates to verify URL
-- Asserts success page
+How to run (staging first) ⚠️
 
-**Best practice**:
-- Run this frequently:
-  ```bash
-  npm run e2e -- e2e/verify-email.spec.ts
-  ```
-- Keep updating snapshots when UI changes.
+1. Prepare
+   - Ensure you have a recent DB snapshot/backup. Work in staging first.
+   - Stop external jobs that may write to the DB during the run if possible.
 
-This gives you **confidence** that the flow works end-to-end without manual steps.
+2. Scan for orphans (dry-run, inspect samples)
 
-#### **3. Optional: Use a Local Email Trap for More Realistic Testing**
-If you want to test **actual email delivery** (template rendering, links, etc.) without sending real emails:
-
-**Tool**: MailHog or Mailpit (free, Docker-based SMTP server with web UI)
-
-**Quick setup** (one-time):
 ```bash
-docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog
-```
-- Web UI: http://localhost:8025
-
-**Configure in `.env.local`**:
-```
-MAILER_PROVIDER=smtp
-MAILER_HOST=localhost
-MAILER_PORT=1025
-MAILER_USERNAME=
-MAILER_PASSWORD=
-MAILER_FROM=no-reply@haypbooks.local
+# from project root
+npm --prefix Backend run db:find-tenantid-orphans
 ```
 
-**Test flow**:
-1. Sign up → email appears in MailHog UI.
-2. Click the "Verify My Email" button in the captured email.
-3. You're redirected to your local app → success page.
+- Inspect the sample rows printed for each table. Confirm rules for inferring tenant from company rows.
 
-**Pros**: See exact rendered email, test links naturally.  
-**When to use**: Before launch, or when tweaking email templates.
+3. Run conservative backfill (dry-run, then apply)
 
-#### **4. What NOT to Do Right Now**
-- Don't use real SMTP (SendGrid, Gmail, etc.) for frequent testing — risk of rate limits or spam flags.
-- Don't rely on manual email checking with real providers.
+```bash
+# dry-run (default)
+npm --prefix Backend run db:backfill:tenantid-from-company
 
-#### **Summary: Your Current Local Testing Strategy (Recommended)**
+# apply the changes (run only after manual review & backup)
+npm --prefix Backend run db:backfill:tenantid-from-company -- --apply
+```
 
-| Scenario                  | Method                              | Command / Steps                          |
-|---------------------------|-------------------------------------|------------------------------------------|
-| Quick manual test         | Use console-logged OTP              | Check terminal → build URL → paste in browser |
-| Automated regression      | Playwright E2E test                 | `npm run e2e -- e2e/verify-email.spec.ts` |
-| Visual email inspection   | (Optional) MailHog                  | Docker + env config → view at localhost:8025 |
+4. Re-scan and validate
 
-You're already doing the **best possible thing** for pre-deployment: using dev OTP logging + automated E2E tests.
+- Re-run `db:find-tenantid-orphans` to confirm counts decreased.
+- Run a small set of application e2e/backend tests and the `companies` scoping tests to confirm no cross-tenant visibility.
 
+Safety checklist ✅
+
+- [ ] Backup (DB snapshot) taken for target environment
+- [ ] Run in staging first and review samples
+- [ ] Get product/owner sign-off for ambiguous tables
+- [ ] Schedule a maintenance window for production apply
+- [ ] Have a tested DB restore plan available
+
+Rollback (if needed)
+
+- Restore DB from the snapshot created before applying updates.
+
+Windows / Prisma note
+
+- If you need to regenerate Prisma client after schema change, you may encounter a Windows file lock on `node_modules/.prisma/client/query_engine-windows.dll.node`. Stop Node processes or restart the machine to clear the lock before running `npm run prisma:generate`.
+
+Next steps (recommended)
+
+1. (Done) Ran orphan scan in dev/staging copy — no tenantId NULL rows remain in scanned tables.
+2. (Done) Added subscription.tenantId column and backfilled 5 rows where `company.tenantId` was a valid UUID.
+3. Prepare migration and PR for production apply (includes idempotent SQL + verification + rollback plan). See `scripts/db/migrations/20260113_add_subscription_tenantid.sql`.
+4. For other tables that require tenant additions, prepare similar migration scripts and include them in the PR.
+5. Add a CI/staging job to periodically run `db:find-tenantid-orphans` and alert if counts increase beyond thresholds.
+
+If you want, I can prepare the PR now with the migration SQL, the runbook checklist (backup, maintenance window, commands to run, verification queries), and a playbook for manual follow-ups (if company.tenantId values are not valid UUIDs). Which would you like me to prepare next?
