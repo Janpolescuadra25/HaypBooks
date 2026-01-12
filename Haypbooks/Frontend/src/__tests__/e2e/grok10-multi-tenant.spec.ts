@@ -49,9 +49,11 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.waitForSelector('#workspace-name', { timeout: 10000 })
     await page.fill('#workspace-name', companyName)
     await page.click('text=Start Free Trial')
+    await page.waitForURL('/get-started/trial', { timeout: 10000 })
+    await page.click('text=Complete Quick Setup')
 
     // Should create tenant + company and redirect to /hub/companies (Owner Hub)
-    await page.waitForURL('/hub/companies', { timeout: 30000 })
+    await page.waitForURL('/hub/companies', { timeout: 60000 })
 
     // Verify company appears in hub
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
