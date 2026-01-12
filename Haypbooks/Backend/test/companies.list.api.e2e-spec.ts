@@ -93,4 +93,34 @@ describe('Companies list API (e2e)', () => {
     const res2 = await request(app.getHttpServer()).get(`/api/companies/${companyB.id}`).set('Authorization', `Bearer ${token}`).expect(200)
     expect(res2.body).toBeTruthy()
   }, 30000)
+
+  it('GET /api/companies?filter=owned excludes companies for INACTIVE tenant memberships', async () => {
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Inactive Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    const demoUser = await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
+    await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","status","joinedAt") VALUES (${tenantId}::uuid, ${demoUser!.id}, ${'MEMBER'}, ${false}, ${'INACTIVE'}, now()) ON CONFLICT ("tenantId","userId") DO NOTHING`
+    await prisma.company.create({ data: { tenantId, name: 'Inactive Membership Company', isActive: true } })
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'demo@haypbooks.test', password: 'password' }).expect(200)
+    const token = login.body.token
+
+    const res = await request(app.getHttpServer()).get('/api/companies?filter=owned').set('Authorization', `Bearer ${token}`).expect(200)
+    const tenantIds = res.body.map((r: any) => r.tenantId)
+    expect(tenantIds).not.toContain(tenantId)
+  }, 30000)
+
+  it('GET /api/companies?filter=owned excludes companies for other tenants', async () => {
+    // Create a tenant and company not linked to demo user
+    const foreignTenant = require('crypto').randomUUID()
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${foreignTenant}::uuid, ${'Foreign Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
+    const foreignCompany = await prisma.company.create({ data: { tenantId: foreignTenant, name: 'Foreign Company', isActive: true } })
+
+    // Login as demo user and fetch owned companies
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'demo@haypbooks.test', password: 'password' }).expect(200)
+    const token = login.body.token
+
+    const res = await request(app.getHttpServer()).get('/api/companies?filter=owned').set('Authorization', `Bearer ${token}`).expect(200)
+    const ids = (res.body || []).map((r: any) => r.id)
+    expect(ids).not.toContain(foreignCompany.id)
+  }, 30000)
 })
