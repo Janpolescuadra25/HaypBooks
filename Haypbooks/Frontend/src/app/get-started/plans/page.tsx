@@ -21,14 +21,9 @@ export default function GetStartedPlansPage() {
         console.warn('Failed to persist Owner Workspace name to backend', e)
       }
 
-      // Attempt to create a company server-side so the Owner Workspace will show a card immediately.
-      // The server will attach the creating user as owner when authenticated.
-      try {
-        await apiClient.post('/api/companies', { name: workspaceName.trim() })
-      } catch (e) {
-        // non-fatal: if company creation fails, onboarding completion will still attempt creation server-side
-        console.warn('Failed to create company at Get Started (non-fatal)', e)
-      }
+      // NOTE: We no longer attempt to create a company here to avoid duplicate creation.
+      // The onboarding flow on the server will create the Company during completion and persist it,
+      // so here we only persist the Workspace name to the user's profile and continue the flow.
 
       router.push(next)
     } finally {
