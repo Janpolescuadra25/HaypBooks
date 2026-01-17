@@ -128,7 +128,7 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                 </div>
                 <div>
                   <h1 className={`${titleClass} text-slate-800`}>HAYPBOOKS</h1>
-                  <p className={`${subtitleClass} text-slate-500`}>OWNER WORKSPACE</p>
+                  <p className={`${subtitleClass} text-slate-500 flex items-center gap-2`}>{user?.companyName ? <span className="text-slate-700 font-semibold text-[10px]">{user.companyName}</span> : null}<span className="uppercase tracking-wide">OWNER WORKSPACE</span></p>
                 </div>
               </div>
 
