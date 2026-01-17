@@ -85,7 +85,7 @@ npm run test:serial -- src/__tests__/your.file.test.ts
 
 ## Running Playwright E2E locally (recommended for full flow verification)
 
-This repository includes Playwright E2E specs that exercise signup -> onboarding -> Owner Hub end-to-end. These specs use backend test helper endpoints (OTP retrieval, create/delete test users/companies), so you must run a local backend with test endpoints enabled to run them locally.
+This repository includes Playwright E2E specs that exercise signup -> onboarding -> Owner Workspace end-to-end. These specs use backend test helper endpoints (OTP retrieval, create/delete test users/companies), so you must run a local backend with test endpoints enabled to run them locally.
 
 Steps to run locally:
 
@@ -115,7 +115,7 @@ npx playwright test e2e/onboarding.ui-and-hub.spec.ts --project=chromium -g "onb
 ```
 
 Notes & tips:
-- The spec will attempt to detect the company in the Owner Hub UI; if it's not present (backend did not auto-create it during onboarding), the test will call the backend test helper `POST /api/test/create-company` to deterministically create the company and re-check the UI.
+- The spec will attempt to detect the company in the Owner Workspace UI; if it's not present (backend did not auto-create it during onboarding), the test will call the backend test helper `POST /api/test/create-company` to deterministically create the company and re-check the UI.
 - If you prefer a strict assertion that a Company row must exist server-side, set `E2E_ASSERT_COMPANY=true` in the environment when running the tests in CI.
 - Ensure the backend exposes the necessary `/api/test/*` endpoints (OTP retrieval, create-company, delete-user, delete-company) for tests to operate deterministically.
 - If a Playwright spec is skipped locally, check that `E2E_FULL_AUTH` is set and that your backend test endpoints are reachable at `http://127.0.0.1:4000`.

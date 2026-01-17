@@ -7,7 +7,8 @@ const prisma = new PrismaClient()
 async function main() {
   const snapshot: any = {}
   // Add core tables used by frontend seed
-  snapshot.tenants = await prisma.tenant.findMany()
+  // Only export safe tenant fields to remain resilient to phased migrations
+  snapshot.tenants = await prisma.tenant.findMany({ select: { id: true, baseCurrency: true, trialUsed: true, trialEndsAt: true } })
   snapshot.users = await prisma.user.findMany()
   snapshot.accounts = await prisma.account.findMany()
   snapshot.contacts = await prisma.contact.findMany()

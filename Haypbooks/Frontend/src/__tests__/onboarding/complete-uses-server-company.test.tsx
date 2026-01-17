@@ -39,6 +39,10 @@ test('uses created company from server response and shows toast + navigates to h
 
   render(<OnboardingPage />)
 
+  // Ensure required business name is present so steps can advance in tests
+  const nameInput = screen.getByPlaceholderText(/e.g. Acme Innovations/i)
+  await act(async () => { await userEvent.type(nameInput, companyName) })
+
   // click Save and continue until Finish is visible
   for (let i = 0; i < 6; i++) {
     const btn = screen.getByRole('button', { name: /save and continue/i })

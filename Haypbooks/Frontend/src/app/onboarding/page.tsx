@@ -43,7 +43,23 @@ export default function OnboardingPage() {
   const [snapshot, setSnapshot] = useState<OnboardingSnapshot>({})
   const stepRef = useRef<any>(null)
   const [savingStep, setSavingStep] = useState(false)
+  const [canProceed, setCanProceed] = useState(true)
   const STEP_KEYS = ['business','sells','fiscal','tax','branding','banking']
+
+  // Check if current step has required data
+  useEffect(() => {
+    const checkValidity = () => {
+      if (step === 0 && stepRef.current && typeof stepRef.current.hasRequiredData === 'function') {
+        setCanProceed(stepRef.current.hasRequiredData())
+      } else {
+        setCanProceed(true)
+      }
+    }
+    // Check initially and set up interval to check while user types
+    checkValidity()
+    const interval = setInterval(checkValidity, 200)
+    return () => clearInterval(interval)
+  }, [step, stepRef.current])
 
   useEffect(() => {
     // load any saved progress
@@ -118,7 +134,7 @@ export default function OnboardingPage() {
         // non-fatal
       }
 
-      // If the backend returned the created company, poll the Owner Hub until it appears (for determinism in E2E/local runs)
+      // If the backend returned the created company, poll the Owner Workspace until it appears (for determinism in E2E/local runs)
       try {
         const created = resJson?.company
         const targetName = created?.name || (snapshot as any)?.business?.companyName
@@ -127,14 +143,14 @@ export default function OnboardingPage() {
           const found = await waitForCompanyInHub(targetName, 5000)
           if (!found) {
             // Non-fatal: warn that the company wasn't visible within timeout
-            push({ type: 'warning', message: `Created ${targetName} but it didn't show in your Hub right away — you can refresh the Hub.` })
+            push({ type: 'warning', message: `Created ${targetName} but it didn't show in your Owner Workspace right away — you can refresh the Owner Workspace.` })
           }
         }
       } catch (e) {
         // ignore polling errors
       }
 
-      // Navigate to the Owner Hub so the user sees their company card
+      // Navigate to the Owner Workspace so the user sees their company card
       router.push('/hub/companies')
     } catch (err) {
       console.error(err)
@@ -294,16 +310,20 @@ export default function OnboardingPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button 
-              className={`px-4 py-2 rounded-xl border ${step === 3 ? 'border-emerald-300 text-emerald-700 font-semibold bg-emerald-50' : 'border-slate-300 text-slate-600'} text-sm hover:bg-slate-50 transition-all`} 
-              onClick={skipOnboarding}
-            >
-              Skip for now
-            </button>
             {step < STEPS.length - 1 ? (
               <button 
                 className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={async () => {
+                  // Validate current step before saving
+                  if (stepRef.current && typeof stepRef.current.hasRequiredData === 'function') {
+                    if (!stepRef.current.hasRequiredData()) {
+                      // Show validation errors
+                      if (typeof stepRef.current.validate === 'function') {
+                        stepRef.current.validate()
+                      }
+                      return
+                    }
+                  }
                   // Save current step then advance
                   setSavingStep(true)
                   try {
@@ -324,7 +344,7 @@ export default function OnboardingPage() {
                     setSavingStep(false)
                   }
                 }}
-                disabled={savingStep}
+                disabled={savingStep || !canProceed}
               >
                 {savingStep ? 'Saving…' : 'Save and continue'}
               </button>

@@ -11,7 +11,7 @@ function csvEscape(v: any): string {
 }
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url)
+  const url = new URL(req.url, 'http://test')
   const versionFlag = parseCsvVersionFlag(req)
   const templateId = url.searchParams.get('templateId') || undefined
   const start = url.searchParams.get('start') || undefined

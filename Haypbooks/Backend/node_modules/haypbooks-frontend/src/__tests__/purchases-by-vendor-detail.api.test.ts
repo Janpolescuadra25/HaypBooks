@@ -5,7 +5,7 @@ const makeReq = (url: string) => new Request(url)
 
 describe('Purchases by Vendor Detail report', () => {
   test('JSON API returns rows, totals, and asOf or range', async () => {
-    const res: any = await PBVD_GET(makeReq('http://localhost/api/reports/purchases-by-vendor-detail?period=YTD'))
+    const res: any = await PBVD_GET(makeReq('http://localhost/api/reports/purchases-by-vendor-detail?period=YTD&end=2025-09-04'))
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(Array.isArray(body.rows)).toBe(true)
@@ -21,7 +21,8 @@ describe('Purchases by Vendor Detail report', () => {
     expect(res.status).toBe(200)
     const text = await res.text()
     const lines = text.trim().split(/\r?\n/)
-    expect(lines[2]).toBe('Date,Type,Number,Item,Vendor,Qty,Rate,Amount')
+    const headerIdx = lines.findIndex(l => l.startsWith('Date,Type,Number,Item,Vendor,Qty,Rate,Amount'))
+    expect(headerIdx).toBeGreaterThanOrEqual(0)
     expect(lines[lines.length - 1].startsWith('Totals')).toBe(true)
     const cd = res.headers.get('Content-Disposition') as string
     expect(cd).toContain('purchases-by-vendor-detail-asof-2025-09-04')

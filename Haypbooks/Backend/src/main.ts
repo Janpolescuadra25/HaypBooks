@@ -45,6 +45,26 @@ async function bootstrap() {
     // ignore if middleware can't be loaded; this is best-effort for diagnostics
   }
 
+  // Add request logging middleware to trace all incoming requests
+  const fs = require('fs')
+  const path = require('path')
+  const logPath = path.join(__dirname, '..', 'logs', 'http-requests.log')
+  try { fs.mkdirSync(path.dirname(logPath), { recursive: true }) } catch (e) {}
+  
+  app.use((req: any, res: any, next: any) => {
+    const start = Date.now()
+    const logRequest = () => {
+      const duration = Date.now() - start
+      const hasAuth = !!req.headers.authorization || !!req.cookies?.token
+      const logLine = `[${new Date().toISOString()}] [HTTP] ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms) [Auth: ${hasAuth ? '✓' : '✗'}]\n`
+      console.log(logLine.trim())
+      try { fs.appendFileSync(logPath, logLine) } catch (e) {}
+    }
+    res.on('finish', logRequest)
+    res.on('close', logRequest)
+    next()
+  })
+
   // Parse cookies so routes can read req.cookies (required for refresh/logout flows)
   try {
     // use require to avoid runtime failure in environments where cookie-parser isn't installed

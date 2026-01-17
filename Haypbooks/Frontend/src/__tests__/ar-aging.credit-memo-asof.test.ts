@@ -26,13 +26,13 @@ describe('A/R Aging respects credit memo date for as-of open balance', () => {
     const fetchRow = async (asOf: string) => {
       const res: any = await GET_JSON(makeReq(`http://localhost/api/reports/ar-aging?end=${asOf}`))
       const data = await res.json()
-      return (data.rows as any[]).find((r: any) => r.customer === custName)
+      return (data.rows as any[]).find((r: any) => r.name === custName)
     }
 
     // As of 2025-02-20: entire 200 open should be in 1–30 bucket
     let row = await fetchRow('2025-02-20')
     expect(row).toBeTruthy()
-    expect(row.bucket1_30).toBeGreaterThanOrEqual(200)
+    expect(row['30']).toBeGreaterThanOrEqual(200)
 
     // Create a credit memo dated 2025-02-22 (after as-of) and apply 50 to the invoice
     const cm = createCreditMemo({ customerId: custId, lines: [{ description: 'Adj', amount: 50 }], date: '2025-02-22' })
@@ -40,12 +40,12 @@ describe('A/R Aging respects credit memo date for as-of open balance', () => {
 
     // As of 2025-02-20 (before credit date): still 200 open
     row = await fetchRow('2025-02-20')
-    expect(row.bucket1_30).toBeGreaterThanOrEqual(200)
+    expect(row['30']).toBeGreaterThanOrEqual(200)
 
     // As of 2025-02-23 (after credit date): open reduced to 150
     row = await fetchRow('2025-02-23')
     // Depending on other seeded data for the same customer, find total deltas via bucket sum
-    const sum = (row.current || 0) + (row.bucket1_30 || 0) + (row.bucket31_60 || 0) + (row.bucket61_90 || 0) + (row.bucketOver90 || 0)
+    const sum = (row.current || 0) + (row['30'] || 0) + (row['60'] || 0) + (row['90'] || 0) + (row['120+'] || 0)
     expect(sum).toBeGreaterThanOrEqual(150)
   })
 })

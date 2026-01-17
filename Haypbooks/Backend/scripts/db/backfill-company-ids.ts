@@ -15,9 +15,9 @@ const TABLES = [
 
 async function run() {
   console.log('Starting companyId backfill...')
-  const tenants = await prisma.tenant.findMany({ select: { id: true, name: true } })
+  const tenants = await prisma.tenant.findMany({ select: { id: true } })
   for (const tenant of tenants) {
-    console.log(`Processing tenant ${tenant.id} (${tenant.name})`)
+    console.log(`Processing tenant ${tenant.id}`)
     // Ensure a default company exists for the tenant
     const defaultCompanyId = `company-${tenant.id}`
     const company = await prisma.company.upsert({
@@ -36,7 +36,7 @@ async function run() {
           continue
         }
         const sql = `UPDATE "${table}" SET "companyId" = $1 WHERE "tenantId" = $2 AND "companyId" IS NULL`
-        const res = await prisma.$executeRawUnsafe(sql.replace('$1', `'${company.id}'`).replace('$2', `'${tenant.id}'`))
+        const res = await prisma.$executeRawUnsafe(sql, company.id, tenant.id)
         console.log(`  ${table}: backfilled rows for tenant ${tenant.id}`)
       } catch (err) {
         console.error(`  ${table}: failed to backfill for tenant ${tenant.id}`, err)

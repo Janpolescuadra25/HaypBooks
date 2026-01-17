@@ -41,14 +41,43 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  // Initial values derived from user props (kept for immediate render), but will be replaced by live fetch
   const ownerCompanies: string[] = (user && (user.companies || user.companiesList)) || ['Acme Corp', 'Beta LLC']
-  const practiceName: string = (user && (user.practiceName || user.firmName)) || 'Rivera CPA'
-  const clientCount: number = (user && (user.clients?.length || user.clientCount)) || 12
+  const [ownerCount, setOwnerCount] = React.useState<number>((user && (user.companies || []).length) || ownerCompanies.length || 0)
+  const [clientCountState, setClientCountState] = React.useState<number>((user && (user.clients?.length || user.clientCount)) || 0)
 
   // Derived flags to know if the user already has an owner/company hub or an accountant hub
   const hasOwnerCompanies = !!(user && ((user.companies && user.companies.length > 0) || (user.companiesList && user.companiesList.length > 0)));
   const hasAccountantHub = !!(user && (user.accountantOnboardingCompleted || user.practiceName || (user.clients && user.clients.length > 0)));
   const userRole = (user && (user.role || (user.isAccountant ? 'accountant' : 'business'))) || null
+
+  // Fetch live counts and poll every 15s when modal or page mounts
+  React.useEffect(() => {
+    let mounted = true
+    let timer: ReturnType<typeof setInterval> | null = null
+
+    async function fetchCounts() {
+      try {
+        const r1 = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
+        if (r1.ok) {
+          const data = await r1.json()
+          if (mounted) setOwnerCount(Array.isArray(data) ? data.length : 0)
+        }
+
+        const r2 = await fetch('/api/tenants/clients', { cache: 'no-store' })
+        if (r2.ok) {
+          const d2 = await r2.json()
+          if (mounted) setClientCountState(Array.isArray(d2) ? d2.length : 0)
+        }
+      } catch (e) {
+        console.error('[HubSelectionModal] Failed to fetch live counts', e)
+      }
+    }
+
+    fetchCounts()
+    timer = setInterval(fetchCounts, 15_000)
+    return () => { mounted = false; if (timer) clearInterval(timer) }
+  }, [])
 
   async function submitAccountantForm() {
     if (!firmName.trim()) { setFirmError('Firm name is required'); return }
@@ -117,17 +146,17 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="border rounded-lg p-4 flex flex-col justify-between" aria-labelledby="owner-hub-title" role="region">
+          <div className="border rounded-lg p-4 flex flex-col justify-between" aria-labelledby="owner-workspace-title" role="region">
             <div>
-              <h3 id="owner-hub-title" className="text-sm font-medium">For Owners</h3>
+              <h3 id="owner-workspace-title" className="text-sm font-medium">For Owners</h3>
               <div className="text-xs text-slate-600 mt-1">My Companies</div>
-              <p className="text-xs text-slate-700 mt-2">{ownerCompanies.slice(0,3).join(', ')}{ownerCompanies.length > 3 ? '…' : ''}</p>
+              <p className="text-xs text-slate-700 mt-2">{ownerCompanies.length ? (ownerCompanies.slice(0,3).join(', ') + (ownerCompanies.length > 3 ? '…' : '')) : `${ownerCount} active companies`}</p>
             </div>
             <div className="mt-3 space-y-2">
               {(!hasOwnerCompanies && userRole === 'accountant') ? (
                 <button data-testid="create-company" onClick={() => router.replace('/companies?create=1')} className="w-full bg-amber-500 text-white px-3 py-2 rounded-md text-sm">Create Company</button>
               ) : (
-                <button data-testid="enter-owner" disabled={loading} onClick={() => chooseHub('OWNER')} className="w-full bg-blue-600 text-white px-3 py-2 rounded-md text-sm">Enter Owner Hub</button>
+                <button data-testid="enter-owner" disabled={loading} onClick={() => chooseHub('OWNER')} className="w-full bg-blue-600 text-white px-3 py-2 rounded-md text-sm">Enter Owner Workspace</button>
               )}
             </div>
           </div>
@@ -136,7 +165,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
             <div>
               <h3 id="acct-hub-title" className="text-sm font-medium">For Accountants</h3>
               <div className="text-xs text-slate-600 mt-1">My Practice</div>
-              <p className="text-xs text-slate-700 mt-2"><strong>{practiceName}</strong> • {clientCount} clients</p>
+              <p className="text-xs text-slate-700 mt-2">{clientCountState} active clients</p>
             </div>
             <div className="mt-3">
               {!showAcctForm ? (
@@ -177,12 +206,12 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border rounded-lg p-6 flex flex-col justify-between" aria-labelledby="owner-hub-title" role="region">
+          <div className="border rounded-lg p-6 flex flex-col justify-between" aria-labelledby="owner-workspace-title" role="region">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="1.5" className="flex-shrink-0"><path d="M3 7h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
                 <div>
-                  <h3 id="owner-hub-title" className="text-md font-semibold">For Owners</h3>
+                  <h3 id="owner-workspace-title" className="text-md font-semibold">For Owners</h3>
                   <div className="text-sm text-slate-600">My Companies</div>
                 </div>
               </div>
@@ -197,7 +226,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
               {(!hasOwnerCompanies && userRole === 'accountant') ? (
                 <button data-testid="create-company" onClick={() => router.replace('/companies?create=1')} className="w-full bg-amber-500 text-white px-4 py-3 rounded-lg font-semibold shadow">Create Company</button>
               ) : (
-                <button data-testid="enter-owner" disabled={loading} onClick={() => chooseHub('OWNER')} className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow">Enter Owner Hub</button>
+                <button data-testid="enter-owner" disabled={loading} onClick={() => chooseHub('OWNER')} className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow">Enter Owner Workspace</button>
               )}
               <button data-testid="create-business" onClick={() => router.replace('/companies?create=1')} className="w-full border border-slate-200 text-slate-800 px-4 py-3 rounded-lg font-medium">Create Business Account</button>
             </div>
@@ -215,8 +244,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
               <p className="text-sm text-slate-600 mt-1">Manage your clients, tasks, and accounting.</p>
 
               <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-                <li><strong>{practiceName}</strong></li>
-                <li>{clientCount} clients</li>
+                <li aria-live="polite">{clientCountState} active clients</li>
               </ul>
             </div>
             <div className="mt-4">

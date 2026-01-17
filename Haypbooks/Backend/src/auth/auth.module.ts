@@ -9,12 +9,10 @@ import { MailService } from '../common/mail.service'
 import { VerificationService } from './verification.service'
 import { VerificationController } from './verification.controller'
 import { PendingSignupService } from './pending-signup.service'
-import { RedisModule } from '../common/redis.module'
 
 @Module({
   imports: [
     PassportModule,
-    RedisModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
       signOptions: { expiresIn: '7d' },

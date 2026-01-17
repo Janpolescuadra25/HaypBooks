@@ -25,8 +25,9 @@ describe('AP aging summary as-of respects vendor credits and payments', () => {
     const venId = db.vendors[0].id
     // Create a bill due 2025-02-10 for 300
     const bill = createBill({ vendorId: venId, billDate: '2025-01-10', terms: 'Net 31', lines: [ { description: 'Svc', amount: 300 } ] })
+
     // As-of 2025-02-15: bill is 5 days past due -> should sit in 1-30 bucket with full 300
-    let res: any = await GET_AP_JSON(makeReq('http://localhost/api/reports/ap-aging?asOf=2025-02-15'))
+    let res: any = await GET_AP_JSON(makeReq('http://localhost/api/reports/ap-aging?end=2025-02-15'))
     let data = await res.json()
     const rowPre = data.rows.find((r: any) => r.name.includes('Vendor'))
     expect(rowPre['30']).toBeGreaterThanOrEqual(300)
@@ -36,13 +37,13 @@ describe('AP aging summary as-of respects vendor credits and payments', () => {
     applyVendorCreditToBill(vc.id, bill.id, 100)
 
     // Recompute as-of 2025-02-15 should still show 300
-    res = await GET_AP_JSON(makeReq('http://localhost/api/reports/ap-aging?asOf=2025-02-15'))
+    res = await GET_AP_JSON(makeReq('http://localhost/api/reports/ap-aging?end=2025-02-15'))
     data = await res.json()
     const row = data.rows.find((r: any) => r.name.includes('Vendor'))
     expect(row['30']).toBeGreaterThanOrEqual(300)
 
     // As-of 2025-02-25 should reflect reduced balance 200
-    res = await GET_AP_JSON(makeReq('http://localhost/api/reports/ap-aging?asOf=2025-02-25'))
+    res = await GET_AP_JSON(makeReq('http://localhost/api/reports/ap-aging?end=2025-02-25'))
     data = await res.json()
     const rowLater = data.rows.find((r: any) => r.name.includes('Vendor'))
     expect(rowLater['30'] + rowLater['60'] + rowLater['90'] + rowLater['120+'] + rowLater.current).toBeGreaterThanOrEqual(200)

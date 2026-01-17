@@ -31,7 +31,7 @@ Phone verification persistence test
 
 Pre-signup (prevent unverified users in DB)
 - A focused Playwright spec `e2e/pre-signup-flow.spec.ts` verifies the pre-signup flow: POST `/api/auth/pre-signup` → no DB user exists yet → navigate to `/verify-otp?signupToken=...` and complete OTP → final DB user is created with `isEmailVerified=true`.
-- Prerequisites: set `ALLOW_TEST_ENDPOINTS=true` (or `NODE_ENV=test`) and have a Redis instance available (start with `docker compose up -d` from `Haypbooks/Backend` to start Redis and Postgres). For local dev, also set `ENFORCE_PRE_SIGNUP=true` when you want `/signup` to route through pre-signup.
+- Prerequisites: set `ALLOW_TEST_ENDPOINTS=true` (or `NODE_ENV=test`) and ensure the backend has been migrated so the `EmailVerificationToken` table exists. For local dev, set `ENFORCE_PRE_SIGNUP=true` when you want `/signup` to route through pre-signup (the server uses the DB-backed `EmailVerificationToken` by default).
 - The test will skip itself if the server does not return a `signupToken` from `/api/auth/pre-signup` (so it's safe to run without enabling pre-signup).
 
 Full integrated auth flow (signup → verify → PIN → hub)

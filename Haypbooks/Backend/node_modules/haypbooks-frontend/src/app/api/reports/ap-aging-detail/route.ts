@@ -56,6 +56,9 @@ export async function GET(req: Request) {
     const bDate = (bill.billDate || bill.dueDate || '').slice(0,10)
     if (start && bDate < start) continue
     if (end && bDate > end) continue
+    const dueIso = (bill.dueDate || bill.billDate || '').slice(0,10)
+    // Only include bills whose due date is on or before the requested as-of
+    if (dueIso && dueIso > asOfIso) continue
     const open = computeOpenBalanceAsOf(bill, asOfIso)
     if (open <= 0) continue
     const dpd = daysPastDue(bill, asOfIso)

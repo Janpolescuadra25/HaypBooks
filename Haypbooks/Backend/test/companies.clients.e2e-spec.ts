@@ -19,7 +19,9 @@ describe('Companies & Clients invite flow (e2e)', () => {
 
   it('creates a tenant invite and accepts it resulting in TenantUser entry', async () => {
     // create tenant
-    const tenant = await prisma.tenant.create({ data: { name: 'Invite Flow Tenant', subdomain: tenantSub } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     // create an owner user (raw SQL to avoid Prisma client/schema mismatch during migration)
     const ownerId = require('crypto').randomUUID()
     await prisma.$executeRaw`INSERT INTO public."User" ("id","email","name","passwordhash","isemailverified","createdAt","updatedAt") VALUES (${ ownerId }, ${ `${tenantSub}@example.test` }, ${ 'Owner' }, ${ 'x' }, ${ true }, now(), now()) ON CONFLICT ("email") DO NOTHING;`

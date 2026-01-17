@@ -45,11 +45,26 @@ export default function RecurringTransactionsPage() {
   const [end, setEnd] = useState<string>('')
   const [search, setSearch] = useState<string>('')
 
+  // Resilient fetch wrapper: node's undici (used by tests) rejects relative URLs; retry with a base when that happens
+  async function safeFetch(path: string, opts?: RequestInit) {
+    try {
+      return await fetch(path, opts)
+    } catch (e: any) {
+      // If the runtime complains about an invalid or relative URL, retry with a localhost base
+      const msg = String(e?.message || '')
+      if (msg.includes('Invalid URL') || msg.includes('Failed to parse URL')) {
+        const abs = path.startsWith('/') ? `http://localhost${path}` : `http://localhost/${path}`
+        return fetch(abs, opts)
+      }
+      throw e
+    }
+  }
+
   async function refresh() {
     setLoading(true)
     setError(undefined)
     try {
-      const r = await fetch('/api/recurring-transactions')
+      const r = await safeFetch('/api/recurring-transactions')
       const j = await r.json()
       setTemplates(j.data || [])
       // Fetch run history (viewer may be blocked; ignore errors)
@@ -57,14 +72,17 @@ export default function RecurringTransactionsPage() {
         const qs = new URLSearchParams()
         if (start) qs.set('start', start)
         if (end) qs.set('end', end)
-        const rh = await fetch(`/api/recurring-transactions/history${qs.toString() ? `?${qs.toString()}` : ''}`)
+        const rh = await safeFetch(`/api/recurring-transactions/history${qs.toString() ? `?${qs.toString()}` : ''}`)
         if (rh.ok) {
           const hj = await rh.json()
+          // debug
+          try { console.log('recurring history json:', hj) } catch {}
           setHistory(Array.isArray(hj.data) ? hj.data.slice(0,25) : [])
         }
       } catch {}
     } catch (e:any) {
-      setError(e.message)
+      console.error('Recurring refresh error', e)
+      setError(e?.message || String(e))
     } finally {
       setLoading(false)
     }
@@ -81,7 +99,7 @@ export default function RecurringTransactionsPage() {
 
   async function runTemplate(id: string) {
     setNotice(undefined)
-    const r = await fetch('/api/recurring-transactions/run',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) })
+    const r = await safeFetch('/api/recurring-transactions/run',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) })
     const j = await r.json()
     if (!r.ok) { setError(j.error || 'run failed'); return }
     setNotice('Run completed (simulated materialization)')
@@ -89,7 +107,7 @@ export default function RecurringTransactionsPage() {
   }
 
   async function pauseTemplate(id: string) {
-    const r = await fetch('/api/recurring-transactions/pause',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) })
+    const r = await safeFetch('/api/recurring-transactions/pause',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) })
     const j = await r.json()
     if (!r.ok) { setError(j.error || 'pause failed'); return }
     setNotice('Paused template')
@@ -97,7 +115,7 @@ export default function RecurringTransactionsPage() {
   }
 
   async function resumeTemplate(id: string) {
-    const r = await fetch('/api/recurring-transactions/resume',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) })
+    const r = await safeFetch('/api/recurring-transactions/resume',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) })
     const j = await r.json()
     if (!r.ok) { setError(j.error || 'resume failed'); return }
     setNotice('Resumed template')
@@ -121,7 +139,7 @@ export default function RecurringTransactionsPage() {
         memo: t.memo,
         currency: t.currency || 'USD'
       }
-      const r = await fetch('/api/recurring-transactions', { method:'POST', headers:{ 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const r = await safeFetch('/api/recurring-transactions', { method:'POST', headers:{ 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!r.ok) {
         const j = await r.json().catch(()=>null)
         throw new Error(j?.error || 'duplicate failed')
@@ -137,7 +155,7 @@ export default function RecurringTransactionsPage() {
     setError(undefined); setNotice(undefined)
     try {
       if (!confirm('Delete this recurring template? This cannot be undone.')) return
-      const r = await fetch(`/api/recurring-transactions?id=${encodeURIComponent(id)}`, { method:'DELETE' })
+      const r = await safeFetch(`/api/recurring-transactions?id=${encodeURIComponent(id)}`, { method:'DELETE' })
       if (!r.ok) {
         const j = await r.json().catch(()=>null)
         throw new Error(j?.error || 'delete failed')

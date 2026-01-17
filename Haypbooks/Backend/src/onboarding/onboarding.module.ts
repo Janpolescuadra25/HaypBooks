@@ -7,5 +7,6 @@ import { CompaniesModule } from '../companies/companies.module'
   imports: [CompaniesModule],
   controllers: [OnboardingController],
   providers: [OnboardingService],
+  exports: [OnboardingService],
 })
 export class OnboardingModule {}

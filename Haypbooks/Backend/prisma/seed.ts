@@ -23,19 +23,21 @@ async function main() {
   const users = await prisma.$queryRaw<any[]>`SELECT id, email, name, "isemailverified" as "isEmailVerified", "createdAt", "updatedAt" FROM public."User" WHERE email = ${ 'demo@haypbooks.test' } LIMIT 1;`
   const user = Array.isArray(users) && users.length ? users[0] : undefined
 
-  // Demo tenant: use raw SQL upsert to remain compatible when Prisma client and DB schema diverge
+  // Demo tenant: seed a deterministic demo tenant id and avoid name/subdomain (moved to Company)
+  const DEMO_TENANT_ID = process.env.DEMO_TENANT_ID || '00000000-0000-0000-0000-000000000001'
   try {
-    const tenantId = require('crypto').randomUUID()
-    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}, ${'Demo Tenant'}, ${'demo'}, ${'USD'}, now(), now()) ON CONFLICT ("subdomain") DO UPDATE SET "name" = EXCLUDED."name", "baseCurrency" = EXCLUDED."baseCurrency";`
+    const tenantId = DEMO_TENANT_ID
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO UPDATE SET "baseCurrency" = EXCLUDED."baseCurrency";`
   } catch (e) {
     // ignore — subsequent SELECT will fetch existing row
   }
-  const tenants = await prisma.$queryRaw<any[]>`SELECT id, name, subdomain, "baseCurrency" FROM public."Tenant" WHERE subdomain = ${'demo'} LIMIT 1;`
+  // Ensure comparison works regardless of id column type (uuid or text)
+  const tenants = await prisma.$queryRaw<any[]>`SELECT id, "baseCurrency" FROM public."Tenant" WHERE CAST(id AS text) = ${DEMO_TENANT_ID} LIMIT 1;`
   let tenant: any = tenants && tenants.length ? tenants[0] : undefined
   if (!tenant) {
-    const fallbackTenantId = require('crypto').randomUUID()
-    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","subdomain","createdAt","updatedAt") VALUES (CAST(${fallbackTenantId} AS uuid), ${'Demo Tenant'}, ${'demo'}, now(), now())`;
-    const tenants2 = await prisma.$queryRaw<any[]>`SELECT id, name, subdomain, "baseCurrency" FROM public."Tenant" WHERE subdomain = ${'demo'} LIMIT 1;`
+    const fallbackTenantId = DEMO_TENANT_ID
+    await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES (CAST(${fallbackTenantId} AS uuid), now(), now())`;
+    const tenants2 = await prisma.$queryRaw<any[]>`SELECT id, "baseCurrency" FROM public."Tenant" WHERE id = CAST(${DEMO_TENANT_ID} AS uuid) LIMIT 1;`
     tenant = tenants2 && tenants2.length ? tenants2[0] : undefined
   }
 
@@ -58,60 +60,69 @@ async function main() {
     const companyHasTenantId = await hasColumn('Company', 'tenantId')
     let demoCompany: any
     if (companyHasTenantId) {
-      // Use composite unique by tenantId + name to avoid non-UUID id usage
-      // If all profile columns are present, seed the full profile; otherwise fall back to minimal seed
-      // Prefer to try the full profile upsert; fall back to a minimal create if DB is missing profile columns
       try {
-        demoCompany = await prisma.company.upsert({ where: { tenantId_name: { tenantId: tenant.id, name: 'Demo Company' } }, update: {}, create: { tenantId: tenant.id, name: 'Demo Company', businessType: 'Demo', industry: 'Demo Industry', address: '123 Demo St', taxId: 'DEMO-TIN', logoUrl: 'https://cdn.example/demo-logo.png', invoicePrefix: 'DEMO', vatRegistered: true, vatRate: 12.00, pricesInclusive: false, defaultPaymentTerms: 'NET 30', accountingMethod: 'ACCRUAL', inventoryEnabled: true, payrollEnabled: false } })
+        demoCompany = await prisma.company.upsert({
+          where: { tenantId_name: { tenantId: tenant.id, name: 'Demo Company' } },
+          update: {},
+          create: { tenantId: tenant.id, name: 'Demo Company', businessType: 'Demo', industry: 'Demo Industry', address: '123 Demo St', taxId: 'DEMO-TIN', logoUrl: 'https://cdn.example/demo-logo.png', invoicePrefix: 'DEMO', vatRegistered: true, vatRate: 12.00, pricesInclusive: false, defaultPaymentTerms: 'NET 30', accountingMethod: 'ACCRUAL', inventoryEnabled: true, payrollEnabled: false }
+        })
       } catch (e) {
-        // Prisma P2022: a referenced column doesn't exist in the DB (schema drift) — fallback to raw SQL minimal insert (avoid Prisma runtime selecting missing columns)
         const isMissingColumnError = e && (e.code === 'P2022' || (e.message && e.message.includes('does not exist')))
-        if (isMissingColumnError) {
-          const companyId = require('crypto').randomUUID()
-          console.log('checking for existing demo company for tenant', tenant.id)
+        if (!isMissingColumnError) throw e
+
+        // Fallback: raw SQL path to handle legacy schemas where Company.tenantId may be non-UUID or missing
+        const companyId = require('crypto').randomUUID()
+        console.log('checking for existing demo company for tenant', tenant.id)
+
+        try {
+          const colType = await prisma.$queryRaw`SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='Company' AND column_name='tenantId'` as any
+          const companyTenantIsUuid = colType && colType.length && (colType[0] as any).data_type === 'uuid'
+          console.log('company.tenantId data_type', (colType && colType[0] && (colType[0] as any).data_type) || 'unknown')
+
           let exists: any[] = []
           try {
-            const colType = await prisma.$queryRaw`SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='Company' AND column_name='tenantId'` as any
-            const companyTenantIsUuid = colType && colType.length && (colType[0] as any).data_type === 'uuid'
-            console.log('company.tenantId data_type', (colType && colType[0] && (colType[0] as any).data_type) || 'unknown')
             if (companyTenantIsUuid) {
-              const sql = `SELECT 1 FROM public."Company" WHERE "tenantId" = '${tenant.id}' AND name = 'Demo Company' LIMIT 1;`
-              console.log('Running company existence SQL (uuid path):', sql)
-              exists = await prisma.$queryRawUnsafe(sql)
+              exists = await prisma.$queryRawUnsafe('SELECT 1 FROM public."Company" WHERE "tenantId" = $1::uuid AND name = $2 LIMIT 1', tenant.id, 'Demo Company')
             } else {
-              const sql = `SELECT 1 FROM public."Company" WHERE CAST("tenantId" AS text) = '${tenant.id}' AND name = 'Demo Company' LIMIT 1;`
-              console.log('Running company existence SQL (text path):', sql)
-              exists = await prisma.$queryRawUnsafe(sql)
+              exists = await prisma.$queryRawUnsafe('SELECT 1 FROM public."Company" WHERE CAST("tenantId" AS text) = $1 AND name = $2 LIMIT 1', tenant.id, 'Demo Company')
             }
           } catch (err) {
             console.error('company existence check failed', err)
             throw err
           }
+
           if (!exists || !exists.length) {
             console.log('inserting minimal demo company for tenant', tenant.id)
             try {
-              await prisma.$executeRawUnsafe(`INSERT INTO public."Company" ("id","tenantId","name") VALUES ('${companyId}','${tenant.id}','Demo Company')`)
+              if (companyTenantIsUuid) {
+                await prisma.$executeRawUnsafe('INSERT INTO public."Company" ("id","tenantId","name") VALUES ($1::uuid,$2::uuid,$3)', companyId, tenant.id, 'Demo Company')
+              } else {
+                await prisma.$executeRawUnsafe('INSERT INTO public."Company" ("id","tenantId","name") VALUES ($1,$2,$3)', companyId, tenant.id, 'Demo Company')
+              }
             } catch (err) {
               console.error('company insert failed', err)
               throw err
             }
           }
-          let rows: any[] = []
+
+          // Lookup the inserted or existing company
           try {
             const idType = await prisma.$queryRaw`SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='Company' AND column_name='id'` as any
             const idIsUuid = idType && idType.length && (idType[0] as any).data_type === 'uuid'
             if (idIsUuid) {
-              rows = await prisma.$queryRaw`SELECT id, "tenantId", name FROM public."Company" WHERE id = CAST(${companyId} AS uuid) LIMIT 1;`
+              const rows: any[] = await prisma.$queryRaw`SELECT id, "tenantId", name FROM public."Company" WHERE id = CAST(${companyId} AS uuid) LIMIT 1;`
+              demoCompany = rows && rows.length ? rows[0] : undefined
             } else {
-              rows = await prisma.$queryRawUnsafe(`SELECT id, "tenantId", name FROM public."Company" WHERE id = '${companyId}' LIMIT 1;`)
+              const rows: any[] = await prisma.$queryRawUnsafe(`SELECT id, "tenantId", name FROM public."Company" WHERE id = '${companyId}' LIMIT 1;`)
+              demoCompany = rows && rows.length ? rows[0] : undefined
             }
           } catch (err) {
             console.error('company lookup failed', err)
             throw err
           }
-          demoCompany = rows && rows.length ? rows[0] : undefined
-        } else {
-          throw e
+        } catch (err) {
+          console.error('company fallback path failed', err)
+          throw err
         }
       }
     } else {
@@ -252,7 +263,7 @@ async function main() {
 
   // Create a demo TenantInvite (if migrations applied)
   try {
-    await prisma.tenantInvite.create({ data: { tenantId: tenant.id, email: `invitee@${tenant.subdomain}.example`, roleId: role && role.id ? role.id : null, invitedBy: user.id, status: 'PENDING', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } })
+    await prisma.tenantInvite.create({ data: { tenantId: tenant.id, email: `invitee@demo-tenant.example`, roleId: role && role.id ? role.id : null, invitedBy: user.id, status: 'PENDING', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } })
     console.log('Seeded a sample TenantInvite (if migrations applied)')
   } catch (e) { /* ignore if migrations not applied or record exists */ }
 

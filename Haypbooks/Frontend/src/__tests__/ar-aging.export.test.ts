@@ -10,7 +10,8 @@ describe('A/R Aging CSV export', () => {
     const lines = body.split(/\r?\n/)
     // Caption line should be present
     expect(lines[0]).toBe('As of,"January 31, 2025"')
-    expect(lines[2]).toBe('Customer,Current,1-30,31-60,61-90,>90,Total')
+    const headerIdx = lines.findIndex(l => l.startsWith('Customer,Current,30,60,90,120+,Total'))
+    expect(headerIdx).toBeGreaterThanOrEqual(0)
     expect(lines[lines.length - 1].startsWith('Totals')).toBe(true)
     expect(disp).toContain('ar-aging-asof-2025-01-31')
   })

@@ -57,9 +57,9 @@ export class UsersService {
     return result
   }
 
-  async updateProfile(userId: string, data: { companyName?: string; firmName?: string }) {
+  async updateProfile(userId: string, data: { firmName?: string }) {
     const payload: any = {}
-    if (typeof data.companyName === 'string') payload.companyName = String(data.companyName).trim() || null
+    // companyName was removed from the User schema; only persist firmName here.
     if (typeof data.firmName === 'string') payload.firmName = String(data.firmName).trim() || null
     const updated = await this.userRepository.update(userId, payload)
     const { password, ...result } = updated

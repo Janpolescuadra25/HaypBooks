@@ -19,7 +19,8 @@ BEGIN
       EXECUTE format('ALTER TABLE %s DROP CONSTRAINT IF EXISTS %I', r.tablename, r.conname);
     EXCEPTION WHEN others THEN
       NULL;
-    END LOOP;
+    END;
+  END LOOP;
 
   -- Step 2: Temporarily drop policies that reference tenantId to permit type changes.
   -- We'll try to drop policies for known tenant tables, but this is best-effort (idempotent).

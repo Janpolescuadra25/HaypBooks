@@ -73,11 +73,11 @@ test('after sign-in shows hub selection with two hubs', async ({ page, request }
     await expect(page.locator('text=My Companies')).toBeVisible()
     await expect(page.locator('text=My Practice')).toBeVisible()
     // Hub selection must show both hub cards and links (allow presence of any global banners)
-    await expect(page.getByRole('link', { name: /Enter Owner Hub/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Enter Owner Workspace/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Enter Accountant Hub/ })).toBeVisible()
 
-    // Click Owner and confirm backend persistence + navigation
-    await page.getByRole('link', { name: /Enter Owner Hub/ }).click()
+    // Click Owner Workspace and confirm backend persistence + navigation
+    await page.getByRole('link', { name: /Enter Owner Workspace/ }).click()
     await page.waitForURL(/\/hub\/companies/, { timeout: 5000 })
     // Backend: confirm preferredHub set (retry briefly to allow backend persistence)
     let userJson: any = null
@@ -93,7 +93,7 @@ test('after sign-in shows hub selection with two hubs', async ({ page, request }
       // preferredHub persisted as expected
     } else {
       // Not all environments persist preferredHub immediately upon hub enter; warn and continue
-      console.warn('preferredHub was not set by backend after entering Owner Hub; continuing without enforcing persistence')
+      console.warn('preferredHub was not set by backend after entering Owner Workspace; continuing without enforcing persistence')
     }
   } else {
     // Direct redirect case - ensure we landed on a hub and backend persisted preferredHub accordingly

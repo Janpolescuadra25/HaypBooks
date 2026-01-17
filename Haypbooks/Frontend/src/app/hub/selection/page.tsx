@@ -57,14 +57,50 @@ export default function HubSelectionPage() {
     }
   }
 
-  const ownerCount = (user && (user.companies || []).length) || 0
-  const practiceName = (user && (user.practiceName || user.firmName)) || 'Rivera CPA Services'
-  const clientCount = (user && (user.clients || []).length) || 12
+  // Live counts (fetched from backend for near real-time reflection)
+  const [ownerCount, setOwnerCount] = useState<number>((user && (user.companies || []).length) || 0)
+  const [clientCount, setClientCount] = useState<number>((user && (user.clients || []).length) || 0)
 
   // Derived flags for CTA behavior
   const hasOwnerCompanies = ownerCount > 0
   const hasAccountantHub = !!(user && (user.accountantOnboardingCompleted || user.practiceName || (user.clients && user.clients.length > 0)))
   const userRole = (user && (user.role || (user.isAccountant ? 'accountant' : 'business'))) || null
+
+  // Fetch fresh counts from server and poll every 15s
+  useEffect(() => {
+    let mounted = true
+    let timer: ReturnType<typeof setInterval> | null = null
+
+    async function fetchCounts() {
+      try {
+        // Owner companies
+        const r1 = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
+        if (r1.ok) {
+          const data = await r1.json()
+          if (mounted) setOwnerCount(Array.isArray(data) ? data.length : 0)
+        }
+
+        // Clients (for accountants)
+        const r2 = await fetch('/api/tenants/clients', { cache: 'no-store' })
+        if (r2.ok) {
+          const data2 = await r2.json()
+          if (mounted) setClientCount(Array.isArray(data2) ? data2.length : 0)
+        }
+      } catch (e) {
+        console.error('[HubSelection] Failed to fetch live counts', e)
+      }
+    }
+
+    // initial fetch
+    fetchCounts()
+    // poll
+    timer = setInterval(fetchCounts, 15_000)
+
+    return () => {
+      mounted = false
+      if (timer) clearInterval(timer)
+    }
+  }, [])
 
   return (
     <main>
@@ -82,7 +118,7 @@ export default function HubSelectionPage() {
 
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Owner Hub Card */}
+            {/* Owner Workspace Card */}
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-5 transform-gpu transition-transform duration-200 ease-out hover:scale-105 hover:-translate-y-1 hover:shadow-2xl border border-transparent hover:border-emerald-500 text-center animate-slide-up motion-reduce:animate-none" style={{ animationDelay: '0ms' }}>
               <div className="w-14 h-14 bg-emerald-600 rounded-2xl mx-auto mb-3 flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,11 +127,11 @@ export default function HubSelectionPage() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">My Companies</h3>
               <p className="text-sm text-slate-700 mb-4 leading-relaxed">Manage your businesses, subscriptions, teams, and accounting books.</p>
-              <p className="text-sm font-medium text-emerald-700 mb-4">{ownerCount} active companies</p>
+              <p aria-live="polite" className="text-sm font-medium text-emerald-700 mb-4">{ownerCount} active companies</p>
               {(!hasOwnerCompanies && userRole === 'accountant') ? (
                 <a href="/companies?create=1" className="inline-block px-5 py-2 bg-amber-500 text-white text-sm font-bold rounded-2xl hover:bg-amber-600 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 motion-reduce:transition-none">Create Company →</a>
               ) : (
-                <a href="/hub/companies" className="inline-block px-5 py-2 bg-emerald-600 text-white text-sm font-bold rounded-2xl shadow-sm hover:shadow-md hover:bg-emerald-700 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:shadow-md motion-reduce:transition-none">Enter Owner Hub →</a>
+                <a href="/hub/companies" className="inline-block px-5 py-2 bg-emerald-600 text-white text-sm font-bold rounded-2xl shadow-sm hover:shadow-md hover:bg-emerald-700 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:shadow-md motion-reduce:transition-none">Enter Owner Workspace →</a>
               )} 
             </div> 
 
@@ -108,7 +144,7 @@ export default function HubSelectionPage() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">My Practice</h3>
               <p className="text-sm text-slate-700 mb-4 leading-relaxed">Manage your clients, tasks, and accounting across multiple firms.</p>
-              <p className="text-sm font-medium text-teal-700 mb-4">{practiceName} • {clientCount} clients</p>
+              <p aria-live="polite" className="text-sm font-medium text-teal-700 mb-4">{clientCount} active clients</p>
               {(!hasAccountantHub && userRole === 'business') ? (
                 <a href="/onboarding/accountant" className="inline-block px-5 py-2 bg-teal-600 text-white text-sm font-bold rounded-2xl hover:bg-teal-700 transition transform-gpu duration-150 ease-out hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none">Create Accountant Hub →</a>
               ) : (

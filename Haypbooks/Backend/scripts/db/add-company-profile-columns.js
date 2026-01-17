@@ -5,9 +5,12 @@ async function run() {
   try {
     console.log('Applying idempotent ALTER TABLE to add onboarding/profile columns to Company')
     const stmts = [
+      `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "legalName" varchar(200)`,
       `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "businessType" text`,
       `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "industry" text`,
       `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "address" text`,
+      `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "country" varchar(100)`,
+      `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "startDate" timestamptz`,
       `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "taxId" varchar(50)`,
       `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "logoUrl" text`,
       `ALTER TABLE public."Company" ADD COLUMN IF NOT EXISTS "invoicePrefix" text`,

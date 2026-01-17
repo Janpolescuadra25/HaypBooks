@@ -29,7 +29,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   if (!requireRole(req, 'admin')) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
-  const { searchParams } = new URL(req.url)
+  const { searchParams } = new URL(req.url, 'http://test')
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id-required' }, { status: 400 })
   removeTemplate(id)

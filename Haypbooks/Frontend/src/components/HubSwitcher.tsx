@@ -34,8 +34,8 @@ export default function HubSwitcher() {
 
   return (
     <div className="relative">
-      <button aria-haspopup="true" aria-label="Switch hub" className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700 px-3 py-1" onClick={() => { /* toggle via simple prompt */ const other = current === 'OWNER' ? 'ACCOUNTANT' : 'OWNER'; if (confirm(`Switch to ${other === 'OWNER' ? 'Owner' : 'Accountant'} Hub?`)) switchHub(other as any) }}>
-        {current === 'OWNER' ? 'Owner Hub' : 'Accountant Hub'}
+      <button aria-haspopup="true" aria-label="Switch hub" className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700 px-3 py-1" onClick={() => { /* toggle via simple prompt */ const other = current === 'OWNER' ? 'ACCOUNTANT' : 'OWNER'; if (confirm(`Switch to ${other === 'OWNER' ? 'Business' : 'Accountant'} Hub?`)) switchHub(other as any) }}>
+        {current === 'OWNER' ? 'Owner Workspace' : 'Accountant Hub'}
       </button>
     </div>
   )

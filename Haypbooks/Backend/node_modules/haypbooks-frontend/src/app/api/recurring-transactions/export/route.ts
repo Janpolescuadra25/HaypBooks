@@ -15,7 +15,7 @@ function csvEscape(v: any): string {
 export async function GET(req: Request) {
   try { seedIfNeeded() } catch {}
   const hasReq = !!(req as any)
-  const url = hasReq && (req as any).url ? new URL((req as any).url) : new URL('http://local/api/recurring-transactions/export')
+  const url = hasReq && (req as any).url ? new URL((req as any).url, 'http://test') : new URL('http://local/api/recurring-transactions/export')
   const versionFlag = parseCsvVersionFlag(hasReq ? (req as any) : url)
 
   // Delegate to JSON list (JSON-first)

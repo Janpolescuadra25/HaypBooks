@@ -62,8 +62,8 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     }
 
-    // set access token cookie (short-lived) and refresh token as httpOnly cookie
-    res.cookie('token', result.token, { ...cookieOptions, maxAge: 1000 * 60 * 15 }) // 15m
+    // set access token cookie (extended to 2h for onboarding) and refresh token as httpOnly cookie
+    res.cookie('token', result.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) // 2h
     if (result.refreshToken) {
       res.cookie('refreshToken', result.refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
     }
@@ -123,6 +123,7 @@ export class AuthController {
       phone,
       phoneCountry,
       companyName: companyName || undefined,
+      // firmName is now stored on User model, not Tenant (Grok.11)
       firmName: firmName || undefined,
       emailOtpVerified: false,
       phoneOtpVerified: false,
@@ -256,8 +257,8 @@ export class AuthController {
         phone: normalizedPhone,
         ...(phoneHmac ? { phoneHmac } : {}),
         ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
-        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
         ...(pendingAfter.firmName ? { firmName: pendingAfter.firmName } : {}),
+        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
       } as any)
     } else {
       // Create final user record
@@ -272,8 +273,8 @@ export class AuthController {
         phone: normalizedPhone,
         ...(phoneHmac ? { phoneHmac } : {}),
         ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
-        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
         ...(pendingAfter.firmName ? { firmName: pendingAfter.firmName } : {}),
+        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
       } as any)
     }
 
@@ -297,7 +298,8 @@ export class AuthController {
     }
 
     const session = await this.authService.createSessionForUser(created.id)
-    try { if (session) res.cookie('token', session.token, cookieOptions) } catch (e) {}
+    try { if (session) res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) } catch (e) {} // 2h for token
+    try { if (session?.refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions) } catch (e) {}
     try { res.cookie('email', created.email, cookieOptions) } catch (e) {}
     try { res.cookie('userId', created.id, cookieOptions) } catch (e) {}
     try { res.cookie('role', created.role, cookieOptions) } catch (e) {}
@@ -482,7 +484,7 @@ export class AuthController {
             sameSite: 'lax' as const,
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
           }
-          res.cookie('token', result.token, { ...cookieOptions, maxAge: 1000 * 60 * 15 })
+          res.cookie('token', result.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) // 2h
           res.cookie('refreshToken', result.refreshToken, cookieOptions)
           return { token: result.token, user: result.user, debug: true }
         }
@@ -532,7 +534,7 @@ export class AuthController {
       sameSite: 'lax' as const,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     }
-    res.cookie('token', result.token, { ...cookieOptions, maxAge: 1000 * 60 * 15 })
+    res.cookie('token', result.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) // 2h
     res.cookie('refreshToken', result.refreshToken, cookieOptions)
 
     return { token: result.token, user: result.user }
@@ -686,7 +688,7 @@ export class AuthController {
                 sameSite: 'lax' as const,
                 maxAge: 7 * 24 * 60 * 60 * 1000,
               }
-              res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 15 })
+              res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) // 2h
               if ((session as any).refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions)
               res.cookie('email', user.email, cookieOptions)
               res.cookie('userId', user.id, cookieOptions)

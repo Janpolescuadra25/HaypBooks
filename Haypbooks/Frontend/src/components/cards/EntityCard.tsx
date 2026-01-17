@@ -48,16 +48,15 @@ export default function EntityCard({ id, name, subtitle, members, connected, var
         role="button" 
         onClick={() => router.push('/companies/new')} 
         aria-label="Register entity" 
-        className="add-entity-card bg-white rounded-2xl border border-dashed border-slate-200 hover:border-emerald-300 transition cursor-pointer flex flex-col items-center justify-center h-[280px]"
-        style={{ borderWidth: '1.5px' }}
+        className="add-entity-card bg-white rounded-2xl border-2 border-dashed border-slate-200 hover:border-emerald-300 transition cursor-pointer flex flex-col items-center justify-center h-[220px]"
       >
-        <div className="w-20 h-20 bg-slate-100 rounded-[12px] flex items-center justify-center mb-4 shadow-[0_8px_20px_rgba(2,6,23,0.04)]">
-          <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 bg-slate-100 rounded-[12px] flex items-center justify-center mb-3 shadow-[0_8px_20px_rgba(2,6,23,0.04)]">
+          <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4"/>
           </svg>
         </div>
-        <h3 className="text-sm font-bold text-slate-900 mb-1">New Entity</h3>
-        <p className="text-[11px] text-slate-500 font-medium normal-case">Expand portfolio</p>
+        <h3 className="text-xs font-bold text-slate-900 mb-1">New Entity</h3>
+        <p className="text-[10px] text-slate-500 font-medium normal-case">Expand portfolio</p>
       </div>
     )
   }
@@ -67,55 +66,40 @@ export default function EntityCard({ id, name, subtitle, members, connected, var
   const planColorClass = getPlanColor(subtitle)
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={`Open ${name || 'company'} dashboard`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`)
-        }
-      }}
-      onClick={() => onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`)}
-      className="company-card bg-white rounded-3xl border border-slate-100 px-6 py-8 h-[300px] flex flex-col shadow-[0_4px_18px_rgba(2,6,23,0.04)] cursor-pointer hover:shadow-lg transition"
-    >
+    <article aria-labelledby={`company-${id || 'company'}`} className="company-card relative bg-white rounded-2xl border border-slate-100 px-4 py-4 h-[180px] flex flex-col shadow-[0_4px_18px_rgba(2,6,23,0.03)] transition">
       {/* Avatar - Centered */}
-      <div className="flex flex-col items-center mb-4">
-        <div className={`w-20 h-20 ${colorClass} rounded-[20px] shadow-[0_6px_18px_rgba(2,6,23,0.06)] flex items-center justify-center text-white font-bold text-2xl mb-3`}>
+      <div className="flex flex-col items-center mb-2">
+        <div className={`w-12 h-12 ${colorClass} rounded-[12px] shadow-[0_6px_18px_rgba(2,6,23,0.04)] flex items-center justify-center text-white font-bold text-xl mb-2`}>
           {firstLetter}
         </div>
-        <h3 className="text-sm font-extrabold text-slate-900 text-center mb-1">{name}</h3>
-        <p className="text-[11px] text-slate-500 normal-case">{subtitle || 'Mid-market'}</p>
+        <h3 id={`company-${id || 'company'}`} className="text-xs font-extrabold text-slate-900 text-center mb-0.5">{name}</h3>
+        {subtitle && subtitle.toLowerCase() !== 'free' ? (
+          <p className="text-[10px] text-slate-500 normal-case">{subtitle}</p>
+        ) : null}
       </div>
 
       {/* Plan Badge */}
-      <div className="flex justify-center mb-3">
-        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium normal-case ${planColorClass}`}>
+      <div className="flex justify-center mb-1">
+        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium normal-case ${planColorClass}`}>
           {subtitle || 'Free'}
         </span>
       </div>
 
       {/* Team Info and Status */}
-      <div className="flex items-center justify-center gap-3 text-[11px] text-slate-600 mb-4">
+      <div className="flex items-center justify-center gap-2 text-[10px] text-slate-600 mb-3">
         <span className="flex items-center gap-1">
           <span className="text-slate-400 font-normal">Team:</span>
-          <span className="font-semibold text-slate-700">{typeof members === 'number' ? members : 'No team yet'}</span>
+          <span className="font-semibold text-slate-700">{typeof members === 'number' ? members : 0}</span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1">
           <span className="font-semibold text-emerald-600">Active</span>
         </span>
       </div>
 
-      {/* Footer: Button (stops propagation so click only fires once) */}
-      <div className="mt-auto">
-        <button 
-          onClick={(e) => { e.stopPropagation(); onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`) }} 
-          className="w-full py-2 bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-lg hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition text-sm"
-        >
-          Open Dashboard
-        </button>
-      </div>
-    </div>
+      {/* Footer: Open Books button */}
+      <button onClick={(e) => { e.stopPropagation(); onLaunch ? onLaunch() : router.push(`/companies/${id || ''}`) }} className="absolute left-4 right-4 -bottom-4 py-2 bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-full hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition text-xs">
+        Open Books
+      </button>
+    </article>
   )
 }

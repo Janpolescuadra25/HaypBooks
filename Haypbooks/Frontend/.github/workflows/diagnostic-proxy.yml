@@ -20,12 +20,7 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
 
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +48,6 @@ jobs:
         working-directory: ./Haypbooks/Backend
         env:
           DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
-          REDIS_URL: redis://localhost:6379
           ENFORCE_PRE_SIGNUP: 'true'
           ALLOW_TEST_ENDPOINTS: 'true'
           NODE_ENV: 'test'
@@ -73,7 +67,6 @@ jobs:
         working-directory: ./Haypbooks/Frontend
         env:
           ALLOW_TEST_ENDPOINTS: 'true'
-          REDIS_URL: redis://localhost:6379
         run: |
           npx playwright test e2e/proxy-refresh.spec.ts e2e/proxy-refresh-proxy-down.spec.ts --project=chromium --reporter=list || true
 

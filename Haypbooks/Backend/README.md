@@ -21,11 +21,12 @@ src/
 │   ├── auth.service.ts     # Auth business logic
 │   ├── auth.module.ts      # Auth module definition
 
-Redis support
--------------
+Pending-signup storage
+----------------------
 
-This backend supports a Redis-backed pending signup store for handling unverified signups in a durable, TTL-backed fashion. Set the environment variable `REDIS_URL` (e.g. `redis://localhost:6379`) and the server will use Redis automatically. If no Redis client is available, the service falls back to an in-memory store (useful for development and tests), but Redis is recommended for production deployments.
-To fully enforce that no unverified users are persisted to the database, set `ENFORCE_PRE_SIGNUP=true`. When enabled, the `/signup` endpoint will behave like `/pre-signup` and return a `signupToken` instead of creating a DB user directly. This requires a reliable Redis instance (or another durable TTL store) to work safely in production.
+The backend uses a DB-backed `EmailVerificationToken` table to store pending signups (with TTL semantics enforced via the `expiresAt` column). By default the system uses this DB-backed approach for pre-signup flows and does **not** require Redis. If no external store is configured, a non-durable in-memory fallback may be used for local development and quick tests.
+
+To fully enforce that no unverified users are persisted to the database, set `ENFORCE_PRE_SIGNUP=true`. When enabled, the `/signup` endpoint will behave like `/pre-signup` and return a `signupToken` instead of creating a DB user directly. This uses the DB-backed pending store by default.
 
 Local testing
 -------------
@@ -52,10 +53,20 @@ To ensure the pre-signup flow is validated in CI, add a Redis service to the CI 
 - `ALLOW_TEST_ENDPOINTS=true`
 
 This makes the E2E `e2e/pre-signup-flow.spec.ts` run reliably in CI and validates that unverified signups are not persisted to the database until verification completes.
+Periodic cleanup
+----------------
 
+To avoid accumulation of expired verification rows, we provide a simple cleanup script that deletes expired `EmailVerificationToken` and `Otp` rows:
+
+- Run locally or from a cronjob: `npm run db:cleanup-expired-tokens --prefix Haypbooks/Backend`
+- The script uses Prisma to delete rows where `expiresAt < now()` and logs the number of deleted rows.
+
+Recommended ops:
+- Run the cleanup script as a scheduled job (cron or hosted scheduler) at an interval appropriate to your traffic (e.g., hourly or daily).
+- Retain a short audit/log window for troubleshooting (consider soft-delete or archiving before purge for high-compliance environments).
 CI: Onboarding E2E workflow
 --------------------------
-We include a GitHub Actions workflow that runs the full onboarding → Owner Hub E2E test (Playwright) as a recommended job. The workflow is at:
+We include a GitHub Actions workflow that runs the full onboarding → Owner Workspace E2E test (Playwright) as a recommended job. The workflow is at:
 
 - `.github/workflows/e2e-onboarding.yml`
 
@@ -77,9 +88,9 @@ For more details see `.github/E2E-SECRETS.md` which documents how to set require
 
 Run E2E locally
 ---------------
-To reproduce the onboarding → Owner Hub E2E locally (mirrors CI):
+To reproduce the onboarding → Owner Workspace E2E locally (mirrors CI):
 
-1. Start Postgres and Redis locally (for parity):
+1. Start Postgres locally (for parity):
    - `docker compose up -d`
 2. Start backend in dev mode (ensure `DATABASE_URL` points to your local test DB):
    - `npm run start:dev --prefix Haypbooks/Backend`
@@ -93,7 +104,7 @@ Notes:
 - If you want the test to strictly fail when the backend doesn't auto-create the company, set `E2E_ASSERT_COMPANY=true` in your environment before running the test.
 
 CI tips:
-- After adding `E2E_DB_PASSWORD` to repository secrets, run the workflow from Actions → Workflows → "E2E — Onboarding → Owner Hub" → Run workflow (select main branch) and watch logs/artifacts for failures.
+- After adding `E2E_DB_PASSWORD` to repository secrets, run the workflow from Actions → Workflows → "E2E — Onboarding → Owner Workspace" → Run workflow (select main branch) and watch logs/artifacts for failures.
 │   ├── dto/                # Data transfer objects
 │   ├── strategies/         # Passport JWT strategy
 │   └── guards/             # JWT auth guard

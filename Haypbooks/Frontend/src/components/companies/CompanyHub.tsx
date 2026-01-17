@@ -6,8 +6,10 @@ import dynamic from 'next/dynamic'
 const TopBar = dynamic(() => import('@/components/TopBar'), { ssr: false })
 import useViewportZoom from '@/hooks/useViewportZoom'
 import { useToast } from '@/components/ToastProvider'
+import AddCompanyModal from './AddCompanyModal'
+import InviteAccountantModal from './InviteAccountantModal'
 
-type Company = { id: string; name: string; status?: string; plan?: string; lastAccessedAt?: string }
+type Company = { id: string; name: string; status?: string; plan?: string; lastAccessedAt?: string; tenantId?: string; tenant?: { id: string } }
 
 export default function CompanyHub() {
   const router = useRouter()
@@ -15,53 +17,102 @@ export default function CompanyHub() {
   const [invited, setInvited] = useState<Company[]>([])
   const [tab, setTab] = useState<'owned' | 'invited'>('owned')
   const [loading, setLoading] = useState(true)
+  const [showAddCompanyModal, setShowAddCompanyModal] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
 
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Permanent vertical offset (px)
-  const verticalOffset = -62
+  // Final container positioning values
+  const containerVerticalOffset = -28
+  const containerHorizontalOffset = -79
+  const containerPadding = 6 // 24px
+  const containerWidth = 113 // percentage
 
   const [me, setMe] = useState<any | null>(null)
   const [autoCreateAttempted, setAutoCreateAttempted] = useState(false)
 
+  const loadCompanies = async () => {
+    setLoading(true)
+    try {
+      const [r1, r2] = await Promise.all([
+        fetch('/api/companies?filter=owned', { cache: 'no-store' }),
+        fetch('/api/companies?filter=invited', { cache: 'no-store' }),
+      ])
+      
+      if (r1.ok) {
+        const ownedData = await r1.json()
+        console.log('[CompanyHub] Owned companies (raw):', ownedData)
+        // defensive dedupe in case backend returns duplicates
+        const byId: Record<string, any> = {}
+        const deduped = [] as any[]
+        for (const c of ownedData || []) {
+          if (!c || !c.id) continue
+          if (!byId[c.id]) {
+            byId[c.id] = true
+            deduped.push(c)
+          }
+        }
+        if ((ownedData || []).length !== deduped.length) {
+          console.warn('[CompanyHub] Detected duplicate owned companies and deduped locally', { rawCount: (ownedData || []).length, dedupedCount: deduped.length })
+        }
+        setOwned(deduped)
+      } else {
+        console.error('[CompanyHub] Failed to fetch owned companies:', r1.status)
+      }
+      
+      if (r2.ok) {
+        const invitedData = await r2.json()
+        console.log('[CompanyHub] Invited companies (raw):', invitedData)
+        // defensive dedupe for invited set as well
+        const byIdI: Record<string, any> = {}
+        const dedupI = [] as any[]
+        for (const c of invitedData || []) {
+          if (!c || !c.id) continue
+          if (!byIdI[c.id]) {
+            byIdI[c.id] = true
+            dedupI.push(c)
+          }
+        }
+        if ((invitedData || []).length !== dedupI.length) {
+          console.warn('[CompanyHub] Detected duplicate invited companies and deduped locally', { rawCount: (invitedData || []).length, dedupedCount: dedupI.length })
+        }
+        setInvited(dedupI)
+      } else {
+        console.error('[CompanyHub] Failed to fetch invited companies:', r2.status)
+      }
+
+      // Also fetch current user profile so we can auto-create a company if needed
+      try {
+        const meRes = await fetch('/api/users/me', { cache: 'no-store' })
+        if (meRes.ok) {
+          const j = await meRes.json()
+          console.log('[CompanyHub] User profile:', j)
+          setMe(j)
+        }
+      } catch (e) {
+        console.error('[CompanyHub] Failed to fetch user profile:', e)
+      }
+    } catch (e) {
+      console.error('[CompanyHub] Error loading companies:', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     let mounted = true
     async function load() {
-      setLoading(true)
-      try {
-        const [r1, r2] = await Promise.all([
-          fetch('/api/companies?filter=owned', { cache: 'no-store' }),
-          fetch('/api/companies?filter=invited', { cache: 'no-store' }),
-        ])
-        if (!mounted) return
-        if (r1.ok) setOwned(await r1.json())
-        if (r2.ok) setInvited(await r2.json())
-
-        // Also fetch current user profile so we can auto-create a company if needed
-        try {
-          const meRes = await fetch('/api/users/me', { cache: 'no-store' })
-          if (meRes.ok) {
-            const j = await meRes.json()
-            if (mounted) setMe(j)
-          }
-        } catch (e) {
-          // ignore
-        }
-      } catch (e) {
-        // ignore
-      } finally {
-        if (mounted) setLoading(false)
-      }
+      await loadCompanies()
     }
-    load()
+    if (mounted) load()
     return () => { mounted = false }
   }, [])
 
   const { push } = useToast()
 
   // If there are no owned companies but the user's profile has a companyName (from signup/get-started),
-  // attempt a best-effort creation so the Owner Hub will immediately show the card.
+  // attempt a best-effort creation so the Owner Workspace will immediately show the card.
   useEffect(() => {
     async function ensureCompany() {
       if (autoCreateAttempted) return
@@ -117,14 +168,10 @@ export default function CompanyHub() {
 
   const { isWide, isCompact } = useViewportZoom()
 
-  // Advanced container settings (finalized)
-  const outerWidthOption: 'match'|'wider'|'full'|'custom' = 'custom'
-  const customWidth = 1800
-  const outerPadding = 0
-  const alignment: 'center'|'left'|'right' = 'center'
-  const offset = -8
-
-
+  // Keep alignment with TopBar on zoom/resize
+  const effectiveHorizontalOffset = isCompact ? 0 : containerHorizontalOffset
+  const effectiveWidth = isCompact ? 100 : containerWidth
+  const effectivePadding = isCompact ? Math.min(containerPadding, 4) : containerPadding
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -135,10 +182,33 @@ export default function CompanyHub() {
         <div className={`${isWide ? 'w-full px-0' : 'max-w-[1800px] mx-auto'} ${isCompact ? 'px-4' : 'px-16'}`}>
 
           {/* White Container (expanded: wider, taller; inner content sizes unchanged) */}
-          <div className={`relative overflow-visible bg-white rounded-[64px] shadow-[0_6px_18px_rgba(2,6,23,0.04)] ring-1 ring-emerald-50 border border-emerald-100 ${isWide ? 'mx-4 lg:mx-8' : ''} px-6 pt-4 pb-10 min-h-[460px] transform -translate-y-[62px]`}>
+          <div 
+            className={`relative overflow-visible bg-white rounded-[64px] shadow-[0_6px_18px_rgba(2,6,23,0.04)] ring-1 ring-emerald-50 border border-emerald-100 ${isWide ? 'mx-4 lg:mx-8' : ''} min-h-[460px] transition-all duration-300 mx-auto`}
+            style={{
+              transform: `translate(${effectiveHorizontalOffset}px, ${containerVerticalOffset}px)`,
+              padding: `${effectivePadding * 4}px`,
+              width: `${effectiveWidth}%`
+            }}
+          >
 
-
-
+            {/* Action Buttons - Now inside the white container */}
+            <div className="flex justify-between items-center mb-6">
+              <button
+                onClick={() => loadCompanies()}
+                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                title="Refresh companies list"
+              >
+                🔄 Refresh
+              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                >
+                  👤 Invite Accountant
+                </button>
+              </div>
+            </div>
 
             {/* Centered Search */}
             <div className="mb-12">
@@ -167,6 +237,32 @@ export default function CompanyHub() {
           </div>
         </div>
       </main>
+
+      {/* Add Company Modal */}
+      {showAddCompanyModal && (
+        <AddCompanyModal
+          onClose={() => setShowAddCompanyModal(false)}
+          onSuccess={() => {
+            setShowAddCompanyModal(false)
+            // Refresh owned companies
+            loadCompanies()
+            push({ type: 'success', message: 'Company added successfully!' })
+          }}
+          tenantId={owned[0]?.tenantId || owned[0]?.tenant?.id} // Use tenantId from first company
+        />
+      )}
+
+      {/* Invite Accountant Modal */}
+      {showInviteModal && (
+        <InviteAccountantModal
+          onClose={() => setShowInviteModal(false)}
+          onSuccess={() => {
+            setShowInviteModal(false)
+            push({ type: 'success', message: 'Invitation sent!' })
+          }}
+          tenantId={owned[0]?.tenantId || owned[0]?.tenant?.id} // Use tenantId from first company
+        />
+      )}
     </div>
   )
 }
@@ -191,7 +287,7 @@ function CompanyGrid({ companies, emptyMessage, searchTerm, me, onCreateFromProf
               onClick={onCreateFromProfile}
               className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-lg font-medium hover:from-emerald-600 hover:to-teal-600 transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              ✨ Add to Owner Hub
+              ✨ Add to Owner Workspace
             </button>
           </div>
         ) : null}
@@ -205,14 +301,15 @@ function CompanyGrid({ companies, emptyMessage, searchTerm, me, onCreateFromProf
   }
 
   return (
-    <div className="flex gap-8 xl:gap-10 overflow-x-auto pb-4">
+    <div className="flex flex-wrap justify-center gap-4">
       {filtered.map((c) => (
-        <div key={c.id} className="flex-shrink-0 w-[300px]">
-          <EntityCard id={c.id} name={c.name} subtitle={c.plan || 'Free'} members={12} connected={true} onLaunch={() => window.location.href = `/companies/${c.id}`} />
+        <div key={c.id} className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/6">
+          <EntityCard id={c.id} name={c.name} subtitle={c.plan || 'Free'} members={typeof c.tenant?._count?.users === 'number' ? c.tenant._count.users : (c.members ?? 0)} connected={true} onLaunch={() => window.location.href = `/companies/${c.id}`} />
         </div>
       ))}
+
       {/* Register card */}
-      <div className="flex-shrink-0 w-[300px]">
+      <div className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/6">
         <EntityCard variant="register" />
       </div>
     </div>

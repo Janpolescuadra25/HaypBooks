@@ -24,7 +24,7 @@ export class CompanyRepository {
 
       // Backfill safety: ensure a minimal Company record exists for this tenant.
       // Some legacy flows (POST /api/companies) only created Tenant rows; to ensure
-      // the Owner Hub can show a Company card, create a minimal Company if missing.
+      // the Owner Workspace can show a Company card, create a minimal Company if missing.
       try {
         const existing = await this.prisma.company.findFirst({ where: { tenantId: tenant.id } })
         if (!existing) {
@@ -106,19 +106,134 @@ export class CompanyRepository {
 
       try {
         // eslint-disable-next-line no-console
-        console.debug('[CompanyRepository] attempting raw INSERT with id,id_old', { id, idOld })
-        const rows: any[] = await this.prisma.$queryRawUnsafe(
-          `INSERT INTO public."Tenant" ("id","name","subdomain","baseCurrency","createdAt","updatedAt","id_old") VALUES ($1::uuid,$2,$3,$4,now(),now(),$5) RETURNING *`,
-          id,
-          name,
-          subdomain,
-          baseCurrency,
-          idOld,
-        )
+        console.debug('[CompanyRepository] attempting tolerant raw INSERT (detecting Tenant columns) with id,id_old', { id, idOld })
+
+        // Dynamically detect which Tenant columns exist in the DB and construct an INSERT
+        const colsRes: Array<{ column_name: string }> = (await this.prisma.$queryRaw`
+          SELECT column_name FROM information_schema.columns WHERE table_name = 'Tenant'
+        `) as any
+        const existingCols = new Set(colsRes.map(r => r.column_name))
+
+        // Base columns we always include where possible
+        const insertCols: string[] = []
+        const values: any[] = []
+        const placeholders: string[] = []
+        let paramIndex = 1
+
+        // id (required)
+        if (existingCols.has('id')) {
+          insertCols.push('"id"')
+          placeholders.push(`$${paramIndex++}`)
+          values.push(id)
+        }
+
+        // name (optional)
+        if (existingCols.has('name')) {
+          insertCols.push('"name"')
+          placeholders.push(`$${paramIndex++}`)
+          values.push(name)
+        }
+
+        if (existingCols.has('subdomain')) {
+          insertCols.push('"subdomain"')
+          placeholders.push(`$${paramIndex++}`)
+          values.push(subdomain)
+        }
+
+        if (existingCols.has('baseCurrency')) {
+          insertCols.push('"baseCurrency"')
+          placeholders.push(`$${paramIndex++}`)
+          values.push(baseCurrency)
+        }
+
+        // createdAt / updatedAt: prefer server-side now()
+        if (existingCols.has('createdAt')) {
+          insertCols.push('"createdAt"')
+          placeholders.push('now()')
+        }
+        if (existingCols.has('updatedAt')) {
+          insertCols.push('"updatedAt"')
+          placeholders.push('now()')
+        }
+
+        if (existingCols.has('id_old')) {
+          insertCols.push('"id_old"')
+          placeholders.push(`$${paramIndex++}`)
+          values.push(idOld)
+        }
+
+        // Detect NOT NULL columns without defaults and provide sensible defaults so
+        // a minimal INSERT can succeed against legacy schemas that require extra
+        // non-null columns (e.g., "status", "type", "isActive", "trialUsed").
+        try {
+          const colsInfo: Array<{ column_name: string, is_nullable: string, data_type: string, column_default: any }> = (await this.prisma.$queryRaw`
+            SELECT column_name, is_nullable, data_type, column_default FROM information_schema.columns WHERE table_name = 'Tenant'
+          `) as any
+
+          const requiredCols = colsInfo.filter(c => c.is_nullable === 'NO' && (c.column_default === null || c.column_default === undefined)).map(c => ({ name: c.column_name, type: c.data_type }))
+
+          for (const rc of requiredCols) {
+            if (insertCols.includes(`"${rc.name}"`)) continue
+            // Add a reasonable default based on column name or data type
+            if (rc.name === 'status') {
+              insertCols.push('"status"')
+              placeholders.push(`$${paramIndex++}`)
+              values.push(status)
+            } else if (rc.name === 'type') {
+              insertCols.push('"type"')
+              placeholders.push(`$${paramIndex++}`)
+              values.push('OWNER')
+            } else if (rc.name === 'isActive') {
+              insertCols.push('"isActive"')
+              placeholders.push(`$${paramIndex++}`)
+              values.push(true)
+            } else if (rc.name === 'trialUsed') {
+              insertCols.push('"trialUsed"')
+              placeholders.push(`$${paramIndex++}`)
+              values.push(false)
+            } else if (rc.name === 'companiesCreated') {
+              insertCols.push('"companiesCreated"')
+              placeholders.push(`$${paramIndex++}`)
+              values.push(0)
+            } else if (rc.type && (rc.type.includes('timestamp') || rc.type.includes('date'))) {
+              insertCols.push(`"${rc.name}"`)
+              placeholders.push('now()')
+            } else if (rc.type && (rc.type === 'boolean')) {
+              insertCols.push(`"${rc.name}"`)
+              placeholders.push(`$${paramIndex++}`)
+              values.push(false)
+            } else if (rc.type && (rc.type.includes('character') || rc.type === 'text' || rc.type === 'varchar')) {
+              insertCols.push(`"${rc.name}"`)
+              placeholders.push(`$${paramIndex++}`)
+              values.push('')
+            } else if (rc.type && (rc.type.includes('int') || rc.type === 'integer')) {
+              insertCols.push(`"${rc.name}"`)
+              placeholders.push(`$${paramIndex++}`)
+              values.push(0)
+            } else {
+              // Fallback: insert empty string for unknown types
+              insertCols.push(`"${rc.name}"`)
+              placeholders.push(`$${paramIndex++}`)
+              values.push('')
+            }
+          }
+        } catch (e) {
+          // best-effort only; if this detection fails, proceed with whatever cols
+          // we already had and let the INSERT error surface.
+          // eslint-disable-next-line no-console
+          console.debug('[CompanyRepository] required column detection failed', { message: e?.message })
+        }
+
+        if (insertCols.length === 0) {
+          throw new Error('No usable Tenant columns found for raw insert')
+        }
+
+        const sql = `INSERT INTO public."Tenant" (${insertCols.join(',')}) VALUES (${placeholders.join(',')}) RETURNING *`
+        const rows: any[] = await this.prisma.$queryRawUnsafe(sql, ...values)
 
         const tenant = rows && rows.length ? rows[0] : null
         // eslint-disable-next-line no-console
-        console.debug('[CompanyRepository] raw INSERT result', { tenant })
+        console.debug('[CompanyRepository] tolerant raw INSERT result', { tenant })
 
         // Create roles (best-effort)
         try {
@@ -194,87 +309,119 @@ export class CompanyRepository {
     
     // Default: return companies for tenants where the user is a member
     if (!filter) {
-      const companies = await this.prisma.company.findMany({
-        where: {
-          isActive: true,
-          tenant: {
-            users: { some: { userId, status: 'ACTIVE' } }
-          }
-        },
-        include: {
-          tenant: {
-            select: {
-              id: true,
-              name: true,
-              users: {
-                where: { userId },
-                select: { isOwner: true, lastAccessedAt: true }
+      try {
+        const companies = await this.prisma.company.findMany({
+          where: {
+            isActive: true,
+            tenant: {
+              users: { some: { userId, status: 'ACTIVE' } }
+            }
+          },
+          include: {
+            tenant: {
+              select: {
+                id: true,
+                name: true,
+                users: {
+                  where: { userId },
+                  select: { isOwner: true, lastAccessedAt: true }
+                },
+                _count: { select: { users: true } }
               }
             }
           }
+        })
+        // Defensive dedupe
+        const seenAll = new Set<string>()
+        const uniqueAll = [] as any[]
+        for (const c of companies || []) {
+          if (!c || !c.id) continue
+          if (!seenAll.has(c.id)) {
+            seenAll.add(c.id)
+            uniqueAll.push(c)
+          }
         }
-      })
-      // Defensive dedupe
-      const seenAll = new Set<string>()
-      const uniqueAll = [] as any[]
-      for (const c of companies || []) {
-        if (!c || !c.id) continue
-        if (!seenAll.has(c.id)) {
-          seenAll.add(c.id)
-          uniqueAll.push(c)
-        }
+        // eslint-disable-next-line no-console
+        console.info('[COMPANY-QUERY] Results (no filter):', { count: uniqueAll.length, companies: uniqueAll.map(c => ({ id: c.id, name: c.name })) })
+        return uniqueAll
+      } catch (e) {
+        // Fallback for inconsistent DB rows: select companies via raw SQL with COALESCE(name,'')
+        // eslint-disable-next-line no-console
+        console.warn('[COMPANY-QUERY] 🛡️ Default query failed; falling back to raw SQL due to inconsistent DB rows:', e?.message || e)
+        const tus = await this.prisma.tenantUser.findMany({ where: { userId, status: 'ACTIVE' }, select: { tenantId: true } })
+        const tenantIds = tus.map(t => t.tenantId)
+        if (!tenantIds || tenantIds.length === 0) return []
+        const rows: any[] = await this.prisma.$queryRawUnsafe('SELECT c.id, c."tenantId", COALESCE(c.name,\'\') as name, c."isActive" FROM public."Company" c WHERE c."tenantId" = ANY($1::uuid[]) AND c."isActive" = true', tenantIds)
+        const mapped = rows.map(r => ({ id: r.id, tenantId: r.tenantId, name: r.name, isActive: r.isActive }))
+        // eslint-disable-next-line no-console
+        console.info('[COMPANY-QUERY] ✅ Raw fallback results (no filter):', { count: mapped.length, companies: mapped })
+        return mapped
       }
-      // eslint-disable-next-line no-console
-      console.info('[COMPANY-QUERY] Results (no filter):', { count: uniqueAll.length, companies: uniqueAll.map(c => ({ id: c.id, name: c.name })) })
-      return uniqueAll
     }
 
     if (filter === 'owned') {
       // eslint-disable-next-line no-console
       console.info('[COMPANY-QUERY] 🔍 Starting owned query for userId:', userId)
       
-      const companies = await this.prisma.company.findMany({
-        where: {
-          isActive: true,
-          tenant: {
-            users: { some: { userId, isOwner: true, status: 'ACTIVE' } }
-          }
-        },
-        include: {
-          tenant: {
-            select: {
-              id: true,
-              name: true,
-              users: {
-                where: { userId },
-                select: { isOwner: true, lastAccessedAt: true }
+      try {
+        const companies = await this.prisma.company.findMany({
+          where: {
+            isActive: true,
+            tenant: {
+              users: { some: { userId, isOwner: true, status: 'ACTIVE' } }
+            }
+          },
+          include: {
+            tenant: {
+              select: {
+                id: true,
+                name: true,
+                users: {
+                  where: { userId },
+                  select: { isOwner: true, lastAccessedAt: true }
+                },
+                _count: { select: { users: true } }
               }
             }
           }
+        })
+        // Defensive dedupe in case DB join returned duplicate rows
+        const seen = new Set<string>()
+        const unique = [] as any[]
+        for (const c of companies || []) {
+          if (!c || !c.id) continue
+          if (!seen.has(c.id)) {
+            seen.add(c.id)
+            unique.push(c)
+          }
         }
-      })
-      // Defensive dedupe in case DB join returned duplicate rows
-      const seen = new Set<string>()
-      const unique = [] as any[]
-      for (const c of companies || []) {
-        if (!c || !c.id) continue
-        if (!seen.has(c.id)) {
-          seen.add(c.id)
-          unique.push(c)
-        }
+        // eslint-disable-next-line no-console
+        console.info('[COMPANY-QUERY] ✅ Results (owned):', { 
+          count: unique.length, 
+          companies: unique.map(c => ({ 
+            id: c.id, 
+            name: c.name, 
+            tenantId: c.tenantId,
+            isActive: c.isActive,
+            tenantUsers: c.tenant?.users 
+          })) 
+        })
+        return unique
+      } catch (e) {
+        // Defensive fallback: handle rare DB rows where nullable fields violate Prisma schema
+        // Gather tenantIds for owned tenants and run a raw query that coalesces null names
+        // eslint-disable-next-line no-console
+        console.warn('[COMPANY-QUERY] 🛡️ Owned query failed; falling back to raw SQL due to inconsistent DB rows:', e?.message || e)
+        const tus = await this.prisma.tenantUser.findMany({ where: { userId, isOwner: true, status: 'ACTIVE' }, select: { tenantId: true } })
+        const tenantIds = tus.map(t => t.tenantId)
+        if (!tenantIds || tenantIds.length === 0) return []
+        const rows: any[] = await this.prisma.$queryRawUnsafe('SELECT c.id, c."tenantId", COALESCE(c.name,\'\') as name, c."isActive" FROM public."Company" c WHERE c."tenantId" = ANY($1::uuid[]) AND c."isActive" = true', tenantIds)
+        // Map raw rows into expected shape
+        const mapped = rows.map(r => ({ id: r.id, tenantId: r.tenantId, name: r.name, isActive: r.isActive }))
+        // eslint-disable-next-line no-console
+        console.info('[COMPANY-QUERY] ✅ Raw fallback results (owned):', { count: mapped.length, companies: mapped })
+        return mapped
       }
-      // eslint-disable-next-line no-console
-      console.info('[COMPANY-QUERY] ✅ Results (owned):', { 
-        count: unique.length, 
-        companies: unique.map(c => ({ 
-          id: c.id, 
-          name: c.name, 
-          tenantId: c.tenantId,
-          isActive: c.isActive,
-          tenantUsers: c.tenant?.users 
-        })) 
-      })
-      return unique
     }
 
     if (filter === 'invited' && email) {
@@ -295,7 +442,8 @@ export class CompanyRepository {
           tenant: {
             select: {
               id: true,
-              name: true
+              name: true,
+              _count: { select: { users: true } }
             }
           }
         }
@@ -494,24 +642,33 @@ export class CompanyRepository {
       return { success: false, reason: 'email_mismatch' }
     }
 
-    // Create tenant user row if missing
+    // Create tenant user row if missing (avoid upsert to prevent failure when unique constraint is absent)
     try {
-      await this.prisma.tenantUser.upsert({
-        where: { tenantId_userId: { tenantId: invite.tenantId, userId } },
-        create: {
-          tenantId: invite.tenantId,
-          userId,
-          role: invite.role ? invite.role.name : 'member',
-          roleId: invite.roleId || null,
-          isOwner: false,
-          joinedAt: new Date(),
-          status: 'ACTIVE',
-        },
-        update: { status: 'ACTIVE', role: invite.role ? invite.role.name : 'member', roleId: invite.roleId || null },
+      const existing = await this.prisma.tenantUser.findFirst({
+        where: { tenantId: invite.tenantId, userId },
       })
+
+      if (existing) {
+        await this.prisma.tenantUser.update({
+          where: { tenantId_userId: { tenantId: invite.tenantId, userId } },
+          data: { status: 'ACTIVE', role: invite.role ? invite.role.name : 'member', roleId: invite.roleId || null },
+        })
+      } else {
+        await this.prisma.tenantUser.create({
+          data: {
+            tenantId: invite.tenantId,
+            userId,
+            role: invite.role ? invite.role.name : 'member',
+            roleId: invite.roleId || null,
+            isOwner: false,
+            joinedAt: new Date(),
+            status: 'ACTIVE',
+          },
+        })
+      }
     } catch (e) {
       // continue but record failure
-      console.warn('tenantUser upsert failed', e?.message)
+      console.warn('tenantUser create/update failed', e?.message)
     }
 
     // Mark invite accepted

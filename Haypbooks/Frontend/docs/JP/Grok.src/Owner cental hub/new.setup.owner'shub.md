@@ -57,7 +57,7 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-xl font-bold text-slate-900">HaypBooks Owner Hub</h1>
+            <h1 class="text-xl font-bold text-slate-900">HaypBooks Owner Workspace</h1>
             <p class="text-sm text-slate-500">Business Control Center</p>
           </div>
         </div>

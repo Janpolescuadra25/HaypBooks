@@ -8,14 +8,10 @@ const prisma = new PrismaClient()
 })
 
 async function main() {
-  // Create demo tenant
-  const tenant = await prisma.tenant.create({
-    data: {
-      name: 'Inventory Demo',
-      subdomain: `inventory-demo-${Math.random().toString(36).slice(2, 7)}`,
-      baseCurrency: 'USD'
-    }
-  })
+  // Create demo tenant (id-only; avoid name/subdomain which have been moved to Company)
+  const tenantId = require('crypto').randomUUID()
+  await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","baseCurrency","createdAt","updatedAt") VALUES ($1::uuid,$2, now(), now()) ON CONFLICT ("id") DO UPDATE SET "baseCurrency" = EXCLUDED."baseCurrency"', tenantId, 'USD')
+  const tenant = { id: tenantId }
 
   // Ensure there's a company ID available if companyId is required
   let seedCompanyId: string | null = null

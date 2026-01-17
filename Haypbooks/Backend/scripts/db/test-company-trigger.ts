@@ -8,8 +8,12 @@ async function run() {
   console.log('Testing company->tenant trigger:')
 
   // Create two tenants
-  const t1 = await prisma.tenant.create({ data: { name: 'TriggerTestTenant1', subdomain: `tt1-${Date.now()}`, baseCurrency: 'USD' } })
-  const t2 = await prisma.tenant.create({ data: { name: 'TriggerTestTenant2', subdomain: `tt2-${Date.now()}`, baseCurrency: 'USD' } })
+  const t1Id = require('crypto').randomUUID()
+  await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","baseCurrency","createdAt","updatedAt") VALUES ($1::uuid,$2, now(), now())', t1Id, 'USD')
+  const t1 = { id: t1Id }
+  const t2Id = require('crypto').randomUUID()
+  await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","baseCurrency","createdAt","updatedAt") VALUES ($1::uuid,$2, now(), now())', t2Id, 'USD')
+  const t2 = { id: t2Id }
 
   const c1 = await prisma.company.create({ data: { id: `company-${t1.id}`, tenantId: t1.id, name: 'T1 Default' } })
   const c2 = await prisma.company.create({ data: { id: `company-${t2.id}`, tenantId: t2.id, name: 'T2 Default' } })

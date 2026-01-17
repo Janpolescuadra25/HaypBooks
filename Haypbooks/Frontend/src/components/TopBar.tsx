@@ -15,6 +15,11 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
   // Permanent horizontal padding (px)
   const horizontalPadding = 63
 
+  // Finalized TopBar values (locked from your selection)
+  const topbarPaddingY = 4.8
+  const topbarContentX = 0
+  const navButtonSize = 11
+
   // User menu state and outside click handling
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -79,21 +84,40 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
     if (userMenuRef.current) userMenuRef.current.setAttribute('aria-expanded', showUserMenu ? 'true' : 'false')
   }, [showUserMenu])
 
+  // fetch current user for display in topbar
+  const [user, setUser] = useState<any | null>(null)
+  useEffect(() => {
+    let mounted = true
+    authService.getCurrentUser().then((u) => { if (mounted) setUser(u) }).catch(() => { if (mounted) setUser(null) })
+    return () => { mounted = false }
+  }, [])
+
   // use hook to determine compact and wide states
   const { isCompact, isWide } = useViewportZoom()
 
   const logoSizeClass = isCompact ? 'w-7 h-7' : 'w-8 h-8'
   const titleClass = isCompact ? 'text-xs font-semibold' : 'text-sm font-bold'
   const subtitleClass = isCompact ? 'text-[9px]' : 'text-[10px]'
-  const navButtonClass = isCompact ? 'flex items-center gap-1 px-1 py-0.5 text-xs' : 'flex items-center gap-2 px-2 py-1 text-xs'
+  const navButtonPaddingY = Math.max(1, Math.round(navButtonSize * 0.25))
+  const navButtonPaddingX = Math.max(2, Math.round(navButtonSize * 0.6))
+  const navButtonClass = 'flex items-center gap-2'
+  const navButtonStyle = { fontSize: `${navButtonSize}px`, padding: `${navButtonPaddingY}px ${navButtonPaddingX}px` }
+  const navIconStyle = { width: `${Math.round(navButtonSize)}px`, height: `${Math.round(navButtonSize)}px` }
 
   return (
     <>
-      <header className="w-full fixed top-0 left-0 right-0 z-50 bg-transparent py-1">
+
+
+      <header className="w-full fixed top-0 left-0 right-0 z-50 bg-transparent py-0.5">
         <div className={`${isWide ? 'w-full px-0' : 'max-w-[1800px] mx-auto'} ${isCompact ? 'px-4' : 'px-16'}`}>
-          <div className={`bg-white rounded-3xl relative shadow-[0_6px_18px_rgba(2,6,23,0.04)] border border-emerald-100 ${isWide ? 'mx-4 lg:mx-8' : ''} px-6 py-1`} ref={null}>
-            {/* Top row: Logo, Navigation and User */}
-            <div className="flex items-center justify-between">
+          <div
+            className={`bg-white rounded-3xl relative shadow-[0_6px_18px_rgba(2,6,23,0.04)] border border-emerald-100 ${isWide ? 'mx-4 lg:mx-8' : ''} px-6`}
+            style={{ paddingTop: `${topbarPaddingY}px`, paddingBottom: `${topbarPaddingY}px` }}
+            ref={null}
+          >
+            <div className="transition-transform" style={{ transform: `translateX(${topbarContentX}px)` }}>
+              {/* Top row: Logo, Navigation and User */}
+              <div className="flex items-center justify-between">
 {/* Left: Logo + Navigation */}
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
@@ -104,33 +128,11 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                 </div>
                 <div>
                   <h1 className={`${titleClass} text-slate-800`}>HAYPBOOKS</h1>
-                  <p className={`${subtitleClass} text-slate-500`}>OWNER HUB</p>
+                  <p className={`${subtitleClass} text-slate-500`}>OWNER WORKSPACE</p>
                 </div>
               </div>
 
-              {/* Navigation (left) */}
-              <nav className="flex items-center gap-3 ml-3">
-                <button className={`${navButtonClass} bg-emerald-600 text-white rounded-full font-semibold shadow-sm`}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                  </svg>
-                  <span className={`${isCompact ? 'sr-only' : ''}`}>PORTFOLIO</span>
-                </button>
-
-                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                  </svg>
-                  <span className={`${isCompact ? 'sr-only' : ''}`}>TASK REMINDER</span>
-                </button>
-
-                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                  </svg>
-                  <span className={`${isCompact ? 'sr-only' : ''}`}>RECONCILE ACCOUNTS</span>
-                </button>
-              </nav>
+              {/* Navigation moved to second bar below on Owner Workspace */}
               </div>
 
               {/* Right: User */}
@@ -150,7 +152,7 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                   <button aria-haspopup="true" onClick={() => setShowUserMenu((s) => !s)} ref={userMenuRef as any} className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-emerald-600 rounded-full flex items-center justify-center text-white font-medium text-xs">DU</div>
                     <div className={`${isCompact ? 'hidden' : 'hidden sm:block'} text-left`}>
-                      <p className="text-xs font-medium text-slate-700">Demo User</p>
+                      <p className="text-xs font-medium text-slate-700">{user?.name ?? 'Demo User'}</p>
                       <p className="text-[9px] text-slate-500">ADMIN ACCESS</p>
                     </div>
                     {/* Dropdown indicator */}
@@ -215,6 +217,39 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+              {/* Center workspace name */}
+              <div className="w-full text-center mt-1 mb-2">
+                <div className="text-sm font-semibold text-slate-700">{user?.companyName ?? 'Your Owner Workspace'}</div>
+              </div>
+
+              {/* Divider */}
+              <div className="mt-2 border-t border-slate-100" />
+
+              {/* Second bar: quick actions */}
+              <div className="mt-2 flex items-center gap-3">
+                <button className={`${navButtonClass} bg-emerald-600 text-white rounded-full font-semibold shadow-sm`} style={navButtonStyle}>
+                  <svg className="" style={navIconStyle} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                  </svg>
+                  <span className={`${isCompact ? 'sr-only' : ''}`}>PORTFOLIO</span>
+                </button>
+
+                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`} style={navButtonStyle}>
+                  <svg className="" style={navIconStyle} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                  <span className={`${isCompact ? 'sr-only' : ''}`}>TASK REMINDER</span>
+                </button>
+
+                <button className={`${navButtonClass} text-slate-600 hover:text-slate-800 font-medium`} style={navButtonStyle}>
+                  <svg className="" style={navIconStyle} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                  <span className={`${isCompact ? 'sr-only' : ''}`}>RECONCILE ACCOUNTS</span>
+                </button>
               </div>
             </div>
           </div>

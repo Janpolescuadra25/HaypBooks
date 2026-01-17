@@ -26,7 +26,38 @@ describe('CompanyRepository', () => {
 
     const res = await repo.create({ name: 'ACME' })
     expect(res).toEqual(tenant)
-    expect(mockPrisma.subscription.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tenantId: 't1', companyId: 't1' }) }))
+    expect(mockPrisma.subscription.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ companyId: 't1' }) }))
     expect(mockPrisma.tenant.update).toHaveBeenCalledWith({ where: { id: 't1' }, data: expect.objectContaining({ trialUsed: true }) })
+  })
+
+  test('findForUser uses owned filter to require isOwner true', async () => {
+    // Arrange
+    mockPrisma.company = { findMany: jest.fn().mockResolvedValueOnce([]) }
+
+    // Act
+    await repo.findForUser('user-123', 'owned')
+
+    // Assert: ensure prisma.company.findMany was called with the owned where clause
+    expect(mockPrisma.company.findMany).toHaveBeenCalledTimes(1)
+    const calledWith = mockPrisma.company.findMany.mock.calls[0][0]
+    expect(calledWith.where).toBeDefined()
+    expect(calledWith.where.isActive).toBe(true)
+    expect(calledWith.where.tenant).toBeDefined()
+    expect(calledWith.where.tenant.users).toBeDefined()
+    expect(calledWith.where.tenant.users.some).toEqual({ userId: 'user-123', isOwner: true, status: 'ACTIVE' })
+  })
+
+  test('findForUser default (no filter) does not require isOwner', async () => {
+    // Arrange
+    mockPrisma.company = { findMany: jest.fn().mockResolvedValueOnce([]) }
+
+    // Act
+    await repo.findForUser('u-abc')
+
+    // Assert
+    expect(mockPrisma.company.findMany).toHaveBeenCalledTimes(1)
+    const calledWith = mockPrisma.company.findMany.mock.calls[0][0]
+    expect(calledWith.where).toBeDefined()
+    expect(calledWith.where.tenant.users.some).toEqual({ userId: 'u-abc', status: 'ACTIVE' })
   })
 })

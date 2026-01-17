@@ -25,20 +25,9 @@ describe('DB backfill Tenant->Company (e2e)', () => {
 
   it('copies tenant onboarding/business fields into Company records', async () => {
     // Create a tenant with onboarding/business fields set
-    const tenant = await prisma.tenant.create({ data: {
-      id: '00000000-0000-4000-8000-000000000100',
-      name: 'Backfill Tenant',
-      subdomain: 'backfill-test',
-      businessType: 'Retail',
-      industry: 'Grocery',
-      address: '123 Market St',
-      taxId: 'TIN-123',
-      logoUrl: 'https://cdn.example/logo.png',
-      invoicePrefix: 'BF-',
-      vatRegistered: true,
-      vatRate: 12,
-      pricesInclusive: true
-    }})
+    const tenantId = '00000000-0000-4000-8000-000000000100'
+    await prisma.$executeRawUnsafe(`INSERT INTO public."Tenant" ("id","businessType","industry","address","taxId","logoUrl","invoicePrefix","vatRegistered","vatRate","pricesInclusive","createdAt","updatedAt") VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10, now(), now()) ON CONFLICT ("id") DO UPDATE SET "businessType" = EXCLUDED."businessType"`, tenantId, 'Retail', 'Grocery', '123 Market St', 'TIN-123', 'https://cdn.example/logo.png', 'BF-', true, 12, true)
+    const tenant = { id: tenantId }
 
     // Ensure there's a company to receive the backfill
     // Create with nullable fields explicitly set to null so backfill can populate them

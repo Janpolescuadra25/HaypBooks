@@ -6,7 +6,7 @@ async function toggleCleared(id: string, cleared: boolean, accountId: string, pe
   await fetch(`${getBaseUrl()}/api/reconciliation/toggle-cleared`, { method: 'POST', body: JSON.stringify({ id, cleared, accountId, periodEnd }), headers: { 'Content-Type': 'application/json' }, cache: 'no-store' })
 }
 
-export default async function ReconciliationPage({ searchParams }: { searchParams: { asOf?: string; statementEndDate?: string } }) {
+export default async function ReconciliationPage({ searchParams }: { searchParams?: { asOf?: string; statementEndDate?: string } } = {}) {
   const sp = new URLSearchParams()
   if (searchParams?.asOf) sp.set('asOf', searchParams.asOf)
   if (searchParams?.statementEndDate) sp.set('statementEndDate', searchParams.statementEndDate)
@@ -112,32 +112,7 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
           <input type="hidden" name="accountId" value={accountId} />
           <button
             className="btn-primary"
-            formAction={async (formData) => {
-              'use server'
-              const eb = Number(formData.get('endingBalance') || 0)
-              const sc = Number(formData.get('serviceCharge') || 0)
-              const ie = Number(formData.get('interestEarned') || 0)
-              const acct = String(formData.get('accountId') || accountId)
-              const periodEnd = String(formData.get('periodEnd') || data.asOf)
-              // Clear all items marked cleared in current view
-              const clearedIds = Array.isArray(data.items) ? data.items.filter((it: any) => it.cleared).map((it: any) => it.id) : []
-              const r = await fetch(`${getBaseUrl()}/api/reconciliation/finalize`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accountId: acct, periodEnd, endingBalance: eb, serviceCharge: sc, interestEarned: ie, clearedIds }),
-                cache: 'no-store',
-              })
-              const next = new URL(`${getBaseUrl()}/bank-transactions/reconciliation`)
-              next.searchParams.set('asOf', String(data.asOf))
-              if (!r.ok) {
-                let msg = 'Unable to finalize reconciliation.'
-                try { const j = await r.json(); if (j?.error) msg = j.error } catch {}
-                next.searchParams.set('error', msg)
-                redirect(next.toString())
-              }
-              next.searchParams.set('notice', 'Reconciliation finalized')
-              redirect(next.toString())
-            }}
+            type="submit"
           >Finalize</button>
         </form>
       </div>
@@ -184,26 +159,6 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
                       className={`inline-flex items-center justify-center min-w-[6ch] rounded-md border px-2 py-0.5 text-xs ${it.cleared ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white/80 border-slate-200 text-slate-700'} ${(it.reconciled || (effectivePeriodEnd && String(it.date || '') > effectivePeriodEnd)) ? 'opacity-60 cursor-not-allowed' : ''}`}
                       title={it.reconciled ? 'This item is already reconciled. Undo the reconciliation to change it.' : ((effectivePeriodEnd && String(it.date || '') > effectivePeriodEnd) ? 'This item is after the statement end date.' : undefined)}
                       disabled={Boolean(it.reconciled) || Boolean(effectivePeriodEnd && String(it.date || '') > effectivePeriodEnd)}
-                      formAction={async () => {
-                        'use server'
-                        const r = await fetch(`${getBaseUrl()}/api/reconciliation/toggle-cleared`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ id: it.id, cleared: !it.cleared, accountId, periodEnd: effectivePeriodEnd }),
-                          cache: 'no-store',
-                        })
-                        const next = new URL(`${getBaseUrl()}/bank-transactions/reconciliation`)
-                        next.searchParams.set('asOf', String(data.asOf))
-                        if (!r.ok) {
-                          let msg = 'Unable to change cleared state.'
-                          try { const j = await r.json(); if (j?.error) msg = j.error } catch {}
-                          next.searchParams.set('error', msg)
-                          redirect(next.toString())
-                        }
-                        const f = new URLSearchParams(searchParams as any).get('filter')
-                        if (f) next.searchParams.set('filter', f)
-                        redirect(next.toString())
-                      }}
                     >{it.cleared ? 'Yes' : 'No'}</button>
                   </form>
                 </td>

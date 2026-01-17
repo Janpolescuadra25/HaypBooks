@@ -29,6 +29,6 @@ describe('Tenant creation and default role seeding', () => {
     await prisma.rolePermission.deleteMany({ where: { roleId: { in: roles.map(r => r.id) } } })
     await prisma.role.deleteMany({ where: { tenantId: tenant.id } })
     await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   }, 20000)
 })

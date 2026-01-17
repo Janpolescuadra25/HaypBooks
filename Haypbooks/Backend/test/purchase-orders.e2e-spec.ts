@@ -23,7 +23,9 @@ describe('Purchase Orders (e2e)', () => {
     await app.init()
 
     // Create tenant and data
-    const tenant = await prisma.tenant.create({ data: { name: 'PO E2E', subdomain: `poi-${Math.random().toString(36).slice(2, 7)}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     tenantId = tenant.id
     const loc = await prisma.stockLocation.create({ data: { tenantId, name: 'Main' } })
     locationId = loc.id

@@ -27,44 +27,44 @@ describe('A/R Aging bucket boundaries (exact edges)', () => {
     const getRow = async (asOf: string) => {
       const res: any = await GET_JSON(makeReq(`http://localhost/api/reports/ar-aging?end=${asOf}`))
       const data = await res.json()
-      return (data.rows as any[]).find(r => r.customer === custName)
+      return (data.rows as any[]).find(r => r.name === custName)
     }
 
     // As of exact due date → Current
     let row = await getRow('2025-02-01')
     expect(row).toBeTruthy()
     expect(row.current).toBe(100)
-    expect(row.bucket1_30).toBe(0)
+    expect(row['30']).toBe(0)
 
     // 30 days past due → 1–30 bucket
     row = await getRow('2025-03-03') // Feb has 28 days in 2025; 2025-03-03 is 30 days after 02-01
     expect(row.current).toBe(0)
-    expect(row.bucket1_30).toBe(100)
-    expect(row.bucket31_60).toBe(0)
+    expect(row['30']).toBe(100)
+    expect(row['60']).toBe(0)
 
     // 31 days past due → 31–60
     row = await getRow('2025-03-04')
-    expect(row.bucket1_30).toBe(0)
-    expect(row.bucket31_60).toBe(100)
+    expect(row['30']).toBe(0)
+    expect(row['60']).toBe(100)
 
     // 60 days past due → still 31–60
     row = await getRow('2025-04-02')
-    expect(row.bucket31_60).toBe(100)
-    expect(row.bucket61_90).toBe(0)
+    expect(row['60']).toBe(100)
+    expect(row['90']).toBe(0)
 
     // 61 days past due → 61–90
     row = await getRow('2025-04-03')
-    expect(row.bucket31_60).toBe(0)
-    expect(row.bucket61_90).toBe(100)
+    expect(row['60']).toBe(0)
+    expect(row['90']).toBe(100)
 
     // 90 days past due → still 61–90
     row = await getRow('2025-05-02')
-    expect(row.bucket61_90).toBe(100)
-    expect(row.bucketOver90).toBe(0)
+    expect(row['90']).toBe(100)
+    expect(row['120+']).toBe(0)
 
     // 91 days past due → >90
     row = await getRow('2025-05-03')
-    expect(row.bucket61_90).toBe(0)
-    expect(row.bucketOver90).toBe(100)
+    expect(row['90']).toBe(0)
+    expect(row['120+']).toBe(100)
   })
 })

@@ -21,11 +21,18 @@ import { test, expect, Page } from '@playwright/test'
 test.describe.configure({ mode: 'serial' })
 
 test.describe('Grok.10 Multi-Tenant Workflow', () => {
-  const ownerEmail = `owner-${Date.now()}@test.com`
-  const accountantEmail = `accountant-${Date.now()}@test.com`
+  let ts: number
+  let ownerEmail: string
+  let accountantEmail: string
   const password = 'Test123!'
   const companyName = 'Test Company Inc'
   const secondCompanyName = 'Second Business LLC'
+
+  test.beforeAll(async () => {
+    ts = Date.now()
+    ownerEmail = `owner-${ts}@test.com`
+    accountantEmail = `accountant-${ts}@test.com`
+  })
 
   test.beforeEach(async ({ page }) => {
     // Clear cookies to start fresh
@@ -33,7 +40,7 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
   })
 
   test('Owner Flow: Signup → Create Company → Add Second Company → Invite Accountant', async ({ page }) => {
-    // Step 1: Owner signs up with OWNER hub
+    // Step 1: Owner signs up with Owner Workspace
     await page.goto('/signup')
     // Choose Owner role then fill the form
     await page.click('text=My Business')
@@ -58,7 +65,7 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.waitForURL('/get-started/trial', { timeout: 10000 })
     await page.click('text=Complete Quick Setup')
 
-    // Onboarding may take a moment — navigate to Owner Hub and verify the company card appears
+    // Onboarding may take a moment — navigate to Owner Workspace and verify the company card appears
     await page.waitForURL('/onboarding', { timeout: 15000 })
     await page.goto('/hub/companies')
     await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
@@ -74,10 +81,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     const ownedJson = await ownedResp.json()
     const tenantId = ownedJson && ownedJson[0] ? (ownedJson[0].tenantId || ownedJson[0].tenant?.id) : undefined
     await page.request.post('/api/companies', { data: { name: secondCompanyName, tenantId }, headers: { cookie: cookieHeader } })
-    // Refresh Owner Hub to pick up the new company
+    // Refresh Owner Workspace to pick up the new company
     await page.reload()
 
-    // Verify both companies appear in Owner Hub
+    // Verify both companies appear in Owner Workspace
     await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
     await page.waitForSelector(`text=${secondCompanyName}`, { timeout: 30000 })
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
@@ -127,7 +134,9 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     const pendingResp = await page.request.get('/api/tenants/invites/pending', { headers: { cookie: acctCookieHeader } })
     const pendingInvites = await pendingResp.json()
     const invite = pendingInvites.find((i: any) => i.tenant && i.tenant.name === companyName)
-    if (!invite) throw new Error('Pending invite not found for company: ' + companyName)
+    if (!invite) {
+      throw new Error('Pending invite not found for company: ' + companyName)
+    }
 
     await page.request.post(`/api/companies/invites/${invite.id}/accept`, { headers: { cookie: acctCookieHeader } })
 
@@ -170,7 +179,7 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
       await page.fill('#password', password)
       await page.click('text=Sign in')
 
-      // Wait for redirect into Owner Hub or verification and handle both
+      // Wait for redirect into Owner Workspace or verification and handle both
       let redirected = await page.waitForURL(/\/(hub\/companies|verify-otp|verification)(.*)?/, { timeout: 20000 }).catch(() => null)
       if (!redirected) {
         await page.press('#password', 'Enter')
@@ -295,7 +304,7 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
       await accountantPage.click('text=Sign in').catch(() => {})
     }
 
-    await accountantPage.goto('/hub/companies') // Try to access owner hub
+    await accountantPage.goto('/hub/companies') // Try to access Owner Workspace
     
     // UI may show or hide the invite CTA depending on role handling; ensure backend forbids the action
     const response = await accountantPage.request.post('/api/tenants/fake-id/invites', {
