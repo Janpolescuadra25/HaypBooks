@@ -2,19 +2,28 @@
 import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react'
 
 const BusinessStepComponent = forwardRef(function BusinessStepComponent({ initial, onSave }:{ initial?: any, onSave?: (d:any)=>void }, ref) {
-  const [form, setForm] = useState<any>({ companyName: '', businessType: '', industry: '', startDate: '', country: '', address: '' })
-  const [errors, setErrors] = useState<{ companyName?: string }>({})
+  const [form, setForm] = useState<any>({ businessName: '', legalBusinessName: '', companyName: '', businessType: '', industry: '', startDate: '', country: '', address: '' })
+  const [errors, setErrors] = useState<{ businessName?: string }>({})
   useEffect(() => { if (initial) setForm({ ...form, ...initial }) }, [])
 
   function validate() {
     const errs: any = {}
-    // Company name is managed elsewhere (not editable in this step), so only validate other fields when required.
+    // Business name required for setup
+    if (!form.businessName || !String(form.businessName).trim()) errs.businessName = 'Business name is required'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
 
   useImperativeHandle(ref, () => ({
-    getData: () => ({ ...form })
+    getData: () => ({ 
+      ...form,
+      // Map businessName to companyName for backend compatibility
+      companyName: form.businessName || form.companyName || ''
+    }),
+    validate: () => validate(),
+    hasRequiredData: () => {
+      return !!(form.businessName && String(form.businessName).trim())
+    }
   }))
 
   // onSave is still supported for backward compatibility (tests or other callers)
@@ -33,7 +42,18 @@ const BusinessStepComponent = forwardRef(function BusinessStepComponent({ initia
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Business type <span className="text-emerald-600">*</span></label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Business name <span className="text-emerald-600">*</span></label>
+          <input value={form.businessName} onChange={(e)=>{ setForm({...form, businessName: e.target.value}); setErrors({...errors, businessName: undefined}) }} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm ${errors.businessName ? 'border-red-500' : 'border-slate-300'}`} placeholder="e.g. Acme Innovations" />
+          {errors.businessName ? <p className="mt-2 text-xs text-red-600">{errors.businessName}</p> : null}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Legal business name</label>
+          <input value={form.legalBusinessName} onChange={(e)=>setForm({...form, legalBusinessName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm" placeholder="Official Registered Name" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Business type</label>
           <select aria-label="Business type" value={form.businessType} onChange={(e)=>setForm({...form, businessType: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm">
             <option value="">Select type</option>
             <option>Sole Proprietor</option>
@@ -45,17 +65,12 @@ const BusinessStepComponent = forwardRef(function BusinessStepComponent({ initia
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Industry <span className="text-emerald-600">*</span></label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Industry</label>
           <input value={form.industry} onChange={(e)=>setForm({...form, industry: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm" placeholder="e.g. Technology, Retail, Manufacturing" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Business start date <span className="text-emerald-600">*</span></label>
-          <input aria-label="Business start date" type="date" value={form.startDate} onChange={(e)=>setForm({...form, startDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm" placeholder="Business start date" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Country <span className="text-emerald-600">*</span></label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Country</label>
           <select aria-label="Country" value={form.country} onChange={(e)=>setForm({...form, country: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm">
             <option value="">Select country</option>
             <option>United States</option>
@@ -67,7 +82,7 @@ const BusinessStepComponent = forwardRef(function BusinessStepComponent({ initia
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-2">Business address <span className="text-emerald-600">*</span></label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Business address</label>
           <input value={form.address} onChange={(e)=>setForm({...form, address: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm" placeholder="Address lines, City, State/Province, Postal Code" />
         </div>
 

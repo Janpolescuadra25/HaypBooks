@@ -4,7 +4,7 @@ import { reopenPeriodWithAudit, db } from '@/mock/db'
 import '@/mock/seed'
 
 // Accept either NextRequest or plain Request for test convenience
-export async function POST(req?: NextRequest | Request) {
+export async function POST(req: NextRequest | Request) {
   const role = getRoleFromCookies()
   if (!hasPermission(role, 'journal:write')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const body = (req && typeof (req as any).json === 'function')

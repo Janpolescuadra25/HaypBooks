@@ -33,7 +33,7 @@ END$$;
 CREATE TABLE IF NOT EXISTS public."AccountantClient" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "accountantId" text NOT NULL,
-  "tenantId" text NOT NULL,
+  "tenantId" uuid NOT NULL,
   "accessLevel" text NOT NULL DEFAULT 'FULL',
   "invitedBy" text,
   "invitedAt" timestamptz,
@@ -59,7 +59,7 @@ CREATE INDEX IF NOT EXISTS "AccountantClient_accountantId_idx" ON public."Accoun
 CREATE TABLE IF NOT EXISTS public."AccountantActivity" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "accountantId" text NOT NULL,
-  "tenantId" text,
+  "tenantId" uuid,
   "action" text NOT NULL,
   "details" jsonb,
   "createdAt" timestamptz NOT NULL DEFAULT now()
@@ -84,7 +84,7 @@ BEGIN
     ALTER TABLE public."AccountantClient" ENABLE ROW LEVEL SECURITY;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantClient' AND p.polname = 'rls_tenant') THEN
-    EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantClient" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true))';
+    EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantClient" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)::uuid) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)::uuid)';
   END IF;
 END$$;
 
@@ -94,7 +94,7 @@ BEGIN
     ALTER TABLE public."AccountantActivity" ENABLE ROW LEVEL SECURITY;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantActivity' AND p.polname = 'rls_tenant') THEN
-    EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantActivity" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true))';
+    EXECUTE 'CREATE POLICY rls_tenant ON public."AccountantActivity" USING (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)::uuid) WITH CHECK (current_setting(''haypbooks.rls_bypass'', true) = ''1'' OR "tenantId" = current_setting(''haypbooks.tenant_id'', true)::uuid)';
   END IF;
 END$$;
 

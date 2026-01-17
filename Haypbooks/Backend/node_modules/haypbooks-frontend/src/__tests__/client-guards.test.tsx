@@ -10,6 +10,7 @@ import NewBillPage from '@/app/bills/new/page'
 // Base mock for next/navigation; individual tests will override useRouter to capture replace()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), refresh: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 describe('Client-side RBAC guards on "New" pages', () => {

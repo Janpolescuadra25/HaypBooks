@@ -14,7 +14,8 @@ async function run() {
   try {
     console.log('Backfilling Tenant onboarding/business fields into Company records')
 
-    const tenants = await prisma.tenant.findMany({})
+    // Only select fields that are safe to read during phased migrations
+    const tenants = await prisma.tenant.findMany({ select: { id: true, baseCurrency: true } })
     console.log(`Found ${tenants.length} tenant(s) to inspect`)
 
     for (const t of tenants) {
@@ -24,12 +25,13 @@ async function run() {
         // Try to create company with same id as tenant if the id is unused
         try {
           console.log(`Creating company for tenant ${t.id} (trying id=${t.id})`)
-          company = await prisma.company.create({ data: { id: t.id, tenantId: t.id, name: t.name || `Default Company ${t.id}`, currency: t.baseCurrency || 'USD' } })
+          // NOTE: Tenant.name/subdomain may not exist; use a deterministic default company name
+          company = await prisma.company.create({ data: { id: t.id, tenantId: t.id, name: `Default Company ${t.id}`, currency: t.baseCurrency || 'USD' } })
           console.log(`  Created company ${company.id} for tenant ${t.id}`)
         } catch (e) {
           // If creation failed (id conflict), create a new company id and attempt to migrate any subscriptions
           console.warn(`  Could not create company with id=${t.id} (may already exist), creating a new company and remapping subscriptions`) 
-          company = await prisma.company.create({ data: { tenantId: t.id, name: t.name || `Default Company ${t.id}`, currency: t.baseCurrency || 'USD' } })
+          company = await prisma.company.create({ data: { tenantId: t.id, name: `Default Company ${t.id}`, currency: t.baseCurrency || 'USD' } })
           // Move any subscriptions that pointed to tenant.id as companyId to the newly created company
           try {
             const moved = await prisma.$executeRawUnsafe(`UPDATE public."Subscription" SET "companyId" = $1 WHERE "companyId" = $2 AND "tenantId" = $3`, company.id, t.id, t.id)

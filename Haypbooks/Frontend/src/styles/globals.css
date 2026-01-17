@@ -174,7 +174,7 @@ html { font-size: clamp(14px, 1vw + 12px, 18px); }
 /* Sidebar link helpers used by Owner's central hub */
 .sidebar-link { position: relative; transition: transform var(--hb-transition), background-color var(--hb-transition), box-shadow var(--hb-transition), color var(--hb-transition); display: inline-flex; align-items: center; }
 
-/* Force the owner hub portfolio card to expand edge-to-edge in wide mode. */
+/* Force the owner workspace portfolio card to expand edge-to-edge in wide mode. */
 .company-hub-force-full > .glass-card.bar-master-frame,
 .company-hub-force-full .glass-card.bar-master-frame {
   /* Use same calculation as dashboard expansion rules, but make it explicit and important to override layout gutters */

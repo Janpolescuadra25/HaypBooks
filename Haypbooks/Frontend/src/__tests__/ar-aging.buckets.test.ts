@@ -29,22 +29,22 @@ describe('A/R Aging bucket math respects as-of and payment dates', () => {
     // 1) As of 2025-01-15 (before due): entire open balance should be in Current
     let res: any = await GET_JSON(makeReq('http://localhost/api/reports/ar-aging?end=2025-01-15'))
     let data = await res.json()
-    let row = (data.rows as any[]).find(r => r.customer === custName)
+    let row = (data.rows as any[]).find(r => r.name === custName)
     expect(row).toBeTruthy()
     expect(row.current).toBe(100)
-    expect(row.bucket1_30).toBe(0)
-    expect(row.bucket31_60).toBe(0)
-    expect(row.bucket61_90).toBe(0)
-    expect(row.bucketOver90).toBe(0)
+    expect(row['30']).toBe(0)
+    expect(row['60']).toBe(0)
+    expect(row['90']).toBe(0)
+    expect(row['120+']).toBe(0)
 
     // 2) As of 2025-02-05 (after due by 16 days): entire open balance in 1–30 bucket
     res = await GET_JSON(makeReq('http://localhost/api/reports/ar-aging?end=2025-02-05'))
     data = await res.json()
-    row = (data.rows as any[]).find((r: any) => r.customer === custName)
+    row = (data.rows as any[]).find((r: any) => r.name === custName)
     expect(row).toBeTruthy()
     expect(row.current).toBe(0)
-    expect(row.bucket1_30).toBe(100)
-    expect(row.bucket31_60).toBe(0)
+    expect(row['30']).toBe(100)
+    expect(row['60']).toBe(0)
 
     // 3) Apply a partial payment of 40 dated 2025-02-10 (after due, before next as-of)
     createCustomerPayment({
@@ -60,10 +60,10 @@ describe('A/R Aging bucket math respects as-of and payment dates', () => {
     // As of 2025-02-15: remaining open (60) should be in 1–30 bucket
     res = await GET_JSON(makeReq('http://localhost/api/reports/ar-aging?end=2025-02-15'))
     data = await res.json()
-    row = (data.rows as any[]).find((r: any) => r.customer === custName)
+    row = (data.rows as any[]).find((r: any) => r.name === custName)
     expect(row).toBeTruthy()
     expect(row.current).toBe(0)
-    expect(row.bucket1_30).toBe(60)
+    expect(row['30']).toBe(60)
     expect(row.total).toBe(60)
 
     // 4) Apply remaining 60 dated 2025-03-25; as of 2025-04-30, the row should disappear (fully paid)

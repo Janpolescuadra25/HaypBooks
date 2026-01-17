@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 // Full end-to-end: sign up an Owner, set company name via UI, complete onboarding UI, assert the success toast,
-// then navigate to Owner Hub and verify the created company card appears.
+// then navigate to Owner Workspace and verify the created company card appears.
 
 // Skip unless backend test endpoints are available
 test.skip(!process.env.E2E_FULL_AUTH && !process.env.CI, 'Set E2E_FULL_AUTH=true locally or run in CI to execute this spec')
@@ -34,7 +34,7 @@ async function fetchLatestOtp(request: any, opts: { email?: string; phone?: stri
 // Allow extra time for slower CI/dev machines
 test.setTimeout(120000)
 
-test('onboarding: shows success toast and company appears in Owner Hub', async ({ page, request }) => {
+test('onboarding: shows success toast and company appears in Owner Workspace', async ({ page, request }) => {
   // Gate: ensure backend test endpoints available
   const gate = await request.get('http://127.0.0.1:4000/api/test/users').catch(() => null)
   if (!gate || gate.status() !== 200) {
@@ -104,13 +104,13 @@ test('onboarding: shows success toast and company appears in Owner Hub', async (
   try {
     await page.locator('[role="status"]', { hasText: companyName }).waitFor({ timeout: 5000 })
   } catch (e) {
-    console.warn('Toast with company name not found; continuing to Owner Hub checks')
+    console.warn('Toast with company name not found; continuing to Owner Workspace checks')
   }
 
   // Wait for the router to navigate to dashboard (component navigates after short delay)
   await page.waitForURL('**/dashboard', { timeout: 10000 }).catch(() => null)
 
-  // Navigate to Owner Hub companies and verify the company card is present
+  // Navigate to Owner Workspace companies and verify the company card is present
   await page.goto('/hub/companies')
 
   // Try to find the company in the UI; if it isn't present within the timeout,
@@ -121,7 +121,7 @@ test('onboarding: shows success toast and company appears in Owner Hub', async (
     await page.locator(`text=${companyName}`).first().waitFor({ timeout: 5000 })
     companyFound = true
   } catch (e) {
-    console.warn('Company not found in Owner Hub UI — attempting to create via test helper')
+    console.warn('Company not found in Owner Workspace UI — attempting to create via test helper')
     await request.post('http://127.0.0.1:4000/api/test/create-company', { data: { email: ownerEmail, name: companyName } }).catch(() => null)
     // reload and wait again
     await page.reload()

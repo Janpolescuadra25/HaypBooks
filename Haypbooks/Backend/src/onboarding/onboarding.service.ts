@@ -37,80 +37,81 @@ export class OnboardingService {
     let createdTenant: any = null
 
     if (hub === 'OWNER') {
-      const fromStep = steps?.business?.companyName
-      const fromProfile = user?.companyName
-      const val = typeof fromStep === 'string' && fromStep.trim().length > 0 ? fromStep : (typeof fromProfile === 'string' && fromProfile.trim().length > 0 ? fromProfile : null)
-      if (!val) throw new BadRequestException('companyName is required to complete owner onboarding')
+      // Get business name from onboarding steps (backwards-compatible with companyName key)
+      const val = steps?.business?.companyName || steps?.business?.businessName
+      if (!val) throw new BadRequestException('businessName is required to complete owner onboarding')
 
-      // Normalize & persist trimmed value
+      // Normalize business name for Company creation
       const normalized = String(val).trim().slice(0, 140)
-      await this.userRepository.update(userId, { companyName: normalized })
 
-      // Best-effort: create a Tenant (company) for the user so the Owner Hub shows a card
-      // Use a simple slugify for subdomain generation and attach the creating user as the owner
+      // Persist detected companyName to user profile (best-effort)
+      try { await this.userRepository.update(userId, { companyName: normalized }) } catch (e) { /* ignore */ }
+
+      // Best-effort: create a Tenant (Owner Workspace) for the user
       try {
-        const slug = normalized.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 50) || undefined
-        const payload: any = { name: normalized }
-        if (slug) payload.subdomain = slug
-          // Include onboarding-supplied business details where available
-          const businessStep = steps?.business || {}
-          const fiscalStep = steps?.fiscal || {}
-          const taxStep = steps?.tax || {}
-          const brandingStep = steps?.branding || {}
+        console.log('[ONBOARDING-COMPLETE] 🚀 Step 1: Starting Tenant creation for userId:', userId)
+        const payload: any = {}
+        const businessStep = steps?.business || {}
+        const fiscalStep = steps?.fiscal || {}
+        const taxStep = steps?.tax || {}
+        const brandingStep = steps?.branding || {}
 
-          // Keep Tenant lightweight (hub-only). Do NOT copy onboarding business
-          // and branding fields to Tenant to avoid coupling Tenant with Company-level
-          // business/profile data. We still use onboarding steps as the source of
-          // truth and map values into the Company record below.
-          if (fiscalStep.fiscalStart) payload.fiscalStart = fiscalStep.fiscalStart
-          // NOTE: business/profile fields intentionally NOT copied to Tenant.
-        // Create tenant and create TenantUser at creation time (nested create)
+        // Include normalized business name on tenant payload so it appears in tenant/company creation trace
+        payload.name = normalized
+
+        // Create tenant and TenantUser
         payload.users = { create: [{ userId, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' }] }
-        // Capture the created tenant so callers can act deterministically
-        try {
-          createdTenant = await this.companyService.createCompany(payload)          // Also create a Company row under the tenant so business/profile fields are available
-          try {
-            const companyPayload: any = { name: normalized, currency: payload.baseCurrency || 'USD' }
-            // map onboarding fields into the Company payload
-            if (fiscalStep.fiscalStart) companyPayload.fiscalYearStart = parseInt(fiscalStep.fiscalStart || '') || undefined
-            if (businessStep.businessType) companyPayload.businessType = businessStep.businessType
-            if (businessStep.industry) companyPayload.industry = businessStep.industry
-            if (businessStep.address) companyPayload.address = businessStep.address
-            if (taxStep.taxId) companyPayload.taxId = taxStep.taxId
-            if (brandingStep.logo) companyPayload.logoUrl = brandingStep.logo
-            if (brandingStep.invoicePrefix) companyPayload.invoicePrefix = brandingStep.invoicePrefix
-            if (taxStep.vatRegistered !== undefined) companyPayload.vatRegistered = !!taxStep.vatRegistered
-            if (taxStep.vatRate !== undefined) companyPayload.vatRate = taxStep.vatRate
-            if (taxStep.pricesInclusive !== undefined) companyPayload.pricesInclusive = !!taxStep.pricesInclusive
+        console.log('[ONBOARDING-COMPLETE] 🚀 Step 2: Calling createCompany (Tenant) with payload:', JSON.stringify(payload, null, 2))
 
-            const createdCompany = await this.companyService.createCompanyUnderTenant(createdTenant.id, companyPayload)
-            // eslint-disable-next-line no-console
-            console.info(`[ONBOARDING] ✅ Created company record during onboarding:`, { companyId: createdCompany?.id, tenantId: createdTenant?.id })
-          } catch (e) {
-            // Non-fatal; we already created the tenant so onboarding can proceed
-            // eslint-disable-next-line no-console
-            console.warn('[ONBOARDING] Failed to create company record under tenant (non-fatal):', e?.message || e)
-          }
-          // eslint-disable-next-line no-console
-          console.info(`[ONBOARDING] ✅ Created tenant during onboarding:`, {
-            tenantId: createdTenant?.id,
-            name: createdTenant?.name,
-            subdomain: createdTenant?.subdomain,
-            userId,
-            hasUsers: !!createdTenant?.users
-          })
+        createdTenant = await this.companyService.createCompany(payload)
+        console.log('[ONBOARDING-COMPLETE] ✅ Step 3: Tenant created successfully:', { tenantId: createdTenant?.id })
+
+        // Build Company payload from onboarding steps
+        const companyPayload: any = { name: normalized, currency: payload.baseCurrency || 'USD' }
+        if (businessStep.legalBusinessName) companyPayload.legalName = businessStep.legalBusinessName
+        if (businessStep.startDate) companyPayload.startDate = new Date(businessStep.startDate)
+        if (businessStep.country) companyPayload.country = businessStep.country
+        if (fiscalStep.fiscalStart) companyPayload.fiscalYearStart = parseInt(fiscalStep.fiscalStart || '') || undefined
+        if (businessStep.businessType) companyPayload.businessType = businessStep.businessType
+        if (businessStep.industry) companyPayload.industry = businessStep.industry
+        if (businessStep.address) companyPayload.address = businessStep.address
+        if (taxStep.taxId || taxStep.tin) companyPayload.taxId = taxStep.taxId || taxStep.tin
+        if (brandingStep.logo) companyPayload.logoUrl = brandingStep.logo
+        if (brandingStep.invoicePrefix) companyPayload.invoicePrefix = brandingStep.invoicePrefix
+        if (taxStep.vatRegistered !== undefined) companyPayload.vatRegistered = !!taxStep.vatRegistered
+        if (taxStep.collectTax !== undefined) companyPayload.vatRegistered = !!taxStep.collectTax
+        if (taxStep.taxRate !== undefined) companyPayload.vatRate = taxStep.taxRate
+        if (taxStep.vatRate !== undefined) companyPayload.vatRate = taxStep.vatRate
+        if (taxStep.pricesInclusive !== undefined) companyPayload.pricesInclusive = !!taxStep.pricesInclusive
+        if (taxStep.inclusive !== undefined) companyPayload.pricesInclusive = !!taxStep.inclusive
+
+        // Attempt to create an actual Company under the tenant (best-effort)
+        try {
+          console.info('[ONBOARDING] 🚀 Creating Company record:', { tenantId: createdTenant.id, name: normalized })
+          const createdCompany = await this.companyService.createCompanyUnderTenant(createdTenant.id, companyPayload)
+          console.log('[ONBOARDING-COMPLETE] ✅ Step 6: Company created successfully:', { companyId: createdCompany?.id, name: createdCompany?.name })
+          try { incMetric('onboarding.company_creation_success') } catch (mErr) { /* no-op */ }
+          if (createdCompany) (createdTenant as any).__createdCompany = createdCompany
+          console.info('[ONBOARDING] ✅ Created company record during onboarding:', { companyId: createdCompany?.id, tenantId: createdTenant?.id, name: createdCompany?.name })
         } catch (e) {
-          // Best-effort only: log and continue; failing company creation should not block onboarding
-          // eslint-disable-next-line no-console
-          console.error('[ONBOARDING] ❌ Failed to create company during onboarding (non-fatal):', e?.message || e, e?.stack)
-          // Increment a lightweight metric so we can alert on repeated failures in production
+          // Non-fatal; we already created the tenant so onboarding can proceed
+          console.error('[ONBOARDING] ❌ Failed to create Company record under tenant (non-fatal):', e?.message || e)
           try { incMetric('onboarding.company_creation_failure') } catch (err) { /* no-op */ }
+
+          // Attempt to recover by finding an existing Company associated with this tenant (best-effort)
+          try {
+            const owned = await this.companyService.listCompaniesForUser(userId, 'owned')
+            const existing = (owned || []).find((c: any) => c.tenantId === createdTenant.id)
+            if (existing) (createdTenant as any).__createdCompany = existing
+          } catch (ex) {
+            // ignore
+          }
         }
       } catch (e) {
-        // Best-effort only: log and continue; failing company creation should not block onboarding
-        // eslint-disable-next-line no-console
-        console.warn('Failed to create company during onboarding (non-fatal):', e?.message || e)
-      }
+        // Best-effort only: log and continue; failing tenant creation should not block onboarding entirely
+        console.warn('Failed to create tenant during onboarding (non-fatal):', e?.message || e)
+        try { incMetric('onboarding.company_creation_failure') } catch (err) { /* no-op */ }
+      } 
 
     } else {
       const fromStep = steps?.accountant_firm?.firmName
@@ -132,7 +133,10 @@ export class OnboardingService {
     // Also set the legacy global flag for compatibility
     updateData.onboardingComplete = true
     await this.userRepository.update(userId, updateData)
-    // Return the created tenant (if any) so callers can wait for consistency
+    // Return the created company (if any) for callers; fall back to tenant when necessary
+    const createdCompany = (createdTenant as any)?.__createdCompany || null
+    if (createdCompany) return { success: true, company: createdCompany }
+    // Fallback: return tenant when company not created (legacy behavior)
     return { success: true, company: createdTenant || null }
   }
 

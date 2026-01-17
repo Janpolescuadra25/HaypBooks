@@ -65,7 +65,7 @@ model Subscription {
    - After creating first Company → prompt for plan selection (FREE trial or paid).
    - Additional Companies → require plan choice immediately.
 
-2. **UI (Owner Hub)**:
+2. **UI (Owner Workspace)**:
    - Company selector shows plan badge (e.g., "GROWTH" or "FREE").
    - "+ Add Company" → plan picker page.
 

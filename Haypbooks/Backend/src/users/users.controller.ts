@@ -33,8 +33,8 @@ export class UsersController {
   async updateProfile(@Request() req, @Body() body: UpdateProfileDto) {
     const userId = req.user.userId
     // sanitize input: trim strings and convert empty -> null
+    // NOTE: we no longer accept `companyName` on the User model (deprecated), only `firmName` is persisted
     const payload: any = {}
-    if (typeof body.companyName === 'string') payload.companyName = String(body.companyName).trim() || null
     if (typeof body.firmName === 'string') payload.firmName = String(body.firmName).trim() || null
     return this.usersService.updateProfile(userId, payload)
   }

@@ -9,10 +9,10 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: replaceMock }
 import HubSelectionModal from '@/components/HubSelectionModal'
 
 describe('HubSelectionModal', () => {
-  beforeEach(() => { jest.resetAllMocks(); (global as any).fetch = jest.fn() })
+  beforeEach(() => { jest.resetAllMocks(); (global as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }) })
 
   test('shows accountant inline form when onboarding incomplete and completes flow', async () => {
-    (global as any).fetch = jest.fn().mockResolvedValue({ ok: true })
+    (global as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
     // First two calls: onboarding/save and onboarding/complete; third: preferred-hub
     render(<HubSelectionModal user={{ id: 'u1', accountantOnboardingCompleted: false, companies: ['Acme Corp'] }} onClose={() => {}} />)
 
@@ -20,7 +20,7 @@ describe('HubSelectionModal', () => {
     expect(screen.getByText(/For Owners/i)).toBeInTheDocument()
     expect(screen.getByText(/My Companies/i)).toBeInTheDocument()
     expect(screen.getByText(/Acme Corp/i)).toBeInTheDocument()
-    const ownerBtn = screen.getByRole('button', { name: /Enter Owner Hub/i })
+    const ownerBtn = screen.getByRole('button', { name: /Enter Owner Workspace/i })
     expect(ownerBtn).toBeInTheDocument()
 
     // Now when accountant onboarding is incomplete we show a "Create Accountant Hub" CTA which opens the inline form
@@ -57,5 +57,25 @@ describe('HubSelectionModal', () => {
     // Click should navigate to company creation
     fireEvent.click(createCompanyBtn)
     expect(replaceMock).toHaveBeenCalledWith('/companies?create=1')
+  })
+
+  test('fetches live counts and displays them (as page)', async () => {
+    // Provide empty user so that counts will be populated by fetch
+    (global as any).fetch = jest.fn((input: RequestInfo) => {
+      const url = String(input)
+      if (url.includes('/api/companies')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: 'c1' }, { id: 'c2' }]) })
+      }
+      if (url.includes('/api/tenants/clients')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: 't1' }, { id: 't2' }, { id: 't3' }, { id: 't4' }, { id: 't5' }]) })
+      }
+      return Promise.resolve({ ok: false })
+    })
+
+    render(<HubSelectionModal user={{ id: 'u3', companies: [], clients: [] }} onClose={() => {}} asPage />)
+
+    // Wait for counts to be fetched and displayed
+    await waitFor(() => expect(screen.getByText(/2 active companies/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/5 active clients/i)).toBeInTheDocument())
   })
 })

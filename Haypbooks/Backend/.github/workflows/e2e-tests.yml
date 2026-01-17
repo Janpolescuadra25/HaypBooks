@@ -19,12 +19,7 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
 
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +52,14 @@ jobs:
           node ./scripts/migrate/run-sql.js
           npm run db:seed:dev
 
+      - name: Run pre-signup DB-backed unit tests 🧪
+        working-directory: ./Haypbooks/Backend
+        env:
+          DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
+          ENFORCE_PRE_SIGNUP: 'true'
+          NODE_ENV: 'test'
+        run: npm run test:unit -- src/auth/pending-signup.db.integration.spec.ts src/auth/auth.controller.spec.ts
+
       - name: Verify subscription schema
         working-directory: ./Haypbooks/Backend
         env:
@@ -67,7 +70,6 @@ jobs:
         working-directory: ./Haypbooks/Backend
         env:
           DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
-          REDIS_URL: redis://localhost:6379
           NODE_ENV: 'test'
           ALLOW_TEST_ENDPOINTS: 'true'
         run: npm run test:e2e

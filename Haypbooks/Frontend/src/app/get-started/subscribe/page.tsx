@@ -29,8 +29,14 @@ export default function SubscribePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center px-4 py-12 bg-gradient-to-br from-emerald-50 to-white">
-      <div className="max-w-4xl w-full">
+    <div className="min-h-screen flex items-start justify-center px-4 py-12 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white relative overflow-hidden">
+      {/* Animated background orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-float-delayed" />
+      </div>
+
+      <div className="max-w-4xl w-full relative z-10">
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center gap-6 text-sm text-slate-600">
             <div className={`flex items-center gap-3 ${step === 1 ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
@@ -125,6 +131,22 @@ export default function SubscribePage() {
         </div>
 
       </div>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(30px, -30px) rotate(5deg); }
+          66% { transform: translate(-20px, 20px) rotate(-5deg); }
+        }
+        @keyframes float-delayed {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(-30px, 30px) rotate(-5deg); }
+          66% { transform: translate(20px, -20px) rotate(5deg); }
+        }
+        .animate-float { animation: float 20s ease-in-out infinite; }
+        .animate-float-delayed { animation: float-delayed 25s ease-in-out infinite; }
+      `}</style>
     </div>
   )
 }

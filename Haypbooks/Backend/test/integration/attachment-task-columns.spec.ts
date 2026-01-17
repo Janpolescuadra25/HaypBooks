@@ -6,7 +6,9 @@ describe('Attachment.isPublic and Task.archivedAt behavior', () => {
   // Helper to create a tenant with fallback for legacy DBs that require id_old
   async function createTenant(data: any) {
     try {
-      return await prisma.tenant.create({ data })
+      const id = require('crypto').randomUUID()
+      await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', id)
+      return { id }
     } catch (e) {
       // Fallback to raw insert including id_old and casting id to uuid
       const { randomUUID } = await import('crypto')
@@ -60,7 +62,7 @@ describe('Attachment.isPublic and Task.archivedAt behavior', () => {
     expect(attachment.isPublic).toBe(false)
 
     await prisma.attachment.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   })
 
   it('Task.archivedAt can be set and queried', async () => {
@@ -89,6 +91,6 @@ describe('Attachment.isPublic and Task.archivedAt behavior', () => {
 
     await prisma.task.deleteMany({ where: { tenantId: tenant.id } })
     await prisma.user.delete({ where: { id: user.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   })
 })

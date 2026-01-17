@@ -41,9 +41,10 @@ async function run() {
     const base = slugify(u.companyName || 'tenant', { lower: true, strict: true, remove: /[*+~.()'"!:@]/g })
     const sub = `${base}-${Math.random().toString(36).slice(2,6)}`.slice(0, 63)
     try {
-      const tenant = await prisma.tenant.create({ data: { name: u.companyName, subdomain: sub } })
-      console.log(`  Created tenant ${tenant.id} (${tenant.name}) for user ${u.email}`)
-      await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: u.id, isOwner: true, role: 'owner' } })
+      const tenantId = require('crypto').randomUUID()
+      await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+      console.log(`  Created tenant ${tenantId} (from ${u.companyName}) for user ${u.email}`)
+      await prisma.tenantUser.create({ data: { tenantId: tenantId, userId: u.id, isOwner: true, role: 'owner' } })
       console.log(`  Linked user ${u.id} as owner to tenant ${tenant.id}`)
       // Create default roles for tenant
       const roleNames = ['Owner','Admin','Bookkeeper','Viewer']

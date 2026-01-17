@@ -17,7 +17,9 @@ describe('Payroll submit flow (e2e)', () => {
     await app.init()
     // backup tenantId_uuid_old columns have been removed; no test DB alterations required
 
-    const tenant = await prisma.tenant.create({ data: { name: 'Payroll Submit E2E', subdomain: `paysubmit-${Math.random().toString(36).slice(2,7)}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     tenantId = tenant.id
     const emp = await prisma.employee.create({ data: { tenantId, firstName: 'Pay', lastName: 'Run', payRate: 20.0, payType: 'HOURLY' } })
     employeeId = emp.id

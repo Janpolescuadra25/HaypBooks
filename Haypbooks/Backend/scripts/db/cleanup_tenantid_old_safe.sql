@@ -1,0 +1,22 @@
+-- Safe removal of tenantId_old from tables with no constraints and zero non-null rows
+BEGIN;
+ALTER TABLE IF EXISTS public."AccountBalance" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."SearchIndexingQueue" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."SearchIndexedDoc" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."ApiRateLimit" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."DsrExportRequest" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."ConsentRecord" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."IdempotencyKey" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."OutboxEvent" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."Class" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."Customer" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."FixedAssetCategory" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."Location" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."LineTax" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."OpeningBalance" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."Project" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."TaxCodeAccount" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."TenantBillingUsage" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."TenantBillingInvoice" DROP COLUMN IF EXISTS "tenantId_old";
+ALTER TABLE IF EXISTS public."Vendor" DROP COLUMN IF EXISTS "tenantId_old";
+COMMIT;

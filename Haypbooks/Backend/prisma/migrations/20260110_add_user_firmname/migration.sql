@@ -1,0 +1,2 @@
+-- Add firmName to User table for accountants' firm identification
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "firmname" TEXT;

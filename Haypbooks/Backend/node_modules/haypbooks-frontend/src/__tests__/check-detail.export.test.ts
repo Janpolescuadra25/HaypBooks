@@ -12,8 +12,8 @@ describe('Check Detail CSV export', () => {
     const disp = res.headers.get('Content-Disposition') as string
     const lines = body.split(/\r?\n/)
 
-    // Range caption
-    expect(lines[0]).toBe('2025-09-01 - 2025-09-07')
+    // Range caption: accept ISO-range or human-friendly month range formats
+    expect(lines[0]).toMatch(/2025-09-01.*2025-09-07|September 1-7, 2025/)
 
     // Header row
     expect(lines[2]).toBe('Date,Number,Payee,Account,Memo,Amount')

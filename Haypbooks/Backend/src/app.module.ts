@@ -12,6 +12,7 @@ import { PrismaRepositoriesModule } from './repositories/prisma/prisma-repositor
 import { PayrollModule } from './payroll/payroll.module'
 import { TasksModule } from './tasks/tasks.module'
 import { AttachmentsModule } from './attachments/attachments.module'
+import { TenantsModule } from './tenants/tenants.module'
 
 const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? MockRepositoriesModule : PrismaRepositoriesModule
 
@@ -30,6 +31,8 @@ const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? MockReposit
     AttachmentsModule,
     // Companies module (provides company listing and last-accessed updates)
     (require('./companies/companies.module').CompaniesModule),
+    // Tenants module (provides client list and invite management for accountants)
+    TenantsModule,
   ],
   controllers: [TestController, HealthController],
 })

@@ -12,14 +12,19 @@ export class OnboardingController {
   @UseGuards(JwtAuthGuard)
   async saveStep(@Request() req, @Body() saveStepDto: SaveStepDto) {
     const userId = req.user.userId
-    return this.onboardingService.saveStep(userId, saveStepDto.step, saveStepDto.data)
+    console.log('[ONBOARDING-SAVE] 📝 Request received:', { userId, step: saveStepDto.step, dataKeys: Object.keys(saveStepDto.data || {}) })
+    const result = await this.onboardingService.saveStep(userId, saveStepDto.step, saveStepDto.data)
+    console.log('[ONBOARDING-SAVE] ✅ Step saved successfully:', { userId, step: saveStepDto.step })
+    return result
   }
 
   @Get('save')
   @UseGuards(JwtAuthGuard)
   async loadProgress(@Request() req) {
     const userId = req.user.userId
+    console.log('[ONBOARDING-LOAD] 📖 Request received:', { userId })
     const steps = await this.onboardingService.loadProgress(userId)
+    console.log('[ONBOARDING-LOAD] ✅ Progress loaded:', { userId, stepKeys: Object.keys(steps || {}) })
     return { steps }
   }
 
@@ -28,6 +33,7 @@ export class OnboardingController {
   @HttpCode(HttpStatus.OK)
   async complete(@Request() req, @Res({ passthrough: true }) res: Response, @Body() body: { type?: 'quick' | 'full', hub?: 'OWNER' | 'ACCOUNTANT' }) {
     const userId = req.user.userId
+    console.log('[ONBOARDING-COMPLETE] 🎯 Request received:', { userId, type: body.type, hub: body.hub })
     const type = body?.type || 'full'
     const hub = body?.hub || 'OWNER'
     // Return the result from the service so callers can access the created company (if any)

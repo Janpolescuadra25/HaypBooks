@@ -5,26 +5,26 @@ import apiClient from '@/lib/api-client'
 
 export default function GetStartedPlansPage() {
   const router = useRouter()
-  const [companyName, setCompanyName] = useState('')
+  const [workspaceName, setWorkspaceName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function persistCompanyAndNavigate(next: string) {
     setError('')
-    if (!companyName.trim()) { setError('Company name is required'); return }
+    if (!workspaceName.trim()) { setError('Owner Workspace name is required'); return }
     setLoading(true)
     try {
-      // Persist company name to backend for current user (best-effort)
+      // Persist Owner Workspace name to backend for current user (best-effort)
       try {
-        await apiClient.patch('/api/users/profile', { companyName: companyName.trim() })
+        await apiClient.patch('/api/users/profile', { companyName: workspaceName.trim() })
       } catch (e) {
-        console.warn('Failed to persist companyName to backend', e)
+        console.warn('Failed to persist Owner Workspace name to backend', e)
       }
 
-      // Attempt to create a company server-side so the Owner Hub will show a card immediately.
+      // Attempt to create a company server-side so the Owner Workspace will show a card immediately.
       // The server will attach the creating user as owner when authenticated.
       try {
-        await apiClient.post('/api/companies', { name: companyName.trim() })
+        await apiClient.post('/api/companies', { name: workspaceName.trim() })
       } catch (e) {
         // non-fatal: if company creation fails, onboarding completion will still attempt creation server-side
         console.warn('Failed to create company at Get Started (non-fatal)', e)
@@ -42,8 +42,14 @@ export default function GetStartedPlansPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center px-4 py-10 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white">
-      <div className="max-w-xl w-full">
+    <div className="min-h-screen flex items-start justify-center px-4 py-10 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white relative overflow-hidden">
+      {/* Animated background orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-float-delayed" />
+      </div>
+
+      <div className="max-w-xl w-full relative z-10">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-lg">
             <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,12 +65,12 @@ export default function GetStartedPlansPage() {
 
         <div className="bg-white rounded-2xl shadow p-6 border border-white/40">
           <h2 className="text-xl font-semibold text-slate-800 mb-3">Let's get started</h2>
-          <p className="text-slate-600 mb-6">Tell us your business name to personalize your experience.</p>
+          <p className="text-slate-600 mb-6">Tell us the name of your Owner Workspace to personalize your experience.</p>
 
           <div className="max-w-md mx-auto">
-            <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 mb-2">Company name</label>
-            <input id="company-name" value={companyName} onChange={(e)=>{ setCompanyName(e.target.value); setError('') }} type="text" placeholder="e.g., Acme Widgets LLC" className={`w-full px-4 py-3 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90 ${error ? 'border-red-500' : 'border-slate-300'}`} required aria-required="true" />
-            {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : <p className="mt-2 text-xs text-slate-500">This will be the name of the new company you're adding to your HaypBooks account.</p>}
+            <label htmlFor="workspace-name" className="block text-sm font-medium text-slate-700 mb-2">Owner Workspace name</label>
+            <input id="workspace-name" value={workspaceName} onChange={(e)=>{ setWorkspaceName(e.target.value); setError('') }} type="text" placeholder="e.g., Acme Widgets LLC" className={`w-full px-4 py-3 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90 ${error ? 'border-red-500' : 'border-slate-300'}`} required aria-required="true" />
+            {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : <p className="mt-2 text-xs text-slate-500">Your Owner Workspace is the central home for your business in HaypBooks. It can contain one company or multiple—all managed in one place.</p>}
           </div>
 
           <div className="mt-6">
@@ -87,6 +93,22 @@ export default function GetStartedPlansPage() {
           <a href="/trial" aria-label="Start free trial" className="w-full inline-flex justify-center items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold shadow-lg">Start Free Trial</a>
         </div>
       </div>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(30px, -30px) rotate(5deg); }
+          66% { transform: translate(-20px, 20px) rotate(-5deg); }
+        }
+        @keyframes float-delayed {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(-30px, 30px) rotate(-5deg); }
+          66% { transform: translate(20px, -20px) rotate(5deg); }
+        }
+        .animate-float { animation: float 20s ease-in-out infinite; }
+        .animate-float-delayed { animation: float-delayed 25s ease-in-out infinite; }
+      `}</style>
     </div>
   )
 }

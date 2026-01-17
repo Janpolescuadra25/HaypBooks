@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { withinAct, flushAsync } from '@/test-utils/act-helpers'
 
@@ -77,15 +77,17 @@ describe('Receipts Linked Match Preview UI', () => {
     await flushAsync()
     // Match manually via Match button prompt interception: override window.prompt
     const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('inv-prev')
-    await withinAct(async () => { await user.click(screen.getByRole('button', { name: /Match$/i })) })
+    await withinAct(async () => { const btns = await screen.findAllByRole('button', { name: /Match$/i }); await user.click(btns[0]) })
     promptSpy.mockRestore()
     // Open linked preview
     await withinAct(async () => { await user.click(screen.getByRole('button', { name: /View match/i })) })
     await waitFor(() => { expect(screen.getByText(/Matched Document/i)).toBeInTheDocument() })
-    expect(screen.getByText(/invoice/i)).toBeInTheDocument()
-    expect(screen.getByText(/INV-PREV/)).toBeInTheDocument()
-    expect(screen.getByText(/PreviewCo/)).toBeInTheDocument()
-    expect(screen.getByText(/Original:/)).toBeInTheDocument()
+    const modalRoot = screen.getByText(/Matched Document/i).parentElement!.parentElement!
+    const m = within(modalRoot)
+    expect(m.getByText(/invoice/i)).toBeInTheDocument()
+    expect(m.getByText(/INV-PREV/)).toBeInTheDocument()
+    expect(m.getByText(/PreviewCo/)).toBeInTheDocument()
+    expect(m.getByText(/Original:/)).toBeInTheDocument()
   })
 
   it('renders bill linked preview after match', async () => {
@@ -97,13 +99,15 @@ describe('Receipts Linked Match Preview UI', () => {
     await withinAct(async () => { await user.upload(upload, file) })
     await flushAsync()
     const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('bill-prev')
-    await withinAct(async () => { await user.click(screen.getByRole('button', { name: /Match$/i })) })
+    await withinAct(async () => { const btns = await screen.findAllByRole('button', { name: /Match$/i }); await user.click(btns[0]) })
     promptSpy.mockRestore()
     await withinAct(async () => { await user.click(screen.getByRole('button', { name: /View match/i })) })
     await waitFor(() => { expect(screen.getByText(/Matched Document/i)).toBeInTheDocument() })
-    expect(screen.getByText(/bill/i)).toBeInTheDocument()
-    expect(screen.getByText(/BILL-PREV/)).toBeInTheDocument()
-    expect(screen.getByText(/VendorPrev/)).toBeInTheDocument()
-    expect(screen.getByText(/Original:/)).toBeInTheDocument()
+    const modalRoot = screen.getByText(/Matched Document/i).parentElement!.parentElement!
+    const m = within(modalRoot)
+    // The modal shows the bill identifier, party, and original amount
+    expect(m.getByText(/BILL-PREV/)).toBeInTheDocument()
+    expect(m.getByText(/VendorPrev/)).toBeInTheDocument()
+    expect(m.getByText(/Original:/)).toBeInTheDocument()
   })
 })

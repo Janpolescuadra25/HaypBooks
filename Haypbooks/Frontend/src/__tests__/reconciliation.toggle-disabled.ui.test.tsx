@@ -50,7 +50,7 @@ describe('Reconciliation UI: disabled toggle states', () => {
       return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }) as any
     }) as any)
 
-    render(<Page searchParams={{}} />)
+    render(await Page({ searchParams: {} } as any))
 
     // Reconciled item row
     const row1 = await screen.findByText('2024-06-15')

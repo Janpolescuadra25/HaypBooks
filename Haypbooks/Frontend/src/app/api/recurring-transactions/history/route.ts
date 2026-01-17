@@ -9,7 +9,7 @@ function requireRole(req: NextRequest, role: string) {
 
 export async function GET(req: NextRequest) {
   if (!requireRole(req,'user')) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
-  const url = new URL(req.url)
+  const url = new URL(req.url, 'http://test')
   const templateId = url.searchParams.get('templateId') || undefined
   const start = url.searchParams.get('start') || undefined
   const end = url.searchParams.get('end') || undefined

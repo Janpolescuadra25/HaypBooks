@@ -1812,6 +1812,21 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Run Onboarding E2E Test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\frontend",
+				"run",
+				"e2e",
+				"--",
+				"e2e/onboarding-full-flow.spec.ts"
+			],
+			"isBackground": false,
+			"group": "test"
 		}
 	]
 }

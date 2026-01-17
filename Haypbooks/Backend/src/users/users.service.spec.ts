@@ -22,11 +22,10 @@ describe('UsersService', () => {
     expect((res as any).password).toBeUndefined()
   })
 
-  test('updateProfile updates companyName and firmName', async () => {
-    mockUserRepo.update.mockResolvedValue({ id: 'u1', companyName: 'C', firmName: 'F' })
-    const res = await usersService.updateProfile('u1', { companyName: 'C', firmName: 'F' })
-    expect(mockUserRepo.update).toHaveBeenCalledWith('u1', { companyName: 'C', firmName: 'F' })
-    expect(res.companyName).toBe('C')
+  test('updateProfile updates firmName only', async () => {
+    mockUserRepo.update.mockResolvedValue({ id: 'u1', firmName: 'F' })
+    const res = await usersService.updateProfile('u1', { firmName: 'F' })
+    expect(mockUserRepo.update).toHaveBeenCalledWith('u1', { firmName: 'F' })
     expect(res.firmName).toBe('F')
   })
 })

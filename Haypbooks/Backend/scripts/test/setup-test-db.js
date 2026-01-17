@@ -45,6 +45,15 @@ function runWithRetry(cmd, maxAttempts = 3, backoffMs = 500) {
 try {
   const initCmd = `node ./scripts/migrate/init-db.js ${recreate ? '--recreate' : ''}`.trim()
   runWithRetry(initCmd, 3, 500)
+  // Ensure Prisma migrations are deployed non-interactively to the test DB (creates tables like EmailVerificationToken)
+  try {
+    runWithRetry('npx prisma migrate deploy --schema=prisma/schema.prisma', 3, 500)
+    // Ensure Prisma client is generated for any ts-node scripts that require it during seeding/tests
+    runWithRetry('npm run prisma:generate', 3, 500)
+  } catch (e) {
+    console.warn('Prisma migrate deploy/generate step failed (continuing):', e && e.message ? e.message : e)
+  }
+  // Fall back to running SQL migration files (idempotent) for compatibility with older setups
   runWithRetry('node ./scripts/migrate/run-sql.js', 3, 500)
   // Ensure tenantId columns are UUID and Task.archivedAt exists before seeding / applying RLS
   try {
@@ -60,13 +69,12 @@ try {
       } catch (e) {
         console.warn('Adding onboarding tenant columns failed (continuing):', e && e.message ? e.message : e)
       }
-      try {
-        runWithRetry('node ./scripts/db/add-company-profile-columns.js', 3, 500)
-      } catch (e) {
-        console.warn('Adding Company profile columns failed (continuing):', e && e.message ? e.message : e)
-      }
-
-      runWithRetry('npm run db:seed:dev', 3, 500)
+        // Ensure Tenant.type exists (some developer/test DBs may miss this column)
+        try {
+          runWithRetry('node ./scripts/db/add_tenant_type.js', 3, 500)
+        } catch (e) {
+          console.warn('Adding tenant.type failed (continuing):', e && e.message ? e.message : e)
+        }
       // Ensure tenantId columns and Task.archivedAt again post-seed (idempotent)
       try {
         runWithRetry('node ./scripts/ensure_tenantid_uuid.js', 3, 500)
@@ -85,6 +93,41 @@ try {
         runWithRetry('node ./scripts/db/ensure_company_profile_columns_pg.js', 3, 500)
       } catch (e) {
         console.warn('Ensuring Company profile columns via pg failed (continuing):', e && e.message ? e.message : e)
+      }
+
+      // Apply any manual schema additions (idempotent)
+      try {
+        runWithRetry('node ./scripts/apply-schema-additions.ts', 3, 500)
+      } catch (e) {
+        console.warn('Applying schema additions failed (continuing):', e && e.message ? e.message : e)
+      }
+
+      // Ensure EmailVerificationToken table exists (safety idempotent step)
+      try {
+        runWithRetry('node ./scripts/db/ensure_email_verification_token.js', 3, 500)
+      } catch (e) {
+        console.warn('Ensuring EmailVerificationToken table failed (continuing):', e && e.message ? e.message : e)
+      }
+
+      // Ensure legacy tenantId_old columns are nullable (avoid NOT NULL regressions from migrations)
+      try {
+        runWithRetry('node ./scripts/db/make_all_tenantid_old_nullable.js', 3, 500)
+      } catch (e) {
+        console.warn('Making tenantId_old nullable failed (continuing):', e && e.message ? e.message : e)
+      }
+
+      // Ensure trigger to backfill tenantId_old for TenantUser exists (idempotent)
+      try {
+        runWithRetry('node ./scripts/db/add_tenantuser_set_tenantid_old_trigger.js', 3, 500)
+      } catch (e) {
+        console.warn('Adding tenantuser tenantId_old trigger failed (continuing):', e && e.message ? e.message : e)
+      }
+
+      // If tenantId_new columns exist in the DB, ensure insertion-time triggers populate them from tenantId
+      try {
+        runWithRetry('node ./scripts/db/add_tenantid_new_triggers.js', 3, 500)
+      } catch (e) {
+        console.warn('Adding tenantId_new triggers failed (continuing):', e && e.message ? e.message : e)
       }
 
       // Backfill tenant onboarding fields into Company records (idempotent)
@@ -119,6 +162,20 @@ try {
       console.warn('Skipping db:seed:dev due to error (possibly missing generated Prisma client):', e && e.message ? e.message : e)
     }
   }
+  // Ensure legacy tenantId_old columns are nullable (avoid NOT NULL regressions from migrations)
+  try {
+    runWithRetry('node ./scripts/db/make_all_tenantid_old_nullable.js', 3, 500)
+  } catch (e) {
+    console.warn('Making tenantId_old nullable failed (continuing):', e && e.message ? e.message : e)
+  }
+
+  // Ensure trigger to backfill tenantId_old for TenantUser exists (idempotent)
+  try {
+    runWithRetry('node ./scripts/db/add_tenantuser_set_tenantid_old_trigger.js', 3, 500)
+  } catch (e) {
+    console.warn('Adding tenantuser tenantId_old trigger failed (continuing):', e && e.message ? e.message : e)
+  }
+
   console.log('✅ Test DB setup complete')
 
   // Small health-check: ensure we can connect to the DB and run a simple query before returning.

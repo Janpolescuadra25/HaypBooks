@@ -211,7 +211,7 @@ describe('Auth e2e', () => {
     expect(updateRes.status).toBeGreaterThanOrEqual(200)
     expect(updateRes.status).toBeLessThan(300)
 
-    // Login and expect redirect to companies (owner hub)
+    // Login and expect redirect to companies (Owner Workspace)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     expect(login.body).toHaveProperty('redirect')
     expect(login.body.redirect).toBe('/hub/companies')

@@ -23,7 +23,9 @@ describe('Inventory API (e2e)', () => {
     await app.init()
 
     // Create tenant and test data
-    const tenant = await prisma.tenant.create({
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
       data: {
         name: 'Inventory E2E Test',
         subdomain: `inv-e2e-${Math.random().toString(36).slice(2, 7)}`

@@ -14,15 +14,16 @@ jest.mock('@/lib/api-client', () => ({ __esModule: true, default: { patch: jest.
 describe('GetStartedPlansPage copy', () => {
   it('shows neutral company guidance for new or existing users', () => {
     render(<GetStartedPlansPage />)
-    expect(screen.getByText("This will be the name of the new company you're adding to your HaypBooks account.")).toBeInTheDocument()
+    // Copy updated to reference Owner Workspace
+    expect(screen.getByText(/Tell us the name of your Owner Workspace/i)).toBeInTheDocument()
   })
 
-  it('shows error when company name missing and prevents navigation', async () => {
+  it('shows error when owner workspace name missing and prevents navigation', async () => {
     render(<GetStartedPlansPage />)
     const startBtn = screen.getByRole('button', { name: /Start Free Trial/i })
     // wrap the click in act to avoid state update warnings
     act(() => { startBtn.click() })
-    expect(await screen.findByText(/company name is required/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Owner Workspace name is required/i)).toBeInTheDocument()
   })
 
   it('persists company name to backend when provided', async () => {

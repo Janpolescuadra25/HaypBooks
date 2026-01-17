@@ -43,7 +43,9 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const companyName = `Acme E2E ${suffix}`
 
     const user = await prisma.user.create({ data: { email, password: 'x', name: 'E', isEmailVerified: true } })
-    const tenant = await prisma.tenant.create({ data: { name: tenantName, subdomain } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
@@ -55,7 +57,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const deletedCompany = await prisma.company.findUnique({ where: { id: company.id } })
     expect(deletedCompany).toBeNull()
 
-    const deletedTenant = await prisma.tenant.findUnique({ where: { id: tenant.id } })
+    const deletedTenant = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
     if (deletedTenant) {
       // Tenant deletion is best-effort; if it remains, ensure it has no companies
       const remainingCompanies = await prisma.company.findMany({ where: { tenantId: tenant.id } })
@@ -68,7 +70,9 @@ describe('TestController /api/test/delete-company (E2E)', () => {
 
   test('refuses to delete non-test companies', async () => {
     const user = await prisma.user.create({ data: { email: `e2e-delete2-${Date.now().toString(36)}@local`, password: 'x', name: 'E', isEmailVerified: true } })
-    const tenant = await prisma.tenant.create({ data: { name: 'Acme Inc', subdomain: `acct-xyz-${Date.now().toString(36)}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, 'Acme', 'USD')
 
@@ -80,7 +84,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     // cleanup
     await prisma.company.delete({ where: { id: company.id } })
     await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
     await prisma.user.delete({ where: { id: user.id } })
   })
 
@@ -88,7 +92,9 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const s = Date.now().toString(36)
     const u1 = await prisma.user.create({ data: { email: `multi1-${s}@local`, password: 'x', name: 'A', isEmailVerified: true } })
     const u2 = await prisma.user.create({ data: { email: `multi2-${s}@local`, password: 'x', name: 'B', isEmailVerified: true } })
-    const tenant = await prisma.tenant.create({ data: { name: `MultiTenant (E2E) ${s}`, subdomain: `e2e-multi-${s}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: u1.id, role: 'owner', isOwner: true } })
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: u2.id, role: 'member', isOwner: false } })
     const company = await createCompanyRaw(prisma, tenant.id, `Comp A E2E ${s}`, 'USD')
@@ -100,13 +106,13 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const deletedCompany = await prisma.company.findUnique({ where: { id: company.id } })
     expect(deletedCompany).toBeNull()
 
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id } })
+    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup: ensure tenant and users deleted
     await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
     await prisma.company.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
     await prisma.user.delete({ where: { id: u1.id } })
     await prisma.user.delete({ where: { id: u2.id } })
   })
@@ -114,7 +120,9 @@ describe('TestController /api/test/delete-company (E2E)', () => {
   test('does not delete tenant when tenant has other companies', async () => {
     const s = Date.now().toString(36)
     const user = await prisma.user.create({ data: { email: `multi-co-${s}@local`, password: 'x', name: 'C', isEmailVerified: true } })
-    const tenant = await prisma.tenant.create({ data: { name: `OtherCo Tenant (E2E) ${s}`, subdomain: `e2e-other-${s}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const companyA = await createCompanyRaw(prisma, tenant.id, `Primary E2E ${s}`, 'USD')
     const companyB = await createCompanyRaw(prisma, tenant.id, `OtherCo ${s}`, 'USD')
@@ -129,13 +137,14 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const otherCompany = await prisma.company.findUnique({ where: { id: companyB.id } })
     expect(otherCompany).not.toBeNull()
 
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id } })
+    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup
     await prisma.company.delete({ where: { id: companyB.id } })
     await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
+    await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })
   })
 
@@ -147,7 +156,9 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const companyName = `Corp E2E ${s}`
 
     const user = await prisma.user.create({ data: { email, password: 'x', name: 'Sys', isEmailVerified: true } })
-    const tenant = await prisma.tenant.create({ data: { name: tenantName, subdomain } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
@@ -164,14 +175,15 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     expect(deletedCompany).toBeNull()
 
     // tenant should remain because the system account prevents deletion
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id } })
+    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup: remove system account, then clean up
     await prisma.account.deleteMany({ where: { tenantId: tenant.id } })
     await prisma.company.deleteMany({ where: { tenantId: tenant.id } })
     await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
+    await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })
   })
 
@@ -183,7 +195,9 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const companyName = `BlockCorp E2E ${s}`
 
     const user = await prisma.user.create({ data: { email, password: 'x', name: 'Blk', isEmailVerified: true } })
-    const tenant = await prisma.tenant.create({ data: { name: tenantName, subdomain } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
@@ -198,21 +212,24 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     expect(deletedCompany).toBeNull()
 
     // tenant should remain because of the blocking JournalEntry
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id } })
+    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup
     await prisma.journalEntry.deleteMany({ where: { tenantId: tenant.id } })
     await prisma.company.deleteMany({ where: { tenantId: tenant.id } })
     await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
+    await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })
   })
 
   test('delete by companyId does not delete tenant when other companies exist', async () => {
     const s = Date.now().toString(36)
     const user = await prisma.user.create({ data: { email: `byid-${s}@local`, password: 'x', name: 'D', isEmailVerified: true } })
-    const tenant = await prisma.tenant.create({ data: { name: `ById Tenant (E2E) ${s}`, subdomain: `e2e-byid-${s}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const companyA = await createCompanyRaw(prisma, tenant.id, `ToDelete E2E ${s}`, 'USD')
     const companyB = await createCompanyRaw(prisma, tenant.id, `KeepCompany ${s}`, 'USD')
@@ -227,13 +244,14 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const otherCompany = await prisma.company.findUnique({ where: { id: companyB.id } })
     expect(otherCompany).not.toBeNull()
 
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id } })
+    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup
     await prisma.company.delete({ where: { id: companyB.id } })
     await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
+    await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })
   })
 })

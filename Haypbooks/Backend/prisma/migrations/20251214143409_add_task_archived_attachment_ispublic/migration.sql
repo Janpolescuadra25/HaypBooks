@@ -776,11 +776,24 @@ ALTER INDEX "idx_task_remindat" RENAME TO "Task_remindAt_idx";
 -- RenameIndex
 ALTER INDEX "idx_task_tenant_assignee" RENAME TO "Task_tenantId_assigneeId_idx";
 
--- RenameIndex
-ALTER INDEX "idx_task_tenant_duedate" RENAME TO "Task_tenantId_dueDate_idx";
+-- RenameIndex (conditionally - only if old index exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_task_tenant_duedate') THEN
+    ALTER INDEX "idx_task_tenant_duedate" RENAME TO "Task_tenantId_dueDate_idx";
+  END IF;
+END$$;
 
--- RenameIndex
-ALTER INDEX "idx_task_tenant_priority" RENAME TO "Task_tenantId_priority_idx";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_task_tenant_priority') THEN
+    ALTER INDEX "idx_task_tenant_priority" RENAME TO "Task_tenantId_priority_idx";
+  END IF;
+END$$;
 
--- RenameIndex
-ALTER INDEX "idx_task_tenant_status" RENAME TO "Task_tenantId_status_idx";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_task_tenant_status') THEN
+    ALTER INDEX "idx_task_tenant_status" RENAME TO "Task_tenantId_status_idx";
+  END IF;
+END$$;

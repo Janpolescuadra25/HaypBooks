@@ -13,10 +13,11 @@ jest.mock('next/navigation', () => ({
 describe('AccountantOnboarding', () => {
   it('disables finish and shows inline error when firm name missing', () => {
     render(<AccountantOnboarding />)
-    const btn = screen.getByRole('button', { name: /finish setup/i })
+    // The UI now uses an explicit 'Create firm' button aria-label
+    const btn = screen.getByRole('button', { name: /create firm/i })
     // Button should be disabled when no firm name
     expect(btn).toBeDisabled()
-    const input = screen.getByPlaceholderText(/your firm name/i)
+    const input = screen.getByPlaceholderText(/your firm's name/i)
     // Blurring empty input should display validation
     fireEvent.blur(input)
     expect(screen.getByText(/firm name is required/i)).toBeInTheDocument()
@@ -30,9 +31,9 @@ describe('AccountantOnboarding', () => {
     const rn = require('next/navigation')
     rn.useRouter = () => ({ push: pushMock })
     render(<AccountantOnboarding />)
-    const input = screen.getByPlaceholderText(/your firm name/i)
+    const input = screen.getByPlaceholderText(/your firm's name/i)
     fireEvent.change(input, { target: { value: 'Rivera CPA' } })
-    const btn = screen.getByRole('button', { name: /finish setup/i })
+    const btn = screen.getByRole('button', { name: /create firm/i })
     fireEvent.click(btn)
     await waitFor(() => expect(mockPost).toHaveBeenCalled())
     expect(pushMock).toHaveBeenCalledWith('/hub/accountant')

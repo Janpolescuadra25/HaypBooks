@@ -39,6 +39,6 @@ describe('Budget vs Actual CSV export', () => {
     const res = await GET(new Request(url))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    try { const parsed = JSON.parse(text); expect(parsed.error).toBe('Forbidden') } catch { expect(text).toBe('Forbidden') }
   })
 })

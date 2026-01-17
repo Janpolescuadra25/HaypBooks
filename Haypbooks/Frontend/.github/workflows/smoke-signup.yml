@@ -20,12 +20,7 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
 
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +52,6 @@ jobs:
         working-directory: ./Haypbooks/Backend
         env:
           DATABASE_URL: postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test
-          REDIS_URL: redis://localhost:6379
           ENFORCE_PRE_SIGNUP: 'true'
           ALLOW_TEST_ENDPOINTS: 'true'
           NODE_ENV: 'test'
@@ -74,13 +68,14 @@ jobs:
           timeout: '60'
           url: 'http://127.0.0.1:4000/api/health'
 
-      - name: Run Playwright smoke test (signup phone-only)
+      - name: Run Playwright smoke test (signup phone-only + onboarding)
         working-directory: ./Haypbooks/Frontend
         env:
           ALLOW_TEST_ENDPOINTS: 'true'
-          REDIS_URL: redis://localhost:6379
+          E2E_FULL_AUTH: 'true'
         run: |
-          npx playwright test e2e/smoke.signup-phone-only.spec.ts e2e/proxy-refresh.spec.ts --project=chromium -g "smoke" --reporter=list
+          # Run smoke tests plus the full onboarding UI test that asserts Owner Workspace shows created company
+          npx playwright test e2e/smoke.signup-phone-only.spec.ts e2e/proxy-refresh.spec.ts e2e/pre-signup-flow.spec.ts e2e/onboarding.ui-and-hub.spec.ts --project=chromium -g "smoke" --reporter=list
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

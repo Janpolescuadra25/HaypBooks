@@ -121,4 +121,18 @@ describe('PrismaAuthService (phone normalization)', () => {
     // PrismaAuthService returns the created OTP row
     expect((res as any).id).toBe('otp1')
   })
+
+  test('login rate limits after repeated failures', async () => {
+    const hashed = await bcrypt.hash('Password1!', 10)
+    mockUserRepo.findByEmail.mockResolvedValue({ id: 'u4', email: 'rl@e.test', password: hashed, isEmailVerified: true })
+
+    // Simulate 5 recent failures
+    mockSecurityEventRepo.countRecentByEmail.mockResolvedValue(5)
+
+    await expect(svc.login('rl@e.test', 'WrongPass', '1.2.3.4', 'ua')).rejects.toThrow('Too many failed login attempts')
+    // Ensure a security event was recorded for rate limit
+    expect(mockSecurityEventRepo.create).toHaveBeenCalled()
+    const createdType = mockSecurityEventRepo.create.mock.calls[0][0].type
+    expect(createdType).toBe('LOGIN_RATE_LIMITED')
+  })
 })

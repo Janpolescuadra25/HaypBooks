@@ -36,7 +36,7 @@ describe('Final removal of Tenant onboarding columns (e2e)', () => {
 
     // Create tenant via raw SQL (avoid Prisma tenant model columns that were dropped)
     const tenantId = ((): string => { function uuidv4() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; const v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); }); } return uuidv4(); })();
-    await prisma.$executeRawUnsafe(`INSERT INTO "Tenant" ("id","name","subdomain","createdAt","updatedAt") VALUES ($1::uuid, $2, $3, now(), now())`, tenantId, 'FinalDrop Inc', 'finaldrop-' + Date.now().toString().slice(-6));
+    await prisma.$executeRawUnsafe(`INSERT INTO "Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())`, tenantId);
     // Create tenant user row
     await prisma.tenantUser.create({ data: { tenantId: tenantId, userId: user.id, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' } })
 

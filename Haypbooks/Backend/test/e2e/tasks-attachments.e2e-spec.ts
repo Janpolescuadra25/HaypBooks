@@ -38,7 +38,9 @@ describe('Tasks & Attachments API (e2e)', () => {
     const token = login.body.token || login.body.accessToken || login.body.accessToken
 
     // create tenant and task
-    const tenant = await prisma.tenant.create({ data: { name: 'E2E Tenant Task', subdomain: `e2e-${Date.now()}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     const user = await prisma.user.findUnique({ where: { email } })
     const task = await prisma.task.create({ data: { tenantId: tenant.id, title: 'API Archive Test', createdById: user!.id } })
 
@@ -54,11 +56,13 @@ describe('Tasks & Attachments API (e2e)', () => {
 
     // cleanup
     await prisma.task.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   }, 30000)
 
   it('toggle attachment public flag', async () => {
-    const tenant = await prisma.tenant.create({ data: { name: 'E2E Tenant Attach', subdomain: `att-${Date.now()}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     const attachment = await prisma.attachment.create({ data: { tenantId: tenant.id, entityType: 'TEST', entityId: 'eid', fileUrl: 'http://x', fileName: 'f' } })
 
     // check default
@@ -71,6 +75,6 @@ describe('Tasks & Attachments API (e2e)', () => {
 
     // cleanup
     await prisma.attachment.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id } })
+    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   })
 })

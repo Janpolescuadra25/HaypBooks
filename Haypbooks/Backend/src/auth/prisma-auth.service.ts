@@ -44,7 +44,8 @@ export class PrismaAuthService {
     // Log successful signup
     await this.logSecurityEvent({ userId: user.id, email, type: 'SIGNUP_SUCCESS' })
 
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role })
+    // Extended to 2h to prevent session expiry during onboarding flow
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
     
     // Return consistent user object structure
     const userResponse = {
@@ -73,14 +74,16 @@ export class PrismaAuthService {
     
     // Check for rate limiting - max 5 failed attempts per email in 15 minutes
     if (user) {
+      let recentFailures = 0
       try {
-        const recentFailures = await this.securityEventRepo.countRecentByEmail(email, 15)
-        if (recentFailures >= 5) {
-          await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_RATE_LIMITED', ipAddress, userAgent })
-          throw new UnauthorizedException('Too many failed login attempts. Please try again later.')
-        }
+        recentFailures = await this.securityEventRepo.countRecentByEmail(email, 15)
       } catch (e) {
         // Continue if rate limit check fails
+      }
+
+      if (recentFailures >= 5) {
+        await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_RATE_LIMITED', ipAddress, userAgent })
+        throw new UnauthorizedException('Too many failed login attempts. Please try again later.')
       }
     }
 
@@ -124,7 +127,8 @@ export class PrismaAuthService {
     // Log successful login
     await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_SUCCESS', ipAddress, userAgent })
 
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
+    // Extended to 2h to prevent session expiry during onboarding flow
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
     // create refresh session (longer lived)
     const refreshToken = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -163,7 +167,8 @@ export class PrismaAuthService {
     const user = await this.userRepo.findById(userId)
     if (!user) return null
 
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
+    // Extended to 2h to prevent session expiry during onboarding flow
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
     const refreshToken = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
@@ -214,7 +219,8 @@ export class PrismaAuthService {
       return null
     }
     
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '15m' })
+    // Extended to 2h to prevent session expiry during onboarding flow
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
     // Optional: rotate refresh token
     const newRefresh = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)

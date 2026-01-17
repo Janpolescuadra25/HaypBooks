@@ -17,10 +17,42 @@ describe('AuthController pre-signup/complete-signup', () => {
     verifyOtpByPhone: jest.fn().mockResolvedValue(true),
     createSessionForUser: jest.fn().mockResolvedValue({ token: 't' }),
   }
-  const pending = new PendingSignupService()
+  let pending: PendingSignupService
 
   beforeEach(() => {
     jest.clearAllMocks()
+
+    // Fake in-memory prisma for unit tests
+    const store = new Map<string, any>()
+    const fakePrisma: any = {
+      emailVerificationToken: {
+        create: jest.fn().mockImplementation(async ({ data }) => {
+          await Promise.resolve()
+          store.set(data.id, { ...data })
+          return { ...data }
+        }),
+        findUnique: jest.fn().mockImplementation(async ({ where }) => {
+          await Promise.resolve()
+          return store.get(where.id) || null
+        }),
+        update: jest.fn().mockImplementation(async ({ where, data }) => {
+          await Promise.resolve()
+          const cur = store.get(where.id) || { data: {} }
+          const next = { ...cur, data: { ...(cur.data || {}), ...(data.data || {}) } }
+          store.set(where.id, next)
+          return next
+        }),
+        delete: jest.fn().mockImplementation(async ({ where }) => {
+          await Promise.resolve()
+          store.delete(where.id)
+          return { id: where.id }
+        }),
+        deleteMany: jest.fn().mockResolvedValue({}),
+      }
+    }
+
+    pending = new PendingSignupService(fakePrisma as any)
+
     controller = new AuthController(authSvc as any, mockUserRepo as any, mockSessionRepo as any, mockOtpRepo as any, mockSecurityEventRepo as any, mockMail as any, pending)
   })
 
@@ -103,6 +135,28 @@ describe('AuthController pre-signup/complete-signup', () => {
     expect(mockUserRepo.create).not.toHaveBeenCalled()
   })
 
+  test('login sets cookies with correct secure/httpOnly flags', async () => {
+    // stub authService.login to return tokens and user
+    const fakeLogin = jest.fn().mockResolvedValue({ token: 'tkn', refreshToken: 'rt', user: { id: 'u', email: 'a@b' } })
+    const ac = new AuthController({ login: fakeLogin, refresh: jest.fn(), createSessionForUser: jest.fn() } as any, mockUserRepo, mockSessionRepo, mockOtpRepo, mockSecurityEventRepo, mockMail as any, pending)
+
+    const cookies: any[] = []
+    const res: any = { cookie: (name: string, val: string, opts: any) => cookies.push({ name, val, opts }), clearCookie: jest.fn() }
+    // call login
+    const result = await ac.login({ email: 'a@b', password: 'Password1!' } as any, { headers: {} } as any, res)
+    expect(fakeLogin).toHaveBeenCalled()
+    // Expect token and refreshToken cookies set
+    const tokenCookie = cookies.find(c => c.name === 'token')
+    const refreshCookie = cookies.find(c => c.name === 'refreshToken')
+    expect(tokenCookie).toBeDefined()
+    expect(refreshCookie).toBeDefined()
+
+    // Ensure HttpOnly is set and secure matches NODE_ENV
+    expect(tokenCookie.opts.httpOnly).toBe(true)
+    const wasProd = process.env.NODE_ENV === 'production'
+    expect(Boolean(tokenCookie.opts.secure)).toBe(wasProd)
+  })
+
   test('completeSignup upgrades existing unverified user instead of creating duplicate', async () => {
     mockUserRepo.findByEmail.mockResolvedValueOnce(null)
     const resp = await controller.preSignup({ email: 'legacy@e.test', password: 'Pass1!', name: 'Legacy', phone: '+14155550102' })
@@ -119,35 +173,24 @@ describe('AuthController pre-signup/complete-signup', () => {
     expect(mockUserRepo.create).not.toHaveBeenCalled()
   })
 
-  test('PendingSignupService falls back to in-memory when Redis operations fail', async () => {
-    // Mock redis client that rejects on commands
-    const failingRedis: any = {
-      set: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
-      get: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
-      ttl: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
-      del: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
-    }
-    const svc = new PendingSignupService(failingRedis)
+  test('PendingSignupService create/get/update/delete with in-memory fake prisma', async () => {
+    // Use the same PendingSignupService (constructed with in-memory fake prisma in beforeEach)
 
-    // create should not throw and should return a token
-    const token = await svc.create({ email: 'fall@e.test', hashedPassword: 'h' }, 5) as string
+    const token = await pending.create({ email: 'fall@e.test', hashedPassword: 'h' }, 5) as string
     expect(typeof token).toBe('string')
 
-    // get returns the stored payload
-    const got = await svc.get(token)
+    const got = await pending.get(token)
     expect(got).not.toBeNull()
     expect((got as any).email).toBe('fall@e.test')
 
-    // update should merge and reflect changes
-    const updated = await svc.update(token, { name: 'Fallback' })
+    const updated = await pending.update(token, { name: 'Fallback' })
     expect(updated).not.toBeNull()
     expect((updated as any).name).toBe('Fallback')
 
-    // delete should succeed
-    const delRes = await svc.delete(token)
+    const delRes = await pending.delete(token)
     expect(delRes).toBe(true)
 
-    const after = await svc.get(token)
+    const after = await pending.get(token)
     expect(after).toBeNull()
   })
 })

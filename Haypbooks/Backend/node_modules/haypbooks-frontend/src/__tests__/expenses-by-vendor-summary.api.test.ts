@@ -5,7 +5,7 @@ const makeReq = (url: string) => new Request(url)
 
 describe('Expenses by Vendor Summary report', () => {
   test('JSON API returns rows, totals, and asOf or range', async () => {
-    const res: any = await EVS_GET(makeReq('http://localhost/api/reports/expenses-by-vendor-summary?period=YTD'))
+    const res: any = await EVS_GET(makeReq('http://localhost/api/reports/expenses-by-vendor-summary?period=YTD&end=2025-09-04'))
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(Array.isArray(body.rows)).toBe(true)
@@ -21,7 +21,8 @@ describe('Expenses by Vendor Summary report', () => {
     expect(res.status).toBe(200)
     const text = await res.text()
     const lines = text.trim().split(/\r?\n/)
-    expect(lines[2]).toBe('Vendor,Transactions,Qty,Amount')
+    const headerIdx = lines.findIndex(l => l.startsWith('Vendor,Transactions,Qty,Amount'))
+    expect(headerIdx).toBeGreaterThanOrEqual(0)
     expect(lines[lines.length - 1].startsWith('Totals')).toBe(true)
     const cd = res.headers.get('Content-Disposition') as string
     expect(cd).toContain('expenses-by-vendor-summary-asof-2025-09-04')

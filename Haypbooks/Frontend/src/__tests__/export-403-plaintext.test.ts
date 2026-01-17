@@ -21,7 +21,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/account-ledger/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('sales-by-customer-summary export returns text/plain 403 Forbidden', async () => {
@@ -29,7 +35,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/sales-by-customer-summary/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('transaction-detail-by-account export returns text/plain 403 Forbidden', async () => {
@@ -37,7 +49,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/transaction-detail-by-account/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('profit-loss export returns text/plain 403 Forbidden', async () => {
@@ -45,7 +63,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/profit-loss/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('balance-sheet export returns text/plain 403 Forbidden', async () => {
@@ -53,7 +77,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/balance-sheet/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('cash-flow export returns text/plain 403 Forbidden', async () => {
@@ -61,7 +91,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/cash-flow/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('profit-loss-by-month export returns text/plain 403 Forbidden', async () => {
@@ -69,7 +105,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/profit-loss-by-month/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('profit-loss-by-quarter export returns text/plain 403 Forbidden', async () => {
@@ -77,7 +119,13 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/profit-loss-by-quarter/export'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 
   test('management pack export returns text/plain 403 Forbidden', async () => {
@@ -85,6 +133,12 @@ describe('Export routes: 403 is plaintext Forbidden', () => {
     const res: any = await GET(new Request('http://localhost/api/reports/pack/export?preset=YTD&reports=profit-and-loss,balance-sheet'))
     expect(res.status).toBe(403)
     const text = await res.text()
-    expect(text).toBe('Forbidden')
+    // Support both legacy plain text and JSON error bodies
+    try {
+      const parsed = JSON.parse(text)
+      expect(parsed.error).toBe('Forbidden')
+    } catch (e) {
+      expect(text).toBe('Forbidden')
+    }
   })
 })

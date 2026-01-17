@@ -9,9 +9,15 @@ function makeReq(url: string): Request { return new Request(url) }
 describe('RBAC gating for CSV export routes', () => {
   afterEach(() => setRoleOverride(undefined))
 
-  test('customers export denies when lacking reports:read', async () => {
-    setRoleOverride('no-reports' as any)
-    const res: any = await CUSTOMERS_GET(makeReq('http://localhost/api/customers/export'))
+  test('customers export denies when lacking customers:read', async () => {
+    // Force denial by mocking hasPermission to false for this test
+    jest.resetModules()
+    jest.doMock('@/lib/rbac-server', () => {
+      const actual = jest.requireActual<any>('@/lib/rbac-server')
+      return { ...actual, hasPermission: () => false }
+    })
+    const { GET } = await import('@/app/api/customers/export/route')
+    const res: any = await GET(makeReq('http://localhost/api/customers/export'))
     expect(res.status).toBe(403)
   })
 
@@ -23,21 +29,33 @@ describe('RBAC gating for CSV export routes', () => {
     expect(cd || '').toMatch(/customers-asof-/)
   })
 
-  test('vendors export denies when lacking reports:read', async () => {
-    setRoleOverride('no-reports' as any)
-    const res: any = await VENDORS_GET(makeReq('http://localhost/api/vendors/export'))
+  test('vendors export denies when lacking vendors:read', async () => {
+    jest.doMock('@/lib/rbac-server', () => {
+      const actual = jest.requireActual<any>('@/lib/rbac-server')
+      return { ...actual, hasPermission: () => false }
+    })
+    const { GET } = await import('@/app/api/vendors/export/route')
+    const res: any = await GET(makeReq('http://localhost/api/vendors/export'))
     expect(res.status).toBe(403)
   })
 
-  test('transactions export denies when lacking reports:read', async () => {
-    setRoleOverride('no-reports' as any)
-    const res: any = await TXN_GET(makeReq('http://localhost/api/transactions/export'))
+  test('transactions export denies when lacking transactions:read', async () => {
+    jest.doMock('@/lib/rbac-server', () => {
+      const actual = jest.requireActual<any>('@/lib/rbac-server')
+      return { ...actual, hasPermission: () => false }
+    })
+    const { GET } = await import('@/app/api/transactions/export/route')
+    const res: any = await GET(makeReq('http://localhost/api/transactions/export'))
     expect(res.status).toBe(403)
   })
 
-  test('bill-payments export denies when lacking reports:read', async () => {
-    setRoleOverride('no-reports' as any)
-    const res: any = await BP_GET(makeReq('http://localhost/api/bill-payments/export') as any)
+  test('bill-payments export denies when lacking bill-payments:read', async () => {
+    jest.doMock('@/lib/rbac-server', () => {
+      const actual = jest.requireActual<any>('@/lib/rbac-server')
+      return { ...actual, hasPermission: () => false }
+    })
+    const { GET } = await import('@/app/api/bill-payments/export/route')
+    const res: any = await GET(makeReq('http://localhost/api/bill-payments/export') as any)
     expect(res.status).toBe(403)
   })
 })

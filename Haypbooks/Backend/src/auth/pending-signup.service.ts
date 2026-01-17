@@ -1,6 +1,7 @@
-import { Injectable, Inject, Optional } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { randomBytes } from 'crypto'
-import type Redis from 'ioredis'
+import * as bcrypt from '../utils/bcrypt-fallback'
+import { PrismaService } from '../repositories/prisma/prisma.service'
 
 type PendingData = {
   email: string
@@ -19,116 +20,79 @@ type PendingData = {
 }
 
 /**
- * PendingSignupService supports a Redis-backed store (recommended for production)
- * and falls back to an in-memory map when a Redis client is not provided. Methods
- * are async to accommodate Redis operations.
+ * DB-backed PendingSignupService stores pending signups in Postgres via Prisma.
+ * Tokens are returned as `${id}.${secret}` where `id` maps to the DB row id and
+ * `secret` is hashed in the DB for secure comparison.
  */
 @Injectable()
 export class PendingSignupService {
-  private store = new Map<string, { data: PendingData; expiresAt: number; timeout: NodeJS.Timeout }>()
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor(@Optional() @Inject('REDIS') private readonly redis?: Redis) {}
+  private generateSecret() {
+    return randomBytes(12).toString('hex')
+  }
+
+  private makeToken(id: string, secret: string) {
+    return `${id}.${secret}`
+  }
 
   async create(data: Omit<PendingData, 'createdAt'>, ttlSeconds = 60 * 30) {
-    const token = randomBytes(16).toString('hex')
-    const createdAt = Date.now()
-    const payload = { ...data, createdAt }
-    const key = `pending_signup:${token}`
+    const id = randomBytes(6).toString('hex')
+    const secret = this.generateSecret()
+    const tokenHash = await bcrypt.hash(secret, 10)
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
 
-    if (this.redis) {
-      try {
-        await this.redis.set(key, JSON.stringify(payload), 'EX', ttlSeconds)
-        return token
-      } catch (e) {
-        console.error('Redis set failed for PendingSignupService.create — falling back to in-memory store', e?.message || e)
-        // fall through to in-memory fallback
-      }
-    }
+    const created = await this.prisma.emailVerificationToken.create({
+      data: {
+        id,
+        email: data.email,
+        tokenHash,
+        data: { ...data },
+        expiresAt,
+      },
+    })
 
-    const expiresAt = createdAt + ttlSeconds * 1000
-    const timeout = setTimeout(() => this.store.delete(token), ttlSeconds * 1000)
-    // Allow process to exit even if the timer is pending (helps unit tests).
-    ;(timeout as any)?.unref?.()
-    this.store.set(token, { data: payload as PendingData, expiresAt, timeout })
-
-    return token
+    return this.makeToken(created.id, secret)
   }
 
   async get(token: string) {
-    const key = `pending_signup:${token}`
-    if (this.redis) {
-      try {
-        const raw = await this.redis.get(key)
-        if (!raw) return null
-        try { return JSON.parse(raw) as PendingData } catch (e) { return null }
-      } catch (e) {
-        console.error('Redis get failed for PendingSignupService.get — falling back to in-memory store', e?.message || e)
-        // fall through to in-memory fallback
-      }
-    }
+    const [id, secret] = String(token).split('.')
+    if (!id || !secret) return null
+    const row = await this.prisma.emailVerificationToken.findUnique({ where: { id } })
+    if (!row) return null
+    if (row.consumedAt) return null
+    if (new Date() > row.expiresAt) return null
 
-    const item = this.store.get(token)
-    if (!item) return null
-    if (item.expiresAt < Date.now()) {
-      clearTimeout(item.timeout)
-      this.store.delete(token)
-      return null
-    }
-    return item.data
+    const ok = await bcrypt.compare(secret, row.tokenHash)
+    if (!ok) return null
+    return row.data as PendingData | null
   }
 
   async update(token: string, patch: Partial<PendingData>) {
-    const key = `pending_signup:${token}`
-    if (this.redis) {
-      try {
-        const raw = await this.redis.get(key)
-        if (!raw) return null
-        let existing: PendingData
-        try { existing = JSON.parse(raw) as PendingData } catch (e) { return null }
-        const ttl = await this.redis.ttl(key)
-        if (ttl <= 0) return null
-        const next = { ...existing, ...patch }
-        await this.redis.set(key, JSON.stringify(next), 'EX', ttl)
-        return next
-      } catch (e) {
-        console.error('Redis update failed for PendingSignupService.update — falling back to in-memory store', e?.message || e)
-        // fall through to in-memory fallback
-      }
-    }
+    const [id, secret] = String(token).split('.')
+    if (!id || !secret) return null
+    const row = await this.prisma.emailVerificationToken.findUnique({ where: { id } })
+    if (!row) return null
+    if (row.consumedAt) return null
+    if (new Date() > row.expiresAt) return null
 
-    const item = this.store.get(token)
-    if (!item) return null
-    if (item.expiresAt < Date.now()) {
-      clearTimeout(item.timeout)
-      this.store.delete(token)
-      return null
-    }
-    const next = { ...item.data, ...patch } as PendingData
-    // Preserve original expiry
-    clearTimeout(item.timeout)
-    const remainingMs = Math.max(0, item.expiresAt - Date.now())
-    const timeout = setTimeout(() => this.store.delete(token), remainingMs)
-    ;(timeout as any)?.unref?.()
-    this.store.set(token, { data: next, expiresAt: item.expiresAt, timeout })
-    return next
+    const ok = await bcrypt.compare(secret, row.tokenHash)
+    if (!ok) return null
+
+    const current = (row.data || {}) as any
+    const nextData = { ...current, ...patch }
+    const updated = await this.prisma.emailVerificationToken.update({ where: { id }, data: { data: nextData } })
+    return updated.data as PendingData
   }
 
   async delete(token: string) {
-    const key = `pending_signup:${token}`
-    if (this.redis) {
-      try {
-        const res = await this.redis.del(key)
-        return res > 0
-      } catch (e) {
-        console.error('Redis del failed for PendingSignupService.delete — falling back to in-memory store', e?.message || e)
-        // fall through to in-memory fallback
-      }
+    const [id] = String(token).split('.')
+    if (!id) return false
+    try {
+      await this.prisma.emailVerificationToken.delete({ where: { id } })
+      return true
+    } catch (e) {
+      return false
     }
-
-    const item = this.store.get(token)
-    if (!item) return false
-    clearTimeout(item.timeout)
-    this.store.delete(token)
-    return true
   }
 }

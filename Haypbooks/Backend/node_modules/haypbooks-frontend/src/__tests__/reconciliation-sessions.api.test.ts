@@ -26,12 +26,21 @@ describe('Reconciliation sessions API', () => {
 
   test('POST creates a session and marks transactions reconciled', async () => {
     const acct = db.accounts[0]
-    const txns = db.transactions.filter(t => t.accountId === acct.id).slice(0, 3)
+    // pick some transactions for the account that are dated on or before the period end and not excluded
+    let txns = db.transactions.filter(t => t.accountId === acct.id && String(t.date || '').slice(0,10) <= '2025-01-31' && t.bankStatus !== 'excluded').slice(0, 3)
+    // If none found (edge cases), create a simple transaction to reconcile
+    if (!txns || txns.length === 0) {
+      const id = `txn_recon_${Math.random().toString(36).slice(2,8)}`
+      db.transactions.push({ id, date: '2025-01-10', description: 'Recon seed', category: 'Income', amount: 100, accountId: acct.id, bankStatus: 'for_review', source: 'manual', tags: [] })
+      txns = db.transactions.filter(t => t.accountId === acct.id && String(t.date || '').slice(0,10) <= '2025-01-31' && t.bankStatus !== 'excluded').slice(0, 3)
+    }
+    const clearedIds = txns.map(t => t.id)
+    const endingBalance = Number(txns.reduce((s: number, t: any) => s + Number(t.amount || 0), 0).toFixed(2))
     const payload = {
       accountId: acct.id,
       periodEnd: '2025-01-31',
-      endingBalance: 1000,
-      clearedIds: txns.map(t => t.id),
+      endingBalance,
+      clearedIds,
     }
     const res: any = await SESS_POST(makeReq('http://localhost/api/reconciliation/sessions', { method: 'POST', body: JSON.stringify(payload) }))
     expect(res.status).toBe(201)
@@ -49,10 +58,23 @@ describe('Reconciliation sessions API', () => {
 
   test('DELETE undoes a session and unreconciles affected transactions', async () => {
     const acct = db.accounts[0]
-    const txns = db.transactions.filter(t => t.accountId === acct.id).slice(0, 2)
-    const payload = { accountId: acct.id, periodEnd: '2025-01-31', endingBalance: 500, clearedIds: txns.map(t => t.id) }
+    const periodEnd = '2025-02-28'
+    let txns = db.transactions.filter(t => t.accountId === acct.id && String(t.date || '').slice(0,10) <= periodEnd && t.bankStatus !== 'excluded').slice(0, 2)
+    if (!txns || txns.length === 0) {
+      const id = `txn_recon_${Math.random().toString(36).slice(2,8)}`
+      db.transactions.push({ id, date: '2025-01-10', description: 'Recon seed', category: 'Income', amount: 100, accountId: acct.id, bankStatus: 'for_review', source: 'manual', tags: [] })
+      txns = db.transactions.filter(t => t.accountId === acct.id && String(t.date || '').slice(0,10) <= periodEnd && t.bankStatus !== 'excluded').slice(0, 2)
+    }
+    const prior = (db.reconcileSessions || []).filter(s => s.accountId === acct.id).slice().sort((a,b) => (b.periodEnd || '').localeCompare(a.periodEnd || '') || (b.createdAt || '').localeCompare(a.createdAt || ''))[0]
+    const priorEnd = Number(prior?.endingBalance || 0)
+    const sumAmounts = Number(txns.reduce((s:number,t:any)=> s + Number(t.amount||0),0).toFixed(2))
+    const payload = { accountId: acct.id, periodEnd, endingBalance: Number((priorEnd + sumAmounts).toFixed(2)), clearedIds: txns.map(t => t.id) }
     const create: any = await SESS_POST(makeReq('http://localhost/api/reconciliation/sessions', { method: 'POST', body: JSON.stringify(payload) }))
-    const { session } = await create.json()
+    if (create.status !== 201) { const errBody = await create.json().catch(()=>null); console.error('CREATE FAILED', create.status, errBody) }
+    expect(create.status).toBe(201)
+    const created = await create.json()
+    expect(created?.session).toBeDefined()
+    const session = created.session
     // Ensure reconciled
     for (const id of payload.clearedIds) expect(db.transactions.find(x => x.id === id)?.reconciled).toBe(true)
 

@@ -18,7 +18,9 @@ describe('Payroll API (basic e2e)', () => {
     prisma = app.get<PrismaService>(PrismaService)
     await app.init()
 
-    const tenant = await prisma.tenant.create({ data: { name: 'Payroll E2E', subdomain: `pay-e2e-${Math.random().toString(36).slice(2,7)}` } })
+    const tenantId = require('crypto').randomUUID()
+    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
+    const tenant = { id: tenantId }
     tenantId = tenant.id
   })
 
