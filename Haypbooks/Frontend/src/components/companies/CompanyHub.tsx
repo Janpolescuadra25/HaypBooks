@@ -89,6 +89,13 @@ export default function CompanyHub() {
           const j = await meRes.json()
           console.log('[CompanyHub] User profile:', j)
           setMe(j)
+          // If the user's Owner Workspace (tenant) name appears among returned companies, filter it out
+          try {
+            if (j && j.companyName) {
+              const nameToRemove = String(j.companyName).trim()
+              setOwned((prev) => (prev || []).filter((c: any) => String(c?.name || '').trim() !== nameToRemove))
+            }
+          } catch (e) { /* no-op */ }
         }
       } catch (e) {
         console.error('[CompanyHub] Failed to fetch user profile:', e)

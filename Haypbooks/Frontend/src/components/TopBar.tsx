@@ -84,11 +84,11 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
     if (userMenuRef.current) userMenuRef.current.setAttribute('aria-expanded', showUserMenu ? 'true' : 'false')
   }, [showUserMenu])
 
-  // fetch current user for display in topbar
-  const [user, setUser] = useState<any | null>(null)
+  // Initialize from stored user (so onboarding name shows immediately if available), then refresh
+  const [user, setUser] = useState<any | null>(() => authService.getStoredUser() || null)
   useEffect(() => {
     let mounted = true
-    authService.getCurrentUser().then((u) => { if (mounted) setUser(u) }).catch(() => { if (mounted) setUser(null) })
+    authService.getCurrentUser().then((u) => { if (mounted) setUser(u) }).catch(() => { if (mounted) {/* keep stored value if available */} })
     return () => { mounted = false }
   }, [])
 
