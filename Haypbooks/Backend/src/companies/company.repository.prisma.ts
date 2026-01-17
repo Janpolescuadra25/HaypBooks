@@ -520,17 +520,33 @@ export class CompanyRepository {
   // Create a child Company record (for multi-company tenants) and activate
   // the tenant trial (best-effort) when appropriate.
   async createCompanyRecord(data: any) {
+    // Normalize incoming name to avoid duplicates caused by trailing/leading whitespace
+    const normalizedName = typeof data.name === 'string' ? String(data.name).trim() : data.name
+
     // eslint-disable-next-line no-console
     console.info('[COMPANY-CHILD-CREATE] 🚀 Starting createCompanyRecord with data:', {
       tenantId: data.tenantId,
-      name: data.name,
+      name: normalizedName,
       legalName: data.legalName,
       country: data.country,
       allKeys: Object.keys(data)
     })
-    
-    const company = await this.prisma.company.create({ data })
-    
+
+    // Defensive idempotency: if a company with same tenantId + name (case-insensitive) already exists,
+    // return it instead of creating a duplicate. This prevents race/duplicate creation during onboarding.
+    try {
+      const existing = await this.prisma.company.findFirst({ where: { tenantId: data.tenantId, name: { equals: normalizedName, mode: 'insensitive' } } })
+      if (existing) {
+        console.info('[COMPANY-CHILD-CREATE] ⚠️ Company already exists; returning existing record to avoid duplicate', { companyId: existing.id, name: existing.name })
+        return existing
+      }
+    } catch (e) {
+      // If any error occurs, log and continue to attempt create (best-effort)
+      console.error('[COMPANY-CHILD-CREATE] Warning: failed to check existing company (continuing to create):', e?.message || e)
+    }
+
+    const company = await this.prisma.company.create({ data: { ...data, name: normalizedName } })
+
     // eslint-disable-next-line no-console
     console.info('[COMPANY-CHILD-CREATE] ✅ Company record created:', {
       companyId: company.id,
@@ -538,7 +554,7 @@ export class CompanyRepository {
       tenantId: company.tenantId,
       isActive: company.isActive
     })
-    
+
     // Increment companies created counter
     try {
       await this.prisma.tenant.update({
