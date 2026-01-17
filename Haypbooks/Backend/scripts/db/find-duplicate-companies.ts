@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 async function findDuplicates() {
   console.log('Scanning for duplicate companies per tenant (case-insensitive name)...')
   const rows: any[] = await prisma.$queryRaw`
-    SELECT c."tenantId", lower(c.name) as lname, json_agg(json_build_object('id', c.id, 'name', c.name, 'createdAt', c."createdAt" ORDER BY c."createdAt")) as companies, count(*)
+    SELECT c."tenantId", lower(c.name) as lname, count(*) as cnt, array_agg(json_build_object('id', c.id, 'name', c.name, 'createdAt', c."createdAt")) as companies
     FROM public."Company" c
     GROUP BY c."tenantId", lower(c.name)
     HAVING count(*) > 1

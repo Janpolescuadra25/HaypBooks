@@ -42,6 +42,8 @@ New utilities added:
 - `backfill-tenantid-from-company.ts` — conservative backfill of `tenantId` from related company rows. Dry-run by default; use `--apply` to perform updates (see `package.json` script `db:backfill:tenantid-from-company`).
 - `find-tenantid-orphans.ts` — scans common tables and reports counts and sample rows for records where `tenantId IS NULL`. Use to prioritize manual fixes for rows that cannot be backfilled from companies.
 
+- `merge-duplicate-companies.ts` — safe utility to detect duplicate Company rows that share the same tenant and case-insensitive name. For groups that have no dependent rows in known domain tables, the tool can delete duplicates while keeping the earliest-created company and decrement the tenant's `companiesCreated` counter. Run without `--apply` to perform a dry-run and inspect planned actions first.
+
 Recommended next steps:
 1. Run `npm run db:find-tenantid-orphans` against a staging copy and review sample rows.
 2. If safe, run `npm run db:backfill:tenantid-from-company -- --apply` in a maintenance window with DB backup.

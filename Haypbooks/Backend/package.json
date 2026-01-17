@@ -88,6 +88,7 @@
     "test:quick": "npm run migrate:init && node ./scripts/migrate/run-sql.js && npm run db:seed:dev && jest --runInBand test/payroll.unit-spec.ts",
     "db:seed": "node dist/prisma/seed.js",
     "db:cleanup:duplicate-companies": "ts-node ./scripts/db/cleanup-duplicate-companies.ts",
+    "db:merge-duplicate-companies": "ts-node ./scripts/db/merge-duplicate-companies.ts",
     "diag:tenants-missing-name": "ts-node ./scripts/db/find-tenants-missing-name.ts",
     "db:backfill:tenant-names": "ts-node ./scripts/db/backfill-tenant-names.ts",
     "db:cleanup-expired-tokens": "ts-node ./scripts/db/cleanup-expired-tokens.ts",
