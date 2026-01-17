@@ -37,4 +37,15 @@ describe('CompanyRepository.createCompanyRecord', () => {
     expect(res).toEqual(company)
     expect(mockPrisma.subscription.create).not.toHaveBeenCalled()
   })
+
+  test('is idempotent: returns existing company if name matches (case-insensitive) and does not create duplicate', async () => {
+    const existing = { id: 'c3', tenantId: 't3', name: 'Acme' }
+    mockPrisma.company.findFirst = jest.fn().mockResolvedValueOnce(existing)
+
+    const res = await repo.createCompanyRecord({ tenantId: 't3', name: '  acme  ' })
+    expect(res).toEqual(existing)
+    // Should not call create or tenant.update since we returned early
+    expect(mockPrisma.company.create).not.toHaveBeenCalled()
+    expect(mockPrisma.tenant.update).not.toHaveBeenCalled()
+  })
 })
