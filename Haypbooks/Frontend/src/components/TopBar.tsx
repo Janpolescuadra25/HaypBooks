@@ -16,8 +16,8 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
   const horizontalPadding = 63
 
   // Finalized TopBar values (locked from your selection)
-  // Reduced vertical padding to make the TopBar more compact and allow the title to sit visually centered
-  const topbarPaddingY = 3
+  // Slightly reduced vertical padding to make the TopBar more compact and keep the title visually centered
+  const topbarPaddingY = 2.5
   const topbarContentX = 0
   const navButtonSize = 11
 
@@ -221,13 +221,13 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
               </div>
             </div>
 
-              {/* Center workspace name (vertically centered inside header) */}
-              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none">
+              {/* Center workspace name (absolutely centered horizontally + vertically) */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
                 <div className="text-sm font-semibold text-slate-700">{user?.companyName ?? 'Your Owner Workspace'}</div>
               </div>
 
               {/* Divider */}
-              <div className="mt-2 border-t border-slate-100" />
+              <div className="mt-1 border-t border-slate-100" />
 
               {/* Second bar: quick actions */}
               <div className="mt-2 flex items-center gap-3">
@@ -271,7 +271,7 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
           </div>
         </div>
       )}
-      <div className={isCompact ? 'h-8' : 'h-10'}></div>
+      <div className={isCompact ? 'h-7' : 'h-9'}></div>
     </>
   )
 }
