@@ -1,0 +1,648 @@
+{
+  "Plan": [
+    {
+      "line": "  subscriptions Subscription[]",
+      "reason": "Opposite for Subscription.plan"
+    }
+  ],
+  "WorkspaceUser": [
+    {
+      "line": "  companyUsers CompanyUser[]",
+      "reason": "Opposite for CompanyUser.member"
+    },
+    {
+      "line": "  practiceUsers PracticeUser[]",
+      "reason": "Opposite for PracticeUser.member"
+    }
+  ],
+  "JournalEntry": [
+    {
+      "line": "  intercompanyTransactions IntercompanyTransaction[] @relation(\"IntercompanyFromJE\")",
+      "reason": "Opposite for IntercompanyTransaction.fromJournalEntry"
+    },
+    {
+      "line": "  intercompanyTransactions IntercompanyTransaction[] @relation(\"IntercompanyToJE\")",
+      "reason": "Opposite for IntercompanyTransaction.toJournalEntry"
+    },
+    {
+      "line": "  consolidationEntries ConsolidationEntry[]",
+      "reason": "Opposite for ConsolidationEntry.journalEntry"
+    },
+    {
+      "line": "  depreciationJournals DepreciationJournal[]",
+      "reason": "Opposite for DepreciationJournal.journalEntry"
+    },
+    {
+      "line": "  currencyRevaluations CurrencyRevaluation[]",
+      "reason": "Opposite for CurrencyRevaluation.journalEntry"
+    },
+    {
+      "line": "  closingEntries ClosingEntry[]",
+      "reason": "Opposite for ClosingEntry.journalEntry"
+    },
+    {
+      "line": "  yearEndCloses YearEndClose[]",
+      "reason": "Opposite for YearEndClose.journalEntry"
+    },
+    {
+      "line": "  dividends Dividend[]",
+      "reason": "Opposite for Dividend.journalEntry"
+    },
+    {
+      "line": "  payrollTaxPayments PayrollTaxPayment[]",
+      "reason": "Opposite for PayrollTaxPayment.journalEntry"
+    },
+    {
+      "line": "  accrualEntries AccrualEntry[]",
+      "reason": "Opposite for AccrualEntry.journalEntry"
+    },
+    {
+      "line": "  payrollAccruals PayrollAccrual[]",
+      "reason": "Opposite for PayrollAccrual.journalEntry"
+    },
+    {
+      "line": "  cOGSRecognitions COGSRecognition[]",
+      "reason": "Opposite for COGSRecognition.journalEntry"
+    },
+    {
+      "line": "  productionRuns ProductionRun[]",
+      "reason": "Opposite for ProductionRun.journalEntry"
+    },
+    {
+      "line": "  form2307s Form2307[]",
+      "reason": "Opposite for Form2307.journalEntry"
+    },
+    {
+      "line": "  creditNotes CreditNote[]",
+      "reason": "Opposite for CreditNote.journalEntry"
+    },
+    {
+      "line": "  debitNotes DebitNote[]",
+      "reason": "Opposite for DebitNote.journalEntry"
+    }
+  ],
+  "FixedAsset": [
+    {
+      "line": "  fixedAssetSchedules FixedAssetSchedule[]",
+      "reason": "Opposite for FixedAssetSchedule.asset"
+    },
+    {
+      "line": "  depreciationAccounts DepreciationAccount[]",
+      "reason": "Opposite for DepreciationAccount.asset"
+    }
+  ],
+  "Account": [
+    {
+      "line": "  depreciationAccounts DepreciationAccount[] @relation(\"DepreciationAccount_expense\")",
+      "reason": "Opposite for DepreciationAccount.expenseAccount"
+    },
+    {
+      "line": "  depreciationAccounts DepreciationAccount[] @relation(\"DepreciationAccount_accum\")",
+      "reason": "Opposite for DepreciationAccount.accumAccount"
+    },
+    {
+      "line": "  accountBalanceAudits AccountBalanceAudit[]",
+      "reason": "Opposite for AccountBalanceAudit.account"
+    },
+    {
+      "line": "  currencyRevaluationEntries CurrencyRevaluationEntry[]",
+      "reason": "Opposite for CurrencyRevaluationEntry.account"
+    },
+    {
+      "line": "  yearEndCloses YearEndClose[] @relation(\"YearEndClose_RE\")",
+      "reason": "Opposite for YearEndClose.retainedEarningsAccount"
+    },
+    {
+      "line": "  yearEndCloses YearEndClose[] @relation(\"YearEndClose_IS\")",
+      "reason": "Opposite for YearEndClose.incomeSummaryAccount"
+    },
+    {
+      "line": "  equityAccounts EquityAccount[]",
+      "reason": "Opposite for EquityAccount.account"
+    },
+    {
+      "line": "  payrollTaxLiabilities PayrollTaxLiability[]",
+      "reason": "Opposite for PayrollTaxLiability.account"
+    },
+    {
+      "line": "  accrualSchedules AccrualSchedule[] @relation(\"AccrualSchedule_Account\")",
+      "reason": "Opposite for AccrualSchedule.account"
+    },
+    {
+      "line": "  accrualSchedules AccrualSchedule[] @relation(\"AccrualSchedule_OffsetAccount\")",
+      "reason": "Opposite for AccrualSchedule.offsetAccount"
+    },
+    {
+      "line": "  accountSegments AccountSegment[]",
+      "reason": "Opposite for AccountSegment.parentAccount"
+    },
+    {
+      "line": "  items Item[] @relation(\"Item_cogsAccount\")",
+      "reason": "Opposite for Item.cogsAccount"
+    },
+    {
+      "line": "  items Item[] @relation(\"Item_inventoryReserve\")",
+      "reason": "Opposite for Item.inventoryReserveAccount"
+    },
+    {
+      "line": "  payrollAccruals PayrollAccrual[]",
+      "reason": "Opposite for PayrollAccrual.account"
+    },
+    {
+      "line": "  productionRuns ProductionRun[]",
+      "reason": "Opposite for ProductionRun.varianceAccount"
+    },
+    {
+      "line": "  deferredTaxs DeferredTax[]",
+      "reason": "Opposite for DeferredTax.account"
+    },
+    {
+      "line": "  withholdingTaxDeductions WithholdingTaxDeduction[] @relation(\"WithholdingTax_Account\")",
+      "reason": "Opposite for WithholdingTaxDeduction.account"
+    },
+    {
+      "line": "  finalTaxDeductions FinalTaxDeduction[] @relation(\"FinalTax_Account\")",
+      "reason": "Opposite for FinalTaxDeduction.account"
+    },
+    {
+      "line": "  percentageTaxs PercentageTax[] @relation(\"PercentageTax_Account\")",
+      "reason": "Opposite for PercentageTax.account"
+    },
+    {
+      "line": "  philippinePayrollDeductions PhilippinePayrollDeduction[] @relation(\"PhilPayrollDeduction_Account\")",
+      "reason": "Opposite for PhilippinePayrollDeduction.account"
+    },
+    {
+      "line": "  defaultAccountMappings DefaultAccountMapping[]",
+      "reason": "Opposite for DefaultAccountMapping.account"
+    },
+    {
+      "line": "  expenseClaimLines ExpenseClaimLine[]",
+      "reason": "Opposite for ExpenseClaimLine.account"
+    },
+    {
+      "line": "  cashOverShortEntries CashOverShortEntry[]",
+      "reason": "Opposite for CashOverShortEntry.account"
+    },
+    {
+      "line": "  cashOverShortRules CashOverShortRule[]",
+      "reason": "Opposite for CashOverShortRule.account"
+    },
+    {
+      "line": "  pettyCashFunds PettyCashFund[]",
+      "reason": "Opposite for PettyCashFund.account"
+    },
+    {
+      "line": "  pettyCashVouchers PettyCashVoucher[]",
+      "reason": "Opposite for PettyCashVoucher.account"
+    },
+    {
+      "line": "  writeOffs WriteOff[]",
+      "reason": "Opposite for WriteOff.account"
+    },
+    {
+      "line": "  subsidiaryLedgers SubsidiaryLedger[]",
+      "reason": "Opposite for SubsidiaryLedger.controlAccount"
+    },
+    {
+      "line": "  budgetActualComparisons BudgetActualComparison[]",
+      "reason": "Opposite for BudgetActualComparison.account"
+    }
+  ],
+  "FixedAssetSchedule": [
+    {
+      "line": "  depreciationJournals DepreciationJournal[]",
+      "reason": "Opposite for DepreciationJournal.schedule"
+    }
+  ],
+  "Class": [
+    {
+      "line": "  workspaceUsers WorkspaceUser[]",
+      "reason": "Opposite for WorkspaceUser.class"
+    }
+  ],
+  "Location": [
+    {
+      "line": "  workspaceUsers WorkspaceUser[]",
+      "reason": "Opposite for WorkspaceUser.location"
+    }
+  ],
+  "Project": [
+    {
+      "line": "  workspaceUsers WorkspaceUser[]",
+      "reason": "Opposite for WorkspaceUser.project"
+    },
+    {
+      "line": "  contractRetentions ContractRetention[]",
+      "reason": "Opposite for ContractRetention.project"
+    }
+  ],
+  "Practice": [
+    {
+      "line": "  workflows Workflow[]",
+      "reason": "Opposite for Workflow.practice"
+    },
+    {
+      "line": "  recurringSchedules RecurringSchedule[]",
+      "reason": "Opposite for RecurringSchedule.practice"
+    },
+    {
+      "line": "  subscriptionReminders SubscriptionReminder[]",
+      "reason": "Opposite for SubscriptionReminder.practice"
+    }
+  ],
+  "User": [
+    {
+      "line": "  workflows Workflow[]",
+      "reason": "Opposite for Workflow.createdBy"
+    },
+    {
+      "line": "  depositSlips DepositSlip[] @relation(\"DepositSlip_PreparedBy\")",
+      "reason": "Opposite for DepositSlip.preparedBy"
+    },
+    {
+      "line": "  depositSlips DepositSlip[] @relation(\"DepositSlip_LastPrintedBy\")",
+      "reason": "Opposite for DepositSlip.lastPrintedBy"
+    },
+    {
+      "line": "  refundApprovals RefundApproval[]",
+      "reason": "Opposite for RefundApproval.approver"
+    },
+    {
+      "line": "  risks Risk[]",
+      "reason": "Opposite for Risk.owner"
+    },
+    {
+      "line": "  notificationPreferences NotificationPreference[]",
+      "reason": "Opposite for NotificationPreference.user"
+    },
+    {
+      "line": "  apiKeys ApiKey[]",
+      "reason": "Opposite for ApiKey.owner"
+    },
+    {
+      "line": "  externalSystemAccessLogs ExternalSystemAccessLog[]",
+      "reason": "Opposite for ExternalSystemAccessLog.user"
+    }
+  ],
+  "Customer": [
+    {
+      "line": "  donations Donation[]",
+      "reason": "Opposite for Donation.donor"
+    },
+    {
+      "line": "  pledges Pledge[]",
+      "reason": "Opposite for Pledge.donor"
+    },
+    {
+      "line": "  leases Lease[]",
+      "reason": "Opposite for Lease.tenant"
+    },
+    {
+      "line": "  loyaltyAccounts LoyaltyAccount[]",
+      "reason": "Opposite for LoyaltyAccount.customer"
+    },
+    {
+      "line": "  quotes Quote[]",
+      "reason": "Opposite for Quote.customer"
+    },
+    {
+      "line": "  creditNotes CreditNote[]",
+      "reason": "Opposite for CreditNote.customer"
+    },
+    {
+      "line": "  dunningNotices DunningNotice[]",
+      "reason": "Opposite for DunningNotice.customer"
+    },
+    {
+      "line": "  customerStatements CustomerStatement[]",
+      "reason": "Opposite for CustomerStatement.customer"
+    },
+    {
+      "line": "  customerRefunds CustomerRefund[]",
+      "reason": "Opposite for CustomerRefund.customer"
+    }
+  ],
+  "Fund": [
+    {
+      "line": "  donations Donation[]",
+      "reason": "Opposite for Donation.matchedFund"
+    }
+  ],
+  "Vendor": [
+    {
+      "line": "  contractors Contractor[]",
+      "reason": "Opposite for Contractor.vendor"
+    },
+    {
+      "line": "  contractorPayments ContractorPayment[]",
+      "reason": "Opposite for ContractorPayment.vendor"
+    },
+    {
+      "line": "  withholdingTaxCertificates WithholdingTaxCertificate[]",
+      "reason": "Opposite for WithholdingTaxCertificate.vendor"
+    },
+    {
+      "line": "  form2307s Form2307[]",
+      "reason": "Opposite for Form2307.supplier"
+    },
+    {
+      "line": "  debitNotes DebitNote[]",
+      "reason": "Opposite for DebitNote.vendor"
+    },
+    {
+      "line": "  vendorRefunds VendorRefund[]",
+      "reason": "Opposite for VendorRefund.vendor"
+    }
+  ],
+  "BillPayment": [
+    {
+      "line": "  contractorPayments ContractorPayment[]",
+      "reason": "Opposite for ContractorPayment.billPayment"
+    },
+    {
+      "line": "  checks Check[]",
+      "reason": "Opposite for Check.payment"
+    }
+  ],
+  "DocumentTemplate": [
+    {
+      "line": "  paychecks Paycheck[]",
+      "reason": "Opposite for Paycheck.template"
+    },
+    {
+      "line": "  quotes Quote[]",
+      "reason": "Opposite for Quote.template"
+    },
+    {
+      "line": "  creditNotes CreditNote[]",
+      "reason": "Opposite for CreditNote.template"
+    },
+    {
+      "line": "  customerStatements CustomerStatement[]",
+      "reason": "Opposite for CustomerStatement.template"
+    },
+    {
+      "line": "  depositSlips DepositSlip[]",
+      "reason": "Opposite for DepositSlip.template"
+    },
+    {
+      "line": "  checks Check[]",
+      "reason": "Opposite for Check.template"
+    },
+    {
+      "line": "  purchaseOrders PurchaseOrder[]",
+      "reason": "Opposite for PurchaseOrder.template"
+    },
+    {
+      "line": "  vendorCredits VendorCredit[]",
+      "reason": "Opposite for VendorCredit.template"
+    },
+    {
+      "line": "  customerCredits CustomerCredit[]",
+      "reason": "Opposite for CustomerCredit.template"
+    }
+  ],
+  "Employee": [
+    {
+      "line": "  payrollAccruals PayrollAccrual[]",
+      "reason": "Opposite for PayrollAccrual.employee"
+    },
+    {
+      "line": "  expenseClaims ExpenseClaim[]",
+      "reason": "Opposite for ExpenseClaim.employee"
+    },
+    {
+      "line": "  pettyCashFunds PettyCashFund[]",
+      "reason": "Opposite for PettyCashFund.custodian"
+    }
+  ],
+  "Item": [
+    {
+      "line": "  inventoryReserves InventoryReserve[]",
+      "reason": "Opposite for InventoryReserve.item"
+    },
+    {
+      "line": "  cOGSRecognitions COGSRecognition[]",
+      "reason": "Opposite for COGSRecognition.item"
+    },
+    {
+      "line": "  productionRuns ProductionRun[]",
+      "reason": "Opposite for ProductionRun.item"
+    },
+    {
+      "line": "  quoteLines QuoteLine[]",
+      "reason": "Opposite for QuoteLine.item"
+    }
+  ],
+  "InvoiceLine": [
+    {
+      "line": "  cOGSRecognitions COGSRecognition[]",
+      "reason": "Opposite for COGSRecognition.invoiceLine"
+    }
+  ],
+  "InventoryTransactionLine": [
+    {
+      "line": "  cOGSRecognitions COGSRecognition[]",
+      "reason": "Opposite for COGSRecognition.inventoryTxLine"
+    }
+  ],
+  "InventoryTransaction": [
+    {
+      "line": "  inventoryAdjustmentRequests InventoryAdjustmentRequest[]",
+      "reason": "Opposite for InventoryAdjustmentRequest.transaction"
+    }
+  ],
+  "Country": [
+    {
+      "line": "  taxAuthorities TaxAuthority[]",
+      "reason": "Opposite for TaxAuthority.country"
+    },
+    {
+      "line": "  taxPeriodLocks TaxPeriodLock[]",
+      "reason": "Opposite for TaxPeriodLock.country"
+    },
+    {
+      "line": "  taxCalendars TaxCalendar[]",
+      "reason": "Opposite for TaxCalendar.country"
+    },
+    {
+      "line": "  complianceDeadlines ComplianceDeadline[]",
+      "reason": "Opposite for ComplianceDeadline.country"
+    },
+    {
+      "line": "  taxAttributeCarryforwards TaxAttributeCarryforward[]",
+      "reason": "Opposite for TaxAttributeCarryforward.country"
+    },
+    {
+      "line": "  taxIncentives TaxIncentive[]",
+      "reason": "Opposite for TaxIncentive.country"
+    },
+    {
+      "line": "  taxRules TaxRule[]",
+      "reason": "Opposite for TaxRule.country"
+    },
+    {
+      "line": "  vatRegistrations VatRegistration[]",
+      "reason": "Opposite for VatRegistration.country"
+    },
+    {
+      "line": "  documentRetentions DocumentRetention[]",
+      "reason": "Opposite for DocumentRetention.country"
+    }
+  ],
+  "TaxReturn": [
+    {
+      "line": "  taxObligations TaxObligation[]",
+      "reason": "Opposite for TaxObligation.taxReturn"
+    },
+    {
+      "line": "  taxAuditCases TaxAuditCase[]",
+      "reason": "Opposite for TaxAuditCase.taxReturn"
+    }
+  ],
+  "Attachment": [
+    {
+      "line": "  taxReturns TaxReturn[]",
+      "reason": "Opposite for TaxReturn.attachment"
+    }
+  ],
+  "TaxRate": [
+    {
+      "line": "  taxReturnLines TaxReturnLine[]",
+      "reason": "Opposite for TaxReturnLine.taxRate"
+    },
+    {
+      "line": "  salesTaxReturnLines SalesTaxReturnLine[]",
+      "reason": "Opposite for SalesTaxReturnLine.taxRate"
+    }
+  ],
+  "TaxJurisdiction": [
+    {
+      "line": "  taxReturnLines TaxReturnLine[]",
+      "reason": "Opposite for TaxReturnLine.jurisdiction"
+    },
+    {
+      "line": "  taxAttributeCarryforwards TaxAttributeCarryforward[]",
+      "reason": "Opposite for TaxAttributeCarryforward.jurisdiction"
+    },
+    {
+      "line": "  taxRules TaxRule[]",
+      "reason": "Opposite for TaxRule.jurisdiction"
+    },
+    {
+      "line": "  salesTaxReturnLines SalesTaxReturnLine[]",
+      "reason": "Opposite for SalesTaxReturnLine.jurisdiction"
+    },
+    {
+      "line": "  withholdingTaxDeductions WithholdingTaxDeduction[]",
+      "reason": "Opposite for WithholdingTaxDeduction.jurisdiction"
+    }
+  ],
+  "ChartOfAccountsTemplate": [
+    {
+      "line": "  companyChartOfAccountses CompanyChartOfAccounts[]",
+      "reason": "Opposite for CompanyChartOfAccounts.template"
+    }
+  ],
+  "Invoice": [
+    {
+      "line": "  creditNotes CreditNote[]",
+      "reason": "Opposite for CreditNote.invoice"
+    },
+    {
+      "line": "  dunningNotices DunningNotice[]",
+      "reason": "Opposite for DunningNotice.invoice"
+    },
+    {
+      "line": "  paymentReminders PaymentReminder[]",
+      "reason": "Opposite for PaymentReminder.invoice"
+    },
+    {
+      "line": "  disputes Dispute[]",
+      "reason": "Opposite for Dispute.invoice"
+    },
+    {
+      "line": "  chargebacks Chargeback[]",
+      "reason": "Opposite for Chargeback.invoice"
+    }
+  ],
+  "Bill": [
+    {
+      "line": "  debitNotes DebitNote[]",
+      "reason": "Opposite for DebitNote.bill"
+    }
+  ],
+  "DunningStep": [
+    {
+      "line": "  dunningNotices DunningNotice[]",
+      "reason": "Opposite for DunningNotice.step"
+    }
+  ],
+  "Subscription": [
+    {
+      "line": "  subscriptionReminders SubscriptionReminder[]",
+      "reason": "Opposite for SubscriptionReminder.subscription"
+    }
+  ],
+  "PaymentReceived": [
+    {
+      "line": "  chargebacks Chargeback[]",
+      "reason": "Opposite for Chargeback.payment"
+    }
+  ],
+  "BankAccount": [
+    {
+      "line": "  bankFeedAccounts BankFeedAccount[]",
+      "reason": "Opposite for BankFeedAccount.bankAccount"
+    },
+    {
+      "line": "  bankTransactionRaws BankTransactionRaw[]",
+      "reason": "Opposite for BankTransactionRaw.bankAccount"
+    },
+    {
+      "line": "  undepositedFundsBatchs UndepositedFundsBatch[]",
+      "reason": "Opposite for UndepositedFundsBatch.bankAccount"
+    },
+    {
+      "line": "  checks Check[]",
+      "reason": "Opposite for Check.bankAccount"
+    }
+  ],
+  "BankTransaction": [
+    {
+      "line": "  bankTransactionRaws BankTransactionRaw[]",
+      "reason": "Opposite for BankTransactionRaw.bankTransaction"
+    }
+  ],
+  "PurchaseOrder": [
+    {
+      "line": "  letterOfCredits LetterOfCredit[]",
+      "reason": "Opposite for LetterOfCredit.purchaseOrder"
+    }
+  ],
+  "Workspace": [
+    {
+      "line": "  vendorRefunds VendorRefund[]",
+      "reason": "Opposite for VendorRefund.workspace"
+    }
+  ],
+  "Budget": [
+    {
+      "line": "  budgetActualComparisons BudgetActualComparison[]",
+      "reason": "Opposite for BudgetActualComparison.budget"
+    }
+  ],
+  "ApiKey": [
+    {
+      "line": "  externalSystemAccessLogs ExternalSystemAccessLog[]",
+      "reason": "Opposite for ExternalSystemAccessLog.apiKey"
+    }
+  ],
+  "ExternalSystemConfig": [
+    {
+      "line": "  externalEntities ExternalEntity[]",
+      "reason": "Opposite for ExternalEntity.integration"
+    }
+  ]
+}
