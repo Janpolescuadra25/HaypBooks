@@ -1,0 +1,9 @@
+DO $$
+BEGIN
+  BEGIN
+    ALTER TYPE "PostingStatus" ADD VALUE 'REVIEWED';
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN
+    ALTER TYPE "PostingStatus" ADD VALUE 'APPROVED';
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END$$;

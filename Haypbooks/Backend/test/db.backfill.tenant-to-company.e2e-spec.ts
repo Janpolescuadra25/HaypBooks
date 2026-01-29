@@ -31,7 +31,7 @@ describe('DB backfill Tenant->Company (e2e)', () => {
 
     // Ensure there's a company to receive the backfill
     // Create with nullable fields explicitly set to null so backfill can populate them
-    const company = await prisma.company.create({ data: { tenantId: tenant.id, name: 'Backfill Company', currency: 'USD', businessType: null, industry: null, address: null, taxId: null, logoUrl: null, invoicePrefix: null, vatRegistered: null, vatRate: null, pricesInclusive: null } })
+    const company = await prisma.company.create({ data: { workspaceId: tenant.id, name: 'Backfill Company', currency: 'USD', businessType: null, industry: null, address: null, taxId: null, logoUrl: null, invoicePrefix: null, vatRegistered: null, vatRate: null, pricesInclusive: null } })
 
     // Run backfill script
     execSync('node ./scripts/db/backfill-tenant-to-company.js', { cwd: BACKEND_DIR, stdio: 'inherit' })

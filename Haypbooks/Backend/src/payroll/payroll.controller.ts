@@ -7,13 +7,13 @@ export class PayrollController {
 
   @Post('preview')
   async preview(@Body() body: any) {
-    const tenantId = body.tenantId
+    const tenantId = body.workspaceId
     return this.payroll.calculate(tenantId, body.rows || [])
   }
 
   @Post('submit')
   async submit(@Body() body: any) {
-    const tenantId = body.tenantId
+    const tenantId = body.workspaceId
     return this.payroll.submit(tenantId, { rows: body.rows || [], startDate: body.startDate, endDate: body.endDate, description: body.description })
   }
 }

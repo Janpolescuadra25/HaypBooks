@@ -10,7 +10,7 @@ export class BillsController {
   @UseGuards(JwtAuthGuard)
   async create(@Request() req, @Body() payload: any) {
     // The payload must include tenantId or companyId
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.billsService.createBill(tenantId, payload)
   }
 
@@ -23,7 +23,7 @@ export class BillsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async list(@Request() req, @Query() query: any) {
-    const tenantId = query.tenantId || req.user?.tenantId
+    const tenantId = query.workspaceId || req.user?.workspaceId
     const filter = query.status ? { status: query.status } : {}
     return this.billsService.listBills(tenantId, filter)
   }
@@ -31,7 +31,7 @@ export class BillsController {
   @Post(':id/payments')
   @UseGuards(JwtAuthGuard)
   async applyPayment(@Request() req, @Param('id') billId: string, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.billsService.applyPayment(tenantId, billId, payload.amount, payload)
   }
 }

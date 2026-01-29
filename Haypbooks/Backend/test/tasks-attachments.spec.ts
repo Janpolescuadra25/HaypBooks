@@ -42,7 +42,7 @@ describe('Tasks & Attachments API (e2e)', () => {
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
     const user = await prisma.user.findUnique({ where: { email } })
-    const task = await prisma.task.create({ data: { tenantId: tenant.id, title: 'API Archive Test', createdById: user!.id } })
+    const task = await prisma.task.create({ data: { workspaceId: tenant.id, title: 'API Archive Test', createdById: user!.id } })
 
     // archive
     await request(app.getHttpServer()).patch(`/api/tasks/${task.id}`).set('Authorization', `Bearer ${token}`).send({ archived: true }).expect(200)
@@ -55,7 +55,7 @@ describe('Tasks & Attachments API (e2e)', () => {
     expect(tdb2!.archivedAt).toBeNull()
 
     // cleanup
-    await prisma.task.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.task.deleteMany({ where: { workspaceId: tenant.id } })
     await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   }, 30000)
 
@@ -63,7 +63,7 @@ describe('Tasks & Attachments API (e2e)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    const attachment = await prisma.attachment.create({ data: { tenantId: tenant.id, entityType: 'TEST', entityId: 'eid', fileUrl: 'http://x', fileName: 'f' } })
+    const attachment = await prisma.attachment.create({ data: { workspaceId: tenant.id, entityType: 'TEST', entityId: 'eid', fileUrl: 'http://x', fileName: 'f' } })
 
     // check default
     expect(attachment.isPublic).toBe(false)
@@ -74,7 +74,7 @@ describe('Tasks & Attachments API (e2e)', () => {
     expect(a2!.isPublic).toBe(true)
 
     // cleanup
-    await prisma.attachment.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.attachment.deleteMany({ where: { workspaceId: tenant.id } })
     await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   })
 })

@@ -20,15 +20,15 @@ describe('Tenant creation and default role seeding', () => {
     const subdomain = `test-${Date.now()}`
     const tenant = await companyRepo.create({ name: 'Test Tenant', subdomain, baseCurrency: 'USD' })
 
-    const roles = await prisma.role.findMany({ where: { tenantId: tenant.id } })
+    const roles = await prisma.role.findMany({ where: { workspaceId: tenant.id } })
     const roleNames = roles.map(r => r.name)
 
     expect(roleNames).toEqual(expect.arrayContaining(['Owner', 'Admin', 'Bookkeeper', 'Viewer']))
 
     // cleanup
     await prisma.rolePermission.deleteMany({ where: { roleId: { in: roles.map(r => r.id) } } })
-    await prisma.role.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.role.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.workspaceUser.deleteMany({ where: { workspaceId: tenant.id } })
     await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   }, 20000)
 })

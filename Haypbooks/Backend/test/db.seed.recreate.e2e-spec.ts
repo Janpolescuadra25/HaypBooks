@@ -20,9 +20,9 @@ describe('DB recreate + seed integration (e2e)', () => {
   })
 
   it('creates the demo tenant and default roles', async () => {
-    const tenant = await prisma.tenant.findFirst({ where: { subdomain: 'demo' } })
+    const tenant = await prisma.workspace.findFirst({ where: { subdomain: 'demo' } })
     expect(tenant).toBeDefined()
-    const roles = await prisma.role.findMany({ where: { tenantId: tenant!.id }, orderBy: { name: 'asc' } })
+    const roles = await prisma.role.findMany({ where: { workspaceId: tenant!.id }, orderBy: { name: 'asc' } })
     const roleNames = roles.map(r => r.name)
     expect(roleNames).toEqual(expect.arrayContaining(['Owner','Admin','Bookkeeper','Viewer']))
   }, 20000)

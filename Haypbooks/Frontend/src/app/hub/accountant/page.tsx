@@ -1,9 +1,6 @@
-import AccountantHub from '@/components/accountant/AccountantHub'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return (
-    <main>
-      <AccountantHub />
-    </main>
-  )
+  // Accountant Hub page removed — redirect to unified Dashboard
+  redirect('/dashboard')
 }

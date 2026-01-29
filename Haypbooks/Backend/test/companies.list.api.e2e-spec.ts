@@ -41,11 +41,11 @@ describe('Companies list API (e2e)', () => {
     await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Owned Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
     await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","joinedAt") VALUES (${tenantId}::uuid, ${demoUser!.id}, ${'OWNER'}, ${true}, now()) ON CONFLICT ("tenantId","userId") DO NOTHING`
     // Ensure a Company row exists for this tenant so the companies API returns it
-    await prisma.company.create({ data: { tenantId, name: 'Owned Company', isActive: true } })
+    await prisma.company.create({ data: { workspaceId, name: 'Owned Company', isActive: true } })
 
     const res = await request(app.getHttpServer()).get('/api/companies?filter=owned').set('Authorization', `Bearer ${token}`).expect(200)
     expect(Array.isArray(res.body)).toBe(true)
-    const tenantIds = res.body.map((r: any) => r.tenantId)
+    const tenantIds = res.body.map((r: any) => r.workspaceId)
     expect(tenantIds).toContain(tenantId)
   }, 30000)
 
@@ -68,11 +68,11 @@ describe('Companies list API (e2e)', () => {
     await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "TenantInvite_tenantId_email_uq" ON public."TenantInvite" ("tenantId","email")`
     await prisma.$executeRaw`INSERT INTO public."TenantInvite" ("id","tenantId","email","invitedBy","invitedAt","status") VALUES (${inviteId}, ${tenantId}::uuid, ${'demo@haypbooks.test'}, ${inviterId}, now(), ${'PENDING'}) ON CONFLICT ("tenantId","email") DO NOTHING`
     // Ensure a Company exists for the invited tenant so the API can return it
-    await prisma.company.create({ data: { tenantId, name: 'Invited Company', isActive: true } })
+    await prisma.company.create({ data: { workspaceId, name: 'Invited Company', isActive: true } })
 
     const res = await request(app.getHttpServer()).get('/api/companies?filter=invited').set('Authorization', `Bearer ${token}`).expect(200)
     expect(Array.isArray(res.body)).toBe(true)
-    const tenantIds = res.body.map((r: any) => r.tenantId)
+    const tenantIds = res.body.map((r: any) => r.workspaceId)
     expect(tenantIds).toContain(tenantId)
   }, 30000)
 
@@ -80,7 +80,7 @@ describe('Companies list API (e2e)', () => {
     // Create a tenant and company not linked to demo user
     const tenantB = require('crypto').randomUUID()
     await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${tenantB}::uuid, ${'Other Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
-    const companyB = await prisma.company.create({ data: { tenantId: tenantB, name: 'Other Company', isActive: true } })
+    const companyB = await prisma.company.create({ data: { workspaceId: tenantB, name: 'Other Company', isActive: true } })
 
     // Demo user should NOT be able to GET this company
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'demo@haypbooks.test', password: 'password' }).expect(200)
@@ -99,13 +99,13 @@ describe('Companies list API (e2e)', () => {
     await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${tenantId}::uuid, ${'Inactive Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
     const demoUser = await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
     await prisma.$executeRaw`INSERT INTO public."TenantUser" ("tenantId","userId","role","isOwner","status","joinedAt") VALUES (${tenantId}::uuid, ${demoUser!.id}, ${'MEMBER'}, ${false}, ${'INACTIVE'}, now()) ON CONFLICT ("tenantId","userId") DO NOTHING`
-    await prisma.company.create({ data: { tenantId, name: 'Inactive Membership Company', isActive: true } })
+    await prisma.company.create({ data: { workspaceId, name: 'Inactive Membership Company', isActive: true } })
 
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'demo@haypbooks.test', password: 'password' }).expect(200)
     const token = login.body.token
 
     const res = await request(app.getHttpServer()).get('/api/companies?filter=owned').set('Authorization', `Bearer ${token}`).expect(200)
-    const tenantIds = res.body.map((r: any) => r.tenantId)
+    const tenantIds = res.body.map((r: any) => r.workspaceId)
     expect(tenantIds).not.toContain(tenantId)
   }, 30000)
 
@@ -113,7 +113,7 @@ describe('Companies list API (e2e)', () => {
     // Create a tenant and company not linked to demo user
     const foreignTenant = require('crypto').randomUUID()
     await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${foreignTenant}::uuid, ${'Foreign Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
-    const foreignCompany = await prisma.company.create({ data: { tenantId: foreignTenant, name: 'Foreign Company', isActive: true } })
+    const foreignCompany = await prisma.company.create({ data: { workspaceId: foreignTenant, name: 'Foreign Company', isActive: true } })
 
     // Login as demo user and fetch owned companies
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'demo@haypbooks.test', password: 'password' }).expect(200)

@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client'
 import * as dotenv from 'dotenv'
+const prisma = require('../scripts/db/prisma-client-compat')
 
 dotenv.config({ path: process.cwd() + '/.env' })
-const prisma = new PrismaClient()
 
 async function main() {
   console.log('Seeding AP & Tax sample data...')

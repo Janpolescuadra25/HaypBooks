@@ -7,12 +7,14 @@ import { assertCompanyBelongsToTenant } from '../common/company-utils'
 export class PurchaseOrdersService {
   constructor(private readonly prisma: PrismaService, private readonly inventory: InventoryService) {}
 
-  async createPurchaseOrder(tenantId: string, payload: any) {
+async createPurchaseOrder(tenantId: string, payload: any) {
+    const workspaceId = tenantId
+
     if (!payload.vendorId) throw new BadRequestException('vendorId required')
     await assertCompanyBelongsToTenant(this.prisma as any, payload.companyId, tenantId)
-    const po = await this.prisma.purchaseOrder.create({ data: { tenantId, companyId: payload.companyId || null, vendorId: payload.vendorId, poNumber: payload.poNumber || null, status: payload.status || 'OPEN', total: payload.total || 0 } })
+    const po = await this.prisma.purchaseOrder.create({ data: { workspaceId, companyId: payload.companyId || null, vendorId: payload.vendorId, poNumber: payload.poNumber || null, status: payload.status || 'OPEN', total: payload.total || 0 } })
     for (const l of payload.lines || []) {
-      await this.prisma.purchaseOrderLine.create({ data: { companyId: payload.companyId || null, purchaseOrder: { connect: { id: po.id } }, item: l.itemId ? { connect: { id: l.itemId } } : undefined, description: l.description || null, quantity: l.quantity || 0, rate: l.rate || 0, amount: l.amount || 0, tenant: { connect: { id: tenantId } } } })
+      await this.prisma.purchaseOrderLine.create({ data: { company: { connect: { id: payload.companyId } }, purchaseOrder: { connect: { id: po.id } }, item: l.itemId ? { connect: { id: l.itemId } } : undefined, description: l.description || null, quantity: l.quantity || 0, rate: l.rate || 0, amount: l.amount || 0, workspace: { connect: { id: tenantId } } } })
     }
     return po
   }
@@ -24,7 +26,7 @@ export class PurchaseOrdersService {
     if (!po.lines || po.lines.length === 0) throw new BadRequestException('PO has no lines')
 
     // find default stock location
-    const defaultLoc = await this.prisma.stockLocation.findFirst({ where: { tenantId, isDefault: true } })
+    const defaultLoc = await this.prisma.stockLocation.findFirst({ where: { companyId: po.companyId || undefined, isDefault: true } })
     const stockLocationId = payload.stockLocationId || defaultLoc?.id
     if (!stockLocationId) throw new BadRequestException('No stock location provided and no default exists')
 

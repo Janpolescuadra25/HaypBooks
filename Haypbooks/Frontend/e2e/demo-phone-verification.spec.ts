@@ -101,7 +101,7 @@ test('demo: signup → phone verification demo', async ({ page, request }) => {
   await page.getByRole('button', { name: /Verify OTP|Verify code/i }).click()
 
   // Expect redirect to hub selection
-  await page.waitForURL('/hub/selection')
+  await page.waitForURL('/workspace')
   await page.screenshot({ path: path.join(outDir, 'verification-complete-phone.png'), fullPage: true })
 
 })

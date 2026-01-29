@@ -13,6 +13,7 @@ type Invite = {
   tenant: {
     id: string
     name: string
+    workspaceName?: string
   }
   invitedByUser: {
     email: string
@@ -99,7 +100,7 @@ export default function PendingInvitesPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-slate-900">
-                      {invite.tenant.name}
+                      {invite.tenant.workspaceName || invite.tenant.name}
                     </h3>
                     <div className="mt-3 space-y-1 text-sm text-slate-500">
                       <p>

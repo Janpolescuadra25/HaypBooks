@@ -13,8 +13,8 @@ export class CompaniesController {
     const userId = req.user?.userId
     
     // Support creating additional companies under existing tenant
-    if (body.tenantId) {
-      return this.svc.createCompanyUnderTenant(body.tenantId, {
+    if (body.workspaceId) {
+      return this.svc.createCompanyUnderTenant(body.workspaceId, {
         name: body.name,
         currency: body.currency,
         business: body.business,

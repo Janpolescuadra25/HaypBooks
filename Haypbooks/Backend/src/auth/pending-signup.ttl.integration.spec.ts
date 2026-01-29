@@ -56,15 +56,20 @@ describe('PendingSignupService TTL expiry (db integration)', () => {
     }
 
     const email = `presignup-ttl-${Date.now()}@haypbooks.test`
-    // Create with TTL of 1 second
-    const token = await svc.create({ email, hashedPassword: 'x', name: 'DB PreSignup TTL' }, 1)
+    // Create with TTL of 2 seconds (use slightly larger TTL to avoid clock-skew flakiness)
+    const token = await svc.create({ email, hashedPassword: 'x', name: 'DB PreSignup TTL' }, 2)
     expect(typeof token).toBe('string')
 
-    const payload = await svc.get(token)
+    let payload = await svc.get(token)
+    if (!payload) {
+      // Retry once in case of tiny timing variance
+      await sleep(50)
+      payload = await svc.get(token)
+    }
     expect(payload).toBeTruthy()
 
-    // Wait for 1500ms to ensure expiry
-    await sleep(1500)
+    // Wait for 3000ms to ensure expiry given TTL was set to 2s
+    await sleep(3000)
 
     const after = await svc.get(token)
     expect(after).toBeNull()

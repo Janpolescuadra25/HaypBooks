@@ -12,13 +12,13 @@ jest.mock('next/navigation', () => ({
 }))
 
 describe('AccountantOnboarding', () => {
-  it('disables finish and shows inline error when firm name missing', () => {
+  it('disables create and shows inline error when workspace name missing', () => {
     render(<AccountantOnboarding />)
-    const btn = screen.getByRole('button', { name: /finish setup/i })
+    const btn = screen.getByRole('button', { name: /Create Accountant Workspace/i })
     expect(btn).toBeDisabled()
-    const input = screen.getByPlaceholderText(/your firm name/i)
+    const input = screen.getByPlaceholderText(/Maria Santos Accounting/i)
     fireEvent.blur(input)
-    expect(screen.getByText(/firm name is required/i)).toBeInTheDocument()
+    expect(screen.getByText(/Accountant Workspace name is required/i)).toBeInTheDocument()
     expect(screen.queryByText(/skip for now/i)).toBeNull()
   })
 

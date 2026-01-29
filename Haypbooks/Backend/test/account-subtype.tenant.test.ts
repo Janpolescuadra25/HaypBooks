@@ -21,7 +21,7 @@ describe('AccountSubType tenant RLS', () => {
   afterAll(async () => {
     // Only cleanup subtypes created by this test (best-effort); do NOT delete seeded tenants.
     try {
-      await prisma.accountSubType.deleteMany({ where: { tenantId: { in: [t1, t2] } } })
+      await prisma.accountSubType.deleteMany({ where: { workspaceId: { in: [t1, t2] } } })
     } catch (e) {
       // Ignore cleanup failures - may be due to legacy DB constraints
     }
@@ -38,7 +38,7 @@ describe('AccountSubType tenant RLS', () => {
     // Attempt to create a subtype under tenant 1 (best-effort). Some DBs have legacy
     // tenantId_old constraints that make direct creation via Prisma fail; ignore in that case.
     try {
-      await prisma.accountSubType.create({ data: { tenantId: t1, name: 'RLS_TEST_SUBTYPE', typeId: 1 } })
+      await prisma.accountSubType.create({ data: { workspaceId: t1, name: 'RLS_TEST_SUBTYPE', typeId: 1 } })
     } catch (e) {
       console.warn('accountSubType create skipped due to DB constraints', e?.message)
     }

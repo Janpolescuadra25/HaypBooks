@@ -113,7 +113,7 @@ export default function LoginPage() {
       } catch (e) { /* swallow logging errors */ }
       
       const params = new URLSearchParams(window.location.search)
-  const next = params.get('next') || '/hub/companies'
+  const next = params.get('next') || '/dashboard'
       // If server indicates MFA/verification is required, redirect to verification flow
       if ((response as any)?.mfaRequired || (response.user as any)?.requiresVerification) {
         // pass email in query so email code form can default to it; include origin
@@ -134,10 +134,10 @@ export default function LoginPage() {
         return
       }
 
-      // If server indicates the user needs to select a hub (multi-role, no preferredHub), show modal
+      // If server indicates the user needs to select a hub (multi-role, no preferredHub), show the Workspace selection page
       if ((response.user as any)?.requiresHubSelection) {
-        // Redirect to dedicated hub selection page to allow an explicit choice after sign-in
-        router.replace('/hub/selection')
+        // Redirect to dedicated Workspace selection page to allow an explicit choice after sign-in
+        router.replace('/workspace')
         setLoading(false)
         return
       }
@@ -187,9 +187,9 @@ export default function LoginPage() {
         return
       }
 
-      // Always show hub selection first so users explicitly choose or create a hub
-      // (Do not auto-redirect to a preferred hub immediately after login.)
-      router.replace('/hub/selection')
+      // Always show the Workspace selection first so users explicitly choose or create a workspace
+      // (Do not auto-redirect to a preferred workspace immediately after login.)
+      router.replace('/workspace')
     } catch (e: any) {
       // If aborted (either by our timeout or user navigation), show a consistent message
       if (e?.name === 'CanceledError' || e?.name === 'AbortError') {

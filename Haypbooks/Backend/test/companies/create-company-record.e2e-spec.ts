@@ -33,12 +33,12 @@ describe('CompanyRepository.createCompanyRecord (e2e)', () => {
 
       const db = await prisma.company.findUnique({ where: { id: created.id } })
       expect(db).toBeTruthy()
-      expect(db?.tenantId).toBe(tenantId)
+      expect(db?.workspaceId).toBe(tenantId)
 
     } finally {
       // Cleanup
-      try { await prisma.company.deleteMany({ where: { tenantId } }) } catch (e) { /* ignore */ }
-      try { await prisma.tenant.delete({ where: { id: tenantId } }) } catch (e) { /* ignore */ }
+      try { await prisma.company.deleteMany({ where: { workspaceId } }) } catch (e) { /* ignore */ }
+      try { await prisma.workspace.delete({ where: { id: workspaceId } }) } catch (e) { /* ignore */ }
     }
   })
 })

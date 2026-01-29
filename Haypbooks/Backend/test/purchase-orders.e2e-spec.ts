@@ -7,7 +7,7 @@ import { PrismaService } from '../src/repositories/prisma/prisma.service'
 describe('Purchase Orders (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
-  let tenantId: string
+  let workspaceId: string
   let itemId: string
   let locationId: string
   let poId: string
@@ -27,14 +27,14 @@ describe('Purchase Orders (e2e)', () => {
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
     tenantId = tenant.id
-    const loc = await prisma.stockLocation.create({ data: { tenantId, name: 'Main' } })
+    const loc = await prisma.stockLocation.create({ data: { workspaceId, name: 'Main' } })
     locationId = loc.id
-    const item = await prisma.item.create({ data: { tenantId, sku: 'POITEM-001', name: 'PO Item', type: 'INVENTORY' } })
+    const item = await prisma.item.create({ data: { workspaceId, sku: 'POITEM-001', name: 'PO Item', type: 'INVENTORY' } })
     itemId = item.id
 
     // Create accounts and map
-    const assetAcct = await prisma.account.create({ data: { tenantId, code: '1401', name: 'Inv Asset PO', typeId: 1 } })
-    const cogsAcct = await prisma.account.create({ data: { tenantId, code: '5101', name: 'COGS PO', typeId: 2 } })
+    const assetAcct = await prisma.account.create({ data: { workspaceId, code: '1401', name: 'Inv Asset PO', typeId: 1 } })
+    const cogsAcct = await prisma.account.create({ data: { workspaceId, code: '5101', name: 'COGS PO', typeId: 2 } })
     await prisma.item.update({ where: { id: item.id }, data: { inventoryAssetAccountId: assetAcct.id, cogsAccountId: cogsAcct.id } })
 
     // create a test user and login to receive JWT
@@ -46,32 +46,32 @@ describe('Purchase Orders (e2e)', () => {
 
   afterAll(async () => {
     // cleanup
-    await prisma.journalEntryLine.deleteMany({ where: { journal: { tenantId } } })
-    await prisma.journalEntry.deleteMany({ where: { tenantId } })
-    await prisma.inventoryTransactionLine.deleteMany({ where: { tenantId } })
-    await prisma.inventoryTransaction.deleteMany({ where: { tenantId } })
-    await prisma.stockLevel.deleteMany({ where: { tenantId } })
-    await prisma.inventoryCostLayer.deleteMany({ where: { tenantId } })
-    await prisma.stockLocation.deleteMany({ where: { tenantId } })
-    await prisma.item.deleteMany({ where: { tenantId } })
-    await prisma.account.deleteMany({ where: { tenantId } })
+    await prisma.journalEntryLine.deleteMany({ where: { journal: { workspaceId } } })
+    await prisma.journalEntry.deleteMany({ where: { workspaceId } })
+    await prisma.inventoryTransactionLine.deleteMany({ where: { workspaceId } })
+    await prisma.inventoryTransaction.deleteMany({ where: { workspaceId } })
+    await prisma.stockLevel.deleteMany({ where: { workspaceId } })
+    await prisma.inventoryCostLayer.deleteMany({ where: { workspaceId } })
+    await prisma.stockLocation.deleteMany({ where: { workspaceId } })
+    await prisma.item.deleteMany({ where: { workspaceId } })
+    await prisma.account.deleteMany({ where: { workspaceId } })
     // Delete purchase orders and their lines
-    const pos = await prisma.purchaseOrder.findMany({ where: { tenantId } })
+    const pos = await prisma.purchaseOrder.findMany({ where: { workspaceId } })
     const poIds = pos.map(p => p.id)
     if (poIds.length) await prisma.purchaseOrderLine.deleteMany({ where: { purchaseOrderId: { in: poIds } } })
-    await prisma.purchaseOrder.deleteMany({ where: { tenantId } })
-    await prisma.vendor.deleteMany({ where: { tenantId } })
-    await prisma.contact.deleteMany({ where: { tenantId } })
-    await prisma.tenant.deleteMany({ where: { id: tenantId } })
+    await prisma.purchaseOrder.deleteMany({ where: { workspaceId } })
+    await prisma.vendor.deleteMany({ where: { workspaceId } })
+    await prisma.contact.deleteMany({ where: { workspaceId } })
+    await prisma.tenant.deleteMany({ where: { id: workspaceId } })
 
     await app.close()
   })
 
   it('should create PO and receive it into stock', async () => {
     // create PO
-    const contact = await prisma.contact.create({ data: { tenantId, type: 'VENDOR', displayName: 'Vendor PO' } })
-    const vendor = await prisma.vendor.create({ data: { contactId: contact.id, tenantId } })
-    const invSuspense = await prisma.account.create({ data: { tenantId, code: 'INV-SUSPENSE', name: 'Inventory Suspense PO', typeId: 5 } })
+    const contact = await prisma.contact.create({ data: { workspaceId, type: 'VENDOR', displayName: 'Vendor PO' } })
+    const vendor = await prisma.vendor.create({ data: { contactId: contact.id, workspaceId } })
+    const invSuspense = await prisma.account.create({ data: { workspaceId, code: 'INV-SUSPENSE', name: 'Inventory Suspense PO', typeId: 5 } })
     const poPayload = {
       tenantId,
       vendorId: vendor.contactId,
@@ -87,7 +87,7 @@ describe('Purchase Orders (e2e)', () => {
     const r = await request(app.getHttpServer()).post(`/api/purchase-orders/${poId}/receive`).set('Authorization', `Bearer ${authToken}`).send(receivePayload).expect(201)
 
     // Verify inventory transaction was created and stock levels updated
-    const sl = await prisma.stockLevel.findFirst({ where: { tenantId, itemId } })
+    const sl = await prisma.stockLevel.findFirst({ where: { workspaceId, itemId } })
     expect(sl).toBeTruthy()
     if (!sl) throw new Error('Stocklevel missing')
     expect(sl.quantity.toNumber()).toBe(12)

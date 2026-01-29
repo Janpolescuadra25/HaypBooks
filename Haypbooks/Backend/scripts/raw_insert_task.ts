@@ -3,7 +3,7 @@ const p = new PrismaClient()
 async function main(){
   const t = await p.tenant.findFirst({ where: { subdomain: 'demo' } })
   const u = await p.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
-  const c = await p.company.findFirst({ where: { tenantId: t?.id } })
+  const c = await p.company.findFirst({ where: { workspaceId: t?.id } })
   console.log('tenant', t?.id)
   console.log('user', u?.id)
   console.log('company', c?.id)

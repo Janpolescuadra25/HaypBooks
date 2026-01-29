@@ -69,7 +69,7 @@
       </div>
 
       <!-- NOTE: After successful verification the app redirects to hub selection so the user can choose Owner or Accountant -->
-      <p class="text-center text-sm text-slate-500 mt-3">After successful verification you'll be redirected to <strong>/hub/selection</strong> to choose your Hub (Owner or Accountant).</p>
+      <p class="text-center text-sm text-slate-500 mt-3">After successful verification you'll be redirected to <strong>/workspace</strong> to choose your workspace (Company or Practice).</p>
     </form>
 
     <!-- Footer link -->

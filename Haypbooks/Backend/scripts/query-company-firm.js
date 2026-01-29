@@ -31,7 +31,7 @@ const { PrismaClient } = require('@prisma/client')
     // Also list recent companies that look like e2e runs
     const recentCompanies = await prisma.company.findMany({
       where: { name: { contains: 'E2E' } },
-      select: { id: true, tenantId: true, name: true, createdAt: true },
+      select: { id: true, workspaceId: true, name: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
       take: 50
     })

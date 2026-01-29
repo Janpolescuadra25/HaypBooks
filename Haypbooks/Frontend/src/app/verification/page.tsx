@@ -75,9 +75,9 @@ export default function VerificationPage() {
   const onVerified = React.useCallback(() => {
     try {
       // prefer router.replace for testability
-      router.replace('/hub/selection')
+      router.replace('/workspace')
     } catch (e) {
-      try { window.location.href = '/hub/selection' } catch (err) { /* swallow in tests */ }
+      try { window.location.href = '/workspace' } catch (err) { /* swallow in tests */ }
     }
   }, [router])
 

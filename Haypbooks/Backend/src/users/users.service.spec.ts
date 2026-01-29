@@ -22,10 +22,10 @@ describe('UsersService', () => {
     expect((res as any).password).toBeUndefined()
   })
 
-  test('updateProfile updates firmName only', async () => {
-    mockUserRepo.update.mockResolvedValue({ id: 'u1', firmName: 'F' })
-    const res = await usersService.updateProfile('u1', { firmName: 'F' })
-    expect(mockUserRepo.update).toHaveBeenCalledWith('u1', { firmName: 'F' })
-    expect(res.firmName).toBe('F')
+  test('updateProfile performs no-op update', async () => {
+    mockUserRepo.update.mockResolvedValue({ id: 'u1' })
+    const res = await usersService.updateProfile('u1', {})
+    expect(mockUserRepo.update).toHaveBeenCalledWith('u1', {})
+    expect(res.id).toBe('u1')
   })
 })

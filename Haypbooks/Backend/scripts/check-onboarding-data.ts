@@ -12,9 +12,9 @@ async function checkOnboardingData() {
   const user = await prisma.user.findUnique({
     where: { email },
     include: {
-      TenantUser: {
+      workspaceUsers: {
         include: {
-          tenant: {
+          workspace: {
             include: {
               companies: true
             }
@@ -33,20 +33,20 @@ async function checkOnboardingData() {
   console.log(`✅ User found: ID=${user.id}, email=${user.email}`)
   console.log(`   Onboarding complete: ${user.onboardingComplete}`)
   console.log(`   Onboarding mode: ${user.onboardingMode}`)
-  console.log(`   TenantUsers count: ${user.TenantUser.length}`)
+  console.log(`   workspaceUsers count: ${user.workspaceUsers?.length || 0}`)
   
-  if (user.TenantUser.length === 0) {
-    console.log('❌ No TenantUser relationships found')
+  if (!user.workspaceUsers || user.workspaceUsers.length === 0) {
+    console.log('❌ No workspaceUsers relationships found')
     await prisma.$disconnect()
     return
   }
   
-  for (const tu of user.TenantUser) {
-    console.log(`\n📋 TenantUser: isOwner=${tu.isOwner}, tenantId=${tu.tenantId}`)
+  for (const tu of user.workspaceUsers) {
+    console.log(`\n📋 workspaceUser: isOwner=${tu.isOwner}, workspaceId=${tu.workspaceId}`)
     
-    if (tu.tenant) {
-      console.log(`   ✅ Tenant: ID=${tu.tenant.id}, name=${tu.tenant.name || '(no name)'}`)
-      console.log(`   Companies: ${tu.tenant.companies.length}`)
+    if (tu.workspace) {
+      console.log(`   ✅ Workspace: ID=${tu.workspace.id}, workspaceName=${(tu.workspace as any).workspaceName || tu.workspace.name || '(no name)'}`)
+      console.log(`   Companies: ${tu.workspace.companies.length}`)
       
       for (const company of tu.tenant.companies) {
         console.log(`   🏢 Company: ID=${company.id}, name=${company.name}`)

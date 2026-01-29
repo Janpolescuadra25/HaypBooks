@@ -63,7 +63,7 @@ async function testOwnerSignupFlow() {
     
     // Step 2: Verify user has NO tenant initially
     console.log('\nStep 2: Verifying user has no tenant initially')
-    const tenantUsers = await prisma.tenantUser.findMany({
+    const tenantUsers = await prisma.workspaceUser.findMany({
       where: { userId: user.id },
     })
     
@@ -73,9 +73,10 @@ async function testOwnerSignupFlow() {
     
     // Step 3: Simulate onboarding completion by creating Tenant
     console.log('\nStep 3: Simulating onboarding - creating Tenant')
-    const tenant = await prisma.tenant.create({
+    const tenant = await prisma.workspace.create({
       data: {
         name: testName, // Should use signup name per Grok.9
+        workspaceName: testName, // New explicit workspace display name
         username: user.email.split('@')[0],
         trialStartsAt: new Date(),
         trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
@@ -92,13 +93,17 @@ async function testOwnerSignupFlow() {
       trialStartsAt: tenant.trialStartsAt,
       trialEndsAt: tenant.trialEndsAt,
     })
+
+    addResult('Tenant.workspaceName set from signup', !!tenant && tenant.workspaceName === testName, {
+      tenantWorkspaceName: tenant.workspaceName,
+    })
     
     // Step 4: Create TenantUser relationship
     console.log('\nStep 4: Creating TenantUser relationship')
-    const tenantUser = await prisma.tenantUser.create({
+    const tenantUser = await prisma.workspaceUser.create({
       data: {
         userId: user.id,
-        tenantId: tenant.id,
+        workspaceId: tenant.id,
         role: 'owner',
         isOwner: true,
         joinedAt: new Date(),
@@ -118,7 +123,7 @@ async function testOwnerSignupFlow() {
     const company = await prisma.company.create({
       data: {
         name: companyName,
-        tenantId: tenant.id,
+        workspaceId: tenant.id,
         currency: 'USD',
         isActive: true,
         fiscalYearStart: 1, // January
@@ -184,13 +189,13 @@ async function testOwnerSignupFlow() {
     const canLogin = !!(
       loginUser &&
       loginUser.isEmailVerified &&
-      loginUser.TenantUser.length > 0
+      loginUser.workspaceUsers && loginUser.workspaceUsers.length > 0
     )
     
     addResult('User can login and access tenant/companies', canLogin, {
       isEmailVerified: loginUser?.isEmailVerified,
-      activeTenants: loginUser?.TenantUser.filter(tu => tu.status === 'ACTIVE').length,
-      activeCompanies: loginUser?.TenantUser[0]?.tenant?.companies.filter(c => c.isActive).length,
+      activeTenants: loginUser?.workspaceUsers?.filter(tu => tu.status === 'ACTIVE').length,
+      activeCompanies: loginUser?.workspaceUsers?.[0]?.workspace?.companies.filter(c => c.isActive).length,
     })
     
     // Cleanup
@@ -198,8 +203,8 @@ async function testOwnerSignupFlow() {
     await prisma.company.delete({ where: { id: company.id } })
     await prisma.tenantUser.delete({ 
       where: { 
-        tenantId_userId: {
-          tenantId: tenantUser.tenantId,
+        workspaceId_userId: {
+          workspaceId: tenantUser.workspaceId,
           userId: tenantUser.userId,
         }
       } 
@@ -250,9 +255,10 @@ async function testAccountantSignupFlow() {
     
     // Step 2: Create firm workspace (Tenant)
     console.log('\nStep 2: Creating firm workspace (Tenant)')
-    const tenant = await prisma.tenant.create({
+    const tenant = await prisma.workspace.create({
       data: {
-        name: firmName, // Firm name as tenant name
+        name: firmName, // Firm name as workspace name
+        workspaceName: firmName, // Ensure workspace display name is populated
         firmName: firmName, // Also set legacy field
         username: user.email.split('@')[0],
         trialStartsAt: new Date(),
@@ -269,13 +275,17 @@ async function testAccountantSignupFlow() {
       tenantName: tenant.name,
       firmName: tenant.firmName,
     })
+
+    addResult('Tenant.workspaceName set for firm', !!tenant && tenant.workspaceName === firmName, {
+      tenantWorkspaceName: tenant.workspaceName,
+    })
     
     // Step 3: Link accountant to firm workspace
     console.log('\nStep 3: Linking accountant to firm workspace')
     const tenantUser = await prisma.tenantUser.create({
       data: {
         userId: user.id,
-        tenantId: tenant.id,
+        workspaceId: tenant.id,
         role: 'owner', // Accountant is owner of their firm
         isOwner: true,
         joinedAt: new Date(),
@@ -303,22 +313,22 @@ async function testAccountantSignupFlow() {
     
     const hasWorkspace = !!(
       accountantWithWorkspace &&
-      accountantWithWorkspace.TenantUser.length > 0 &&
+      accountantWithWorkspace.workspaceUsers && accountantWithWorkspace.workspaceUsers.length > 0 &&
       accountantWithWorkspace.firmName === firmName
     )
     
     addResult('Accountant has firm workspace access', hasWorkspace, {
       userFirmName: accountantWithWorkspace?.firmName,
-      tenantFirmName: accountantWithWorkspace?.TenantUser[0]?.tenant?.firmName,
-      activeTenants: accountantWithWorkspace?.TenantUser.length,
+      tenantFirmName: accountantWithWorkspace?.workspaceUsers?.[0]?.workspace?.firmName,
+      activeTenants: accountantWithWorkspace?.workspaceUsers?.length,
     })
     
     // Cleanup
     console.log('\nCleaning up test data...')
     await prisma.tenantUser.delete({ 
       where: { 
-        tenantId_userId: {
-          tenantId: tenantUser.tenantId,
+        workspaceId_userId: {
+          workspaceId: tenantUser.workspaceId,
           userId: tenantUser.userId,
         }
       } 
@@ -364,13 +374,15 @@ async function testSchemaConsistency() {
     `
     
     const hasTenantName = tenantColumns.some(col => col.column_name === 'name')
-    const hasTenantFirmName = tenantColumns.some(col => col.column_name === 'firmName')
+    const hasTenantFirmName = tenantColumns.some(col => col.column_name === 'firmName' || col.column_name === 'firmname')
+    const hasTenantWorkspaceName = tenantColumns.some(col => col.column_name === 'workspace_name' || col.column_name === 'workspaceName')
     const hasTenantTrialFields = tenantColumns.some(col => 
       col.column_name === 'trialStartsAt' || col.column_name === 'trialEndsAt'
     )
     
     addResult('Tenant.name field exists', hasTenantName)
     addResult('Tenant.firmName field exists', hasTenantFirmName)
+    addResult('Tenant.workspace_name field exists', hasTenantWorkspaceName)
     addResult('Tenant has trial fields', hasTenantTrialFields)
     
     // Check Company table indexes

@@ -7,7 +7,7 @@ import { PrismaService } from '../src/repositories/prisma/prisma.service'
 describe('Payroll API (basic e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
-  let tenantId: string
+  let workspaceId: string
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -26,22 +26,22 @@ describe('Payroll API (basic e2e)', () => {
 
   afterAll(async () => {
     // cleanup
-    await prisma.paycheckLine.deleteMany({ where: { paycheck: { tenantId } } }).catch(() => {})
-    await prisma.paycheck.deleteMany({ where: { tenantId } }).catch(() => {})
+    await prisma.paycheckLine.deleteMany({ where: { paycheck: { workspaceId } } }).catch(() => {})
+    await prisma.paycheck.deleteMany({ where: { workspaceId } }).catch(() => {})
     await prisma.payrollRunEmployee.deleteMany({ where: {} }).catch(() => {})
-    await prisma.payrollRun.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.paySchedule.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.employee.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.tenant.deleteMany({ where: { id: tenantId } })
+    await prisma.payrollRun.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.paySchedule.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.employee.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.tenant.deleteMany({ where: { id: workspaceId } })
     await app.close()
   })
 
   it('can create an employee and pay schedule', async () => {
-    const emp = await prisma.employee.create({ data: { tenantId, firstName: 'John', lastName: 'Smith', payRate: 25.0, payType: 'HOURLY' } })
+    const emp = await prisma.employee.create({ data: { workspaceId, firstName: 'John', lastName: 'Smith', payRate: 25.0, payType: 'HOURLY' } })
     expect(emp).toBeTruthy()
     expect(emp.firstName).toBe('John')
 
-    const ps = await prisma.paySchedule.create({ data: { tenantId, name: 'Biweekly', frequency: 'BIWEEKLY' } })
+    const ps = await prisma.paySchedule.create({ data: { workspaceId, name: 'Biweekly', frequency: 'BIWEEKLY' } })
     expect(ps).toBeTruthy()
     expect(ps.frequency).toBe('BIWEEKLY')
   })

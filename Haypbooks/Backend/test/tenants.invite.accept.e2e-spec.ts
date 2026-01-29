@@ -34,14 +34,14 @@ describe('Tenant Invite accept flow (e2e)', () => {
     expect(tenant).toBeTruthy()
 
     // Create role if missing
-    let acctRole = await prisma.role.findFirst({ where: { tenantId: tenant!.id, name: 'Accountant' } })
+    let acctRole = await prisma.role.findFirst({ where: { workspaceId: tenant!.id, name: 'Accountant' } })
     if (!acctRole) {
-      acctRole = await prisma.role.create({ data: { tenantId: tenant!.id, name: 'Accountant' } })
+      acctRole = await prisma.role.create({ data: { workspaceId: tenant!.id, name: 'Accountant' } })
     }
 
     // Create an invite for a new user email
     const email = `acct-accept-${Date.now()}@haypbooks.test`
-    const invite = await prisma.tenantInvite.create({ data: { tenantId: tenant!.id, email, roleId: acctRole.id, invitedBy: (await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } }))!.id } })
+    const invite = await prisma.tenantInvite.create({ data: { workspaceId: tenant!.id, email, roleId: acctRole.id, invitedBy: (await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } }))!.id } })
 
     // Create user via test endpoint
     const create = await request(app.getHttpServer()).post('/api/test/create-user').send({ email, password: 'Password1!', isEmailVerified: true })
@@ -62,7 +62,7 @@ describe('Tenant Invite accept flow (e2e)', () => {
     expect(user).toBeTruthy()
     expect(user!.isAccountant).toBe(true)
 
-    const tu = await prisma.tenantUser.findUnique({ where: { tenantId_userId: { tenantId: tenant!.id, userId: user!.id } } })
+    const tu = await prisma.workspaceUser.findUnique({ where: { workspaceId_userId: { workspaceId: tenant!.id, userId: user!.id } } })
     expect(tu).toBeTruthy()
     expect(tu!.status).toBe('ACTIVE')
   }, 20000)

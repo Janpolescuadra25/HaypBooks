@@ -30,7 +30,7 @@ test('renders owned companies and displays them', async () => {
 
 test('register entity card is present when companies are present', async () => {
   await act(async () => { render(<CompanyHub />) })
-  await waitFor(() => expect(screen.getByText(/new entity/i)).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText(/add company/i)).toBeInTheDocument())
   await waitFor(() => expect(screen.getByText(/expand portfolio/i)).toBeInTheDocument())
 })
 
@@ -68,7 +68,7 @@ test("shows a company created during signup/onboarding (e.g. \"JP's shop\")", as
   await act(async () => { render(<CompanyHub />) })
   await waitFor(() => expect(screen.getByText("JP's shop")).toBeInTheDocument())
   // verify register card still present
-  await waitFor(() => expect(screen.getByText(/new entity/i)).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText(/add company/i)).toBeInTheDocument())
 })
 
 // Defensive test: if API returns duplicate company rows, ensure we dedupe client-side

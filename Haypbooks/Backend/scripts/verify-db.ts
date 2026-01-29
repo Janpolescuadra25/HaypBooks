@@ -19,7 +19,7 @@ async function main() {
     console.log(`✅ UserSecurityEvent table: ${securityEventCount} records`);
 
     // Check Tenant table
-    const tenantCount = await prisma.tenant.count();
+    const tenantCount = await prisma.workspace.count();
     console.log(`✅ Tenant table: ${tenantCount} records`);
 
     // Check Company table

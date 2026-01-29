@@ -6,6 +6,30 @@ try {
   bcrypt = require('bcryptjs')
 }
 
-export const hash = (...args: any[]) => bcrypt.hash(...args)
-export const compare = (...args: any[]) => bcrypt.compare(...args)
+// Normalize to Promise-based API for both bcrypt native and bcryptjs
+export const hash = (value: string, saltOrRounds: number) => {
+  return new Promise<string>((resolve, reject) => {
+    try {
+      bcrypt.hash(value, saltOrRounds, (err: any, hash: string) => {
+        if (err) return reject(err)
+        resolve(hash)
+      })
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
+export const compare = (value: string, hash: string) => {
+  return new Promise<boolean>((resolve) => {
+    try {
+      bcrypt.compare(value, hash, (err: any, ok: boolean) => {
+        resolve(Boolean(ok))
+      })
+    } catch (e) {
+      resolve(false)
+    }
+  })
+}
+
 export default { hash, compare }

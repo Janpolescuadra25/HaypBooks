@@ -18,9 +18,9 @@ async function checkRecentE2EUsers() {
     },
     take: 5,
     include: {
-      TenantUser: {
+      workspaceUsers: {
         include: {
-          tenant: {
+          workspace: {
             include: {
               companies: true
             }
@@ -38,14 +38,14 @@ async function checkRecentE2EUsers() {
     console.log(`   Created: ${user.createdAt}`)
     console.log(`   Onboarding complete: ${user.onboardingComplete}`)
     console.log(`   Onboarding mode: ${user.onboardingMode || '(not set)'}`)
-    console.log(`   TenantUsers: ${user.TenantUser.length}`)
+    console.log(`   workspaceUsers: ${user.workspaceUsers?.length || 0}`)
     
-    for (const tu of user.TenantUser) {
-      console.log(`   - TenantUser: isOwner=${tu.isOwner}, tenantId=${tu.tenantId}`)
-      if (tu.tenant) {
-        console.log(`     Tenant: ${tu.tenant.name || '(no name)'} (ID=${tu.tenant.id})`)
-        console.log(`     Companies: ${tu.tenant.companies.length}`)
-        for (const company of tu.tenant.companies) {
+    for (const tu of user.workspaceUsers) {
+      console.log(`   - workspaceUser: isOwner=${tu.isOwner}, workspaceId=${tu.workspaceId}`)
+      if (tu.workspace) {
+        console.log(`     Workspace: ${(tu.workspace as any).workspaceName || tu.workspace.name || '(no name)'} (ID=${tu.workspace.id})`)
+        console.log(`     Companies: ${tu.workspace.companies.length}`)
+        for (const company of tu.workspace.companies) {
           console.log(`       🏢 ${company.name} (ID=${company.id})`)
         }
       }

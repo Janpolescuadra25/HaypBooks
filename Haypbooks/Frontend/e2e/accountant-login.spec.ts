@@ -43,8 +43,9 @@ test('Accountant login: selecting Accountant signs in to Accountant Hub', async 
 
   if (page.url().includes('/onboarding/accountant')) {
     // Complete the accountant onboarding
-    await page.fill('input[placeholder="Your firm name"]', 'Playwright Firm')
-    await page.getByRole('button', { name: 'Finish setup' }).click()
+    await page.fill('#firmName', 'Playwright Firm')
+    // Click either the page or modal submit button
+    await page.getByRole('button', { name: /Create Accountant Workspace|Finish setup/i }).click()
     await page.waitForURL(/\/hub\/accountant/, { timeout: 15000 })
   }
 

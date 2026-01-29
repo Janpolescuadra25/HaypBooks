@@ -85,7 +85,7 @@ describe('Verification page behavior', () => {
     expect(await screen.findByTestId('option-phone')).toBeInTheDocument()
   })
 
-  test('redirects to /hub/selection after successful email verification', async () => {
+  test('redirects to /workspace after successful email verification', async () => {
     ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false })
 
     render(<VerificationPage />)
@@ -111,10 +111,10 @@ describe('Verification page behavior', () => {
     // Prevent JSDOM navigation by stubbing location.assign and assert it was called
     await act(async () => { await user.click(verifyBtn) })
 
-    expect(routerMock.replace).toHaveBeenCalledWith('/hub/selection')
+    expect(routerMock.replace).toHaveBeenCalledWith('/workspace')
   })
 
-  test('redirects to /hub/selection after successful phone verification', async () => {
+  test('redirects to /workspace after successful phone verification', async () => {
     ;(authService.getCurrentUser as jest.Mock).mockResolvedValue({ email: 'dev@example.com', hasPin: false, phone: '+15551234567' })
 
     render(<VerificationPage />)
@@ -139,6 +139,6 @@ describe('Verification page behavior', () => {
     // Prevent JSDOM navigation by stubbing location.assign and assert it was called
     await act(async () => { await user.click(verifyBtn) })
 
-    expect(routerMock.replace).toHaveBeenCalledWith('/hub/selection')
+    expect(routerMock.replace).toHaveBeenCalledWith('/workspace')
   })
 })

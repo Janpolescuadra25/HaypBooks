@@ -28,11 +28,11 @@ describe('TenantUser lastAccessed e2e', () => {
   })
 
   it('seed sets lastAccessedAt and it can be updated', async () => {
-    const tenant = await prisma.tenant.findFirst({ where: { subdomain: 'demo' } })
+    const tenant = await prisma.workspace.findFirst({ where: { subdomain: 'demo' } })
     expect(tenant).toBeTruthy()
 
-    // Find seeded tenant user
-    const tu = await prisma.tenantUser.findFirst({ where: { tenantId: tenant!.id } })
+    // Find seeded workspace user
+    const tu = await prisma.workspaceUser.findFirst({ where: { workspaceId: tenant!.id } })
     expect(tu).toBeTruthy()
 
     // The seed should set lastAccessedAt on the demo tenant user
@@ -40,7 +40,7 @@ describe('TenantUser lastAccessed e2e', () => {
 
     // Update lastAccessedAt and verify
     const before = (tu as any).lastAccessedAt
-    const updated = await prisma.tenantUser.update({ where: { tenantId_userId: { tenantId: tenant!.id, userId: (tu as any).userId } }, data: { lastAccessedAt: new Date() } })
+    const updated = await prisma.tenantUser.update({ where: { workspaceId_userId: { workspaceId: tenant!.id, userId: (tu as any).userId } }, data: { lastAccessedAt: new Date() } })
     expect(updated.lastAccessedAt).toBeTruthy()
     const beforeTs = before ? new Date(before).getTime() : 0
     expect(new Date(updated.lastAccessedAt!).getTime()).toBeGreaterThan(beforeTs)

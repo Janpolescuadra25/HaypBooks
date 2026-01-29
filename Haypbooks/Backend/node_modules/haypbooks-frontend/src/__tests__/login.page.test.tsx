@@ -54,7 +54,7 @@ describe('LoginPage', () => {
     const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
 
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/selection'))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/workspace'))
     expect(localStorage.getItem('user')).toBeTruthy()
 
     // Case B: login returns user but getCurrentUser probe reports unverified -> verification
@@ -114,7 +114,7 @@ describe('LoginPage', () => {
     const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
 
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/selection'))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/workspace'))
     // ensure the login was called
     expect(authService.login).toHaveBeenCalled()
   })
@@ -133,7 +133,7 @@ describe('LoginPage', () => {
     const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
 
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/hub/selection'))
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/workspace'))
     expect(authService.login).toHaveBeenCalled()
   })
 

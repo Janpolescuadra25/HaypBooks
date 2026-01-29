@@ -184,7 +184,7 @@ async function comprehensiveDbCheck() {
     console.log('\n🏢 8. Multi-Tenant Verification...');
     const tenantCount = await prisma.tenant.count();
     const companyCount = await prisma.company.count();
-    const tenantUserCount = await prisma.tenantUser.count();
+    const tenantUserCount = await prisma.workspaceUser.count();
 
     console.log(`   ℹ️  Tenants: ${tenantCount}`);
     console.log(`   ℹ️  Companies: ${companyCount}`);

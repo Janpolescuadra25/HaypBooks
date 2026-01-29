@@ -12,7 +12,7 @@ async function run() {
     for (const u of users) {
       scanned++
       // Find tenantIds where user is owner (active)
-      const tus = await prisma.tenantUser.findMany({ where: { userId: u.id, status: 'ACTIVE' }, select: { tenantId: true, isOwner: true } })
+      const tus = await prisma.workspaceUser.findMany({ where: { userId: u.id, status: 'ACTIVE' }, select: { workspaceId: true, isOwner: true } })
       const ownerTenantIds = tus.filter(t => t.isOwner).map(t => t.tenantId)
       const memberTenantIds = tus.map(t => t.tenantId)
 
@@ -22,10 +22,10 @@ async function run() {
       // Gather companies returned by "owned" filter (try Prisma, fallback to raw)
       let companiesOwned: any[] = []
       try {
-        companiesOwned = await prisma.company.findMany({ where: { isActive: true, tenant: { users: { some: { userId: u.id, isOwner: true, status: 'ACTIVE' } } } }, select: { id: true, tenantId: true, name: true } })
+        companiesOwned = await prisma.company.findMany({ where: { isActive: true, tenant: { users: { some: { userId: u.id, isOwner: true, status: 'ACTIVE' } } } }, select: { id: true, workspaceId: true, name: true } })
       } catch (e) {
         // fallback
-        const tusForOwned = await prisma.tenantUser.findMany({ where: { userId: u.id, isOwner: true, status: 'ACTIVE' }, select: { tenantId: true } })
+        const tusForOwned = await prisma.workspaceUser.findMany({ where: { userId: u.id, isOwner: true, status: 'ACTIVE' }, select: { workspaceId: true } })
         const tenantIds = tusForOwned.map(t => t.tenantId)
         if (tenantIds.length > 0) {
           companiesOwned = await prisma.$queryRawUnsafe('SELECT c.id, c."tenantId", COALESCE(c.name,\'\') as name FROM public."Company" c WHERE c."tenantId" = ANY($1::text[]) AND c."isActive" = true', tenantIds)

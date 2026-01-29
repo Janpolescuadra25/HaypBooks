@@ -1,6 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./prisma-client-compat');
 (async () => {
-  const prisma = new PrismaClient();
   try {
     const t = await prisma.tenant.create({ data: { name: 'Prisma Test Tenant', baseCurrency: 'USD' } });
     console.log('created via prisma', t);

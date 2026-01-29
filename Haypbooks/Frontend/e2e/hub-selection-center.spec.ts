@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test'
 // If zoomed or on very small viewports, the page may be scrollable but the initial position
 // should place the card approximately in the vertical center of the viewport.
 test('hub selection card is centered on load', async ({ page }) => {
-  await page.goto('/hub/selection')
+  await page.goto('/workspace')
   const card = page.locator('main > div.bg-white')
   await expect(card).toBeVisible()
   const box = await card.boundingBox()

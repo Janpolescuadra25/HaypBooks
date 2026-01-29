@@ -55,5 +55,5 @@ test('uses created company from server response and shows toast + navigates to h
 
   // Wait for toast and navigation
   await waitFor(() => expect(toastPush).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', message: expect.stringContaining(companyName) })))
-  await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/hub/companies'))
+  await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/dashboard'))
 })

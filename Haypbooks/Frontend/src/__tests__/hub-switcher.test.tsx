@@ -8,6 +8,7 @@ describe('HubSwitcher', () => {
   test('renders and shows current hub', async () => {
     render(<HubSwitcher />)
     await waitFor(() => expect(screen.getByRole('button', { name: /switch hub/i })).toBeInTheDocument())
-    expect(screen.getByText(/Owner Workspace/i)).toBeInTheDocument()
+    // Owner Workspace removed; ensure hub label adapts (no Owner Workspace text expected)
+    expect(screen.queryByText(/Owner Workspace/i)).toBeNull()
   })
 })

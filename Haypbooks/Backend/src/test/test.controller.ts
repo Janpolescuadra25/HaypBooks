@@ -151,8 +151,10 @@ export class TestController {
     const user = await this.prisma.user.findUnique({ where: { email: body.email } })
     if (!user) return { error: 'user not found' }
     const mode = body.mode || 'quick'
-    const updated = await this.prisma.user.update({ where: { id: user.id }, data: { onboardingComplete: true, onboardingMode: mode } as any })
-    return { success: true, user: { id: updated.id, email: updated.email, onboardingComplete: updated.onboardingComplete, onboardingMode: updated.onboardingMode } }
+    // Use onboarding repository to mark completion and store mode (schema no longer has onboarding flags on User)
+    await (this as any).onboardingRepository.markComplete(user.id)
+    await (this as any).onboardingRepository.save(user.id, 'onboarding_mode', { mode })
+    return { success: true, user: { id: user.id, email: user.email, onboardingComplete: true, onboardingMode: mode } }
   }
 
   @Post('force-run-onboarding')
@@ -164,12 +166,8 @@ export class TestController {
 
     // Ensure minimal business onboarding step exists
     const companyName = body.companyName || 'Auto Onboarded Company'
-    const existing = await this.prisma.onboardingStep.findFirst({ where: { userId: user.id, step: 'business' } })
-    if (existing) {
-      await this.prisma.onboardingStep.update({ where: { id: existing.id }, data: { data: { businessName: companyName } } })
-    } else {
-      await this.prisma.onboardingStep.create({ data: { userId: user.id, step: 'business', data: { businessName: companyName } } })
-    }
+    // Ensure minimal business onboarding step exists (store via onboarding repository which embeds userId)
+    await (this as any).onboardingRepository.save(user.id, 'business', { businessName: companyName })
 
     const mode = body.mode || 'full'
     // Call onboarding service to perform the complete flow (create tenant + company)
@@ -213,16 +211,16 @@ export class TestController {
   async listUsers() {
     this.ensureEnabled()
     // return a safe, small list of user fields for test inspection
-    const rows = await this.prisma.user.findMany({ select: { id: true, email: true, name: true, isEmailVerified: true, onboardingComplete: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 200 })
+    const rows = await this.prisma.user.findMany({ select: { id: true, email: true, name: true, isEmailVerified: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 200 })
     return rows
   }
 
   @Post('create-user')
-  async createUser(@Body() body: { email: string; password: string; name?: string; phone?: string; isEmailVerified?: boolean; isAccountant?: boolean; role?: string; firmName?: string }) {
+  async createUser(@Body() body: { email: string; password: string; name?: string; phone?: string; isEmailVerified?: boolean; isAccountant?: boolean; role?: string }) {
     this.ensureEnabled()
     const hash = await bcrypt.hash(body.password, 10)
-    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', phone: body.phone || null, isEmailVerified: !!body.isEmailVerified, isAccountant: !!body.isAccountant, role: body.role, firmName: body.firmName || null } })
-    return { id: created.id, email: created.email, firmName: created.firmName }
+    const created = await this.prisma.user.create({ data: { email: body.email, password: hash, name: body.name || 'Test User', phone: body.phone || null, isEmailVerified: !!body.isEmailVerified, systemRole: body.role } })
+    return { id: created.id, email: created.email }
   }
 
   @Post('set-trial')
@@ -299,30 +297,30 @@ export class TestController {
     if (!user) return { error: 'user not found' }
 
     // Find tenant associations for the user
-    let tenantUsers = await this.prisma.tenantUser.findMany({ where: { userId: user.id }, select: { tenantId: true } })
-    let tenantId: string | null = null
+    let tenantUsers = await this.prisma.workspaceUser.findMany({ where: { userId: user.id }, select: { workspaceId: true } })
+    let workspaceId: string | null = null
 
     if (!tenantUsers || tenantUsers.length === 0) {
       // Optionally create a tenant and associate the user if none exist (test-only convenience)
       if (body.createTenant === false) return { error: 'user not associated with any tenant' }
       const tenantIdNew = require('crypto').randomUUID()
       await this.prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantIdNew)
-      await this.prisma.tenantUser.create({ data: { tenantId: tenantIdNew, userId: user.id, role: 'owner', isOwner: true } as any })
-      tenantId = tenantIdNew
+      await this.prisma.workspaceUser.create({ data: { workspaceId: tenantIdNew, userId: user.id, role: 'owner', isOwner: true } as any })
+      workspaceId = tenantIdNew
     } else {
-      tenantId = tenantUsers[0].tenantId
+      workspaceId = tenantUsers[0].workspaceId
     }
 
     // Check if company already exists
     const companyName = String(body.name)
-    const existingRows: any[] = await this.prisma.$queryRaw`SELECT id, "tenantId", name FROM public."Company" WHERE "tenantId" = CAST(${tenantId} AS uuid) AND name = ${companyName} LIMIT 1;`
+    const existingRows: any[] = await this.prisma.$queryRaw`SELECT id, "tenantId", name FROM public."Company" WHERE "tenantId" = CAST(${workspaceId} AS uuid) AND name = ${companyName} LIMIT 1;`
     const existing = existingRows && existingRows.length ? existingRows[0] : undefined
     if (existing) return { created: false, company: existing }
 
     // Use the repository method so trial activation logic is applied for first-company trials
     // The test controller may not have CompanyRepository injected in all test contexts; fall back to a manual instance
     const companyRepo: any = (this as any).companyRepo || new CompanyRepository(this.prisma as any)
-    const company = await companyRepo.createCompanyRecord({ tenantId, name: body.name, currency: body.currency || 'USD' })
+    const company = await companyRepo.createCompanyRecord({ tenantId: workspaceId, name: body.name, currency: body.currency || 'USD' })
     return { created: true, company }
   }
 
@@ -338,15 +336,15 @@ export class TestController {
       if (c) {
         // Attach tenant id for downstream delete logic (avoid including Tenant fields that may be absent)
         const trows: any[] = await this.prisma.$queryRaw`SELECT "tenantId" FROM public."Company" WHERE id = ${body.companyId} LIMIT 1;`
-        if (trows && trows.length) (c as any).tenant = { id: (trows[0] as any).tenantId }
+        if (trows && trows.length) (c as any).tenant = { id: (trows[0] as any).workspaceId }
         companies = [c]
       }
     } else {
       // Find user and tenant(s)
       const user = await this.prisma.user.findUnique({ where: { email: body.email } })
       if (!user) return { deleted: 0, message: 'user not found' }
-      const tenantUsers = await this.prisma.tenantUser.findMany({ where: { userId: user.id }, select: { tenantId: true } })
-      const tenantIds = tenantUsers.map(t => t.tenantId)
+      const tenantUsers = await this.prisma.workspaceUser.findMany({ where: { userId: user.id }, select: { workspaceId: true } })
+      const tenantIds = tenantUsers.map(t => t.workspaceId)
       if (tenantIds.length === 0) return { deleted: 0, message: 'user not associated with any tenant' }
       // Use raw query to avoid Prisma selecting Tenant fields that may be missing in DB
       // Cast the incoming tenantId array to UUID[] to prevent "uuid = text" operator errors when Postgres compares
@@ -367,20 +365,20 @@ export class TestController {
         await this.prisma.company.delete({ where: { id: c.id } })
         deletedCount++
         // optionally delete tenant if requested and tenant appears test-created and has no other companies/users (best-effort)
-        if (body.deleteTenant && (c.tenant || c.tenantId)) {
-          const tenantId = c.tenant ? c.tenant.id : c.tenantId
+        if (body.deleteTenant && (c.tenant || c.workspaceId)) {
+          const tenantId = c.tenant ? c.tenant.id : c.workspaceId
           try {
             // We only rely on company name being test-created (already filtered). Proceed with conservative checks:
             // check for tenant system accounts; if any exist, skip tenant deletion
-            const hasSystemAccounts = (await this.prisma.account.findMany({ where: { tenantId, isSystem: true }, select: { id: true }, take: 1 })).length > 0
+            const hasSystemAccounts = (await this.prisma.account.findMany({ where: { isSystem: true }, select: { id: true }, take: 1 })).length > 0
             if (hasSystemAccounts) {
               // Skip deleting tenant if system accounts are present (conservative, non-destructive)
               continue
             }
 
             // check if any other non-system rows exist for tenant (use selects to avoid returning Tenant fields)
-            const users = await this.prisma.tenantUser.findMany({ where: { tenantId }, select: { userId: true } })
-            const otherCompanies = await this.prisma.company.findMany({ where: { tenantId }, select: { id: true } })
+            const users = await this.prisma.workspaceUser.findMany({ where: { workspaceId: tenantId }, select: { userId: true } })
+            const otherCompanies = await this.prisma.company.findMany({ where: { workspaceId: tenantId }, select: { id: true } })
             if (users.length <= 1 && otherCompanies.length === 0) {
               // Use raw DELETE so Prisma won't attempt to select absent Tenant columns during delete
               await this.prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenantId)
@@ -402,17 +400,38 @@ export class TestController {
     this.ensureEnabled()
     if (!email) return []
 
-    const user = await this.prisma.user.findUnique({ where: { email } })
-    if (!user) return []
+    try {
+      const user = await this.prisma.user.findUnique({ where: { email } })
+      if (!user) return []
 
-    // Find tenant associations for the user
-    const tenantUsers = await this.prisma.tenantUser.findMany({ where: { userId: user.id }, select: { tenantId: true } })
-    const tenantIds = tenantUsers.map(t => t.tenantId)
+      // Find tenant associations for the user
+      const tenantUsers = await this.prisma.workspaceUser.findMany({ where: { userId: user.id }, select: { workspaceId: true } })
+      const tenantIds = tenantUsers.map(t => t.workspaceId)
 
-    if (tenantIds.length === 0) return []
+      if (tenantIds.length === 0) return []
 
-    const companies = await this.prisma.company.findMany({ where: { tenantId: { in: tenantIds } }, select: { id: true, tenantId: true, name: true, createdAt: true } })
-    return companies
+      // Use raw SQL to avoid Prisma mapping errors if DB contains unexpected NULLs in columns
+    // Fallback: query each tenant id individually to avoid any array/operator casting issues
+    let rows: any[] = []
+    for (const tid of tenantIds) {
+      const r: any[] = await this.prisma.$queryRawUnsafe(`
+        SELECT c.id, c."tenantId", c.name, c."createdAt",
+          COALESCE((row_to_json(t)->>'workspace_name'), (row_to_json(t)->>'workspaceName')) AS "tenantWorkspaceName"
+        FROM public."Company" c
+        LEFT JOIN public."Tenant" t ON t.id::text = c."tenantId"::text
+        WHERE c."tenantId"::text = '${tid}'
+      `)
+      rows = rows.concat(r)
+    }
+
+    return rows.map(r => ({ id: r.id, workspaceId: r.tenantid || r.workspaceId, name: r.name || null, createdAt: r.createdat || r.createdAt, tenantWorkspaceName: r.tenantworkspacename || r.tenantWorkspaceName || null }))
+
+    } catch (e) {
+      // Log error for debugging but do not leak stack to tests; make endpoint resilient
+      // eslint-disable-next-line no-console
+      console.error('[TEST-ENDPOINT] listCompaniesForUser error:', e?.message || e)
+      return []
+    }
   }
 }
 

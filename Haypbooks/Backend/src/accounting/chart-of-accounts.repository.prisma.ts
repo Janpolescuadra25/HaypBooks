@@ -11,7 +11,7 @@ export class ChartOfAccountsRepository {
   }
 
   async listForCompany(companyId: string) {
-    return this.prisma.account.findMany({ where: { tenantId: companyId } })
+    return this.prisma.account.findMany({ where: { companyId } })
   }
 
   async findById(id: string) {

@@ -1,0 +1,1 @@
+Purpose: Add denormalized active_project_count column to Tenant table (mapped from Workspace.activeProjectCount). This migration is idempotent and safe to run multiple times.

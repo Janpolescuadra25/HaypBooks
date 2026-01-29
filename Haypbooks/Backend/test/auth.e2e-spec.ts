@@ -195,10 +195,10 @@ describe('Auth e2e', () => {
     // Create verified accountant user
     await request(app.getHttpServer()).post('/api/test/create-user').send({ email, password, name: 'Acct Login', role: 'accountant', isAccountant: true, isEmailVerified: true }).expect(201)
 
-    // Login and expect redirect to accountant hub
+    // Login and expect redirect to workspace selection (no preferred workspace)
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     expect(login.body).toHaveProperty('redirect')
-    expect(login.body.redirect).toBe('/hub/accountant')
+    expect(login.body.redirect).toBe('/workspace')
   }, 20000)
 
   it('login respects preferredHub when present and redirects accordingly', async () => {
@@ -211,10 +211,10 @@ describe('Auth e2e', () => {
     expect(updateRes.status).toBeGreaterThanOrEqual(200)
     expect(updateRes.status).toBeLessThan(300)
 
-    // Login and expect redirect to companies (Owner Workspace)
+    // Login and expect redirect to dashboard when preferredHub is set
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     expect(login.body).toHaveProperty('redirect')
-    expect(login.body.redirect).toBe('/hub/companies')
+    expect(login.body.redirect).toBe('/dashboard')
   }, 20000)
 
   it('signup with existing email returns 409 and proper message (integration)', async () => {
@@ -463,7 +463,8 @@ describe('Auth e2e', () => {
     const savedAccountant = await prisma.user.findUnique({ where: { email: email2 } })
     expect(savedAccountant).toBeTruthy()
     expect((savedAccountant as any).accountantOnboardingComplete || (savedAccountant as any).onboardingComplete).toBeTruthy()
-    expect(savedAccountant?.firmName).toBeTruthy()
+    const tu = await prisma.workspaceUser.findFirst({ where: { userId: savedAccountant!.id, isOwner: true }, include: { workspace: true } })
+    expect(tu?.tenant?.firmName).toBeTruthy()
 
     // Also test that setting profile fields directly allows completion
     const email3 = `e2e-onb-profile-${Date.now()}@haypbooks.test`

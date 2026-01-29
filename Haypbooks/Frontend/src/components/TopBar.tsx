@@ -27,8 +27,8 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
   const router = useRouter()
 
   async function handleSwitchHub() {
-    // Navigate to the hub selection page
-    try { router.push('/hub/selection') } catch (e) {}
+    // Navigate to the Workspace selection page
+    try { router.push('/workspace') } catch (e) {}
   }
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -128,11 +128,11 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                 </div>
                 <div>
                   <h1 className={`${titleClass} text-slate-800`}>HAYPBOOKS</h1>
-                  <p className={`${subtitleClass} text-slate-500 flex items-center gap-2`}>{user?.companyName ? <span className="text-slate-700 font-semibold text-[10px]">{user.companyName}</span> : null}<span className="uppercase tracking-wide">OWNER WORKSPACE</span></p>
+                  <p className={`${subtitleClass} text-slate-500 flex items-center gap-2`}>{user?.companyName ? <span className="text-slate-700 font-semibold text-[10px]">{user.companyName}</span> : null}</p>
                 </div>
               </div>
 
-              {/* Navigation moved to second bar below on Owner Workspace */}
+              {/* Navigation moved to second bar below */}
               </div>
 
               {/* Right: User */}
@@ -171,7 +171,7 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                         <li>
                           <a href="#" className="flex items-center gap-3 text-slate-700 hover:text-slate-900">
                             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            OWNER PROFILE
+                            ACCOUNT PROFILE
                           </a>
                         </li>
                         <li>

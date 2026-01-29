@@ -7,7 +7,15 @@ export class CompanyService {
 
   async createCompany(payload: any) {
     // Validation/permissions go here
-    return this.repo.create(payload)
+    try {
+      console.info('[COMPANY-SERVICE] createCompany called with payload keys:', Object.keys(payload || {}))
+      const res = await this.repo.create(payload)
+      console.info('[COMPANY-SERVICE] createCompany result:', { id: res?.id })
+      return res
+    } catch (e) {
+      console.error('[COMPANY-SERVICE] createCompany error:', e?.message || e)
+      throw e
+    }
   }
 
   async getCompany(id: string) {
@@ -38,10 +46,10 @@ export class CompanyService {
     return this.repo.findRecentForUser(userId, limit)
   }
 
-  async updateLastAccessed(userId: string, tenantId: string) {
+  async updateLastAccessed(userId: string, workspaceId: string) {
     // Defensive: ensure inputs
-    if (!userId || !tenantId) return { success: false }
-    return this.repo.updateTenantUserLastAccessed(userId, tenantId)
+    if (!userId || !workspaceId) return { success: false }
+    return this.repo.updateTenantUserLastAccessed(userId, workspaceId)
   }
 
   async acceptInvite(userId: string, inviteId: string, setIsAccountant: boolean = false) {

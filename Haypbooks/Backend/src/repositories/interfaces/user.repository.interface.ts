@@ -19,7 +19,6 @@ export interface User {
   phoneHmac?: string | null
   // Optional company & firm names
   companyName?: string | null
-  firmName?: string | null
   // Whether the phone number has been verified (server-side canonical flag)
   isPhoneVerified?: boolean
   phoneVerifiedAt?: Date | null

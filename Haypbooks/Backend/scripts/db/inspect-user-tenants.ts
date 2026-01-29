@@ -9,12 +9,12 @@ if (!userId) {
 
 async function run() {
   console.info('[INSPECT-USER] userId=', userId)
-  const tenantUsers: any = await prisma.tenantUser.findMany({ where: { userId } })
+  const tenantUsers: any = await prisma.workspaceUser.findMany({ where: { userId } })
   console.info('[INSPECT-USER] tenantUser rows:', tenantUsers)
 
   const tenantIds = tenantUsers.map((t: any) => t.tenantId).filter(Boolean)
   if (tenantIds.length) {
-    const companies = await prisma.company.findMany({ where: { tenantId: { in: tenantIds } }, select: { id: true, name: true, tenantId: true } })
+    const companies = await prisma.company.findMany({ where: { workspaceId: { in: tenantIds } }, select: { id: true, name: true, workspaceId: true } })
     console.info('[INSPECT-USER] companies for user tenants:', companies)
   } else {
     console.info('[INSPECT-USER] no tenant memberships found for user')

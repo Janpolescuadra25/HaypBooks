@@ -1,0 +1,1 @@
+CREATE DATABASE haypbooks_migration_test;

@@ -51,7 +51,7 @@ test('multi-role login shows hub selection modal and handles selection', async (
   // (Optional) The accountant hub may show a Create Business Account flow in some envs; we do not require it here
 
   // Now go back to selection and choose Owner Workspace which should patch preferred hub and navigate to companies hub
-  await page.goto('/hub/selection')
+  await page.goto('/workspace')
   // Choose Owner Workspace and confirm navigation to companies hub
   await page.getByRole('link', { name: /Enter Owner Workspace/i }).click()
   await page.waitForURL(/\/hub\/companies/, { timeout: 5000 })

@@ -85,7 +85,7 @@ npm run test:serial -- src/__tests__/your.file.test.ts
 
 ## Running Playwright E2E locally (recommended for full flow verification)
 
-This repository includes Playwright E2E specs that exercise signup -> onboarding -> Owner Workspace end-to-end. These specs use backend test helper endpoints (OTP retrieval, create/delete test users/companies), so you must run a local backend with test endpoints enabled to run them locally.
+This repository includes Playwright E2E specs that exercise signup -> onboarding -> Dashboard end-to-end. These specs use backend test helper endpoints (OTP retrieval, create/delete test users/companies), so you must run a local backend with test endpoints enabled to run them locally.
 
 Steps to run locally:
 

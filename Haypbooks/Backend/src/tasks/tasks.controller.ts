@@ -11,35 +11,35 @@ export class TasksController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@Request() req, @Body() payload: CreateTaskDto) {
-    const tenantId = (payload as any).tenantId || req.user?.tenantId
+    const tenantId = (payload as any).workspaceId || req.user?.workspaceId
     return this.svc.createTask(tenantId, payload)
   }
 
   @Get()
   @UseGuards(JwtAuthGuard)
   async list(@Request() req, @Query() q: any) {
-    const tenantId = q.tenantId || req.user?.tenantId
+    const tenantId = q.workspaceId || req.user?.workspaceId
     return this.svc.listTasks(tenantId, q)
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async get(@Request() req, @Param('id') id: string) {
-    const tenantId = req.user?.tenantId
+    const tenantId = req.user?.workspaceId
     return this.svc.getTask(tenantId, id)
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   async update(@Request() req, @Param('id') id: string, @Body() payload: UpdateTaskDto) {
-    const tenantId = (payload as any).tenantId || req.user?.tenantId
+    const tenantId = (payload as any).workspaceId || req.user?.workspaceId
     return this.svc.updateTask(tenantId, id, payload)
   }
 
   @Post(':id/comments')
   @UseGuards(JwtAuthGuard)
   async comment(@Request() req, @Param('id') id: string, @Body() payload: { comment: string }) {
-    const tenantId = req.user?.tenantId
+    const tenantId = req.user?.workspaceId
     return this.svc.addComment(tenantId, id, req.user?.id, payload.comment)
   }
 }

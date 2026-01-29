@@ -19,7 +19,7 @@ async function main() {
   console.info('[CLEANUP] Starting duplicate companies cleanup', { dryRun, limit })
 
   // Fetch companies (we'll consider both active and inactive to diagnose duplicates fully)
-  const companies = await prisma.company.findMany({ select: { id: true, name: true, tenantId: true, createdAt: true, isActive: true } })
+  const companies = await prisma.company.findMany({ select: { id: true, name: true, workspaceId: true, createdAt: true, isActive: true } })
 
   // Group by tenantId + normalized(name)
   const groups: Record<string, Array<any>> = {}

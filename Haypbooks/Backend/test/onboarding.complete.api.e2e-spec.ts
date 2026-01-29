@@ -70,6 +70,11 @@ describe('Onboarding complete API (e2e)', () => {
         expect(comp.taxId).toBe('TIN123')
         expect(comp.logoUrl).toBe('https://cdn.example/logo.png')
         expect(comp.invoicePrefix).toBe('ACME')
+
+        // Tenant should have workspaceName set from onboarding businessName
+        const tenant = await prisma.workspace.findUnique({ where: { id: comp.workspaceId } })
+        expect(tenant).toBeTruthy()
+        expect((tenant as any).workspaceName).toBe(companyName)
       }
     }
 

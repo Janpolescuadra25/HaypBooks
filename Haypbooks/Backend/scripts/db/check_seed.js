@@ -1,6 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./prisma-client-compat');
 (async () => {
-  const prisma = new PrismaClient();
   try {
     const tenants = await prisma.tenant.count();
     const users = await prisma.user.count();

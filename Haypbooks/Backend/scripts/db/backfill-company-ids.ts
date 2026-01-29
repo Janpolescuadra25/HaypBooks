@@ -15,7 +15,7 @@ const TABLES = [
 
 async function run() {
   console.log('Starting companyId backfill...')
-  const tenants = await prisma.tenant.findMany({ select: { id: true } })
+  const tenants = await prisma.workspace.findMany({ select: { id: true } })
   for (const tenant of tenants) {
     console.log(`Processing tenant ${tenant.id}`)
     // Ensure a default company exists for the tenant
