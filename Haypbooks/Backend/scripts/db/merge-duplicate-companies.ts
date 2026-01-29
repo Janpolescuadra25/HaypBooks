@@ -66,7 +66,7 @@ async function run(dryRun = true) {
       // delete duplicate company rows
       await pr.company.deleteMany({ where: { id: { in: deleteIds } } })
       // decrement companiesCreated by number deleted; use group's tenantId
-      await pr.tenant.update({ where: { id: g.tenantId }, data: { companiesCreated: { decrement: deleteIds.length } } })
+      await pr.tenant.update({ where: { id: g.workspaceId }, data: { companiesCreated: { decrement: deleteIds.length } } })
     })
 
     console.log('  Deleted duplicates and adjusted tenant counter')

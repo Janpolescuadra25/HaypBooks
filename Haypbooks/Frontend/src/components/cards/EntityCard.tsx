@@ -55,7 +55,7 @@ export default function EntityCard({ id, name, subtitle, members, connected, var
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4"/>
           </svg>
         </div>
-        <h3 className="text-xs font-bold text-slate-900 mb-1">New Entity</h3>
+        <h3 className="text-xs font-bold text-slate-900 mb-1">Add Company</h3>
         <p className="text-[10px] text-slate-500 font-medium normal-case">Expand portfolio</p>
       </div>
     )

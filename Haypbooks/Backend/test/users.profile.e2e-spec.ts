@@ -42,7 +42,7 @@ describe('Users profile persistence (e2e)', () => {
     await prisma.user.deleteMany({ where: { email: { contains: 'profile-e2e' } } }).catch(() => {})
   })
 
-  it('PATCH /api/users/profile updates DB fields companyName and firmName', async () => {
+  it('PATCH /api/users/profile updates DB fields', async () => {
     const email = `profile-e2e-${Date.now()}@haypbooks.test`
     const password = 'ProfileE2E1!'
 
@@ -61,17 +61,15 @@ describe('Users profile persistence (e2e)', () => {
     const res = await request(app.getHttpServer())
       .patch('/api/users/profile')
       .set('Authorization', `Bearer ${token}`)
-      .send({ companyName: 'Acme Widgets', firmName: 'Rivera CPA' })
+      .send({ companyName: 'Acme Widgets' })
       .expect(200)
 
     expect(res.body).toHaveProperty('companyName', 'Acme Widgets')
-    expect(res.body).toHaveProperty('firmName', 'Rivera CPA')
 
     // Confirm DB persisted
     const saved = await prisma.user.findUnique({ where: { email } })
     expect(saved).toBeTruthy()
     expect((saved as any).companyName).toBe('Acme Widgets')
-    expect((saved as any).firmName).toBe('Rivera CPA')
   }, 30000)
 
   it('sanitizes (trims) input and converts empty string to null', async () => {
@@ -86,19 +84,17 @@ describe('Users profile persistence (e2e)', () => {
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
     const token = login.body.token as string
 
-    // Send with whitespace and empty firmName
+    // Send with whitespace input
     const res = await request(app.getHttpServer())
       .patch('/api/users/profile')
       .set('Authorization', `Bearer ${token}`)
-      .send({ companyName: '  Trim Co  ', firmName: '   ' })
+      .send({ companyName: '  Trim Co  ' })
       .expect(200)
 
     expect(res.body.companyName).toBe('Trim Co')
-    expect(res.body.firmName).toBeNull()
 
     const saved = await prisma.user.findUnique({ where: { email } })
     expect((saved as any).companyName).toBe('Trim Co')
-    expect((saved as any).firmName).toBeNull()
   }, 30000)
 
   it('returns 400 for too-long inputs', async () => {

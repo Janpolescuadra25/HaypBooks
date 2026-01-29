@@ -14,10 +14,10 @@ export default function HubSidebar() {
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto" aria-label="Hub navigation">
-        <Link href="/hub/companies" className={`sidebar-link flex items-center gap-4 px-4 py-3 rounded-lg font-medium ${isActive('/hub/companies') ? 'text-slate-900 active' : 'text-slate-700'}`} aria-current={isActive('/hub/companies') ? 'page' : undefined}>
+        <Link href="/dashboard" className={`sidebar-link flex items-center gap-4 px-4 py-3 rounded-lg font-medium ${isActive('/dashboard') ? 'text-slate-900 active' : 'text-slate-700'}`} aria-current={isActive('/dashboard') ? 'page' : undefined}>
           <svg className="icon w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-          <span className="flex-1">Companies</span>
-          <span className={`ml-2 w-1 h-6 rounded-full ${isActive('/hub/companies') ? 'bg-emerald-500 rotate-0' : 'bg-transparent'}`} aria-hidden />
+          <span className="flex-1">Dashboard</span>
+          <span className={`ml-2 w-1 h-6 rounded-full ${isActive('/dashboard') ? 'bg-emerald-500 rotate-0' : 'bg-transparent'}`} aria-hidden />
         </Link>
 
         <Link href="/hub/billing" className={`sidebar-link flex items-center gap-4 px-4 py-3 rounded-lg font-medium ${isActive('/hub/billing') ? 'text-slate-900 active' : 'text-slate-700'}`} aria-current={isActive('/hub/billing') ? 'page' : undefined}>

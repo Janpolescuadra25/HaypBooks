@@ -6,7 +6,7 @@ import { PrismaService } from '../src/repositories/prisma/prisma.service'
 describe('Fixed Assets (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
-  let tenantId: string
+  let workspaceId: string
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile()
@@ -19,23 +19,23 @@ describe('Fixed Assets (e2e)', () => {
   })
 
   afterAll(async () => {
-    await prisma.fixedAssetDepreciation.deleteMany({ where: { asset: { tenantId } } })
-    await prisma.fixedAsset.deleteMany({ where: { tenantId } })
-    await prisma.fixedAssetCategory.deleteMany({ where: { tenantId } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId } })
+    await prisma.fixedAssetDepreciation.deleteMany({ where: { asset: { workspaceId } } })
+    await prisma.fixedAsset.deleteMany({ where: { workspaceId } })
+    await prisma.fixedAssetCategory.deleteMany({ where: { workspaceId } })
+    await prisma.workspaceUser.deleteMany({ where: { workspaceId } })
     await prisma.user.deleteMany({ where: { email: 'fixed-assets-test@example.com' } })
-    await prisma.tenant.deleteMany({ where: { id: tenantId } })
+    await prisma.tenant.deleteMany({ where: { id: workspaceId } })
     await app.close()
   })
 
   it('creates fixed asset, category and depreciation entries', async () => {
-    const fac = await prisma.fixedAssetCategory.create({ data: { tenantId, name: 'Office Equipment' } })
+    const fac = await prisma.fixedAssetCategory.create({ data: { workspaceId, name: 'Office Equipment' } })
     expect(fac).toBeDefined()
 
-    const asset = await prisma.fixedAsset.create({ data: { tenantId, categoryId: fac.id, name: 'Desktop Workstation', acquisitionDate: new Date(), cost: 3000, salvageValue: 300, usefulLifeMonths: 60 } })
+    const asset = await prisma.fixedAsset.create({ data: { workspaceId, categoryId: fac.id, name: 'Desktop Workstation', acquisitionDate: new Date(), cost: 3000, salvageValue: 300, usefulLifeMonths: 60 } })
     expect(asset).toBeDefined()
 
-    const depr = await prisma.fixedAssetDepreciation.create({ data: { assetId: asset.id, tenantId, periodStart: new Date(), periodEnd: new Date(Date.now()+30*24*60*60*1000), amount: 50.00 } })
+    const depr = await prisma.fixedAssetDepreciation.create({ data: { assetId: asset.id, workspaceId, periodStart: new Date(), periodEnd: new Date(Date.now()+30*24*60*60*1000), amount: 50.00 } })
     expect(depr).toBeDefined()
 
     const loaded = await prisma.fixedAsset.findUnique({ where: { id: asset.id }, include: { depreciations: true } })

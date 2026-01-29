@@ -46,7 +46,7 @@ describe('Subscription & Tenant Trial (e2e)', () => {
     }
 
     // Ensure tenant had trial activated
-    const tenant = await prisma.tenant.findUnique({ where: { id: company1.tenantId }, select: { trialUsed: true, trialEndsAt: true } })
+    const tenant = await prisma.workspace.findUnique({ where: { id: company1.workspaceId }, select: { trialUsed: true, trialEndsAt: true } })
     expect(tenant).toBeTruthy()
     expect(tenant?.trialUsed).toBe(true)
     expect(tenant?.trialEndsAt).toBeTruthy()
@@ -74,7 +74,7 @@ describe('Subscription & Tenant Trial (e2e)', () => {
     if (subs2.length !== 0) expect(subs2.length).toBe(0)
 
     // Tenant trialEnd should be unchanged
-    const tenantAfter = await prisma.tenant.findUnique({ where: { id: company1.tenantId }, select: { trialUsed: true, trialEndsAt: true } })
+    const tenantAfter = await prisma.tenant.findUnique({ where: { id: company1.workspaceId }, select: { trialUsed: true, trialEndsAt: true } })
     expect(tenantAfter!.trialUsed).toBe(true)
     expect(tenantAfter!.trialEndsAt!.toISOString()).toBe(firstTrialEnds)
 

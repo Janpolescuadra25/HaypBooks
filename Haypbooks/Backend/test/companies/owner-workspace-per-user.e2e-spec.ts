@@ -59,7 +59,7 @@ describe('Owner Workspace per-user company visibility (e2e)', () => {
     // Create a company for a separate tenant and ensure it is NOT returned
     const otherTenantId = require('crypto').randomUUID()
     await prisma.$executeRaw`INSERT INTO public."Tenant" ("id","name","baseCurrency","createdAt","updatedAt") VALUES (${otherTenantId}::uuid, ${'Foreign Tenant'}, ${'USD'}, now(), now()) ON CONFLICT ("id") DO NOTHING`
-    const foreignCompany = await prisma.company.create({ data: { tenantId: otherTenantId, name: `Foreign Company E2E ${s}`, isActive: true } })
+    const foreignCompany = await prisma.company.create({ data: { workspaceId: otherTenantId, name: `Foreign Company E2E ${s}`, isActive: true } })
 
     const res2 = await request(app.getHttpServer()).get('/api/companies?filter=owned').set('Authorization', `Bearer ${token}`).expect(200)
     const ids = (res2.body || []).map((r: any) => r.id)

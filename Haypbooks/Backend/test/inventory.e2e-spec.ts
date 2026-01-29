@@ -8,7 +8,7 @@ import { retryRequest } from './http.retry'
 describe('Inventory API (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
-  let tenantId: string
+  let workspaceId: string
   let itemId: string
   let locationId: string
   let authToken: string
@@ -33,14 +33,14 @@ describe('Inventory API (e2e)', () => {
     })
     tenantId = tenant.id
 
-    const location = await prisma.stockLocation.create({ data: { tenantId, name: 'Main' } })
+    const location = await prisma.stockLocation.create({ data: { workspaceId, name: 'Main' } })
     locationId = location.id
 
-    const item = await prisma.item.create({ data: { tenantId, sku: 'E2E-001', name: 'E2E Widget', type: 'INVENTORY' } })
+    const item = await prisma.item.create({ data: { workspaceId, sku: 'E2E-001', name: 'E2E Widget', type: 'INVENTORY' } })
     // create accounts
-    const assetAcct = await prisma.account.create({ data: { tenantId, code: '1400', name: 'Inventory Asset (E2E)', typeId: 1 } })
-    const cogsAcct = await prisma.account.create({ data: { tenantId, code: '5100', name: 'COGS (E2E)', typeId: 2 } })
-    const invSuspense = await prisma.account.create({ data: { tenantId, code: 'INV-SUSPENSE', name: 'Inventory Suspense (E2E)', typeId: 5 } })
+    const assetAcct = await prisma.account.create({ data: { workspaceId, code: '1400', name: 'Inventory Asset (E2E)', typeId: 1 } })
+    const cogsAcct = await prisma.account.create({ data: { workspaceId, code: '5100', name: 'COGS (E2E)', typeId: 2 } })
+    const invSuspense = await prisma.account.create({ data: { workspaceId, code: 'INV-SUSPENSE', name: 'Inventory Suspense (E2E)', typeId: 5 } })
     await prisma.item.update({ where: { id: item.id }, data: { inventoryAssetAccountId: assetAcct.id, cogsAccountId: cogsAcct.id } })
 
     // create a test user and login to receive JWT
@@ -53,16 +53,16 @@ describe('Inventory API (e2e)', () => {
 
   afterAll(async () => {
     // Cleanup
-    await prisma.inventoryTransactionLine.deleteMany({ where: { tenantId } })
-    await prisma.inventoryTransaction.deleteMany({ where: { tenantId } })
-    await prisma.stockLevel.deleteMany({ where: { tenantId } })
-    await prisma.stockLocation.deleteMany({ where: { tenantId } })
-    await prisma.inventoryCostLayer.deleteMany({ where: { tenantId } })
-    await prisma.item.deleteMany({ where: { tenantId } })
-    await prisma.journalEntryLine.deleteMany({ where: { journal: { tenantId } } })
-    await prisma.journalEntry.deleteMany({ where: { tenantId } })
-    await prisma.account.deleteMany({ where: { tenantId } })
-    await prisma.tenant.deleteMany({ where: { id: tenantId } })
+    await prisma.inventoryTransactionLine.deleteMany({ where: { workspaceId } })
+    await prisma.inventoryTransaction.deleteMany({ where: { workspaceId } })
+    await prisma.stockLevel.deleteMany({ where: { workspaceId } })
+    await prisma.stockLocation.deleteMany({ where: { workspaceId } })
+    await prisma.inventoryCostLayer.deleteMany({ where: { workspaceId } })
+    await prisma.item.deleteMany({ where: { workspaceId } })
+    await prisma.journalEntryLine.deleteMany({ where: { journal: { workspaceId } } })
+    await prisma.journalEntry.deleteMany({ where: { workspaceId } })
+    await prisma.account.deleteMany({ where: { workspaceId } })
+    await prisma.tenant.deleteMany({ where: { id: workspaceId } })
     await app.close()
   })
 
@@ -80,13 +80,13 @@ describe('Inventory API (e2e)', () => {
 
     expect(res.body).toHaveProperty('id')
 
-    const sl = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { tenantId, itemId, stockLocationId: locationId } } })
+    const sl = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { workspaceId, itemId, stockLocationId: locationId } } })
     expect(sl).toBeTruthy()
     if (!sl) throw new Error('Stock level missing')
     expect(sl.quantity.toNumber()).toBe(20)
 
     // Verify JournalEntry created for inventory receipt
-    const je = await prisma.journalEntry.findFirst({ where: { tenantId, description: { contains: 'Inventory receipt' } } })
+    const je = await prisma.journalEntry.findFirst({ where: { workspaceId, description: { contains: 'Inventory receipt' } } })
     expect(je).toBeTruthy()
     if (!je) throw new Error('Journal entry missing')
     const lines = await prisma.journalEntryLine.findMany({ where: { journalId: je.id } })
@@ -109,13 +109,13 @@ describe('Inventory API (e2e)', () => {
 
     expect(res.body).toHaveProperty('id')
 
-    const sl = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { tenantId, itemId, stockLocationId: locationId } } })
+    const sl = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { workspaceId, itemId, stockLocationId: locationId } } })
     expect(sl).toBeTruthy()
     if (!sl) throw new Error('Stock level missing')
     expect(sl.quantity.toNumber()).toBe(10)
 
     // Verify JournalEntry for COGS
-    const je = await prisma.journalEntry.findFirst({ where: { tenantId, description: { contains: 'COGS for shipment' } } })
+    const je = await prisma.journalEntry.findFirst({ where: { workspaceId, description: { contains: 'COGS for shipment' } } })
     expect(je).toBeTruthy()
     if (!je) throw new Error('COGS Journal entry missing')
     const lines = await prisma.journalEntryLine.findMany({ where: { journalId: je.id } })
@@ -131,7 +131,7 @@ describe('Inventory API (e2e)', () => {
 
   it('should transfer stock between locations', async () => {
     // create destination
-    const dest = await prisma.stockLocation.create({ data: { tenantId, name: 'Secondary' } })
+    const dest = await prisma.stockLocation.create({ data: { workspaceId, name: 'Secondary' } })
     const payloadReceive = {
       tenantId,
       transactionNumber: 'RCPT-E2E-02',
@@ -152,8 +152,8 @@ describe('Inventory API (e2e)', () => {
 
     await request(app.getHttpServer()).post('/api/inventory/transfer').set('Authorization', `Bearer ${authToken}`).send(payloadTransfer).expect(201)
 
-    const slMain = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { tenantId, itemId, stockLocationId: locationId } } })
-    const slDest = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { tenantId, itemId, stockLocationId: dest.id } } })
+    const slMain = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { workspaceId, itemId, stockLocationId: locationId } } })
+    const slDest = await prisma.stockLevel.findUnique({ where: { tenantId_itemId_stockLocationId: { workspaceId, itemId, stockLocationId: dest.id } } })
     expect(slMain).toBeTruthy()
     expect(slDest).toBeTruthy()
     if (!slMain || !slDest) throw new Error('Stock level missing')

@@ -15,14 +15,14 @@ async function main() {
     }
     console.log('User:', { id: user.id, email: user.email, name: user.name })
 
-    const tenantUsers = await prisma.tenantUser.findMany({ where: { userId: user.id } })
+    const tenantUsers = await prisma.workspaceUser.findMany({ where: { userId: user.id } })
     console.log('TenantUser rows:', tenantUsers)
 
     const tenantIds = tenantUsers.map(tu => tu.tenantId)
     const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } })
     console.log('Tenants:', tenants)
 
-    const companies = await prisma.company.findMany({ where: { tenantId: { in: tenantIds } } })
+    const companies = await prisma.company.findMany({ where: { workspaceId: { in: tenantIds } } })
     console.log('Companies under these tenants:', companies)
 
     // Also show owned filter result using the same logic as repo

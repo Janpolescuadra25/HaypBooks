@@ -38,10 +38,10 @@ describe('Final removal of Tenant onboarding columns (e2e)', () => {
     const tenantId = ((): string => { function uuidv4() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; const v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); }); } return uuidv4(); })();
     await prisma.$executeRawUnsafe(`INSERT INTO "Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())`, tenantId);
     // Create tenant user row
-    await prisma.tenantUser.create({ data: { tenantId: tenantId, userId: user.id, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' } })
+    await prisma.workspaceUser.create({ data: { workspaceId: workspaceId, userId: user.id, role: 'owner', isOwner: true, joinedAt: new Date(), status: 'ACTIVE' } })
 
     // Create company under tenant with onboarding fields
-    const company = await prisma.company.create({ data: { tenantId: tenantId, name: 'FinalDrop Inc', currency: 'USD', businessType: 'Retail', industry: 'Grocery', address: '123 Market', taxId: 'TINZ', logoUrl: 'https://cdn.example/logo.png', invoicePrefix: 'FD-', vatRegistered: true, vatRate: 12, pricesInclusive: true } })
+    const company = await prisma.company.create({ data: { workspaceId: workspaceId, name: 'FinalDrop Inc', currency: 'USD', businessType: 'Retail', industry: 'Grocery', address: '123 Market', taxId: 'TINZ', logoUrl: 'https://cdn.example/logo.png', invoicePrefix: 'FD-', vatRegistered: true, vatRate: 12, pricesInclusive: true } })
 
     // Verify Tenant columns are absent (information_schema)
     const cols: any[] = await prisma.$queryRawUnsafe(`SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='Tenant' AND column_name IN ('businessType','taxId','logoUrl')`)

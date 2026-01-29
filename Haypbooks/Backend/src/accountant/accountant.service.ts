@@ -8,15 +8,15 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 @Injectable()
 export class AccountantService {
-  async createClient(accountantId: string, tenantId: string, accessLevel: AccountantAccessLevel = 'FULL' as AccountantAccessLevel) {
+  async createClient(accountantId: string, workspaceId: string, accessLevel: AccountantAccessLevel = 'FULL' as AccountantAccessLevel) {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
       await client.query(
         'INSERT INTO public."AccountantClient" ("accountantId","tenantId","accessLevel","status","invitedAt") VALUES ($1,$2,$3,$4,now()) ON CONFLICT ("accountantId","tenantId") DO UPDATE SET "status" = EXCLUDED."status", "accessLevel" = EXCLUDED."accessLevel"',
-        [accountantId, tenantId, accessLevel, 'ACTIVE']
+        [accountantId, workspaceId, accessLevel, 'ACTIVE']
       )
-      const res = await client.query('SELECT * FROM public."AccountantClient" WHERE "accountantId" = $1 AND "tenantId" = $2 LIMIT 1', [accountantId, tenantId])
+      const res = await client.query('SELECT * FROM public."AccountantClient" WHERE "accountantId" = $1 AND "tenantId" = $2 LIMIT 1', [accountantId, workspaceId])
       await client.query('COMMIT')
       return res.rows[0]
     } finally {

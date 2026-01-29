@@ -1,0 +1,462 @@
+{
+  "FixedAsset": [
+    {
+      "src": "FixedAssetSchedule",
+      "field": "asset",
+      "target": "FixedAsset",
+      "relationName": null
+    },
+    {
+      "src": "DepreciationAccount",
+      "field": "asset",
+      "target": "FixedAsset",
+      "relationName": null
+    }
+  ],
+  "Account": [
+    {
+      "src": "DepreciationAccount",
+      "field": "expenseAccount",
+      "target": "Account",
+      "relationName": "DepreciationAccount_expense"
+    },
+    {
+      "src": "DepreciationAccount",
+      "field": "accumAccount",
+      "target": "Account",
+      "relationName": "DepreciationAccount_accum"
+    },
+    {
+      "src": "AccountBalanceAudit",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "CurrencyRevaluationEntry",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "YearEndClose",
+      "field": "retainedEarningsAccount",
+      "target": "Account",
+      "relationName": "YearEndClose_RE"
+    },
+    {
+      "src": "YearEndClose",
+      "field": "incomeSummaryAccount",
+      "target": "Account",
+      "relationName": "YearEndClose_IS"
+    },
+    {
+      "src": "EquityAccount",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "PayrollTaxLiability",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "AccrualSchedule",
+      "field": "account",
+      "target": "Account",
+      "relationName": "AccrualSchedule_Account"
+    },
+    {
+      "src": "AccrualSchedule",
+      "field": "offsetAccount",
+      "target": "Account",
+      "relationName": "AccrualSchedule_OffsetAccount"
+    },
+    {
+      "src": "AccountSegment",
+      "field": "parentAccount",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "Item",
+      "field": "cogsAccount",
+      "target": "Account",
+      "relationName": "Item_cogsAccount"
+    },
+    {
+      "src": "Item",
+      "field": "inventoryReserveAccount",
+      "target": "Account",
+      "relationName": "Item_inventoryReserve"
+    },
+    {
+      "src": "PayrollAccrual",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "ProductionRun",
+      "field": "varianceAccount",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "DeferredTax",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "WithholdingTaxDeduction",
+      "field": "account",
+      "target": "Account",
+      "relationName": "WithholdingTax_Account"
+    },
+    {
+      "src": "FinalTaxDeduction",
+      "field": "account",
+      "target": "Account",
+      "relationName": "FinalTax_Account"
+    },
+    {
+      "src": "PercentageTax",
+      "field": "account",
+      "target": "Account",
+      "relationName": "PercentageTax_Account"
+    },
+    {
+      "src": "PhilippinePayrollDeduction",
+      "field": "account",
+      "target": "Account",
+      "relationName": "PhilPayrollDeduction_Account"
+    },
+    {
+      "src": "DefaultAccountMapping",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "ExpenseClaimLine",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "CashOverShortEntry",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "CashOverShortRule",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "PettyCashFund",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "PettyCashVoucher",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "WriteOff",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "SubsidiaryLedger",
+      "field": "controlAccount",
+      "target": "Account",
+      "relationName": null
+    },
+    {
+      "src": "BudgetActualComparison",
+      "field": "account",
+      "target": "Account",
+      "relationName": null
+    }
+  ],
+  "FixedAssetSchedule": [
+    {
+      "src": "DepreciationJournal",
+      "field": "schedule",
+      "target": "FixedAssetSchedule",
+      "relationName": null
+    }
+  ],
+  "Class": [
+    {
+      "src": "WorkspaceUser",
+      "field": "class",
+      "target": "Class",
+      "relationName": null
+    }
+  ],
+  "Location": [
+    {
+      "src": "WorkspaceUser",
+      "field": "location",
+      "target": "Location",
+      "relationName": null
+    }
+  ],
+  "Practice": [
+    {
+      "src": "Workflow",
+      "field": "practice",
+      "target": "Practice",
+      "relationName": null
+    },
+    {
+      "src": "RecurringSchedule",
+      "field": "practice",
+      "target": "Practice",
+      "relationName": null
+    },
+    {
+      "src": "SubscriptionReminder",
+      "field": "practice",
+      "target": "Practice",
+      "relationName": null
+    }
+  ],
+  "Customer": [
+    {
+      "src": "Donation",
+      "field": "donor",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "Pledge",
+      "field": "donor",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "Lease",
+      "field": "tenant",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "LoyaltyAccount",
+      "field": "customer",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "Quote",
+      "field": "customer",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "CreditNote",
+      "field": "customer",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "DunningNotice",
+      "field": "customer",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "CustomerStatement",
+      "field": "customer",
+      "target": "Customer",
+      "relationName": null
+    },
+    {
+      "src": "CustomerRefund",
+      "field": "customer",
+      "target": "Customer",
+      "relationName": null
+    }
+  ],
+  "Vendor": [
+    {
+      "src": "Contractor",
+      "field": "vendor",
+      "target": "Vendor",
+      "relationName": null
+    },
+    {
+      "src": "ContractorPayment",
+      "field": "vendor",
+      "target": "Vendor",
+      "relationName": null
+    },
+    {
+      "src": "WithholdingTaxCertificate",
+      "field": "vendor",
+      "target": "Vendor",
+      "relationName": null
+    },
+    {
+      "src": "Form2307",
+      "field": "supplier",
+      "target": "Vendor",
+      "relationName": null
+    },
+    {
+      "src": "DebitNote",
+      "field": "vendor",
+      "target": "Vendor",
+      "relationName": null
+    },
+    {
+      "src": "VendorRefund",
+      "field": "vendor",
+      "target": "Vendor",
+      "relationName": null
+    }
+  ],
+  "BillPayment": [
+    {
+      "src": "ContractorPayment",
+      "field": "billPayment",
+      "target": "BillPayment",
+      "relationName": null
+    },
+    {
+      "src": "Check",
+      "field": "payment",
+      "target": "BillPayment",
+      "relationName": null
+    }
+  ],
+  "Employee": [
+    {
+      "src": "PayrollAccrual",
+      "field": "employee",
+      "target": "Employee",
+      "relationName": null
+    },
+    {
+      "src": "ExpenseClaim",
+      "field": "employee",
+      "target": "Employee",
+      "relationName": null
+    },
+    {
+      "src": "PettyCashFund",
+      "field": "custodian",
+      "target": "Employee",
+      "relationName": null
+    }
+  ],
+  "Item": [
+    {
+      "src": "InventoryReserve",
+      "field": "item",
+      "target": "Item",
+      "relationName": null
+    },
+    {
+      "src": "COGSRecognition",
+      "field": "item",
+      "target": "Item",
+      "relationName": null
+    },
+    {
+      "src": "ProductionRun",
+      "field": "item",
+      "target": "Item",
+      "relationName": null
+    },
+    {
+      "src": "QuoteLine",
+      "field": "item",
+      "target": "Item",
+      "relationName": null
+    }
+  ],
+  "InvoiceLine": [
+    {
+      "src": "COGSRecognition",
+      "field": "invoiceLine",
+      "target": "InvoiceLine",
+      "relationName": null
+    }
+  ],
+  "InventoryTransactionLine": [
+    {
+      "src": "COGSRecognition",
+      "field": "inventoryTxLine",
+      "target": "InventoryTransactionLine",
+      "relationName": null
+    }
+  ],
+  "InventoryTransaction": [
+    {
+      "src": "InventoryAdjustmentRequest",
+      "field": "transaction",
+      "target": "InventoryTransaction",
+      "relationName": null
+    }
+  ],
+  "Invoice": [
+    {
+      "src": "CreditNote",
+      "field": "invoice",
+      "target": "Invoice",
+      "relationName": null
+    },
+    {
+      "src": "DunningNotice",
+      "field": "invoice",
+      "target": "Invoice",
+      "relationName": null
+    },
+    {
+      "src": "PaymentReminder",
+      "field": "invoice",
+      "target": "Invoice",
+      "relationName": null
+    },
+    {
+      "src": "Dispute",
+      "field": "invoice",
+      "target": "Invoice",
+      "relationName": null
+    },
+    {
+      "src": "Chargeback",
+      "field": "invoice",
+      "target": "Invoice",
+      "relationName": null
+    }
+  ],
+  "Bill": [
+    {
+      "src": "DebitNote",
+      "field": "bill",
+      "target": "Bill",
+      "relationName": null
+    }
+  ],
+  "Country": [
+    {
+      "src": "DocumentRetention",
+      "field": "country",
+      "target": "Country",
+      "relationName": null
+    }
+  ]
+}

@@ -8,7 +8,7 @@ import * as path from 'path'
 
 const BACKEND_DIR = path.resolve(__dirname, '..')
 
-describe('Auth pre-signup company/firm persistence (e2e)', () => {
+describe('Auth pre-signup company persistence (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaClient
 
@@ -41,14 +41,14 @@ describe('Auth pre-signup company/firm persistence (e2e)', () => {
     await prisma.user.deleteMany({ where: { email: { contains: 'presignup-company' } } }).catch(() => {})
   })
 
-  it('preSignup accepts companyName and firmName and completeSignup persists them to user', async () => {
+  it('preSignup accepts companyName and completeSignup persists it to user', async () => {
     const email = `presignup-company-${Date.now()}@haypbooks.test`
     const password = 'PreSignCo1!'
 
-    // Start pending signup with company and firm
+    // Start pending signup with company
     const pre = await request(app.getHttpServer())
       .post('/api/auth/pre-signup')
-      .send({ email, password, name: 'PreSignup Co', companyName: 'Biz Co', firmName: 'Biz Firm' })
+      .send({ email, password, name: 'PreSignup Co', companyName: 'Biz Co' })
       .expect(200)
 
     expect(pre.body).toHaveProperty('signupToken')
@@ -69,6 +69,5 @@ describe('Auth pre-signup company/firm persistence (e2e)', () => {
     const created = await prisma.user.findUnique({ where: { email } })
     expect(created).toBeTruthy()
     expect((created as any).companyName).toBe('Biz Co')
-    expect((created as any).firmName).toBe('Biz Firm')
   }, 30000)
 })

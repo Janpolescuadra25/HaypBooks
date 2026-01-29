@@ -7,9 +7,9 @@ async function checkAllData() {
   console.log('=' .repeat(60))
   
   const userCount = await prisma.user.count()
-  const tenantCount = await prisma.tenant.count()
+  const tenantCount = await prisma.workspace.count()
   const companyCount = await prisma.company.count()
-  const tenantUserCount = await prisma.tenantUser.count()
+  const tenantUserCount = await prisma.workspaceUser.count()
   
   console.log(`👥 Users: ${userCount}`)
   console.log(`🏢 Tenants: ${tenantCount}`)
@@ -41,7 +41,7 @@ async function checkAllData() {
       select: {
         id: true,
         name: true,
-        tenantId: true,
+        workspaceId: true,
         createdAt: true
       }
     })

@@ -11,9 +11,9 @@ describe('TestController delete-company', () => {
     process.env.NODE_ENV = 'test'
     mockPrisma = {
       user: { findUnique: jest.fn() },
-      tenantUser: { findMany: jest.fn() },
+      workspaceUser: { findMany: jest.fn() },
       company: { findMany: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
-      tenant: { delete: jest.fn() },
+      workspace: { delete: jest.fn() },
       $queryRaw: jest.fn(),
       $queryRawUnsafe: jest.fn(),
       $executeRawUnsafe: jest.fn()
@@ -26,30 +26,30 @@ describe('TestController delete-company', () => {
   test('deletes test-created company found by email+name and deletes tenant when requested', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1' })
     // First call: find tenant associations
-    mockPrisma.tenantUser.findMany.mockResolvedValueOnce([{ tenantId: 't1' }])
+    mockPrisma.workspaceUser.findMany.mockResolvedValueOnce([{ workspaceId: 't1' }])
     // First raw query should return the matching company (prisma.$queryRawUnsafe used in controller)
-    mockPrisma.$queryRawUnsafe.mockResolvedValueOnce([{ id: 'c1', tenantId: 't1', name: 'Acme E2E' }])
+    mockPrisma.$queryRawUnsafe.mockResolvedValueOnce([{ id: 'c1', workspaceId: 't1', name: 'Acme E2E' }])
     mockPrisma.company.delete.mockResolvedValue({ id: 'c1' })
     // Ensure account lookup returns empty (no system accounts)
     mockPrisma.account = { findMany: jest.fn() }
     mockPrisma.account.findMany.mockResolvedValueOnce([])
     // Subsequent checks for tenant deletion: no other users/company rows
-    mockPrisma.tenantUser.findMany.mockResolvedValueOnce([{ tenantId: 't1' }])
+    mockPrisma.workspaceUser.findMany.mockResolvedValueOnce([{ workspaceId: 't1' }])
     mockPrisma.company.findMany.mockResolvedValueOnce([])
 
     const res = await controller.deleteCompany({ email: 'u@e.test', name: 'Acme E2E', deleteTenant: true })
     expect(res.deleted).toBe(1)
     expect(mockPrisma.company.delete).toHaveBeenCalled()
-    // tenant delete may be attempted via raw DELETE (best-effort) or via prisma.tenant.delete
+    // tenant delete may be attempted via raw DELETE (best-effort) or via prisma.workspace.delete
     const execCalled = mockPrisma.$executeRawUnsafe.mock && mockPrisma.$executeRawUnsafe.mock.calls.length > 0
-    const tenantDeleteCalled = mockPrisma.tenant.delete.mock && mockPrisma.tenant.delete.mock.calls.length > 0
+    const tenantDeleteCalled = mockPrisma.workspace.delete.mock && mockPrisma.workspace.delete.mock.calls.length > 0
     expect(execCalled || tenantDeleteCalled).toBeTruthy()
   })
 
   test('does not delete non-test companies (safety check)', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1' })
-    mockPrisma.tenantUser.findMany.mockResolvedValue([{ tenantId: 't1' }])
-    mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: 'c2', tenantId: 't1', name: 'Acme' }])
+    mockPrisma.workspaceUser.findMany.mockResolvedValue([{ workspaceId: 't1' }])
+    mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: 'c2', workspaceId: 't1', name: 'Acme' }])
 
     const res = await controller.deleteCompany({ email: 'u@e.test', name: 'Acme' })
     expect(res.deleted).toBe(0)
@@ -68,8 +68,8 @@ describe('TestController delete-company', () => {
 
   test('does not attempt to delete tenant when tenant has system accounts', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1' })
-    mockPrisma.tenantUser.findMany.mockResolvedValueOnce([{ tenantId: 't1' }])
-    mockPrisma.$queryRawUnsafe.mockResolvedValueOnce([{ id: 'c1', tenantId: 't1', name: 'Acme E2E' }])
+    mockPrisma.workspaceUser.findMany.mockResolvedValueOnce([{ workspaceId: 't1' }])
+    mockPrisma.$queryRawUnsafe.mockResolvedValueOnce([{ id: 'c1', workspaceId: 't1', name: 'Acme E2E' }])
     mockPrisma.company.delete.mockResolvedValue({ id: 'c1' })
     // Simulate a system account present for tenant
     mockPrisma.account = { findMany: jest.fn() }
@@ -78,38 +78,38 @@ describe('TestController delete-company', () => {
     const res = await controller.deleteCompany({ email: 'u@e.test', name: 'Acme E2E', deleteTenant: true })
     expect(res.deleted).toBe(1)
     expect(mockPrisma.company.delete).toHaveBeenCalled()
-    expect(mockPrisma.tenant.delete).not.toHaveBeenCalled()
+    expect(mockPrisma.workspace.delete).not.toHaveBeenCalled()
   })
 
   test('swallows tenant.delete errors and continues', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1' })
-    mockPrisma.tenantUser.findMany.mockResolvedValueOnce([{ tenantId: 't1' }])
-    mockPrisma.$queryRawUnsafe.mockResolvedValueOnce([{ id: 'c2', tenantId: 't1', name: 'Acme E2E' }])
+    mockPrisma.workspaceUser.findMany.mockResolvedValueOnce([{ workspaceId: 't1' }])
+    mockPrisma.$queryRawUnsafe.mockResolvedValueOnce([{ id: 'c2', workspaceId: 't1', name: 'Acme E2E' }])
     mockPrisma.company.delete.mockResolvedValue({ id: 'c2' })
     // No system accounts, allow tenant deletion attempt
     mockPrisma.account = { findMany: jest.fn() }
     mockPrisma.account.findMany.mockResolvedValueOnce([])
     // Subsequent checks for tenant deletion: no other users/company rows
-    mockPrisma.tenantUser.findMany.mockResolvedValueOnce([{ tenantId: 't1' }])
+    mockPrisma.workspaceUser.findMany.mockResolvedValueOnce([{ workspaceId: 't1' }])
     mockPrisma.company.findMany.mockResolvedValueOnce([])
     // But tenant.delete throws
-    mockPrisma.tenant.delete.mockRejectedValue(new Error('boom'))
+    mockPrisma.workspace.delete.mockRejectedValue(new Error('boom'))
 
     const res = await controller.deleteCompany({ email: 'u@e.test', name: 'Acme E2E', deleteTenant: true })
     expect(res.deleted).toBe(1)
     expect(mockPrisma.company.delete).toHaveBeenCalled()
     const execCalled = mockPrisma.$executeRawUnsafe.mock && mockPrisma.$executeRawUnsafe.mock.calls.length > 0
-    const tenantDeleteCalled = mockPrisma.tenant.delete.mock && mockPrisma.tenant.delete.mock.calls.length > 0
+    const tenantDeleteCalled = mockPrisma.workspace.delete.mock && mockPrisma.workspace.delete.mock.calls.length > 0
     expect(execCalled || tenantDeleteCalled).toBeTruthy()
   })
 
   test('ignores failing company.delete for some companies and returns count of successful deletes', async () => {
     // Simulate user -> tenant -> multiple companies; first delete fails, second succeeds
     mockPrisma.user.findUnique.mockResolvedValue({ id: 'uX' })
-    mockPrisma.tenantUser.findMany.mockResolvedValueOnce([{ tenantId: 'tX' }])
+    mockPrisma.workspaceUser.findMany.mockResolvedValueOnce([{ workspaceId: 'tX' }])
     mockPrisma.$queryRawUnsafe.mockResolvedValueOnce([
-      { id: 'c4', tenantId: 'tX', name: 'A E2E' },
-      { id: 'c5', tenantId: 'tX', name: 'A E2E' }
+      { id: 'c4', workspaceId: 'tX', name: 'A E2E' },
+      { id: 'c5', workspaceId: 'tX', name: 'A E2E' }
     ])
     mockPrisma.company.delete.mockImplementationOnce(() => { throw new Error('boom') }).mockResolvedValueOnce({ id: 'c5' })
 

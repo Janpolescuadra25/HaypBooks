@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 ;(async () => {
   const prisma = new PrismaClient()
   try {
-    const rows = await prisma.tenant.findMany({
+    const rows = await prisma.workspace.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: { users: { include: { user: { select: { email: true } } } } }

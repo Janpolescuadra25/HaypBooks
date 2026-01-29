@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth.service'
+import useViewportZoom from '@/hooks/useViewportZoom'
 
 type Props = {
   onSwitchToOwner?: () => void
@@ -17,6 +18,15 @@ export default function AccountantTopBar({ onSwitchToOwner }: Props) {
   const userMenuRef = useRef<HTMLButtonElement | null>(null)
   const logoutConfirmRef = useRef<HTMLButtonElement | null>(null)
   const router = useRouter()
+  // viewport sizing (keep parity with TopBar)
+  const { isCompact, isWide } = useViewportZoom()
+  const topbarPaddingY = 4.8
+  const navButtonSize = 11
+  const navButtonPaddingY = Math.max(1, Math.round(navButtonSize * 0.25))
+  const navButtonPaddingX = Math.max(2, Math.round(navButtonSize * 0.6))
+  const navButtonClass = 'flex items-center gap-2'
+  const navButtonStyle = { fontSize: `${navButtonSize}px`, padding: `${navButtonPaddingY}px ${navButtonPaddingX}px` }
+  const navIconStyle = { width: `${Math.round(navButtonSize)}px`, height: `${Math.round(navButtonSize)}px` }
 
   useEffect(() => {
     let mounted = true
@@ -29,7 +39,7 @@ export default function AccountantTopBar({ onSwitchToOwner }: Props) {
       if (onSwitchToOwner) {
         onSwitchToOwner()
       } else {
-        router.push('/hub/selection')
+        router.push('/workspace')
       }
     } catch (e) {}
   }
@@ -103,37 +113,12 @@ export default function AccountantTopBar({ onSwitchToOwner }: Props) {
                   </div>
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex items-center gap-3 ml-3">
-                  <button
-                    onClick={() => setActive('clients')}
-                    className={`flex items-center gap-2 px-2 py-1 text-xs rounded-full font-semibold ${
-                      active === 'clients'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-800'
-                    }`}
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    <span>CLIENTS</span>
-                  </button>
-
-                  <button
-                    onClick={() => setActive('invitations')}
-                    className={`flex items-center gap-2 px-2 py-1 text-xs rounded-full font-medium ${
-                      active === 'invitations'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-800'
-                    }`}
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span>INVITATIONS</span>
-                  </button>
+                {/* Navigation placeholder (kept minimal on top row for Accountant Hub) */}
+                <nav className="hidden md:flex items-center gap-3 ml-3" aria-hidden>
+                  {/* top-level nav is intentionally compact for accountant hub; actions moved to second bar below */}
                 </nav>
               </div>
+
 
               {/* Right: User */}
               <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
@@ -209,6 +194,34 @@ export default function AccountantTopBar({ onSwitchToOwner }: Props) {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Divider */}
+            <div className="mt-2 border-t border-slate-100" />
+
+            {/* Second bar: quick actions (copied sizing from Owner Workspace TopBar) */}
+            <div className="mt-2 flex items-center gap-3">
+              <button
+                onClick={() => { setActive('clients'); try { router.push('/hub/accountant?tab=clients') } catch (e) {} }}
+                className={`${navButtonClass} ${active === 'clients' ? 'bg-emerald-600 text-white rounded-full font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                style={navButtonStyle}
+              >
+                <svg style={navIconStyle} className="" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className={`${isCompact ? 'sr-only' : ''}`}>CLIENTS</span>
+              </button>
+
+              <button
+                onClick={() => { setActive('invitations'); try { router.push('/hub/invites') } catch (e) {} }}
+                className={`${navButtonClass} ${active === 'invitations' ? 'bg-emerald-600 text-white rounded-full font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                style={navButtonStyle}
+              >
+                <svg style={navIconStyle} className="" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span className={`${isCompact ? 'sr-only' : ''}`}>INVITATIONS</span>
+              </button>
             </div>
           </div>
         </div>

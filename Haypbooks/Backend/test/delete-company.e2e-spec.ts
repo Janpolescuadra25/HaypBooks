@@ -5,7 +5,7 @@ import { AppModule } from '../src/app.module'
 import { PrismaService } from '../src/repositories/prisma/prisma.service'
 
 // Helper: create a company via raw INSERT to avoid relying on schema parity for new optional columns
-async function createCompanyRaw(prisma: PrismaService, tenantId: string, name: string, currency = 'USD') {
+async function createCompanyRaw(prisma: PrismaService, workspaceId: string, name: string, currency = 'USD') {
   const { randomUUID } = require('crypto')
   const id = randomUUID()
   await prisma.$executeRawUnsafe('INSERT INTO public."Company" ("id","tenantId","name","currency","createdAt") VALUES ($1, $2::uuid, $3, $4, now())', id, tenantId, name, currency)
@@ -46,7 +46,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: user.email, name: companyName, deleteTenant: true })
@@ -57,10 +57,10 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const deletedCompany = await prisma.company.findUnique({ where: { id: company.id } })
     expect(deletedCompany).toBeNull()
 
-    const deletedTenant = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
+    const deletedTenant = await prisma.workspace.findUnique({ where: { id: tenant.id }, select: { id: true } })
     if (deletedTenant) {
       // Tenant deletion is best-effort; if it remains, ensure it has no companies
-      const remainingCompanies = await prisma.company.findMany({ where: { tenantId: tenant.id } })
+      const remainingCompanies = await prisma.company.findMany({ where: { workspaceId: tenant.id } })
       expect(remainingCompanies.length).toBe(0)
     }
 
@@ -73,7 +73,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, 'Acme', 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: user.email, name: 'Acme' })
@@ -83,8 +83,8 @@ describe('TestController /api/test/delete-company (E2E)', () => {
 
     // cleanup
     await prisma.company.delete({ where: { id: company.id } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
+    await prisma.workspaceUser.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.workspace.delete({ where: { id: tenant.id }, select: { id: true } })
     await prisma.user.delete({ where: { id: user.id } })
   })
 
@@ -95,8 +95,8 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: u1.id, role: 'owner', isOwner: true } })
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: u2.id, role: 'member', isOwner: false } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: u1.id, role: 'owner', isOwner: true } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: u2.id, role: 'member', isOwner: false } })
     const company = await createCompanyRaw(prisma, tenant.id, `Comp A E2E ${s}`, 'USD')
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: u1.email, name: company.name, deleteTenant: true })
@@ -106,13 +106,13 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const deletedCompany = await prisma.company.findUnique({ where: { id: company.id } })
     expect(deletedCompany).toBeNull()
 
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
+    const tenantStill = await prisma.workspace.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup: ensure tenant and users deleted
-    await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.company.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
+    await prisma.workspaceUser.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.company.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.workspace.delete({ where: { id: tenant.id }, select: { id: true } })
     await prisma.user.delete({ where: { id: u1.id } })
     await prisma.user.delete({ where: { id: u2.id } })
   })
@@ -123,7 +123,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const companyA = await createCompanyRaw(prisma, tenant.id, `Primary E2E ${s}`, 'USD')
     const companyB = await createCompanyRaw(prisma, tenant.id, `OtherCo ${s}`, 'USD')
 
@@ -142,7 +142,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
 
     // cleanup
     await prisma.company.delete({ where: { id: companyB.id } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.tenantUser.deleteMany({ where: { workspaceId: tenant.id } })
     // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
     await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })
@@ -159,13 +159,13 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
     // create or reuse an existing account type and a system account for the tenant
     let acctType = await prisma.accountType.findFirst()
     if (!acctType) acctType = await prisma.accountType.create({ data: { name: `ASSET-${s}` } })
-    await prisma.account.create({ data: { tenantId: tenant.id, code: `SYS-${s}`, name: 'Accounts Receivable (SYS)', typeId: acctType.id, isSystem: true } })
+    await prisma.account.create({ data: { workspaceId: tenant.id, code: `SYS-${s}`, name: 'Accounts Receivable (SYS)', typeId: acctType.id, isSystem: true } })
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: user.email, name: companyName, deleteTenant: true })
     expect(res.status).toBe(201)
@@ -175,13 +175,13 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     expect(deletedCompany).toBeNull()
 
     // tenant should remain because the system account prevents deletion
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
+    const tenantStill = await prisma.workspace.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup: remove system account, then clean up
-    await prisma.account.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.company.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.account.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.company.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.tenantUser.deleteMany({ where: { workspaceId: tenant.id } })
     // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
     await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })
@@ -198,11 +198,11 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const company = await createCompanyRaw(prisma, tenant.id, companyName, 'USD')
 
     // Add a JournalEntry row that will cause tenant.delete to fail (FK prevents tenant deletion)
-    await prisma.journalEntry.create({ data: { tenantId: tenant.id, date: new Date(), entryNumber: `J-${s}` } })
+    await prisma.journalEntry.create({ data: { workspaceId: tenant.id, date: new Date(), entryNumber: `J-${s}` } })
 
     const res = await request(app.getHttpServer()).post('/api/test/delete-company').send({ email: user.email, name: companyName, deleteTenant: true })
     expect(res.status).toBe(201)
@@ -212,13 +212,13 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     expect(deletedCompany).toBeNull()
 
     // tenant should remain because of the blocking JournalEntry
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
+    const tenantStill = await prisma.workspace.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup
-    await prisma.journalEntry.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.company.deleteMany({ where: { tenantId: tenant.id } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.journalEntry.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.company.deleteMany({ where: { workspaceId: tenant.id } })
+    await prisma.tenantUser.deleteMany({ where: { workspaceId: tenant.id } })
     // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
     await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })
@@ -230,7 +230,7 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const tenantId = require('crypto').randomUUID()
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: user.id, role: 'owner', isOwner: true } })
     const companyA = await createCompanyRaw(prisma, tenant.id, `ToDelete E2E ${s}`, 'USD')
     const companyB = await createCompanyRaw(prisma, tenant.id, `KeepCompany ${s}`, 'USD')
 
@@ -244,12 +244,12 @@ describe('TestController /api/test/delete-company (E2E)', () => {
     const otherCompany = await prisma.company.findUnique({ where: { id: companyB.id } })
     expect(otherCompany).not.toBeNull()
 
-    const tenantStill = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { id: true } })
+    const tenantStill = await prisma.workspace.findUnique({ where: { id: tenant.id }, select: { id: true } })
     expect(tenantStill).not.toBeNull()
 
     // cleanup
     await prisma.company.delete({ where: { id: companyB.id } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.workspaceUser.deleteMany({ where: { workspaceId: tenant.id } })
     // Use raw DELETE to avoid Prisma selecting dropped Tenant columns
     await prisma.$executeRawUnsafe('DELETE FROM public."Tenant" WHERE id = $1::uuid', tenant.id)
     await prisma.user.delete({ where: { id: user.id } })

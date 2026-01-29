@@ -48,7 +48,7 @@ describe('Contacts e2e', () => {
     expect(tenant).toBeTruthy()
 
     // Create a contact
-    const contact = await prisma.contact.create({ data: { tenantId: tenant!.id, type: 'CUSTOMER', displayName: 'E2E Contact Test' } })
+    const contact = await prisma.contact.create({ data: { workspaceId: tenant!.id, type: 'CUSTOMER', displayName: 'E2E Contact Test' } })
     expect(contact).toBeTruthy()
     expect(contact.id).toBeTruthy()
     expect(contact.id.length).toBeGreaterThan(8)

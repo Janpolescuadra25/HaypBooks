@@ -7,7 +7,7 @@ import { PrismaService } from '../src/repositories/prisma/prisma.service'
 describe('Payroll submit flow (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
-  let tenantId: string
+  let workspaceId: string
   let employeeId: string
 
   beforeAll(async () => {
@@ -21,29 +21,29 @@ describe('Payroll submit flow (e2e)', () => {
     await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
     const tenant = { id: tenantId }
     tenantId = tenant.id
-    const emp = await prisma.employee.create({ data: { tenantId, firstName: 'Pay', lastName: 'Run', payRate: 20.0, payType: 'HOURLY' } })
+    const emp = await prisma.employee.create({ data: { workspaceId, firstName: 'Pay', lastName: 'Run', payRate: 20.0, payType: 'HOURLY' } })
     employeeId = emp.id
     // create basic tax rates for tenant to ensure payroll calculates taxes
-    await prisma.taxRate.create({ data: { tenantId, jurisdiction: 'FEDERAL', name: 'Federal Tax', rate: 0.1, effectiveFrom: new Date('2020-01-01') } })
-    await prisma.taxRate.create({ data: { tenantId, jurisdiction: 'STATE', name: 'State Tax', rate: 0.05, effectiveFrom: new Date('2020-01-01') } })
+    await prisma.taxRate.create({ data: { workspaceId, jurisdiction: 'FEDERAL', name: 'Federal Tax', rate: 0.1, effectiveFrom: new Date('2020-01-01') } })
+    await prisma.taxRate.create({ data: { workspaceId, jurisdiction: 'STATE', name: 'State Tax', rate: 0.05, effectiveFrom: new Date('2020-01-01') } })
   })
 
   afterAll(async () => {
     // clean up Journal Entries first, then payroll artifacts, then tenant
-    await prisma.journalEntryLine.deleteMany({ where: { journal: { tenantId } } }).catch(() => {})
-    await prisma.journalEntry.deleteMany({ where: { tenantId } }).catch(() => {})
+    await prisma.journalEntryLine.deleteMany({ where: { journal: { workspaceId } } }).catch(() => {})
+    await prisma.journalEntry.deleteMany({ where: { workspaceId } }).catch(() => {})
     // delete paycheck dependents in correct order: taxes, lines, then paychecks
-    await prisma.paycheckTax.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.paycheckLine.deleteMany({ where: { paycheck: { tenantId } } }).catch(() => {})
-    await prisma.paycheck.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.payrollRunEmployee.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.payrollRun.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.account.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.taxRate.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.employee.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.taxRate.deleteMany({ where: { tenantId } }).catch(() => {})
+    await prisma.paycheckTax.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.paycheckLine.deleteMany({ where: { paycheck: { workspaceId } } }).catch(() => {})
+    await prisma.paycheck.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.payrollRunEmployee.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.payrollRun.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.account.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.taxRate.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.employee.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.taxRate.deleteMany({ where: { workspaceId } }).catch(() => {})
     try {
-      await prisma.tenant.deleteMany({ where: { id: tenantId } })
+      await prisma.tenant.deleteMany({ where: { id: workspaceId } })
     } catch (err) {
       console.error('Failed deleting tenant during teardown:', err)
       try {
@@ -78,13 +78,13 @@ describe('Payroll submit flow (e2e)', () => {
     expect(res.body.paychecks.length).toBe(1)
 
     // verify journal entry created
-    const je = await prisma.journalEntry.findFirst({ where: { tenantId, description: { contains: 'Pay run' } } })
+    const je = await prisma.journalEntry.findFirst({ where: { workspaceId, description: { contains: 'Pay run' } } })
     expect(je).toBeTruthy()
 
     // verify paycheck taxes persisted
     const paychecks = res.body.paychecks
     expect(paychecks.length).toBeGreaterThan(0)
-    const taxes = await prisma.paycheckTax.findMany({ where: { tenantId, paycheckId: paychecks[0].id } })
+    const taxes = await prisma.paycheckTax.findMany({ where: { workspaceId, paycheckId: paychecks[0].id } })
     expect(taxes.length).toBeGreaterThan(0)
 
     // verify journal entry lines sum to zero
@@ -96,21 +96,21 @@ describe('Payroll submit flow (e2e)', () => {
 
   it('allows tenant deletion after payroll run (regression)', async () => {
     // replicate cleanup steps to verify no FK RESTRICT prevents tenant deletion
-    await prisma.paycheckTax.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.paycheckLine.deleteMany({ where: { paycheck: { tenantId } } }).catch(() => {})
-    await prisma.paycheck.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.payrollRunEmployee.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.payrollRun.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.employee.deleteMany({ where: { tenantId } }).catch(() => {})
+    await prisma.paycheckTax.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.paycheckLine.deleteMany({ where: { paycheck: { workspaceId } } }).catch(() => {})
+    await prisma.paycheck.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.payrollRunEmployee.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.payrollRun.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.employee.deleteMany({ where: { workspaceId } }).catch(() => {})
     // Remove journal entries first, then attempt to remove rows that reference tenant accounts (by accountId) before deleting accounts
-    await prisma.journalEntryLine.deleteMany({ where: { journal: { tenantId } } }).catch(() => {})
-    await prisma.journalEntry.deleteMany({ where: { tenantId } }).catch(() => {})
+    await prisma.journalEntryLine.deleteMany({ where: { journal: { workspaceId } } }).catch(() => {})
+    await prisma.journalEntry.deleteMany({ where: { workspaceId } }).catch(() => {})
     try {
       const acctTables: Array<{ table_name: string }> = await prisma.$queryRaw`
         SELECT DISTINCT table_name FROM information_schema.columns
         WHERE column_name = 'accountId' AND table_schema = 'public'
       `
-      const accs = await prisma.account.findMany({ where: { tenantId }, select: { id: true } })
+      const accs = await prisma.account.findMany({ where: { workspaceId }, select: { id: true } })
       const accIds = accs.map(a => a.id)
       if (accIds.length > 0) {
         for (const t of acctTables) {
@@ -127,8 +127,8 @@ describe('Payroll submit flow (e2e)', () => {
       // ignore diagnostic errors
     }
 
-    await prisma.account.deleteMany({ where: { tenantId } }).catch(() => {})
-    await prisma.taxRate.deleteMany({ where: { tenantId } }).catch(() => {})
+    await prisma.account.deleteMany({ where: { workspaceId } }).catch(() => {})
+    await prisma.taxRate.deleteMany({ where: { workspaceId } }).catch(() => {})
 
     // Best-effort multi-pass cleanup across all tenant-scoped tables to avoid FK RESTRICT ordering issues
     const tenantTables: Array<{ table_name: string }> = await prisma.$queryRaw`
@@ -145,7 +145,7 @@ describe('Payroll submit flow (e2e)', () => {
         }
       }
       try {
-        const del = await prisma.tenant.deleteMany({ where: { id: tenantId } })
+        const del = await prisma.tenant.deleteMany({ where: { id: workspaceId } })
         if (del.count && del.count > 0) deleted = true
       } catch (e) {
         // continue to next pass

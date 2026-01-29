@@ -60,21 +60,23 @@ describe('OnboardingService (e2e)', () => {
       expect(dbCompany).toBeTruthy()
       expect(dbCompany?.name).toEqual(expect.stringContaining('E2E INT Company'))
 
-      const tenant = await prisma.tenant.findUnique({ where: { id: dbCompany?.tenantId as string } })
+      const tenant = await prisma.tenant.findUnique({ where: { id: dbCompany?.workspaceId as string } })
       expect(tenant).toBeTruthy()
+      // workspaceName should be set from onboarding businessName
+      expect((tenant as any).workspaceName).toEqual(companyName)
 
     } finally {
       // cleanup
       try {
         const tenantUsers = await prisma.tenantUser.findMany({ where: { userId: user.id } })
         for (const tu of tenantUsers) {
-          const tenantId = tu.tenantId
-          const comps = await prisma.company.findMany({ where: { tenantId } })
+          const tenantId = tu.workspaceId
+          const comps = await prisma.company.findMany({ where: { workspaceId } })
           for (const c of comps) {
             await prisma.company.delete({ where: { id: c.id } }).catch(() => {})
           }
-          await prisma.tenantUser.deleteMany({ where: { tenantId } }).catch(() => {})
-          await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => {})
+          await prisma.tenantUser.deleteMany({ where: { workspaceId } }).catch(() => {})
+          await prisma.tenant.delete({ where: { id: workspaceId } }).catch(() => {})
         }
       } catch (e) { /* ignore */ }
       try { await userRepo.delete(user.id) } catch (e) { /* ignore */ }

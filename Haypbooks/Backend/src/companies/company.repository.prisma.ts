@@ -15,9 +15,9 @@ export class CompanyRepository {
     // includes `id_old` to satisfy legacy DBs.
     
     try {
-      const tenant = await this.prisma.tenant.create({ data })
+      const tenant = await this.prisma.workspace.create({ data })
       // eslint-disable-next-line no-console
-      console.info('[COMPANY-CREATE] ✅ prisma.tenant.create succeeded', {
+      console.info('[COMPANY-CREATE] ✅ prisma.workspace.create succeeded', {
         id: tenant.id,
         hasUserPayload: !!data.users
       })
@@ -25,36 +25,53 @@ export class CompanyRepository {
       // Backfill safety: ensure a minimal Company record exists for this tenant.
       // Some legacy flows (POST /api/companies) only created Tenant rows; to ensure
       // the Owner Workspace can show a Company card, create a minimal Company if missing.
-      try {
-        const existing = await this.prisma.company.findFirst({ where: { tenantId: tenant.id } })
-        if (!existing) {
-          const created = await this.prisma.company.create({ data: { tenantId: tenant.id, name: data.name || tenant.name || 'Company', isActive: true } })
-          // eslint-disable-next-line no-console
-          console.info('[COMPANY-CREATE] ✅ Backfilled Company for tenant (legacy flow):', { companyId: created.id, tenantId: tenant.id })
-          try {
-            await this.prisma.tenant.update({ where: { id: tenant.id }, data: { companiesCreated: { increment: 1 } } })
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error('[COMPANY-CREATE] Failed to increment companiesCreated (non-fatal):', e?.message || e)
-          }
-        }
-      } catch (e) {
+      // However, callers can opt out of this backfill by setting `suppressCompanyCreation` on payload.
+      if (data && data.suppressCompanyCreation) {
         // eslint-disable-next-line no-console
-        console.error('[COMPANY-CREATE] Failed to backfill Company (non-fatal):', e?.message || e)
+        console.info('[COMPANY-CREATE] Skipping Company backfill due to suppressCompanyCreation flag', { workspaceId: tenant.id })
+      } else {
+        try {
+          const existing = await this.prisma.company.findFirst({ where: { workspaceId: tenant.id } })
+          if (!existing) {
+            // If caller supplied a country code (e.g., 'PH') attempt to resolve it to countryId
+            try {
+              if (data && !data.countryId && data.country) {
+                const code = String(data.country).trim()
+                const c = await this.prisma.country.findUnique({ where: { code } as any }).catch(() => null)
+                if (c && c.id) data.countryId = c.id
+              }
+            } catch (e) {
+              // ignore; best-effort
+            }
+
+            const created = await this.prisma.company.create({ data: { workspace: { connect: { id: tenant.id } }, name: data.name || (tenant as any).workspaceName || 'Company', countryId: data.countryId || data.countryId, isActive: true } as any })
+            // eslint-disable-next-line no-console
+            console.info('[COMPANY-CREATE] ✅ Backfilled Company for tenant (legacy flow):', { companyId: created.id, workspaceId: tenant.id })
+            try {
+              await this.prisma.tenant.update({ where: { id: tenant.id }, data: { companiesCreated: { increment: 1 } } })
+            } catch (e) {
+              // eslint-disable-next-line no-console
+              console.error('[COMPANY-CREATE] Failed to increment companiesCreated (non-fatal):', e?.message || e)
+            }
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('[COMPANY-CREATE] Failed to backfill Company (non-fatal):', e?.message || e)
+        }
       }
 
       // Verify TenantUser was created
       try {
-        const tenantUsers = await this.prisma.tenantUser.findMany({ where: { tenantId: tenant.id } })
+        const tenantUsers = await this.prisma.workspaceUser.findMany({ where: { workspaceId: tenant.id } })
         // eslint-disable-next-line no-console
-        console.info('[COMPANY-CREATE] TenantUser records:', {
-          tenantId: tenant.id,
+        console.info('[COMPANY-CREATE] WorkspaceUser records:', {
+          workspaceId: tenant.id,
           count: tenantUsers.length,
-          users: tenantUsers.map(tu => ({ userId: tu.userId, isOwner: tu.isOwner, role: tu.role }))
+          users: tenantUsers.map(tu => ({ userId: tu.userId, isOwner: tu.isOwner, role: (tu as any).role }))
         })
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error('[COMPANY-CREATE] ❌ Failed to query TenantUser:', e?.message)
+        console.error('[COMPANY-CREATE] ❌ Failed to query WorkspaceUser:', e?.message)
       }
 
       try {
@@ -76,13 +93,9 @@ export class CompanyRepository {
       try {
         if (!tenant.trialUsed) {
           const trialEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          // Create subscription tied to this company (tenant-as-company) and mark tenant trial used
-          await this.prisma.$transaction([
-            this.prisma.subscription.create({ data: { companyId: tenant.id, plan: 'FREE', status: 'TRIAL' } }),
-            this.prisma.tenant.update({ where: { id: tenant.id }, data: { trialEndsAt: trialEnds, trialUsed: true } }),
-          ])
-          // eslint-disable-next-line no-console
-          console.info('[COMPANY-CREATE] Activated trial for tenant', { tenantId: tenant.id, trialEnds })
+          // Ensure subscription exists for this company (centralized validation)
+          await this.ensureSubscriptionForCompany(tenant.id, { companyId: tenant.id, plan: 'FREE', status: 'TRIAL' })
+          await this.prisma.workspace.update({ where: { id: tenant.id }, data: { trialEndsAt: trialEnds, trialUsed: true } })
         }
       } catch (e) {
         // best-effort only
@@ -93,7 +106,7 @@ export class CompanyRepository {
       return tenant
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.debug('[CompanyRepository] prisma.tenant.create failed, falling back to raw insert', { err: err?.message })
+      console.debug('[CompanyRepository] prisma.workspace.create failed, falling back to raw insert', { err: err?.message })
       // Fallback: raw SQL insert including `id_old` so legacy DBs accept the row.
       // Generate an id on the application side so we can set both id and id_old.
       const { randomUUID } = await import('crypto')
@@ -244,18 +257,24 @@ export class CompanyRepository {
         }
 
         // Backfill (legacy raw insert path): ensure a minimal Company exists
+        // Skip backfill if the payload requested suppression
         try {
           if (tenant && tenant.id) {
-            const existing = await this.prisma.company.findFirst({ where: { tenantId: tenant.id } })
-            if (!existing) {
-              const created = await this.prisma.company.create({ data: { tenantId: tenant.id, name: name || tenant.name || 'Company', isActive: true } })
+            if (data && data.suppressCompanyCreation) {
               // eslint-disable-next-line no-console
-              console.info('[COMPANY-CREATE] ✅ Backfilled Company for tenant (raw insert path):', { companyId: created.id, tenantId: tenant.id })
-              try {
-                await this.prisma.tenant.update({ where: { id: tenant.id }, data: { companiesCreated: { increment: 1 } } })
-              } catch (e) {
+              console.info('[COMPANY-CREATE] Skipping raw-path Company backfill due to suppressCompanyCreation flag', { workspaceId: tenant.id })
+            } else {
+              const existing = await this.prisma.company.findFirst({ where: { workspaceId: tenant.id } })
+              if (!existing) {
+                const created = await this.prisma.company.create({ data: { workspace: { connect: { id: tenant.id } }, name: name || tenant.workspaceName || 'Company', isActive: true } as any })
                 // eslint-disable-next-line no-console
-                console.error('[COMPANY-CREATE] Failed to increment companiesCreated (non-fatal):', e?.message || e)
+                console.info('[COMPANY-CREATE] ✅ Backfilled Company for tenant (raw insert path):', { companyId: created.id, workspaceId: tenant.id })
+                try {
+                  await this.prisma.workspace.update({ where: { id: tenant.id }, data: { companiesCreated: { increment: 1 } } })
+                } catch (e) {
+                  // eslint-disable-next-line no-console
+                  console.error('[COMPANY-CREATE] Failed to increment companiesCreated (non-fatal):', e?.message || e)
+                }
               }
             }
           }
@@ -275,7 +294,7 @@ export class CompanyRepository {
   }
 
   async findById(id: string) {
-    return this.prisma.tenant.findUnique({ where: { id } })
+    return this.prisma.workspace.findUnique({ where: { id } })
   }
 
   // Return company only if the userId is a member of the owning tenant
@@ -284,15 +303,14 @@ export class CompanyRepository {
       where: {
         id,
         isActive: true,
-        tenant: {
+        workspace: {
           users: { some: { userId, status: 'ACTIVE' } }
         }
       },
       include: {
-        tenant: {
+        workspace: {
           select: {
             id: true,
-            name: true,
             users: {
               where: { userId },
               select: { isOwner: true, lastAccessedAt: true }
@@ -313,15 +331,14 @@ export class CompanyRepository {
         const companies = await this.prisma.company.findMany({
           where: {
             isActive: true,
-            tenant: {
+            workspace: {
               users: { some: { userId, status: 'ACTIVE' } }
             }
           },
           include: {
-            tenant: {
+            workspace: {
               select: {
                 id: true,
-                name: true,
                 users: {
                   where: { userId },
                   select: { isOwner: true, lastAccessedAt: true }
@@ -348,11 +365,11 @@ export class CompanyRepository {
         // Fallback for inconsistent DB rows: select companies via raw SQL with COALESCE(name,'')
         // eslint-disable-next-line no-console
         console.warn('[COMPANY-QUERY] 🛡️ Default query failed; falling back to raw SQL due to inconsistent DB rows:', e?.message || e)
-        const tus = await this.prisma.tenantUser.findMany({ where: { userId, status: 'ACTIVE' }, select: { tenantId: true } })
-        const tenantIds = tus.map(t => t.tenantId)
+        const tus = await this.prisma.workspaceUser.findMany({ where: { userId, status: 'ACTIVE' }, select: { workspaceId: true } })
+        const tenantIds = tus.map(t => t.workspaceId)
         if (!tenantIds || tenantIds.length === 0) return []
         const rows: any[] = await this.prisma.$queryRawUnsafe('SELECT c.id, c."tenantId", COALESCE(c.name,\'\') as name, c."isActive" FROM public."Company" c WHERE c."tenantId" = ANY($1::uuid[]) AND c."isActive" = true', tenantIds)
-        const mapped = rows.map(r => ({ id: r.id, tenantId: r.tenantId, name: r.name, isActive: r.isActive }))
+        const mapped = rows.map(r => ({ id: r.id, workspaceId: r.tenantid || r.tenantId, name: r.name, isActive: r.isActive }))
         // eslint-disable-next-line no-console
         console.info('[COMPANY-QUERY] ✅ Raw fallback results (no filter):', { count: mapped.length, companies: mapped })
         return mapped
@@ -367,15 +384,14 @@ export class CompanyRepository {
         const companies = await this.prisma.company.findMany({
           where: {
             isActive: true,
-            tenant: {
+            workspace: {
               users: { some: { userId, isOwner: true, status: 'ACTIVE' } }
             }
           },
           include: {
-            tenant: {
+            workspace: {
               select: {
                 id: true,
-                name: true,
                 users: {
                   where: { userId },
                   select: { isOwner: true, lastAccessedAt: true }
@@ -401,9 +417,9 @@ export class CompanyRepository {
           companies: unique.map(c => ({ 
             id: c.id, 
             name: c.name, 
-            tenantId: c.tenantId,
+            workspaceId: c.workspaceId,
             isActive: c.isActive,
-            tenantUsers: c.tenant?.users 
+            tenantUsers: c.workspace?.users 
           })) 
         })
         return unique
@@ -412,12 +428,12 @@ export class CompanyRepository {
         // Gather tenantIds for owned tenants and run a raw query that coalesces null names
         // eslint-disable-next-line no-console
         console.warn('[COMPANY-QUERY] 🛡️ Owned query failed; falling back to raw SQL due to inconsistent DB rows:', e?.message || e)
-        const tus = await this.prisma.tenantUser.findMany({ where: { userId, isOwner: true, status: 'ACTIVE' }, select: { tenantId: true } })
-        const tenantIds = tus.map(t => t.tenantId)
+        const tus = await this.prisma.workspaceUser.findMany({ where: { userId, isOwner: true, status: 'ACTIVE' }, select: { workspaceId: true } })
+        const tenantIds = tus.map(t => t.workspaceId)
         if (!tenantIds || tenantIds.length === 0) return []
         const rows: any[] = await this.prisma.$queryRawUnsafe('SELECT c.id, c."tenantId", COALESCE(c.name,\'\') as name, c."isActive" FROM public."Company" c WHERE c."tenantId" = ANY($1::uuid[]) AND c."isActive" = true', tenantIds)
         // Map raw rows into expected shape
-        const mapped = rows.map(r => ({ id: r.id, tenantId: r.tenantId, name: r.name, isActive: r.isActive }))
+        const mapped = rows.map(r => ({ id: r.id, workspaceId: r.workspaceId, name: r.name, isActive: r.isActive }))
         // eslint-disable-next-line no-console
         console.info('[COMPANY-QUERY] ✅ Raw fallback results (owned):', { count: mapped.length, companies: mapped })
         return mapped
@@ -426,23 +442,22 @@ export class CompanyRepository {
 
     if (filter === 'invited' && email) {
       // Find invites for this email that are pending
-      const invites: any[] = await this.prisma.tenantInvite.findMany({ 
+      const invites: any[] = await this.prisma.workspaceInvite.findMany({ 
         where: { email, status: 'PENDING' }, 
-        select: { tenantId: true } 
+        select: { workspaceId: true } 
       })
-      const tenantIds = invites.map((i) => i.tenantId)
+      const tenantIds = invites.map((i) => i.workspaceId)
       if (!tenantIds || !tenantIds.length) return []
       
       const companies = await this.prisma.company.findMany({
         where: {
           isActive: true,
-          tenantId: { in: tenantIds }
+          workspaceId: { in: tenantIds }
         },
         include: {
-          tenant: {
+          workspace: {
             select: {
               id: true,
-              name: true,
               _count: { select: { users: true } }
             }
           }
@@ -465,15 +480,14 @@ export class CompanyRepository {
     const companies = await this.prisma.company.findMany({
       where: {
         isActive: true,
-        tenant: {
+        workspace: {
           users: { some: { userId } }
         }
       },
       include: {
-        tenant: {
+        workspace: {
           select: {
             id: true,
-            name: true,
             users: {
               where: { userId },
               select: { isOwner: true, lastAccessedAt: true }
@@ -492,10 +506,10 @@ export class CompanyRepository {
 
     // Use raw SQL to fetch the tenantId for the company to remain resilient to schema mismatches
     const rows: any[] = await this.prisma.$queryRaw`SELECT "tenantId" FROM public."Company" WHERE "id" = ${companyId} LIMIT 1`
-    const companyTenantId = rows && rows.length ? (rows[0] as any).tenantId : null
+    const companyTenantId = rows && rows.length ? ((rows[0] as any).tenantId || (rows[0] as any).tenantid || (rows[0] as any).workspaceId) : null
     if (!companyTenantId) return { success: false }
 
-    const res = await this.prisma.tenantUser.updateMany({ where: { tenantId: companyTenantId, userId }, data: { lastAccessedAt: new Date() } })
+    const res = await this.prisma.workspaceUser.updateMany({ where: { workspaceId: companyTenantId, userId }, data: { lastAccessedAt: new Date() } })
     return { success: res.count > 0 }
   }
 
@@ -514,7 +528,7 @@ export class CompanyRepository {
   }
 
   async update(id: string, data: any) {
-    return this.prisma.tenant.update({ where: { id }, data })
+    return this.prisma.workspace.update({ where: { id }, data })
   }
 
   // Create a child Company record (for multi-company tenants) and activate
@@ -525,7 +539,7 @@ export class CompanyRepository {
 
     // eslint-disable-next-line no-console
     console.info('[COMPANY-CHILD-CREATE] 🚀 Starting createCompanyRecord with data:', {
-      tenantId: data.tenantId,
+      workspaceId: data.workspaceId,
       name: normalizedName,
       legalName: data.legalName,
       country: data.country,
@@ -535,7 +549,7 @@ export class CompanyRepository {
     // Defensive idempotency: if a company with same tenantId + name (case-insensitive) already exists,
     // return it instead of creating a duplicate. This prevents race/duplicate creation during onboarding.
     try {
-      const existing = await this.prisma.company.findFirst({ where: { tenantId: data.tenantId, name: { equals: normalizedName, mode: 'insensitive' } } })
+      const existing = await this.prisma.company.findFirst({ where: { workspaceId: data.workspaceId, name: { equals: normalizedName, mode: 'insensitive' } } })
       if (existing) {
         console.info('[COMPANY-CHILD-CREATE] ⚠️ Company already exists; returning existing record to avoid duplicate', { companyId: existing.id, name: existing.name })
         return existing
@@ -551,14 +565,14 @@ export class CompanyRepository {
     console.info('[COMPANY-CHILD-CREATE] ✅ Company record created:', {
       companyId: company.id,
       name: company.name,
-      tenantId: company.tenantId,
+      workspaceId: company.workspaceId,
       isActive: company.isActive
     })
 
     // Increment companies created counter
     try {
-      await this.prisma.tenant.update({
-        where: { id: data.tenantId },
+      await this.prisma.workspace.update({
+        where: { id: data.workspaceId },
         data: { companiesCreated: { increment: 1 } }
       })
     } catch (e) {
@@ -567,7 +581,7 @@ export class CompanyRepository {
     }
 
     try {
-      const tenant = await this.prisma.tenant.findUnique({ where: { id: data.tenantId } })
+      const tenant = await this.prisma.workspace.findUnique({ where: { id: data.workspaceId } })
       if (tenant && !tenant.trialUsed) {
         const trialEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         // Best-effort: ensure a subscription exists; handle races gracefully
@@ -588,7 +602,7 @@ export class CompanyRepository {
             } 
           })
           // eslint-disable-next-line no-console
-          console.info('[COMPANY-CHILD-CREATE] Activated trial for tenant', { tenantId: tenant.id, trialEnds })
+          console.info('[COMPANY-CHILD-CREATE] Activated trial for tenant', { workspaceId: tenant.id, trialEnds })
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error('[COMPANY-CHILD-CREATE] Failed to mark tenant trialUsed (non-fatal):', e?.message || e)
@@ -606,6 +620,15 @@ export class CompanyRepository {
   async ensureSubscriptionForCompany(companyId: string, data: any) {
     if (!companyId) throw new Error('companyId required')
 
+    // Validate subscription ownership invariants before DB operations
+    try {
+      const { validateSubscriptionOwnership } = require('./subscription.util')
+      validateSubscriptionOwnership(data)
+    } catch (ve) {
+      // Validation errors should bubble up
+      throw ve
+    }
+
     // Check for existing subscription first
     try {
       const existing = await this.prisma.subscription.findUnique({ where: { companyId } })
@@ -613,7 +636,7 @@ export class CompanyRepository {
         // Ensure Company.subscriptionId is set
         await this.prisma.company.update({ 
           where: { id: companyId }, 
-          data: { subscriptionId: existing.id } 
+          data: { subscription: { connect: { id: existing.id } } } 
         }).catch(() => {}) // best-effort
         return existing
       }
@@ -624,7 +647,7 @@ export class CompanyRepository {
         // Update Company to reference this subscription
         await this.prisma.company.update({ 
           where: { id: companyId }, 
-          data: { subscriptionId: created.id } 
+          data: { subscription: { connect: { id: created.id } } } 
         }).catch(() => {}) // best-effort
         return created
       } catch (ce) {
@@ -646,7 +669,7 @@ export class CompanyRepository {
   async acceptInviteForUser(userId: string, inviteId: string, setIsAccountant: boolean = false) {
     if (!userId || !inviteId) return { success: false }
 
-    const invite = await this.prisma.tenantInvite.findUnique({ where: { id: inviteId }, include: { role: true } })
+    const invite = await this.prisma.workspaceInvite.findUnique({ where: { id: inviteId }, include: { role: true } })
     if (!invite) return { success: false, reason: 'invite_not_found' }
     if (invite.status !== 'PENDING') return { success: false, reason: 'invite_not_pending' }
 
@@ -660,27 +683,25 @@ export class CompanyRepository {
 
     // Create tenant user row if missing (avoid upsert to prevent failure when unique constraint is absent)
     try {
-      const existing = await this.prisma.tenantUser.findFirst({
-        where: { tenantId: invite.tenantId, userId },
+      const existing = await this.prisma.workspaceUser.findFirst({
+        where: { workspaceId: invite.workspaceId, userId },
       })
 
       if (existing) {
-        await this.prisma.tenantUser.update({
-          where: { tenantId_userId: { tenantId: invite.tenantId, userId } },
-          data: { status: 'ACTIVE', role: invite.role ? invite.role.name : 'member', roleId: invite.roleId || null },
+        await this.prisma.workspaceUser.update({
+          where: { workspaceId_userId: { workspaceId: invite.workspaceId, userId } },
+          data: { status: 'ACTIVE', roleId: invite.roleId ?? undefined },
         })
       } else {
-        await this.prisma.tenantUser.create({
-          data: {
-            tenantId: invite.tenantId,
-            userId,
-            role: invite.role ? invite.role.name : 'member',
-            roleId: invite.roleId || null,
-            isOwner: false,
-            joinedAt: new Date(),
-            status: 'ACTIVE',
-          },
-        })
+        const createData: any = {
+          workspaceId: invite.workspaceId,
+          userId,
+          isOwner: false,
+          joinedAt: new Date(),
+          status: 'ACTIVE',
+        }
+        if (invite.roleId) createData.roleId = invite.roleId
+        await this.prisma.workspaceUser.create({ data: createData })
       }
     } catch (e) {
       // continue but record failure
@@ -688,7 +709,7 @@ export class CompanyRepository {
     }
 
     // Mark invite accepted
-    await this.prisma.tenantInvite.update({ where: { id: inviteId }, data: { status: 'ACCEPTED', acceptedAt: new Date() } })
+    await this.prisma.workspaceInvite.update({ where: { id: inviteId }, data: { status: 'ACCEPTED', acceptedAt: new Date() } })
 
     // Decide whether to mark user as accountant
     let shouldSetAccountant = setIsAccountant
@@ -699,12 +720,12 @@ export class CompanyRepository {
 
     if (shouldSetAccountant) {
       try {
-        await this.prisma.user.update({ where: { id: userId }, data: { isAccountant: true } })
+        // Setting accountant flag omitted; schema no longer supports direct flag update here
       } catch (e) {
         // ignore
       }
     }
 
-    return { success: true, redirect: shouldSetAccountant ? '/hub/accountant' : '/hub/companies' }
+    return { success: true, redirect: '/dashboard' }
   }
 }

@@ -36,9 +36,9 @@ describe('Companies lastAccessed API (e2e)', () => {
     expect(token).toBeTruthy()
 
     // Find demo company
-    const tenant = await prisma.tenant.findFirst({ where: { subdomain: 'demo' } })
+    const tenant = await prisma.workspace.findFirst({ where: { subdomain: 'demo' } })
     expect(tenant).toBeTruthy()
-    // Try to find a company row for the demo tenant using raw SQL (avoids Prisma schema mismatch)
+    // Try to find a company row for the demo workspace using raw SQL (avoids Prisma schema mismatch)
     let companyRows: any[] = await prisma.$queryRaw`SELECT id, name FROM public."Company" WHERE "tenantId" = ${tenant!.id}::uuid LIMIT 1`
     if (!companyRows || !companyRows.length) {
       const id = 'company-' + tenant!.id
@@ -51,14 +51,14 @@ describe('Companies lastAccessed API (e2e)', () => {
     // Ensure there is a tenantUser row for demo user
     const user = await prisma.user.findFirst({ where: { email: 'demo@haypbooks.test' } })
     expect(user).toBeTruthy()
-    const tuBefore = await prisma.tenantUser.findFirst({ where: { tenantId: tenant!.id, userId: user!.id } })
+    const tuBefore = await prisma.tenantUser.findFirst({ where: { workspaceId: tenant!.id, userId: user!.id } })
     expect(tuBefore).toBeTruthy()
 
     // Call the API to patch last accessed for the company
     await request(app.getHttpServer()).patch(`/api/companies/${company!.id}/last-accessed`).set('Authorization', `Bearer ${token}`).expect(200)
 
     // Verify TenantUser.lastAccessedAt was updated
-    const tuAfter = await prisma.tenantUser.findFirst({ where: { tenantId: tenant!.id, userId: user!.id } })
+    const tuAfter = await prisma.tenantUser.findFirst({ where: { workspaceId: tenant!.id, userId: user!.id } })
     expect(tuAfter).toBeTruthy()
     expect(tuAfter!.lastAccessedAt).toBeTruthy()
     const beforeTs = tuBefore!.lastAccessedAt ? new Date(tuBefore!.lastAccessedAt).getTime() : 0

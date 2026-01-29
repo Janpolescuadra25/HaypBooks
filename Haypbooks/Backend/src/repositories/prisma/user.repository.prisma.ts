@@ -33,15 +33,28 @@ export class PrismaUserRepository implements IUserRepository {
   async create(data: Partial<User>): Promise<User> {
     const toCreate: any = { ...(data as any) }
     if (toCreate.email) toCreate.email = this.normalizeEmail(toCreate.email)
+    // Backwards-compat: accept `role` in legacy test/seed fixtures and map to `systemRole`
+    if (toCreate.role) { toCreate.systemRole = toCreate.role; delete toCreate.role }
     const created = await this.prisma.user.create({ data: toCreate })
     return created as any
   }
 
   async update(id: string, data: Partial<User>): Promise<User> {
     // Use the generated Prisma client for updates now that `prisma generate` has been run.
-    const toUpdate: any = { ...(data as any) }
+    let toUpdate: any = { ...(data as any) }
     if (toUpdate.email) toUpdate.email = this.normalizeEmail(toUpdate.email)
-    const updated = await this.prisma.user.update({ where: { id }, data: toUpdate })
+    if (toUpdate.role) { toUpdate.systemRole = toUpdate.role; delete toUpdate.role }
+
+    // Whitelist scalar user fields to avoid passing unknown legacy flags (e.g., onboarding flags)
+    const allowed = new Set([
+      'email','systemRole','name','password','isEmailVerified','resetToken','resetTokenExpiry','preferredHub','phone','phoneHmac','isPhoneVerified','phoneVerifiedAt','auditReviewer'
+    ])
+    const filtered: any = {}
+    for (const k of Object.keys(toUpdate)) {
+      if (allowed.has(k)) filtered[k] = toUpdate[k]
+    }
+
+    const updated = await this.prisma.user.update({ where: { id }, data: filtered })
     return updated as any
   }
 

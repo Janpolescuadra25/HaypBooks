@@ -9,7 +9,7 @@ export class InventoryController {
   @Post('items')
   @UseGuards(JwtAuthGuard)
   async createItem(@Request() req, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.service.createItem(tenantId, payload)
   }
 
@@ -22,42 +22,42 @@ export class InventoryController {
   @Get('items')
   @UseGuards(JwtAuthGuard)
   async listItems(@Request() req, @Query() query: any) {
-    const tenantId = query.tenantId || req.user?.tenantId
+    const tenantId = query.workspaceId || req.user?.workspaceId
     return this.service.listItems(tenantId, query)
   }
 
   @Post('locations')
   @UseGuards(JwtAuthGuard)
   async createLocation(@Request() req, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.service.createStockLocation(tenantId, payload)
   }
 
   @Post('receive')
   @UseGuards(JwtAuthGuard)
   async receive(@Request() req, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.service.receiveStock(tenantId, payload)
   }
 
   @Post('ship')
   @UseGuards(JwtAuthGuard)
   async ship(@Request() req, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.service.shipStock(tenantId, payload)
   }
 
   @Post('transfer')
   @UseGuards(JwtAuthGuard)
   async transfer(@Request() req, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.service.transferStock(tenantId, payload)
   }
 
   @Post('adjust')
   @UseGuards(JwtAuthGuard)
   async adjust(@Request() req, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.service.adjustStock(tenantId, payload)
   }
 }

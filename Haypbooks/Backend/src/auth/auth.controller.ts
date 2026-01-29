@@ -33,21 +33,17 @@ export class AuthController {
     const ua = req.headers['user-agent'] || ''
     const result = await this.authService.login(normalizeEmail(loginDto.email), loginDto.password, req.ip || req.connection?.remoteAddress, String(ua))
 
-    // Determine landing redirect: if user is an accountant, suggest accountant hub; otherwise companies hub.
+    // Determine landing redirect: if the user already has a preferred workspace/hub set, send to Dashboard.
+    // Otherwise, send them to the Workspace selection page so they can choose a Company or Practice.
     try {
       if (result?.user) {
-        // Respect an explicit preferredHub when present; otherwise fall back to accountant iff user.isAccountant
-        const preferred = (result.user as any)?.preferredHub ? String((result.user as any).preferredHub).toLowerCase() : ''
+        const preferred = (result.user as any)?.preferredHub || (result.user as any)?.preferredWorkspaceId || ''
         if (preferred) {
-          if (preferred === 'owner') {
-            (result as any).redirect = '/hub/companies'
-          } else if (preferred === 'accountant') {
-            (result as any).redirect = '/hub/accountant'
-          } else {
-            (result as any).redirect = result.user.isAccountant ? '/hub/accountant' : '/hub/companies'
-          }
+          // Redirect into unified Dashboard when preferred workspace is known
+          (result as any).redirect = '/dashboard'
         } else {
-          (result as any).redirect = result.user.isAccountant ? '/hub/accountant' : '/hub/companies'
+          // No preferred workspace — take user to the Workspace selection flow
+          (result as any).redirect = '/workspace'
         }
       }
     } catch (e) {
@@ -104,8 +100,8 @@ export class AuthController {
 
   @Post('pre-signup')
   @HttpCode(HttpStatus.OK)
-  async preSignup(@Body() body: { email: string; password: string; name?: string; role?: string; phone?: string; phoneCountry?: string; companyName?: string; firmName?: string }) {
-    const { password, name, role, phone, phoneCountry, companyName, firmName } = body
+  async preSignup(@Body() body: { email: string; password: string; name?: string; role?: string; phone?: string; phoneCountry?: string; companyName?: string }) {
+    const { password, name, role, phone, phoneCountry, companyName } = body
     const email = normalizeEmail(body.email)
     // Ensure no verified user exists with that email
     const existing = await this.userRepository.findByEmail(email)
@@ -123,8 +119,6 @@ export class AuthController {
       phone,
       phoneCountry,
       companyName: companyName || undefined,
-      // firmName is now stored on User model, not Tenant (Grok.11)
-      firmName: firmName || undefined,
       emailOtpVerified: false,
       phoneOtpVerified: false,
     }, 60 * 30)
@@ -242,7 +236,6 @@ export class AuthController {
       phoneOk,
       finalEmailVerified,
       finalPhoneVerified,
-      willSetPhoneVerified: !!(normalizedPhone && finalPhoneVerified)
     })
 
     if (existing && !existing.isEmailVerified) {
@@ -257,7 +250,6 @@ export class AuthController {
         phone: normalizedPhone,
         ...(phoneHmac ? { phoneHmac } : {}),
         ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
-        ...(pendingAfter.firmName ? { firmName: pendingAfter.firmName } : {}),
         ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
       } as any)
     } else {
@@ -273,7 +265,6 @@ export class AuthController {
         phone: normalizedPhone,
         ...(phoneHmac ? { phoneHmac } : {}),
         ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
-        ...(pendingAfter.firmName ? { firmName: pendingAfter.firmName } : {}),
         ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
       } as any)
     }

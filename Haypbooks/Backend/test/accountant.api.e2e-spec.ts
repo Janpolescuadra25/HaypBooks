@@ -51,7 +51,7 @@ describe('Accountant API (e2e)', () => {
     await pool.query('INSERT INTO public."User" ("id","email","name","passwordhash","createdAt","updatedAt") VALUES ($1,$2,$3,$4,now(),now()) ON CONFLICT ("id") DO NOTHING', [fakeUserId, `${fakeUserId}@example`, 'Test User', 'x'])
     await pool.query('INSERT INTO public."Tenant" ("id","name","subdomain","createdAt","updatedAt") VALUES ($1,$2,$3,now(),now()) ON CONFLICT ("id") DO NOTHING', [fakeUserId, 'Test Tenant', `${fakeUserId}-sub`])
     // create client mapping
-    const createResp = await client.post('/api/accountants/clients').send({ accountantId: fakeUserId, tenantId: fakeUserId, accessLevel: 'FULL' }).set('Authorization', `Bearer test-token`).expect(201)
+    const createResp = await client.post('/api/accountants/clients').send({ accountantId: fakeUserId, workspaceId: fakeUserId, accessLevel: 'FULL' }).set('Authorization', `Bearer test-token`).expect(201)
     const id = createResp.body.id
 
     const listResp = await client.get(`/api/accountants/clients/${fakeUserId}`).set('Authorization', `Bearer test-token`).expect(200)

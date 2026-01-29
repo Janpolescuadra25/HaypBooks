@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 const TopBar = dynamic(() => import('@/components/accountant/AccountantTopBar'), { ssr: false })
 import Link from 'next/link'
 import { useToast } from '@/components/ToastProvider'
+import useViewportZoom from '@/hooks/useViewportZoom'
 
 type Client = { 
   tenantId: string
@@ -23,6 +24,16 @@ export default function AccountantHub() {
   const [pendingCount, setPendingCount] = useState(0)
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+
+  const { isWide, isCompact } = useViewportZoom()
+  // Copy container sizing from Owner Workspace CompanyHub
+  const containerVerticalOffset = -28
+  const containerHorizontalOffset = -79
+  const containerPadding = 6 // 24px
+  const containerWidth = 113 // percentage
+  const effectiveHorizontalOffset = isCompact ? 0 : containerHorizontalOffset
+  const effectiveWidth = isCompact ? 100 : containerWidth
+  const effectivePadding = isCompact ? Math.min(containerPadding, 4) : containerPadding
 
   const loadClients = async () => {
     setLoading(true)
@@ -69,7 +80,7 @@ export default function AccountantHub() {
       await fetch(`/api/tenants/${tenantId}/access`, { method: 'POST' })
       pushToast({ type: 'success', message: 'Switched to client tenant' })
       // Navigate to client's company selection or first company
-      router.push('/hub/selection')
+      router.push('/workspace')
     } catch (e) {
       console.error('Failed to update last accessed', e)
       pushToast({ type: 'error', message: 'Failed to switch to client' })
@@ -100,7 +111,14 @@ export default function AccountantHub() {
         <div className="max-w-[1800px] mx-auto px-16">
           
           {/* White Container - matching Owner Workspace style */}
-          <div className="relative overflow-visible bg-white rounded-[64px] shadow-[0_6px_18px_rgba(2,6,23,0.04)] ring-1 ring-emerald-50 border border-emerald-100 px-6 pt-6 pb-10 min-h-[460px] transform -translate-y-[62px]">
+          <div 
+            className={`relative overflow-visible bg-white rounded-[64px] shadow-[0_6px_18px_rgba(2,6,23,0.04)] ring-1 ring-emerald-50 border border-emerald-100 ${isWide ? 'mx-4 lg:mx-8' : ''} min-h-[460px] transition-all duration-300 mx-auto`}
+            style={{
+              transform: `translate(${effectiveHorizontalOffset}px, ${containerVerticalOffset}px)`,
+              padding: `${effectivePadding * 4}px`,
+              width: `${effectiveWidth}%`
+            }}
+          >
             
             <header className="mb-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

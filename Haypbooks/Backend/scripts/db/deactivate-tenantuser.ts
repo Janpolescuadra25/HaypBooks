@@ -12,7 +12,7 @@ if (!userId || !tenantId) {
 
 async function run() {
   console.info('[DEACTIVATE] userId=', userId, 'tenantId=', tenantId, 'apply=', apply)
-  const rows: any = await prisma.tenantUser.findMany({ where: { userId, tenantId } })
+  const rows: any = await prisma.tenantUser.findMany({ where: { userId, workspaceId } })
   console.info('[DEACTIVATE] Found tenantUser rows:', rows)
   if (!rows || rows.length === 0) {
     console.info('[DEACTIVATE] Nothing to do')
@@ -26,7 +26,7 @@ async function run() {
     return
   }
 
-  const res = await prisma.tenantUser.updateMany({ where: { userId, tenantId }, data: { status: 'INACTIVE', deletedAt: new Date() } })
+  const res = await prisma.tenantUser.updateMany({ where: { userId, workspaceId }, data: { status: 'INACTIVE', deletedAt: new Date() } })
   console.info('[DEACTIVATE] Updated rows:', res)
   await prisma.$disconnect()
 }

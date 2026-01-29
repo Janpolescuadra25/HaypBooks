@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 const { PrismaClient } = require('@prisma/client')
+const prisma = new PrismaClient()
 // Lightweight slugify replacement to avoid adding new deps
 function slugify(s){ if(!s) return 't'; return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50) }
-const prisma = new PrismaClient()
 
 const args = process.argv.slice(2)
 const apply = args.includes('--apply')
@@ -20,7 +20,7 @@ async function run() {
     // skip empty or whitespace names
     const name = (u.companyName || '').trim()
     if (!name) continue
-    const hasTenant = await prisma.tenantUser.findFirst({ where: { userId: u.id } })
+    const hasTenant = await prisma.workspaceUser.findFirst({ where: { userId: u.id } })
     if (!hasTenant) candidates.push(u)
     if (candidates.length >= limit) break
   }
@@ -44,12 +44,12 @@ async function run() {
       const tenantId = require('crypto').randomUUID()
       await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
       console.log(`  Created tenant ${tenantId} (from ${u.companyName}) for user ${u.email}`)
-      await prisma.tenantUser.create({ data: { tenantId: tenantId, userId: u.id, isOwner: true, role: 'owner' } })
+      await prisma.workspaceUser.create({ data: { workspaceId: workspaceId, userId: u.id, isOwner: true, role: 'owner' } })
       console.log(`  Linked user ${u.id} as owner to tenant ${tenant.id}`)
       // Create default roles for tenant
       const roleNames = ['Owner','Admin','Bookkeeper','Viewer']
       for (const rn of roleNames) {
-        try { await prisma.role.create({ data: { name: rn, tenantId: tenant.id } }) } catch(e) { /* ignore uniqueness errors */ }
+        try { await prisma.role.create({ data: { name: rn, workspaceId: tenant.id } }) } catch(e) { /* ignore uniqueness errors */ }
       }
       console.log(`  Created default roles for tenant ${tenant.id}`)
     } catch (e) {

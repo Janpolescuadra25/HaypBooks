@@ -6,8 +6,8 @@ export class AttachmentsController {
   constructor(private readonly svc: AttachmentsService) {}
 
   @Get()
-  async list(@Query('tenantId') tenantId: string, @Query('entityType') entityType: string, @Query('entityId') entityId: string) {
-    return this.svc.list(tenantId, entityType, entityId)
+  async list(@Query('tenantId') workspaceId: string, @Query('entityType') entityType: string, @Query('entityId') entityId: string) {
+    return this.svc.list(workspaceId, entityType, entityId)
   }
 
   @Post()

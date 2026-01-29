@@ -20,7 +20,7 @@ describe('CompanyRepository.ensureSubscriptionForCompany', () => {
     const res = await repo.ensureSubscriptionForCompany('c1', { companyId: 'c1', plan: 'FREE' })
     expect(res).toEqual({ id: 's1', companyId: 'c1' })
     expect(mockPrisma.subscription.create).toHaveBeenCalledWith({ data: expect.objectContaining({ companyId: 'c1' }) })
-    expect(mockPrisma.company.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { subscriptionId: 's1' } })
+    expect(mockPrisma.company.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { subscription: { connect: { id: 's1' } } } })
   })
 
   test('returns existing subscription if present', async () => {
@@ -30,7 +30,7 @@ describe('CompanyRepository.ensureSubscriptionForCompany', () => {
     const res = await repo.ensureSubscriptionForCompany('c2', { companyId: 'c2', plan: 'FREE' })
     expect(res).toEqual({ id: 's2', companyId: 'c2' })
     expect(mockPrisma.subscription.create).not.toHaveBeenCalled()
-    expect(mockPrisma.company.update).toHaveBeenCalledWith({ where: { id: 'c2' }, data: { subscriptionId: 's2' } })
+    expect(mockPrisma.company.update).toHaveBeenCalledWith({ where: { id: 'c2' }, data: { subscription: { connect: { id: 's2' } } } })
   })
 
   test('handles race where create fails with P2002 by returning existing', async () => {
@@ -42,5 +42,10 @@ describe('CompanyRepository.ensureSubscriptionForCompany', () => {
 
     const res = await repo.ensureSubscriptionForCompany('c3', { companyId: 'c3', plan: 'FREE' })
     expect(res).toEqual({ id: 's3', companyId: 'c3' })
+  })
+
+  test('throws when provided invalid subscription ownership', async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValueOnce(null)
+    await expect(repo.ensureSubscriptionForCompany('c1', { companyId: 'c1', practiceId: 'p1', plan: 'PRO' })).rejects.toThrow(/exactly one owner/)
   })
 })

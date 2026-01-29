@@ -11,13 +11,13 @@ This short guide shows how to test phone verification flows locally and in Playw
 curl "http://127.0.0.1:4000/api/test/otp/latest?phone=%2B15551234567"
 ```
 
-4. Enter the 6-digit code in the verification form and confirm you are redirected to `/hub/selection`.
+4. Enter the 6-digit code in the verification form and confirm you are redirected to `/workspace`.
 
 ## Deterministic Playwright demo
 Use the included e2e demo `e2e/demo-phone-verification.spec.ts` which:
 1. Signs up with a fake phone.
 2. Calls `POST /api/test/create-otp` with `{ phone, otp: '654321', purpose: 'VERIFY_PHONE' }`.
-3. Navigates to `/verification`, clicks **Send Code to Phone**, enters `654321` and asserts redirect to `/hub/selection`.
+3. Navigates to `/verification`, clicks **Send Code to Phone**, enters `654321` and asserts redirect to `/workspace`.
 
 ## Automated persistence test
 A focused Playwright spec `e2e/verify-phone-persist.spec.ts` validates that a successful phone verification causes the backend to set `isPhoneVerified=true` and populate `phoneVerifiedAt` for the user record.

@@ -64,7 +64,7 @@ describe('AuthController pre-signup/complete-signup', () => {
     expect(authSvc.startOtpByPhone).toHaveBeenCalled()
   })
 
-  test('preSignup accepts companyName and firmName and completeSignup persists them to user', async () => {
+  test('preSignup accepts companyName and completeSignup persists it to user', async () => {
     mockUserRepo.findByEmail.mockResolvedValue(null)
 
     // Create pending directly to avoid any runtime shape oddities in preSignup wrapper
@@ -73,7 +73,6 @@ describe('AuthController pre-signup/complete-signup', () => {
       hashedPassword: 'hashed',
       name: 'Biz',
       companyName: 'Biz Co',
-      firmName: 'Biz Firm',
       emailOtpVerified: false,
       phoneOtpVerified: false,
     }) as string
@@ -86,7 +85,6 @@ describe('AuthController pre-signup/complete-signup', () => {
     expect(mockUserRepo.create).toHaveBeenCalled()
     const created = (mockUserRepo.create as jest.Mock).mock.calls[0][0]
     expect(created.companyName).toBe('Biz Co')
-    expect(created.firmName).toBe('Biz Firm')
     expect((result as any).token).toBeTruthy()
   })
   test('completeSignup completes after either email OR phone OTP (OR policy)', async () => {

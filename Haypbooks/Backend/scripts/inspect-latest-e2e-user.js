@@ -7,10 +7,10 @@ const { PrismaClient } = require('@prisma/client');
     if (!user) return;
     const step = await p.onboardingStep.findFirst({ where: { userId: user.id, step: 'business' }, orderBy: { createdAt: 'desc' } });
     console.log('business step:', step ? step.data : null);
-    const tenantUsers = await p.tenantUser.findMany({ where: { userId: user.id } });
+    const tenantUsers = await p.workspaceUser.findMany({ where: { userId: user.id } });
     console.log('tenantUsers:', tenantUsers);
-    const tenantIds = tenantUsers.map(t => t.tenantId);
-    const companies = await p.company.findMany({ where: { tenantId: { in: tenantIds } } });
+    const tenantIds = tenantUsers.map(t => t.workspaceId);
+    const companies = await p.company.findMany({ where: { workspaceId: { in: tenantIds } } });
     console.log('companies:', companies);
   } catch (e) {
     console.error(e);

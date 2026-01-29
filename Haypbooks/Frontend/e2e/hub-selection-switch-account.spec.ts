@@ -7,7 +7,7 @@ test('switch account logs out and navigates to sign in', async ({ page }) => {
     localStorage.setItem('user', JSON.stringify({ id: 'e2e-user', email: 'e2e@haypbooks.test', name: 'E2E' }))
   })
 
-  await page.goto('/hub/selection')
+  await page.goto('/workspace')
   await expect(page.locator('[data-testid="switch-account"]')).toBeVisible()
   await page.getByTestId('switch-account').click()
 

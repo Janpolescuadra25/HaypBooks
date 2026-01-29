@@ -66,7 +66,7 @@ async function run() {
         console.info(`[BACKFILL-TID] Table=${m.table} (resolved ${usedTable}.${usedCol}) missing tenantId (direct company):`, cnt)
         if (apply && cnt > 0) {
           // Update by joining to Company using resolved names
-          const sql = `UPDATE public."${usedTable}" t SET "tenantId" = c."tenantId" FROM public."Company" c WHERE t."${usedCol}" = c.id AND t."tenantId" IS NULL RETURNING t.id;`
+          const sql = `UPDATE public."${usedTable}" t SET "tenantId" = c."tenantId"::uuid FROM public."Company" c WHERE t."${usedCol}" = c.id AND t."tenantId" IS NULL RETURNING t.id;`
           const updated: any[] = await prisma.$queryRawUnsafe(sql)
           console.info(`[BACKFILL-TID] Updated ${m.table} (resolved ${usedTable}.${usedCol}): `, (updated && updated.length) ? updated.length : 0)
         }
@@ -79,7 +79,7 @@ async function run() {
       const cnt = res && res[0] ? res[0].cnt : 0
       console.info(`[BACKFILL-TID] Table=${m.table} missing tenantId (via ${m.joinTable}):`, cnt)
       if (apply && cnt > 0) {
-        const sql = `UPDATE public."${m.table}" t SET "tenantId" = j."tenantId" FROM public."${m.joinTable}" j WHERE t."${m.joinColumn}" = j.id AND t."tenantId" IS NULL RETURNING t.id;`
+        const sql = `UPDATE public."${m.table}" t SET "tenantId" = j."tenantId"::uuid FROM public."${m.joinTable}" j WHERE t."${m.joinColumn}" = j.id AND t."tenantId" IS NULL RETURNING t.id;`
         const updated: any[] = await prisma.$queryRawUnsafe(sql)
         console.info(`[BACKFILL-TID] Updated ${m.table}: `, (updated && updated.length) ? updated.length : 0)
       }

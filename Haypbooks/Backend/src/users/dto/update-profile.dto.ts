@@ -6,10 +6,4 @@ export class UpdateProfileDto {
   @IsNotEmpty()
   @MaxLength(140)
   companyName?: string
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(140)
-  firmName?: string
 }

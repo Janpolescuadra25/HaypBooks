@@ -37,11 +37,11 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard)
   async createInvite(
     @Req() req: any,
-    @Param('tenantId') tenantId: string,
+    @Param('tenantId') workspaceId: string,
     @Body() body: { email: string; roleId?: string }
   ) {
     const userId = req.user?.userId
-    return this.tenantsService.createInvite(tenantId, body.email, userId, body.roleId)
+    return this.tenantsService.createInvite(workspaceId, body.email, userId, body.roleId)
   }
 
   /**
@@ -74,9 +74,9 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard)
   async updateLastAccessed(
     @Req() req: any,
-    @Param('tenantId') tenantId: string
+    @Param('tenantId') workspaceId: string
   ) {
     const userId = req.user?.userId
-    return this.tenantsService.updateLastAccessed(tenantId, userId)
+    return this.tenantsService.updateLastAccessed(workspaceId, userId)
   }
 }

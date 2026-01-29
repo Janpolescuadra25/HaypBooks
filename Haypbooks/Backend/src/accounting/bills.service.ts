@@ -7,6 +7,7 @@ export class BillsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createBill(tenantId: string, payload: any) {
+    const workspaceId = tenantId
     await assertCompanyBelongsToTenant(this.prisma as any, payload.companyId, tenantId)
     if (!payload.vendorId) {
       throw new BadRequestException('vendorId is required')
@@ -16,7 +17,7 @@ export class BillsService {
     const bill = await this.prisma.$transaction(async (tx) => {
       const newBill = await tx.bill.create({ 
         data: { 
-          tenantId, 
+          workspaceId, 
           companyId: payload.companyId, 
           vendorId: payload.vendorId, 
           billNumber: payload.billNumber, 
@@ -32,7 +33,7 @@ export class BillsService {
       for (const line of payload.lines || []) {
         await tx.billLine.create({
           data: {
-            companyId: payload.companyId,
+            company: { connect: { id: payload.companyId } },
             bill: { connect: { id: newBill.id } },
             accountId: line.accountId,
             itemId: line.itemId,
@@ -41,7 +42,7 @@ export class BillsService {
             rate: line.unitPrice || line.rate || 0,
             amount: line.totalPrice || line.amount || 0,
             taxCodeId: line.taxCodeId || null,
-            tenant: { connect: { id: tenantId } }
+            workspace: { connect: { id: workspaceId } }
           }
         })
       }
@@ -65,9 +66,12 @@ export class BillsService {
     return bill
   }
 
-  async listBills(tenantId: string, filter?: any) {
+
+async listBills(tenantId: string, filter?: any) {
+    const workspaceId = tenantId
+
     return this.prisma.bill.findMany({ 
-      where: { tenantId, ...filter }, 
+      where: { workspaceId, ...filter }, 
       include: { lines: true, payments: true },
       orderBy: { issuedAt: 'desc' }
     })
@@ -75,6 +79,7 @@ export class BillsService {
 
   async applyPayment(tenantId: string, billId: string, amount: number, payload: any) {
     await assertCompanyBelongsToTenant(this.prisma as any, payload.companyId, tenantId)
+    const workspaceId = tenantId
     // Validate bill exists and has sufficient balance
     const bill = await this.prisma.bill.findUnique({ where: { id: billId } })
     
@@ -90,7 +95,7 @@ export class BillsService {
     const result = await this.prisma.$transaction(async (tx) => {
       const payment = await tx.billPayment.create({ 
         data: { 
-          tenantId, 
+          workspaceId, 
           billId, 
           companyId: payload.companyId, 
           amount, 

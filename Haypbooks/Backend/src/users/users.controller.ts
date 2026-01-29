@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request, Patch, Body } from '@nestjs/common'
+import { Controller, Get, UseGuards, Request, Patch, Body, Post } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { UsersService } from './users.service'
 import { SetPreferredHubDto } from './dto/set-preferred-hub.dto'
@@ -33,9 +33,14 @@ export class UsersController {
   async updateProfile(@Request() req, @Body() body: UpdateProfileDto) {
     const userId = req.user.userId
     // sanitize input: trim strings and convert empty -> null
-    // NOTE: we no longer accept `companyName` on the User model (deprecated), only `firmName` is persisted
     const payload: any = {}
-    if (typeof body.firmName === 'string') payload.firmName = String(body.firmName).trim() || null
     return this.usersService.updateProfile(userId, payload)
+  }
+
+  @Post('preferred-workspace')
+  @UseGuards(JwtAuthGuard)
+  async setPreferredWorkspace(@Request() req, @Body() body: { type: 'company'|'practice', id?: string }) {
+    const userId = req.user.userId
+    return this.usersService.setPreferredWorkspace(userId, body)
   }
 }

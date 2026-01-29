@@ -14,16 +14,27 @@ export default function GetStartedPlansPage() {
     if (!workspaceName.trim()) { setError('Owner Workspace name is required'); return }
     setLoading(true)
     try {
-      // Persist Owner Workspace name to backend for current user (best-effort)
+      // Save workspace name to onboarding steps (prefer explicit workspaceName key)
       try {
-        await apiClient.patch('/api/users/profile', { companyName: workspaceName.trim() })
+        await apiClient.post('/api/onboarding/save', { step: 'owner_workspace', data: { workspaceName: workspaceName.trim() } })
+        // Reflect immediately in local storage by storing workspaceName (best-effort)
+        if (typeof window !== 'undefined') {
+          try {
+            const s = localStorage.getItem('user')
+            if (s) {
+              const parsed = JSON.parse(s)
+              parsed.workspaceName = workspaceName.trim()
+              localStorage.setItem('user', JSON.stringify(parsed))
+            }
+          } catch (err) {
+            // ignore localStorage errors
+          }
+        }
       } catch (e) {
-        console.warn('Failed to persist Owner Workspace name to backend', e)
+        // Non-fatal: log and continue
+        // eslint-disable-next-line no-console
+        console.warn('[GET-STARTED] Failed to save onboarding business step (non-fatal):', e)
       }
-
-      // NOTE: We no longer attempt to create a company here to avoid duplicate creation.
-      // The onboarding flow on the server will create the Company during completion and persist it,
-      // so here we only persist the Workspace name to the user's profile and continue the flow.
 
       router.push(next)
     } finally {
@@ -60,12 +71,12 @@ export default function GetStartedPlansPage() {
 
         <div className="bg-white rounded-2xl shadow p-6 border border-white/40">
           <h2 className="text-xl font-semibold text-slate-800 mb-3">Let's get started</h2>
-          <p className="text-slate-600 mb-6">Tell us the name of your Owner Workspace to personalize your experience.</p>
+          <p className="text-slate-600 mb-6">Tell us the name of your workspace to personalize your experience.</p>
 
           <div className="max-w-md mx-auto">
-            <label htmlFor="workspace-name" className="block text-sm font-medium text-slate-700 mb-2">Owner Workspace name</label>
+            <label htmlFor="workspace-name" className="block text-sm font-medium text-slate-700 mb-2">Workspace name</label>
             <input id="workspace-name" value={workspaceName} onChange={(e)=>{ setWorkspaceName(e.target.value); setError('') }} type="text" placeholder="e.g., Acme Widgets LLC" className={`w-full px-4 py-3 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90 ${error ? 'border-red-500' : 'border-slate-300'}`} required aria-required="true" />
-            {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : <p className="mt-2 text-xs text-slate-500">Your Owner Workspace is the central home for your business in HaypBooks. It can contain one company or multiple—all managed in one place.</p>}
+            {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : <p className="mt-2 text-xs text-slate-500">This will be used to personalize your account and help identify your business in HaypBooks.</p>}
           </div>
 
           <div className="mt-6">

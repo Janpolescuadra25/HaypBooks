@@ -5,14 +5,41 @@ import { PrismaService } from '../repositories/prisma/prisma.service'
 export class TenantsService {
   constructor(private readonly prisma: PrismaService) {}
 
+async updateWorkspaceName(tenantId: string, workspaceName: string) {
+    const workspaceId = tenantId
+
+    if (!tenantId || !workspaceName) return null
+    try {
+      // Cast to any to allow runtime DB fields that may be missing from Prisma schema in some environments
+      return await this.prisma.workspace.update({ where: { id: workspaceId }, data: { workspaceName } as any })
+    } catch (e) {
+      console.warn('[TenantsService] Failed to update workspaceName (non-fatal):', e?.message || e)
+      return null
+    }
+  }
+
+
+async updateFirmName(tenantId: string, firmName: string) {
+    const workspaceId = tenantId
+
+    if (!tenantId || !firmName) return null
+    try {
+      // Cast as any to tolerate missing schema fields at type-check/runtime parity
+      return await this.prisma.workspace.update({ where: { id: workspaceId }, data: { firmName } as any })
+    } catch (e) {
+      console.warn('[TenantsService] Failed to update firmName (non-fatal):', e?.message || e)
+      return null
+    }
+  }
+
   /**
    * Get all tenants the user has access to via TenantUser
    */
   async listTenantsForUser(userId: string) {
-    const tenantUsers = await this.prisma.tenantUser.findMany({
+    const tenantUsers = await this.prisma.workspaceUser.findMany({
       where: { userId },
       include: {
-        tenant: {
+        workspace: {
           include: {
             companies: {
               where: { isActive: true },
@@ -24,6 +51,7 @@ export class TenantsService {
             },
           },
         },
+        Role: { select: { id: true, name: true } },
       },
       orderBy: {
         lastAccessedAt: 'desc',
@@ -31,13 +59,15 @@ export class TenantsService {
     })
 
     return tenantUsers.map(tu => ({
-      id: tu.tenant.id,
-      name: tu.tenant.name,
+      id: tu.workspace.id,
+      name: (tu.workspace as any).workspaceName || null,
+      workspaceName: (tu.workspace as any).workspaceName || null,
+      activeNonOwnerUsersCount: (tu.workspace as any).activeNonOwnerUsersCount ?? 0,
       isOwner: tu.isOwner,
-      role: tu.role,
+      role: tu.Role?.name || null,
       lastAccessedAt: tu.lastAccessedAt,
-      companiesCount: tu.tenant.companies.length,
-      companies: tu.tenant.companies,
+      companiesCount: tu.workspace.companies.length,
+      companies: tu.workspace.companies,
     }))
   }
 
@@ -46,13 +76,13 @@ export class TenantsService {
    * Returns tenants where user is invited (not owner)
    */
   async listClientsForAccountant(userId: string) {
-    const tenantUsers = await this.prisma.tenantUser.findMany({
+    const tenantUsers = await this.prisma.workspaceUser.findMany({
       where: {
         userId,
         isOwner: false, // Only non-owned tenants (clients)
       },
       include: {
-        tenant: {
+        workspace: {
           include: {
             companies: {
               where: { isActive: true },
@@ -63,6 +93,7 @@ export class TenantsService {
             },
           },
         },
+        Role: { select: { id: true, name: true } },
       },
       orderBy: {
         lastAccessedAt: 'desc',
@@ -70,12 +101,14 @@ export class TenantsService {
     })
 
     return tenantUsers.map(tu => ({
-      tenantId: tu.tenant.id,
-      tenantName: tu.tenant.name,
-      role: tu.role,
+      workspaceId: tu.workspace.id,
+      tenantName: (tu.workspace as any).workspaceName || null,
+      workspaceName: (tu.workspace as any).workspaceName || null,
+      activeNonOwnerUsersCount: (tu.workspace as any).activeNonOwnerUsersCount ?? 0,
+      role: tu.Role?.name || null,
       lastAccessedAt: tu.lastAccessedAt,
-      companiesCount: tu.tenant.companies.length,
-      companies: tu.tenant.companies,
+      companiesCount: tu.workspace.companies.length,
+      companies: tu.workspace.companies,
     }))
   }
 
@@ -89,11 +122,13 @@ export class TenantsService {
       throw new ForbiddenException('Invalid tenant')
     }
 
+    const workspaceId = tenantId
+
     // Verify the inviter has permission (must be owner)
-    const tenantUser = await this.prisma.tenantUser.findUnique({
+    const tenantUser = await this.prisma.workspaceUser.findUnique({
       where: {
-        tenantId_userId: {
-          tenantId,
+        workspaceId_userId: {
+          workspaceId,
           userId: invitedBy,
         },
       },
@@ -104,10 +139,10 @@ export class TenantsService {
     }
 
     // Check if invite already exists
-    const existingInvite = await this.prisma.tenantInvite.findUnique({
+    const existingInvite = await this.prisma.workspaceInvite.findUnique({
       where: {
-        tenantId_email: {
-          tenantId,
+        workspaceId_email: {
+          workspaceId,
           email,
         },
       },
@@ -123,10 +158,10 @@ export class TenantsService {
     })
 
     if (invitedUser) {
-      const existingMembership = await this.prisma.tenantUser.findUnique({
+      const existingMembership = await this.prisma.workspaceUser.findUnique({
         where: {
-          tenantId_userId: {
-            tenantId,
+          workspaceId_userId: {
+            workspaceId,
             userId: invitedUser.id,
           },
         },
@@ -138,9 +173,9 @@ export class TenantsService {
     }
 
     // Create the invite
-    const invite = await this.prisma.tenantInvite.create({
+    const invite = await this.prisma.workspaceInvite.create({
       data: {
-        tenantId,
+        workspaceId,
         email,
         roleId,
         invitedBy,
@@ -148,9 +183,9 @@ export class TenantsService {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
       include: {
-        tenant: {
+        workspace: {
           select: {
-            name: true,
+            id: true,
           },
         },
         invitedByUser: {
@@ -172,7 +207,7 @@ export class TenantsService {
    * Get pending invites for an email
    */
   async getPendingInvitesForEmail(email: string) {
-    const invites = await this.prisma.tenantInvite.findMany({
+    const invites = await this.prisma.workspaceInvite.findMany({
       where: {
         email,
         status: 'PENDING',
@@ -181,10 +216,9 @@ export class TenantsService {
         },
       },
       include: {
-        tenant: {
+        workspace: {
           select: {
             id: true,
-            name: true,
           },
         },
         invitedByUser: {
@@ -211,22 +245,25 @@ export class TenantsService {
   /**
    * Get tenant details if user has access
    */
-  async getTenantForUser(tenantId: string, userId: string) {
-    const tenantUser = await this.prisma.tenantUser.findUnique({
+async getTenantForUser(tenantId: string, userId: string) {
+    const workspaceId = tenantId
+
+    const tenantUser = await this.prisma.workspaceUser.findUnique({
       where: {
-        tenantId_userId: {
-          tenantId,
+        workspaceId_userId: {
+          workspaceId,
           userId,
         },
       },
       include: {
-        tenant: {
+        workspace: {
           include: {
             companies: {
               where: { isActive: true },
             },
           },
         },
+        Role: { select: { id: true, name: true } },
       },
     })
 
@@ -235,20 +272,23 @@ export class TenantsService {
     }
 
     return {
-      ...tenantUser.tenant,
+      ...(tenantUser.workspace as any),
       isOwner: tenantUser.isOwner,
-      role: tenantUser.role,
+      role: tenantUser.Role?.name || null,
     }
   }
 
   /**
    * Update last accessed time when accountant switches to a client
    */
-  async updateLastAccessed(tenantId: string, userId: string) {
-    const tenantUser = await this.prisma.tenantUser.findUnique({
+
+async updateLastAccessed(tenantId: string, userId: string) {
+    const workspaceId = tenantId
+
+    const tenantUser = await this.prisma.workspaceUser.findUnique({
       where: {
-        tenantId_userId: {
-          tenantId,
+        workspaceId_userId: {
+          workspaceId,
           userId,
         },
       },
@@ -258,10 +298,10 @@ export class TenantsService {
       throw new NotFoundException('Tenant access not found')
     }
 
-    await this.prisma.tenantUser.update({
+    await this.prisma.workspaceUser.update({
       where: {
-        tenantId_userId: {
-          tenantId,
+        workspaceId_userId: {
+          workspaceId,
           userId,
         },
       },

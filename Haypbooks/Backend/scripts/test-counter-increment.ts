@@ -27,7 +27,7 @@ async function main() {
   const secondCompany = await prisma.company.create({
     data: {
       name: 'Test Company #2',
-      tenantId: tenant.id,
+      workspaceId: tenant.id,
       currency: 'USD'
     }
   });
@@ -36,13 +36,13 @@ async function main() {
 
   // Increment counter (simulate what createCompanyRecord does)
   console.log('🔨 Incrementing counter...');
-  await prisma.tenant.update({
+  await prisma.workspace.update({
     where: { id: tenant.id },
     data: { companiesCreated: { increment: 1 } }
   });
 
   // Verify counter
-  const updatedTenant = await prisma.tenant.findUnique({
+  const updatedTenant = await prisma.workspace.findUnique({
     where: { id: tenant.id },
     include: {
       companies: true

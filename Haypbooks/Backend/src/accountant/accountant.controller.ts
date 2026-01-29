@@ -11,7 +11,7 @@ export class AccountantController {
   @UseGuards(JwtAuthGuard)
   @Post('clients')
   createClient(@Body() dto: CreateAccountantClientDto) {
-    return this.svc.createClient(dto.accountantId, dto.tenantId, dto.accessLevel as any)
+    return this.svc.createClient(dto.accountantId, dto.workspaceId, dto.accessLevel as any)
   }
 
   @UseGuards(JwtAuthGuard)

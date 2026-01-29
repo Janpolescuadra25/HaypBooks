@@ -142,8 +142,8 @@ async function finalDatabaseValidation() {
     console.log('\n🏢 8. MULTI-TENANT ARCHITECTURE');
     console.log('-'.repeat(70));
     
-    const tenantCount = await prisma.tenant.count();
-    const tenantUserCount = await prisma.tenantUser.count();
+    const tenantCount = await prisma.workspace.count();
+    const tenantUserCount = await prisma.workspaceUser.count();
     const companyCount = await prisma.company.count();
     
     console.log(`   Tenants: ${tenantCount}`);

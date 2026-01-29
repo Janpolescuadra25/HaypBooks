@@ -1,5 +1,6 @@
-import CompanyHub from '@/components/companies/CompanyHub'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <CompanyHub />
+  // Owner Workspace has been removed — redirect to unified Dashboard
+  redirect('/dashboard')
 }

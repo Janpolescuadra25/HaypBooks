@@ -9,14 +9,14 @@ export class PurchaseOrdersController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@Request() req, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.svc.createPurchaseOrder(tenantId, payload)
   }
 
   @Post(':id/receive')
   @UseGuards(JwtAuthGuard)
   async receive(@Request() req, @Param('id') id: string, @Body() payload: any) {
-    const tenantId = payload.tenantId || req.user?.tenantId
+    const tenantId = payload.workspaceId || req.user?.workspaceId
     return this.svc.receivePurchaseOrder(tenantId, id, payload)
   }
 }

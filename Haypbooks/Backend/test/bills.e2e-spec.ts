@@ -8,8 +8,10 @@ describe('Bills API (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
   let authToken: string
-  let tenantId: string
-  let vendorId: string
+  let workspaceId: string
+  let vendorId: string | undefined
+  let companyId: string | undefined
+  let createUserId: string
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -20,51 +22,67 @@ describe('Bills API (e2e)', () => {
     prisma = app.get<PrismaService>(PrismaService)
     await app.init()
 
-    // Setup test data: create tenant, user, vendor
-    const tenant = await prisma.tenant.upsert({ where: { subdomain: 'bills-test' }, update: {}, create: { name: 'Test Bills Company', subdomain: 'bills-test' } })
-    tenantId = tenant.id
-
-    // User will be created via the signup endpoint so we avoid direct DB upserts that
-    // can conflict with API-level validations.
-
-    // Create vendor contact and vendor record
-    const vendor = await prisma.contact.create({ data: { tenantId, type: 'VENDOR', displayName: 'Test Vendor LLC' } })
-    await prisma.vendor.create({ data: { contactId: vendor.id, tenantId } })
-    vendorId = vendor.id
+    // Setup test data will be created after the test user signs up
 
     // Ensure no existing user will conflict and create a verified test user
-    await prisma.user.deleteMany({ where: { email: 'bills-test@example.com' } })
+    try { await prisma.user.deleteMany({ where: { email: 'bills-test@example.com' } }) } catch (e) { /* ignore FK / owner references in legacy Tenant table */ }
     const createUser = await request(app.getHttpServer()).post('/api/test/create-user').send({ email: 'bills-test@example.com', password: 'bills-pass', name: 'Bills Tester', isEmailVerified: true }).expect(201)
     // login to obtain token
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'bills-test@example.com', password: 'bills-pass' }).expect(200)
     authToken = login.body.token
-    // ensure this user is part of the test tenant so guarded endpoints work for tenantId
-    await prisma.tenantUser.create({ data: { tenantId, userId: createUser.body.id, role: 'ADMIN' } })
+
+    // Create a workspace owned by this user, a default ADMIN role, a test company and a vendor
+    const workspace = await prisma.workspace.create({ data: { ownerUserId: createUser.body.id } })
+    workspaceId = workspace.id
+    let role = await prisma.role.findFirst({ where: { workspaceId, name: 'ADMIN' } })
+    if (!role) {
+      // Fallback raw insert to handle intermediate migration columns (tenantId_new) that Prisma may not manage
+      const rows: any[] = await prisma.$queryRawUnsafe(`INSERT INTO public."Role" ("id", "tenantId", "tenantId_new", "name", "createdAt") VALUES (gen_random_uuid(), $1::uuid, $1::uuid, $2, now()) RETURNING *`, workspaceId, 'ADMIN')
+      role = rows && rows.length ? rows[0] : await prisma.role.findFirst({ where: { workspaceId, name: 'ADMIN' } })
+    }
+    const country = await prisma.country.findFirst()
+    const countryId = country ? country.id : (await prisma.country.create({ data: { code: 'US', name: 'United States' } })).id
+    const companyRows: any[] = await prisma.$queryRawUnsafe(`INSERT INTO public."Company" ("id", "tenantId", "tenantId_new", "countryId", "name", "createdAt") VALUES (gen_random_uuid(), $1::uuid, $1::uuid, $2, $3, now()) RETURNING *`, workspaceId, countryId, 'Test Company')
+    companyId = companyRows && companyRows.length ? companyRows[0].id : undefined
+    const contactRows: any[] = await prisma.$queryRawUnsafe(`INSERT INTO public."Contact" ("id", "tenantId", "tenantId_new", "type", "displayName", "createdAt") VALUES (gen_random_uuid(), $1::uuid, $1::uuid, $2, $3, now()) RETURNING *`, workspaceId, 'VENDOR', 'Test Vendor LLC')
+    const vendorContact = contactRows && contactRows.length ? contactRows[0] : null
+    if (vendorContact) {
+      await prisma.$queryRawUnsafe(`INSERT INTO public."Vendor" ("contactId", "tenantId", "tenantId_new") VALUES ($1, $2::uuid, $2::uuid) RETURNING *`, vendorContact.id, workspaceId)
+      vendorId = vendorContact.id
+    } else {
+      vendorId = undefined
+    }
+
+    // Add the user as an owner of the workspace
+    createUserId = createUser.body.id
+    await prisma.workspaceUser.create({ data: { workspace: { connect: { id: workspaceId } }, user: { connect: { id: createUserId } }, Role: { connect: { id: (role as any).id } }, isOwner: true } })
   })
 
   afterAll(async () => {
-    // Cleanup - remove dependent child records first to satisfy FK constraints
-    await prisma.billPayment.deleteMany({ where: { tenantId } })
-    await prisma.billLine.deleteMany({ where: { bill: { tenantId } } })
-    await prisma.bill.deleteMany({ where: { tenantId } })
-    await prisma.vendor.deleteMany({ where: { tenantId } })
-    await prisma.contact.deleteMany({ where: { tenantId } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId } })
-    await prisma.user.deleteMany({ where: { email: 'bills-test@example.com' } })
-    await prisma.tenant.deleteMany({ where: { id: tenantId } })
+    // Resilient cleanup - delete in a safe order and ignore individual failures
+    try { await prisma.billPayment.deleteMany({ where: { workspaceId } }) } catch (e) { console.warn('cleanup billPayment failed', e) }
+    try { await prisma.bill.deleteMany({ where: { workspaceId } }) } catch (e) { console.warn('cleanup bills failed', e) }
+    try { await prisma.vendor.deleteMany({ where: { workspaceId } }) } catch (e) { console.warn('cleanup vendors failed', e) }
+    try { await prisma.contact.deleteMany({ where: { workspaceId } }) } catch (e) { console.warn('cleanup contacts failed', e) }
+    try { await prisma.workspaceUser.deleteMany({ where: { workspaceId } }) } catch (e) { console.warn('cleanup workspaceUsers failed', e) }
+    try { await prisma.company.deleteMany({ where: { workspaceId } }) } catch (e) { console.warn('cleanup companies failed', e) }
+    try { await prisma.role.deleteMany({ where: { workspaceId } }) } catch (e) { console.warn('cleanup roles failed', e) }
+    try { if (createUserId) await prisma.tenant.deleteMany({ where: { ownerUserId: createUserId } }) } catch (e) { /* ignore */ }
+    try { await prisma.workspace.deleteMany({ where: { id: workspaceId } }) } catch (e) { console.warn('cleanup workspace failed', e) }
+    try { await prisma.user.deleteMany({ where: { email: 'bills-test@example.com' } }) } catch (e) { console.warn('cleanup users failed', e) }
     await app.close()
   })
 
   describe('POST /api/bills', () => {
     it('should create a bill with lines', async () => {
       const billData = {
-        tenantId,
+        workspaceId,
         vendorId,
         billNumber: 'BILL-001',
         date: new Date().toISOString(),
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         totalAmount: 1500.00,
-        status: 'OPEN',
+        status: 'DRAFT',
         lines: [
           {
             description: 'Office supplies',
@@ -86,12 +104,12 @@ describe('Bills API (e2e)', () => {
       expect(response.body.billNumber).toBe('BILL-001')
       expect(Number(response.body.total)).toBe(1500)
       expect(Number(response.body.balance)).toBe(1500)
-      expect(response.body.status).toBe('OPEN')
+      expect(response.body.status).toBe('DRAFT')
     })
 
     it('should reject bill without required fields', async () => {
       const invalidBill = {
-        tenantId,
+        workspaceId,
         // Missing vendorId
         billNumber: 'BILL-002'
       }
@@ -105,7 +123,7 @@ describe('Bills API (e2e)', () => {
 
     beforeAll(async () => {
       // Create a test bill
-      const bill = await prisma.bill.create({ data: { tenantId, vendorId, billNumber: 'BILL-GET-001', issuedAt: new Date(), dueAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), total: 1000, balance: 1000, status: 'OPEN', lines: { create: [{ tenantId, description: 'Test item', quantity: 1, rate: 1000, amount: 1000 }] } } })
+      const bill = await prisma.bill.create({ data: { workspace: { connect: { id: workspaceId } }, vendor: { connect: { contactId: vendorId } }, company: { connect: { id: companyId } }, billNumber: 'BILL-GET-001', issuedAt: new Date(), dueAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), total: 1000, balance: 1000, status: 'DRAFT', lines: { create: [{ workspace: { connect: { id: workspaceId } }, company: { connect: { id: companyId } }, description: 'Test item', quantity: 1, rate: 1000, amount: 1000 }] } } })
       billId = bill.id
     })
 
@@ -126,18 +144,18 @@ describe('Bills API (e2e)', () => {
   describe('GET /api/bills', () => {
     beforeAll(async () => {
       // Create multiple test bills
-      await prisma.bill.create({ data: { tenantId, vendorId, billNumber: 'BILL-LIST-001', issuedAt: new Date(), total: 500, balance: 500, status: 'OPEN' } })
-      await prisma.bill.create({ data: { tenantId, vendorId, billNumber: 'BILL-LIST-002', issuedAt: new Date(), total: 750, balance: 0, status: 'PAID' } })
-      const response = await request(app.getHttpServer()).get('/api/bills').set('Authorization', `Bearer ${authToken}`).query({ tenantId }).expect(200)
+      await prisma.bill.create({ data: { workspace: { connect: { id: workspaceId } }, vendor: { connect: { contactId: vendorId } }, company: { connect: { id: companyId } }, billNumber: 'BILL-LIST-001', issuedAt: new Date(), total: 500, balance: 500, status: 'DRAFT' } })
+      await prisma.bill.create({ data: { workspace: { connect: { id: workspaceId } }, vendor: { connect: { contactId: vendorId } }, company: { connect: { id: companyId } }, billNumber: 'BILL-LIST-002', issuedAt: new Date(), total: 750, balance: 0, status: 'PAID' } })
+      const response = await request(app.getHttpServer()).get('/api/bills').set('Authorization', `Bearer ${authToken}`).query({ workspaceId }).expect(200)
 
       expect(Array.isArray(response.body)).toBe(true)
       expect(response.body.length).toBeGreaterThanOrEqual(2)
     })
 
     it('should filter bills by status', async () => {
-      const response = await request(app.getHttpServer()).get('/api/bills').set('Authorization', `Bearer ${authToken}`).query({ tenantId, status: 'OPEN' }).expect(200)
+      const response = await request(app.getHttpServer()).get('/api/bills').set('Authorization', `Bearer ${authToken}`).query({ workspaceId, status: 'DRAFT' }).expect(200)
 
-      expect(response.body.every(b => b.status === 'OPEN')).toBe(true)
+      expect(response.body.every(b => b.status === 'DRAFT')).toBe(true)
     })
   })
 
@@ -145,7 +163,7 @@ describe('Bills API (e2e)', () => {
     let billId: string
 
     beforeAll(async () => {
-      const bill = await prisma.bill.create({ data: { tenantId, vendorId, billNumber: 'BILL-PAY-001', issuedAt: new Date(), total: 2000, balance: 2000, status: 'OPEN' } })
+      const bill = await prisma.bill.create({ data: { workspace: { connect: { id: workspaceId } }, vendor: { connect: { contactId: vendorId } }, company: { connect: { id: companyId } }, billNumber: 'BILL-PAY-001', issuedAt: new Date(), total: 2000, balance: 2000, status: 'DRAFT' } })
       billId = bill.id
     })
 
@@ -158,7 +176,7 @@ describe('Bills API (e2e)', () => {
         referenceNumber: 'CHK-1001'
       }
 
-      const response = await request(app.getHttpServer()).post(`/api/bills/${billId}/payments`).set('Authorization', `Bearer ${authToken}`).send({ ...paymentData, tenantId }).expect(201)
+      const response = await request(app.getHttpServer()).post(`/api/bills/${billId}/payments`).set('Authorization', `Bearer ${authToken}`).send({ ...paymentData, workspaceId }).expect(201)
 
       expect(response.body).toHaveProperty('id')
       expect(Number(response.body.amount)).toBe(500)
@@ -176,7 +194,7 @@ describe('Bills API (e2e)', () => {
         paymentMethod: 'ACH'
       }
 
-      await request(app.getHttpServer()).post(`/api/bills/${billId}/payments`).set('Authorization', `Bearer ${authToken}`).send({ ...paymentData, tenantId }).expect(201)
+      await request(app.getHttpServer()).post(`/api/bills/${billId}/payments`).set('Authorization', `Bearer ${authToken}`).send({ ...paymentData, workspaceId }).expect(201)
 
       const paidBill = await prisma.bill.findUnique({ where: { id: billId } })
       expect(paidBill!.balance.toNumber()).toBe(0)
@@ -190,7 +208,7 @@ describe('Bills API (e2e)', () => {
         paymentDate: new Date().toISOString()
       }
 
-      await request(app.getHttpServer()).post(`/api/bills/${billId}/payments`).set('Authorization', `Bearer ${authToken}`).send({ ...overpaymentData, tenantId }).expect(400)
+      await request(app.getHttpServer()).post(`/api/bills/${billId}/payments`).set('Authorization', `Bearer ${authToken}`).send({ ...overpaymentData, workspaceId }).expect(400)
     })
   })
 })

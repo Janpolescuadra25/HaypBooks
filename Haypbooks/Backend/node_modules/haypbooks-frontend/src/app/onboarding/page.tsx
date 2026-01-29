@@ -134,24 +134,9 @@ export default function OnboardingPage() {
         // non-fatal
       }
 
-      // If the backend returned the created company, poll the Owner Workspace until it appears (for determinism in E2E/local runs)
-      try {
-        const created = resJson?.company
-        const targetName = created?.name || (snapshot as any)?.business?.companyName
-
-        if (targetName) {
-          const found = await waitForCompanyInHub(targetName, 5000)
-          if (!found) {
-            // Non-fatal: warn that the company wasn't visible within timeout
-            push({ type: 'warning', message: `Created ${targetName} but it didn't show in your Owner Workspace right away — you can refresh the Owner Workspace.` })
-          }
-        }
-      } catch (e) {
-        // ignore polling errors
-      }
-
-      // Navigate to the Owner Workspace so the user sees their company card
-      router.push('/hub/companies')
+      // Navigate to the unified Dashboard so the user sees their company card
+      // (we consolidated Owner Workspace + Accountant Hub into Dashboard)
+      router.push('/dashboard')
     } catch (err) {
       console.error(err)
       // If the backend call failed (could be 401 due to cookie SameSite in cross-origin dev),
@@ -181,8 +166,8 @@ export default function OnboardingPage() {
         const res = await apiClient.post('/api/onboarding/complete', { type: 'quick', hub: 'OWNER' })
         if (!(res.status >= 200 && res.status < 300)) throw new Error('complete failed')
       }
-      // After marking onboarding complete (quick), navigate to Central Hub
-      router.push('/hub/companies')
+      // After marking onboarding complete (quick), navigate to unified Dashboard
+      router.push('/dashboard')
     } catch (err) {
       console.error(err)
       // Mark onboarding complete locally as a fallback so the UI renders (top bar/sidebar)

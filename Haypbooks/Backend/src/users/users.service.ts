@@ -57,11 +57,15 @@ export class UsersService {
     return result
   }
 
-  async updateProfile(userId: string, data: { firmName?: string }) {
-    const payload: any = {}
-    // companyName was removed from the User schema; only persist firmName here.
-    if (typeof data.firmName === 'string') payload.firmName = String(data.firmName).trim() || null
-    const updated = await this.userRepository.update(userId, payload)
+  async updateProfile(userId: string, _data: { companyName?: string } = {}) {
+    const updated = await this.userRepository.update(userId, {})
+    const { password, ...result } = updated
+    return result
+  }
+
+  async setPreferredWorkspace(userId: string, body: { type: 'company'|'practice', id?: string }) {
+    const preferredHub = body.type === 'company' ? 'OWNER' : 'ACCOUNTANT'
+    const updated = await this.userRepository.update(userId, { preferredHub } as any)
     const { password, ...result } = updated
     return result
   }

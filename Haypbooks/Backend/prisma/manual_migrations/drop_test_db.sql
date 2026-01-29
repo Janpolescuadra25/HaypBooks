@@ -1,0 +1,2 @@
+DROP DATABASE IF EXISTS haypbooks_migration_test;
+CREATE DATABASE haypbooks_migration_test;

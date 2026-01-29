@@ -7,7 +7,7 @@ export class CreateAccountantClientDto {
 
   @IsNotEmpty()
   @IsString()
-  tenantId: string
+  workspaceId: string
 
   @IsString()
   @IsIn(['FULL','VIEW_ONLY','BILLING_ONLY'])

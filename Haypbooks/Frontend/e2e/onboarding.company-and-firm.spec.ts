@@ -140,6 +140,15 @@ test('onboarding: owner companyName and accountant firmName persist via UI and b
     console.warn('Company row not found for owner; continuing without failing (set E2E_ASSERT_COMPANY=true to make this assert strict)')
   }
 
+  // Verify tenant workspaceName was populated from the Owner Workspace input (via test helper endpoint)
+  const companiesResp = await request.get(`http://127.0.0.1:4000/api/test/companies?email=${encodeURIComponent(ownerEmail)}`).catch(() => null)
+  const companiesJson = companiesResp ? await companiesResp.json().catch(() => null) : null
+  const hasWorkspaceNameMatch = (companiesJson && Array.isArray(companiesJson) && companiesJson.some((c:any) => c.tenantWorkspaceName === ownerCompany))
+  if (!hasWorkspaceNameMatch) {
+    console.warn('Tenant.workspaceName not found matching Owner Workspace input; companies API returned:', companiesJson)
+  }
+  expect(hasWorkspaceNameMatch).toBeTruthy()
+
   // Clean up owner user if backend supports deletion
   await request.post('http://127.0.0.1:4000/api/test/delete-user', { data: { email: ownerEmail } }).catch(() => null)
   // Also attempt to delete the test-created company and tenant (best-effort)

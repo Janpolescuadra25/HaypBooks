@@ -20,11 +20,11 @@ async function run() {
 
   // Make a contact/customer for tenant 1 so invoice insert reaches the trigger check
   const contact = await prisma.contact.create({ data: { id: `${t1.id}-contact`, tenantId: t1.id, type: 'CUSTOMER', displayName: 'T1 Customer' } })
-  await prisma.customer.create({ data: { contactId: contact.id, tenantId: t1.id } })
+  await prisma.customer.create({ data: { contactId: contact.id, workspaceId: t1.id } })
 
   try {
     // attempt to create an invoice for tenant t1 but with company c2 (wrong tenant)
-    await prisma.invoice.create({ data: { tenantId: t1.id, companyId: c2.id, customerId: contact.id, totalAmount: 10, balance: 10, date: new Date() } })
+    await prisma.invoice.create({ data: { workspaceId: t1.id, companyId: c2.id, customerId: contact.id, totalAmount: 10, balance: 10, date: new Date() } })
     console.error('Expected failure but insert succeeded (trigger not applied)')
   } catch (e) {
     console.log('Trigger prevented mismatched company assignment (expected):', (e as any).message || e)

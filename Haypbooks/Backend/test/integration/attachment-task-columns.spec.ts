@@ -44,7 +44,7 @@ describe('Attachment.isPublic and Task.archivedAt behavior', () => {
     // Create attachment with best-effort fallback for legacy tenantId_old constraint
     let attachment
     try {
-      attachment = await prisma.attachment.create({ data: { tenantId: tenant.id, entityType: 'TEST', entityId: 'eid', fileUrl: 'http://example', fileName: 'f.txt' } })
+      attachment = await prisma.attachment.create({ data: { workspaceId: tenant.id, entityType: 'TEST', entityId: 'eid', fileUrl: 'http://example', fileName: 'f.txt' } })
     } catch (e) {
       // Fallback to raw insert including tenantId_old
       const rows: any[] = await prisma.$queryRawUnsafe(
@@ -61,7 +61,7 @@ describe('Attachment.isPublic and Task.archivedAt behavior', () => {
 
     expect(attachment.isPublic).toBe(false)
 
-    await prisma.attachment.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.attachment.deleteMany({ where: { workspaceId: tenant.id } })
     await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   })
 
@@ -70,7 +70,7 @@ describe('Attachment.isPublic and Task.archivedAt behavior', () => {
     const user = await prisma.user.create({ data: { email: `user-${Date.now()}@example.test`, password: 'x', isEmailVerified: true } })
     let task
     try {
-      task = await prisma.task.create({ data: { tenantId: tenant.id, title: 'To archive', createdById: user.id } })
+      task = await prisma.task.create({ data: { workspaceId: tenant.id, title: 'To archive', createdById: user.id } })
     } catch (e) {
       // Fallback to raw INSERT for Task to satisfy tenantId_old legacy constraint
       const rows: any[] = await prisma.$queryRawUnsafe(
@@ -86,10 +86,10 @@ describe('Attachment.isPublic and Task.archivedAt behavior', () => {
     const date = new Date()
     await prisma.task.update({ where: { id: task.id }, data: { archivedAt: date } })
 
-    const archived = await prisma.task.findMany({ where: { tenantId: tenant.id, archivedAt: { not: null } } })
+    const archived = await prisma.task.findMany({ where: { workspaceId: tenant.id, archivedAt: { not: null } } })
     expect(archived.length).toBeGreaterThanOrEqual(1)
 
-    await prisma.task.deleteMany({ where: { tenantId: tenant.id } })
+    await prisma.task.deleteMany({ where: { workspaceId: tenant.id } })
     await prisma.user.delete({ where: { id: user.id } })
     await prisma.tenant.delete({ where: { id: tenant.id }, select: { id: true } })
   })

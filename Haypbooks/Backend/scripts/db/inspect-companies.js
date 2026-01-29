@@ -6,7 +6,7 @@ const { PrismaClient } = require('@prisma/client')
       select: {
         id: true,
         name: true,
-        tenantId: true,
+        workspaceId: true,
         isActive: true,
         createdAt: true,
         tenant: { select: { id: true, name: true } },
@@ -17,7 +17,7 @@ const { PrismaClient } = require('@prisma/client')
     // For each company, fetch tenant users (TenantUser records) for its tenant
     const results = []
     for (const c of companies) {
-      const tenantUsers = await prisma.tenantUser.findMany({ where: { tenantId: c.tenantId }, select: { userId: true, role: true, isOwner: true } })
+      const tenantUsers = await prisma.workspaceUser.findMany({ where: { workspaceId: c.workspaceId }, select: { userId: true, role: true, isOwner: true } })
       results.push({ ...c, tenantUsers })
     }
 

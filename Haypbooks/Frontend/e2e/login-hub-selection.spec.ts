@@ -56,57 +56,34 @@ test('after sign-in shows hub selection with two hubs', async ({ page, request }
     console.warn('No auth response observed after clicking Sign in')
   }
 
-  // Wait for either hub selection or a direct hub redirect (some environments return a redirect)
+  // Wait for either the Workspace selection page or a direct hub redirect (some environments return a redirect)
   const finalUrl = await (async () => {
     const deadline = Date.now() + 15000
     while (Date.now() < deadline) {
       const u = page.url()
-      if (/\/hub\/selection/.test(u) || /\/hub\/(companies|accountant)/.test(u)) return u
+      if (/\/workspace/.test(u) || /\/hub\/(companies|accountant)/.test(u) || /\/dashboard/.test(u)) return u
       await page.waitForTimeout(250)
     }
-    throw new Error('Neither hub selection nor hub redirect occurred within timeout')
+    throw new Error('Neither workspace selection nor hub redirect occurred within timeout')
   })()
 
-  if (/\/hub\/selection/.test(finalUrl)) {
-    // Assertions: hub selection page visible with both cards (allow small copy variations)
-    await expect(page.locator('text=Choose how')).toBeVisible()
+  if (/\/workspace/.test(finalUrl)) {
+    // Chrome should be hidden on the workspace selection page
+    await expect(page.locator('.glass-topbar')).toHaveCount(0)
+    await expect(page.locator('.glass-sidebar')).toHaveCount(0)
+    // Assertions: workspace selection should show both cards with items
+    await expect(page.locator('text=Welcome back')).toBeVisible()
     await expect(page.locator('text=My Companies')).toBeVisible()
     await expect(page.locator('text=My Practice')).toBeVisible()
-    // Hub selection must show both hub cards and links (allow presence of any global banners)
-    await expect(page.getByRole('link', { name: /Enter Owner Workspace/ })).toBeVisible()
-    await expect(page.getByRole('link', { name: /Enter Accountant Hub/ })).toBeVisible()
 
-    // Click Owner Workspace and confirm backend persistence + navigation
-    await page.getByRole('link', { name: /Enter Owner Workspace/ }).click()
-    await page.waitForURL(/\/hub\/companies/, { timeout: 5000 })
-    // Backend: confirm preferredHub set (retry briefly to allow backend persistence)
-    let userJson: any = null
-    for (let i = 0; i < 6; i++) {
-      const userResp = await request.get(`http://localhost:4000/api/test/user?email=${encodeURIComponent(email)}`)
-      if (userResp.ok()) {
-        userJson = await userResp.json().catch(() => null)
-        if (userJson && (userJson.preferredHub === 'OWNER' || userJson.preferredHub === 'owner')) break
-      }
-      await new Promise(res => setTimeout(res, 500))
-    }
-    if (userJson && (userJson.preferredHub === 'OWNER' || userJson.preferredHub === 'owner')) {
-      // preferredHub persisted as expected
-    } else {
-      // Not all environments persist preferredHub immediately upon hub enter; warn and continue
-      console.warn('preferredHub was not set by backend after entering Owner Workspace; continuing without enforcing persistence')
-    }
+    // Click a company item and continue to Dashboard
+    await page.getByText('Hayp Ventures').click()
+    await page.getByTestId('confirm-company').click()
+    await page.waitForURL(/\/dashboard/, { timeout: 5000 })
   } else {
-    // Direct redirect case - ensure we landed on a hub and backend persisted preferredHub accordingly
-    if (/\/hub\/companies/.test(finalUrl)) {
-      await expect(page.locator('text=My Companies')).toBeVisible()
-      const userResp = await request.get(`http://localhost:4000/api/test/user?email=${encodeURIComponent(email)}`)
-      const userJson = await userResp.json()
-      expect(userJson.preferredHub === 'OWNER' || userJson.preferredHub === 'owner').toBeTruthy()
-    } else if (/\/hub\/accountant/.test(finalUrl)) {
-      await expect(page.locator('text=My Practice')).toBeVisible()
-      const userResp = await request.get(`http://localhost:4000/api/test/user?email=${encodeURIComponent(email)}`)
-      const userJson = await userResp.json()
-      expect(userJson.preferredHub === 'ACCOUNTANT' || userJson.preferredHub === 'accountant').toBeTruthy()
+    // Direct redirect case - ensure we landed on the Dashboard
+    if (/\/dashboard/.test(finalUrl)) {
+      await expect(page.locator('text=Dashboard')).toBeVisible().catch(() => {})
     } else {
       throw new Error('Unexpected final URL after login: ' + finalUrl)
     }

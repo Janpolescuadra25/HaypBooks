@@ -17,5 +17,6 @@ export const PUBLIC_PATH_PREFIXES = [
   '/onboarding/business',
   '/hub',
   '/accountants',
+  '/workspace',
   '/get-started'
 ]

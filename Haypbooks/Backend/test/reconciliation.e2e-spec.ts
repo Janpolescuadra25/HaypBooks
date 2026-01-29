@@ -36,24 +36,24 @@ describe('Bank Reconciliation invariants e2e', () => {
     await prisma.$executeRawUnsafe(`INSERT INTO "AccountType" (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, 1000000, 'BANK_ASSET')
     const accountType = await prisma.accountType.findFirst({ where: { name: 'BANK_ASSET' } })
     if (!accountType) throw new Error('Failed to ensure AccountType BANK_ASSET exists')
-    const account = await prisma.account.create({ data: { tenantId: tenant!.id, code: '1010', name: 'Bank Test', typeId: accountType.id } })
-    const bankAccount = await prisma.bankAccount.create({ data: { tenantId: tenant!.id, name: 'E2E BANK' } })
+    const account = await prisma.account.create({ data: { workspaceId: tenant!.id, code: '1010', name: 'Bank Test', typeId: accountType.id } })
+    const bankAccount = await prisma.bankAccount.create({ data: { workspaceId: tenant!.id, name: 'E2E BANK' } })
 
     // Create a journal entry that posts to the bank account
-    const journal = await prisma.journalEntry.create({ data: { tenantId: tenant!.id, date: new Date(), postingStatus: 'POSTED' } })
-    const jel = await prisma.journalEntryLine.create({ data: { journalId: journal.id, accountId: account.id, debit: 1500, credit: 0, tenantId: tenant!.id } })
+    const journal = await prisma.journalEntry.create({ data: { workspaceId: tenant!.id, date: new Date(), postingStatus: 'POSTED' } })
+    const jel = await prisma.journalEntryLine.create({ data: { journalId: journal.id, accountId: account.id, debit: 1500, credit: 0, workspaceId: tenant!.id } })
 
     // Create bank transactions - two that will be matched
-    const tx1 = await prisma.bankTransaction.create({ data: { bankAccountId: bankAccount.id, tenantId: tenant!.id, amount: 200, date: new Date(), description: 'Deposit 1' } })
-    const tx2 = await prisma.bankTransaction.create({ data: { bankAccountId: bankAccount.id, tenantId: tenant!.id, amount: 300, date: new Date(), description: 'Deposit 2' } })
+    const tx1 = await prisma.bankTransaction.create({ data: { bankAccountId: bankAccount.id, workspaceId: tenant!.id, amount: 200, date: new Date(), description: 'Deposit 1' } })
+    const tx2 = await prisma.bankTransaction.create({ data: { bankAccountId: bankAccount.id, workspaceId: tenant!.id, amount: 300, date: new Date(), description: 'Deposit 2' } })
 
     // Create a reconciliation referencing the bank account where closingBalance = bookBalance - clearedDelta
     const closingBalance = 1500 - (200 + 300)
-    const recon = await prisma.bankReconciliation.create({ data: { tenantId: tenant!.id, bankAccountId: bankAccount.id, statementDate: new Date(), closingBalance: closingBalance, status: 'COMPLETED' } })
+    const recon = await prisma.bankReconciliation.create({ data: { workspaceId: tenant!.id, bankAccountId: bankAccount.id, statementDate: new Date(), closingBalance: closingBalance, status: 'COMPLETED' } })
 
     // Mark transactions as matched in the reconciliation
-    await prisma.bankReconciliationLine.create({ data: { tenantId: tenant!.id, bankReconciliationId: recon.id, bankTransactionId: tx1.id, matched: true } })
-    await prisma.bankReconciliationLine.create({ data: { tenantId: tenant!.id, bankReconciliationId: recon.id, bankTransactionId: tx2.id, matched: true } })
+    await prisma.bankReconciliationLine.create({ data: { workspaceId: tenant!.id, bankReconciliationId: recon.id, bankTransactionId: tx1.id, matched: true } })
+    await prisma.bankReconciliationLine.create({ data: { workspaceId: tenant!.id, bankReconciliationId: recon.id, bankTransactionId: tx2.id, matched: true } })
 
     // Calculate bookBalance from journalEntryLines for debit and credit difference
     const bookBalanceRow = await prisma.$queryRawUnsafe(`SELECT COALESCE(SUM(jl.debit) - SUM(jl.credit), 0) as book_balance FROM "JournalEntryLine" jl WHERE jl."tenantId" = $1::uuid AND jl."accountId" = $2`, tenant!.id, account.id)

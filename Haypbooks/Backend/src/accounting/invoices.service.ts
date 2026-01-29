@@ -7,13 +7,14 @@ export class InvoicesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createInvoice(companyId: string, payload: any) {
-    const tenantId = payload.tenantId || companyId
+    const tenantId = payload.workspaceId || companyId
+    const workspaceId = tenantId
     await assertCompanyBelongsToTenant(this.prisma as any, companyId, tenantId)
     const invoice = await this.prisma.invoice.create({ 
       data: { 
-        tenantId, 
-        companyId, 
-        customerId: payload.customerId, 
+        workspace: { connect: { id: workspaceId } },
+        company: { connect: { id: companyId } },
+        customer: { connect: { contactId: payload.customerId } },
         invoiceNumber: payload.invoiceNumber, 
         date: new Date(payload.date), 
         dueDate: payload.dueDate ? new Date(payload.dueDate) : null, 
@@ -25,14 +26,14 @@ export class InvoicesService {
     for (const line of payload.lines || []) {
       await this.prisma.invoiceLine.create({
         data: {
-          companyId,
+          company: { connect: { id: companyId } },
           invoiceId: invoice.id,
           description: line.description,
           quantity: line.quantity || 1,
           unitPrice: line.unitPrice || line.rate || 0,
           totalPrice: line.totalPrice || line.amount || 0,
-          tenantId: tenantId
-        }
+          // InvoiceLine CreateInput shape can vary across generated clients; cast to any for compatibility
+        } as any
       })
     }
     return invoice

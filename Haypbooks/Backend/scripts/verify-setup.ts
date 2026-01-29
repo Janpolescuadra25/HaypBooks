@@ -9,9 +9,9 @@ async function verifySetup() {
 
     // Check database counts
     const userCount = await prisma.user.count()
-    const tenantCount = await prisma.tenant.count()
+    const tenantCount = await prisma.workspace.count()
     const companyCount = await prisma.company.count()
-    const tenantUserCount = await prisma.tenantUser.count()
+    const tenantUserCount = await prisma.workspaceUser.count()
     const onboardingStepCount = await prisma.onboardingStep.count()
 
     console.log('\n📊 Database Status:')

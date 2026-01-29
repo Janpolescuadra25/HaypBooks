@@ -9,7 +9,7 @@ const email = process.argv[2] || 'demo@haypbooks.test'
       process.exit(0)
     }
     console.log('User:', { id: user.id, email: user.email })
-    const tenants = await prisma.tenantUser.findMany({ where: { userId: user.id }, select: { tenantId: true, role: true, isOwner: true } })
+    const tenants = await prisma.workspaceUser.findMany({ where: { userId: user.id }, select: { workspaceId: true, role: true, isOwner: true } })
     console.log('Tenant links:', tenants)
   } catch (err) {
     console.error(err)

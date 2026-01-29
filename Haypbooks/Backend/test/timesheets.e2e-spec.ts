@@ -6,7 +6,7 @@ import { PrismaService } from '../src/repositories/prisma/prisma.service'
 describe('Timesheets (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
-  let tenantId: string
+  let workspaceId: string
   let employeeId: string
 
   beforeAll(async () => {
@@ -15,33 +15,33 @@ describe('Timesheets (e2e)', () => {
     prisma = app.get<PrismaService>(PrismaService)
     await app.init()
 
-    const tenant = await prisma.tenant.upsert({ where: { subdomain: 'timesheets-test' }, update: {}, create: { name: 'Timesheets Test Tenant', subdomain: 'timesheets-test' } })
+    const tenant = await prisma.workspace.upsert({ where: { subdomain: 'timesheets-test' }, update: {}, create: { name: 'Timesheets Test Tenant', subdomain: 'timesheets-test' } })
     tenantId = tenant.id
 
     // create a test employee
-    const employee = await prisma.employee.create({ data: { tenantId, firstName: 'TS', lastName: 'Worker', hireDate: new Date() } })
+    const employee = await prisma.employee.create({ data: { workspaceId, firstName: 'TS', lastName: 'Worker', hireDate: new Date() } })
     employeeId = employee.id
   })
 
   afterAll(async () => {
-    await prisma.timesheetApproval.deleteMany({ where: { tenantId } })
-    await prisma.timeEntry.deleteMany({ where: { tenantId } })
-    await prisma.timesheet.deleteMany({ where: { tenantId } })
+    await prisma.timesheetApproval.deleteMany({ where: { workspaceId } })
+    await prisma.timeEntry.deleteMany({ where: { workspaceId } })
+    await prisma.timesheet.deleteMany({ where: { workspaceId } })
     await prisma.employee.deleteMany({ where: { id: employeeId } })
-    await prisma.tenantUser.deleteMany({ where: { tenantId } })
+    await prisma.workspaceUser.deleteMany({ where: { workspaceId } })
     await prisma.user.deleteMany({ where: { email: 'timesheets-test@example.com' } })
-    await prisma.tenant.deleteMany({ where: { id: tenantId } })
+    await prisma.workspace.deleteMany({ where: { id: workspaceId } })
     await app.close()
   })
 
   it('creates and retrieves timesheets with entries and approvals', async () => {
-    const timesheet = await prisma.timesheet.create({ data: { tenantId, employeeId, weekStart: new Date(), status: 'DRAFT' } })
+    const timesheet = await prisma.timesheet.create({ data: { workspaceId, employeeId, weekStart: new Date(), status: 'DRAFT' } })
     expect(timesheet).toBeDefined()
 
-    const entry = await prisma.timeEntry.create({ data: { tenantId, timesheetId: timesheet.id, employeeId, date: new Date(), hours: 8.00, description: 'Development work' } })
+    const entry = await prisma.timeEntry.create({ data: { workspaceId, timesheetId: timesheet.id, employeeId, date: new Date(), hours: 8.00, description: 'Development work' } })
     expect(entry).toBeDefined()
 
-    const approval = await prisma.timesheetApproval.create({ data: { tenantId, timesheetId: timesheet.id, approverId: (await prisma.user.findFirst())!.id, approvedAt: new Date(), comment: 'OK' } })
+    const approval = await prisma.timesheetApproval.create({ data: { workspaceId, timesheetId: timesheet.id, approverId: (await prisma.user.findFirst())!.id, approvedAt: new Date(), comment: 'OK' } })
     expect(approval).toBeDefined()
 
     const found = await prisma.timesheet.findUnique({ where: { id: timesheet.id }, include: { entries: true, approvals: true } })

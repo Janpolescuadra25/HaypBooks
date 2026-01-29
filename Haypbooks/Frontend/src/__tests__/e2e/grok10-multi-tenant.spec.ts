@@ -65,12 +65,12 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.waitForURL('/get-started/trial', { timeout: 10000 })
     await page.click('text=Complete Quick Setup')
 
-    // Onboarding may take a moment — navigate to Owner Workspace and verify the company card appears
+    // Onboarding may take a moment — check the Dashboard for the company card
     await page.waitForURL('/onboarding', { timeout: 15000 })
-    await page.goto('/hub/companies')
+    await page.goto('/dashboard')
     await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
 
-    // Verify company appears in hub
+    // Verify company appears in Dashboard
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
 
     // Step 2: Create a second company (use API for reliability in E2E)
@@ -81,10 +81,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     const ownedJson = await ownedResp.json()
     const tenantId = ownedJson && ownedJson[0] ? (ownedJson[0].tenantId || ownedJson[0].tenant?.id) : undefined
     await page.request.post('/api/companies', { data: { name: secondCompanyName, tenantId }, headers: { cookie: cookieHeader } })
-    // Refresh Owner Workspace to pick up the new company
+    // Refresh Dashboard to pick up the new company
     await page.reload()
 
-    // Verify both companies appear in Owner Workspace
+    // Verify both companies appear in Dashboard
     await page.waitForSelector(`text=${companyName}`, { timeout: 30000 })
     await page.waitForSelector(`text=${secondCompanyName}`, { timeout: 30000 })
     await expect(page.locator(`text=${companyName}`)).toBeVisible()
@@ -133,7 +133,7 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     const acctCookieHeader = acctCookies.map(c => `${c.name}=${c.value}`).join('; ')
     const pendingResp = await page.request.get('/api/tenants/invites/pending', { headers: { cookie: acctCookieHeader } })
     const pendingInvites = await pendingResp.json()
-    const invite = pendingInvites.find((i: any) => i.tenant && i.tenant.name === companyName)
+    const invite = pendingInvites.find((i: any) => i.tenant && ((i.tenant.workspaceName && i.tenant.workspaceName === companyName) || i.tenant.name === companyName))
     if (!invite) {
       throw new Error('Pending invite not found for company: ' + companyName)
     }
@@ -141,10 +141,10 @@ test.describe('Grok.10 Multi-Tenant Workflow', () => {
     await page.request.post(`/api/companies/invites/${invite.id}/accept`, { headers: { cookie: acctCookieHeader } })
 
     // Navigate to Accountant Hub and verify the accepted client appears
-    await page.goto('/hub/accountant')
-    await page.waitForURL('/hub/accountant')
+    await page.goto('/dashboard')
+    await page.waitForURL('/dashboard')
 
-    // Step 4: Verify client appears in list
+    // Step 4: Verify client appears in list on Dashboard
     await page.waitForSelector(`text=${companyName}`, { timeout: 10000 })
 
     // Step 5: View client details

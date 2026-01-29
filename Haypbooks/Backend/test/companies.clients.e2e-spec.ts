@@ -29,7 +29,7 @@ describe('Companies & Clients invite flow (e2e)', () => {
     const owner = Array.isArray(ownerRows) && ownerRows.length ? ownerRows[0] : undefined
 
     // create an invite
-    const invite = await prisma.tenantInvite.create({ data: { tenantId: tenant.id, email: 'newuser@example.test', invitedBy: owner.id, status: 'PENDING' } })
+    const invite = await prisma.tenantInvite.create({ data: { workspaceId: tenant.id, email: 'newuser@example.test', invitedBy: owner.id, status: 'PENDING' } })
     expect(invite).toBeDefined()
 
     // simulate user signup and acceptance - create the new user (raw SQL)
@@ -39,9 +39,9 @@ describe('Companies & Clients invite flow (e2e)', () => {
     const newUser = Array.isArray(newUserRows) && newUserRows.length ? newUserRows[0] : undefined
 
     // accept invite by creating a TenantUser record (this is what the acceptance flow would do)
-    await prisma.tenantUser.create({ data: { tenantId: tenant.id, userId: newUser.id, role: 'BOOKKEEPER', isOwner: false } })
+    await prisma.workspaceUser.create({ data: { workspaceId: tenant.id, userId: newUser.id, role: 'BOOKKEEPER', isOwner: false } })
 
-    const membership = await prisma.tenantUser.findUnique({ where: { tenantId_userId: { tenantId: tenant.id, userId: newUser.id } } })
+    const membership = await prisma.workspaceUser.findUnique({ where: { workspaceId_userId: { workspaceId: tenant.id, userId: newUser.id } } })
     expect(membership).toBeDefined()
     expect(membership?.role).toBe('BOOKKEEPER')
   }, 20000)

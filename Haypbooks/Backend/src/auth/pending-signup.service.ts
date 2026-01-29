@@ -11,7 +11,6 @@ type PendingData = {
   phone?: string
   phoneCountry?: string
   companyName?: string
-  firmName?: string
   emailOtpVerified?: boolean
   phoneOtpVerified?: boolean
   emailOtpVerifiedAt?: number
@@ -40,7 +39,9 @@ export class PendingSignupService {
     const id = randomBytes(6).toString('hex')
     const secret = this.generateSecret()
     const tokenHash = await bcrypt.hash(secret, 10)
-    const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
+    // Add a small safety margin to account for clock skew between app and DB
+    const safetyMs = 1000
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000 + safetyMs)
 
     const created = await this.prisma.emailVerificationToken.create({
       data: {
@@ -59,11 +60,16 @@ export class PendingSignupService {
     const [id, secret] = String(token).split('.')
     if (!id || !secret) return null
     const row = await this.prisma.emailVerificationToken.findUnique({ where: { id } })
+    console.log('[PENDING-DBG] found row:', row)
     if (!row) return null
-    if (row.consumedAt) return null
-    if (new Date() > row.expiresAt) return null
+    if ((row as any).consumedAt) return null
+    if (new Date() > row.expiresAt) {
+      console.log('[PENDING-DBG] row expired:', row.expiresAt, 'now:', new Date())
+      return null
+    }
 
     const ok = await bcrypt.compare(secret, row.tokenHash)
+    console.log('[PENDING-DBG] compare result:', ok)
     if (!ok) return null
     return row.data as PendingData | null
   }
@@ -73,7 +79,7 @@ export class PendingSignupService {
     if (!id || !secret) return null
     const row = await this.prisma.emailVerificationToken.findUnique({ where: { id } })
     if (!row) return null
-    if (row.consumedAt) return null
+    if ((row as any).consumedAt) return null
     if (new Date() > row.expiresAt) return null
 
     const ok = await bcrypt.compare(secret, row.tokenHash)
