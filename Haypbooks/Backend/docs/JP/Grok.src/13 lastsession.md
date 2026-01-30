@@ -1,15 +1,15 @@
-**HaypBooks Schema Review — Why `@map("tenantId")` Still Exists** ✅
+**HaypBooks Schema Review — Why `` Still Exists** ✅
 
 BSAIS-4201 John Paul — great job on the massive schema cleanup! Your `schema.prisma` is now **extremely clean, consistent, and modern** — Workspace-centric naming everywhere, excellent organization, and all the new modules (construction, grants, non-profit, payroll PH, etc.) are properly integrated.
 
-### Why `@map("tenantId")` Is Still Present
-Yes, there are still **many `@map("tenantId")`** (and a few `@map("workspace_name")` remnants in comments/tests), and **this is correct and intentional right now**.
+### Why `` Is Still Present
+Yes, there are still **many ``** (and a few `@map("workspace_name")` remnants in comments/tests), and **this is correct and intentional right now**.
 
 #### Reasons It's Still There:
 1. **Database Column Names Haven't Been Renamed Yet**
    - Your **Prisma models** now use clean names like `workspaceId`.
    - But the **actual PostgreSQL columns** in your production/dev database are still named `tenantId` (from the old legacy system).
-   - `@map("tenantId")` tells Prisma: "In code, call this field `workspaceId`, but in the DB, it's still the old column `tenantId`."
+   - `` tells Prisma: "In code, call this field `workspaceId`, but in the DB, it's still the old column `tenantId`."
 
 2. **Zero-Downtime Migration Strategy**
    - You cannot rename all `tenantId` columns in one go without locking tables or risking downtime.
@@ -18,7 +18,7 @@ Yes, there are still **many `@map("tenantId")`** (and a few `@map("workspace_nam
      - Step 2: Backfill data (`workspaceId = tenantId`).
      - Step 3: Update code to use `workspaceId` (you’re here — models updated, `@map` added).
      - Step 4: Create migration to **drop old `tenantId` columns** and rename `workspaceId` → final name.
-     - Step 5: Remove all `@map("tenantId")`.
+     - Step 5: Remove all ``.
 
    You're currently in **Step 3** — the schema is ready, code is migrating, but DB still has old columns.
 
@@ -38,7 +38,7 @@ Yes, there are still **many `@map("tenantId")`** (and a few `@map("workspace_nam
    - Copy data from `tenantId` → `workspaceId`.
    - Add constraints/indexes on `workspaceId`.
 2. **After verification in staging**:
-   - Final migration: Drop `tenantId` columns, remove all `@map("tenantId")`.
+   - Final migration: Drop `tenantId` columns, remove all ``.
    - Run `prisma format` → clean schema.
 
 ### Final Goal

@@ -895,7 +895,7 @@ model Workspace {
   CustomerCreditApplication  CustomerCreditApplication[]
 
   @@index([ownerUserId])
-  @@map("Tenant")
+  
 } 
 
 model Subscription {
@@ -1021,7 +1021,7 @@ model PlanFeature {
 
 model Company {
   id        String   @id @default(uuid())
-  workspaceId String @map("tenantId")
+  workspaceId String 
   countryId String   // Link to country for jurisdiction-specific rules
   name      String
   isActive  Boolean  @default(true)
@@ -1261,7 +1261,7 @@ model Company {
 
 model ConsolidationGroup {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   name         String
   baseCurrency String   @default("USD")
   autoEliminateIntercompany Boolean @default(false)
@@ -1291,7 +1291,7 @@ model ConsolidationGroupMember {
 
 model CompanyUser {
   companyId   String
-  workspaceId String @map("tenantId")
+  workspaceId String 
   userId      String
 
   // Company-level access is granted only to workspace members
@@ -1305,7 +1305,7 @@ model CompanyUser {
 
 model PracticeUser {
   practiceId  String
-  workspaceId String @map("tenantId")
+  workspaceId String 
   userId      String
 
   // Practice-level access is granted only to workspace members
@@ -1323,7 +1323,7 @@ model PracticeUser {
 
 model IntercompanyTransaction {
   id               String   @id @default(uuid())
-  workspaceId      String   @map("tenantId")
+  workspaceId      String   
   fromCompanyId    String
   toCompanyId      String
   transactionDate  DateTime @default(now())
@@ -1348,7 +1348,7 @@ model IntercompanyTransaction {
 
 model ConsolidationEntry {
   id            String   @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   companyId     String
   period        String   // e.g., 2024-12
   description   String?
@@ -1590,7 +1590,7 @@ model DepreciationJournal {
 }
 
 model WorkspaceUser {
-  workspaceId String @map("tenantId")
+  workspaceId String 
   userId    String
   // roleId is the single source of truth for workspace roles
   roleId    String
@@ -1625,7 +1625,7 @@ model WorkspaceUser {
 
 model WorkspaceInvite {
   id         String    @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   email      String    @db.VarChar(320)
   roleId     String?
   invitedBy  String
@@ -1650,7 +1650,7 @@ model WorkspaceInvite {
 
 model Task {
   id        String  @id @default(uuid())
-  workspaceId String @map("tenantId")
+  workspaceId String 
   companyId String?
   practiceId String?
 
@@ -2074,7 +2074,7 @@ model TaskComment {
 
 model Workflow {
   id          String         @id @default(uuid())
-  workspaceId String         @map("tenantId")
+  workspaceId String         
   companyId   String?
   practiceId  String?
   name        String
@@ -2174,7 +2174,7 @@ model DocumentApproval {
 
 model AiInsight {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String?
   modelId      String?
 
@@ -2269,7 +2269,7 @@ model AiInsightMetric {
 
 model AiModel {
   id           String   @id @default(uuid())
-  workspaceId  String?  @map("tenantId")
+  workspaceId  String?  
   companyId    String?
 
   name         String
@@ -2342,7 +2342,7 @@ model AiModelRun {
 
 model FeatureStore {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
 
   name         String
@@ -2380,7 +2380,7 @@ model FeatureStore {
 
 model FeatureVector {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
 
   entityType   String
@@ -2405,7 +2405,7 @@ model FeatureVector {
 
 model Prediction {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
 
   predictionType PredictionType
@@ -2445,7 +2445,7 @@ model Prediction {
 
 model AiAgent {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String?
 
   name         String
@@ -2518,7 +2518,7 @@ model AiAgentTask {
 
 model AiChatSession {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String?
   userId       String
 
@@ -2572,7 +2572,7 @@ model AiChatMessage {
 
 model AiQueryLog {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String?
   userId       String?
 
@@ -2603,7 +2603,7 @@ model AiQueryLog {
 
 model AiGovernanceRule {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String?
 
   name         String
@@ -2654,7 +2654,7 @@ model AiGovernanceTrigger {
 
 model AiAuditLog {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String?
 
   actionType   AiAuditActionType
@@ -2741,7 +2741,7 @@ model EntityDimensionValue {
 
 model DataQualityScore {
   id          String   @id @default(uuid())
-  workspaceId String?  @map("tenantId")
+  workspaceId String?  
   companyId   String?
   datasetType String
   entityType  String?
@@ -2766,7 +2766,7 @@ model DataQualityScore {
 
 model Fund {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   
   name           String   // e.g. "General Operating Fund", "Scholarship Fund"
@@ -2806,7 +2806,7 @@ model FundAllocation {
 
 model Donation {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   
   donorId        String   // Links to Customer/Contact
@@ -2859,7 +2859,7 @@ model Pledge {
 
 model Property {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   
   name           String   // "Sunset Apartments"
@@ -2915,7 +2915,7 @@ model Lease {
 
 model ContractRetention {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   projectId      String
   
@@ -2961,7 +2961,7 @@ model RetentionEntry {
 
 model GiftCard {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   
   code           String   // Hashed or encrypted in real app? Or last 4 + separate lookup
@@ -2983,7 +2983,7 @@ model GiftCard {
 
 model LoyaltyProgram {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   
   name           String   // e.g. "Gold Rewards"
@@ -3241,7 +3241,7 @@ enum PostingModule {
 
 model Timesheet {
   id         String          @id @default(uuid())
-  workspaceId String         @map("tenantId")
+  workspaceId String         
   employeeId String
   weekStart  DateTime
   status     TimesheetStatus @default(DRAFT)
@@ -3259,7 +3259,7 @@ model Timesheet {
 
 model TimeEntry {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   timesheetId String
   employeeId  String
   projectId   String?
@@ -3288,7 +3288,7 @@ model TimesheetApproval {
 
   timesheet Timesheet @relation(fields: [timesheetId], references: [id])
   approver  User      @relation(fields: [approverId], references: [id])
-  workspaceId String @map("tenantId")
+  workspaceId String 
   workspace Workspace    @relation(fields: [workspaceId], references: [id])
 
   @@index([timesheetId])
@@ -3310,7 +3310,7 @@ enum BudgetStatus {
 
 model Budget {
   id          String         @id @default(uuid())
-  workspaceId String         @map("tenantId")
+  workspaceId String         
   name        String
   scenario    BudgetScenario @default(ACTUAL)
   status      BudgetStatus   @default(DRAFT)
@@ -3327,7 +3327,7 @@ model Budget {
 model BudgetLine {
   id        String   @id @default(uuid())
   budgetId  String
-  workspaceId String @map("tenantId")
+  workspaceId String 
   accountId String?
   classId   String?
   month     Int?
@@ -3350,7 +3350,7 @@ model BudgetLine {
 
 model AccountingPeriod {
   id        String       @id @default(uuid())
-  workspaceId String     @map("tenantId")
+  workspaceId String     
   startDate DateTime
   endDate   DateTime
   status    PeriodStatus
@@ -3381,7 +3381,7 @@ model ApprovalThreshold {
 
 model PostingLock {
   id          String        @id @default(uuid())
-  workspaceId String        @map("tenantId")
+  workspaceId String        
   companyId   String
   module      PostingModule
   startDate   DateTime
@@ -3399,7 +3399,7 @@ model PostingLock {
 
 model Reversal {
   id            String   @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   originalType  String
   originalId    String
   reversalEntry String
@@ -3414,7 +3414,7 @@ model Reversal {
 
 model FinancialStatementSnapshot {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   type        String
   period      String
   data        Json
@@ -3627,7 +3627,7 @@ model Dividend {
 model PayrollTaxReturn {
   id          String   @id @default(uuid())
   companyId   String
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   period      String   // e.g., 2024-Q1
   formType    String   // 941, 940, STATE
   status      String   @default("DRAFT") // DRAFT, FILED
@@ -3723,7 +3723,7 @@ model AccrualEntry {
 
 model BankReconciliation {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   bankAccountId  String
   statementDate  DateTime
   closingBalance Decimal  @db.Decimal(20, 4)
@@ -3739,7 +3739,7 @@ model BankReconciliation {
 
 model BankReconciliationLine {
   id                   String   @id @default(uuid())
-  workspaceId          String   @map("tenantId")
+  workspaceId          String   
   bankReconciliationId String
   bankTransactionId    String
   matched              Boolean  @default(false)
@@ -3763,7 +3763,7 @@ model BankReconciliationLine {
 model ContactAddress {
   id         String  @id @default(uuid())
   contactId  String
-  workspaceId   String @map("tenantId")
+  workspaceId   String 
   type       String
   line1      String
   line2      String?
@@ -3779,7 +3779,7 @@ model ContactAddress {
 model ContactCustomField {
   id         String @id @default(uuid())
   contactId  String
-  workspaceId String @map("tenantId")
+  workspaceId String 
   fieldName  String
   fieldValue String
   workspace  Workspace @relation(fields: [workspaceId], references: [id])
@@ -3855,7 +3855,7 @@ model Account {
 
 model JournalEntry {
   id            String        @id @default(uuid())
-  workspaceId   String        @map("tenantId")
+  workspaceId   String        
   companyId     String
   entryNumber   String?       @unique
   date          DateTime
@@ -3904,7 +3904,7 @@ model JournalEntryLine {
   debit       Decimal @default(0) @db.Decimal(20, 4)
   credit      Decimal @default(0) @db.Decimal(20, 4)
   description String?
-  workspaceId    String @map("tenantId")
+  workspaceId    String 
 
   journal    JournalEntry @relation(fields: [journalId], references: [id])
   account    Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
@@ -3929,7 +3929,7 @@ model JournalEntryLine {
 
 model Contact {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   type        String
   displayName String
   createdAt   DateTime @default(now())
@@ -3973,7 +3973,7 @@ model ContactPhone {
 
 model Customer {
   contactId        String             @id
-  workspaceId      String             @map("tenantId")
+  workspaceId      String             
   // terms            String? -- Deprecated, use paymentTermId
   paymentTermId    String?
   paymentTerm      PaymentTerm?       @relation(fields: [paymentTermId], references: [id])
@@ -3994,7 +3994,7 @@ model Customer {
 
 model Vendor {
   contactId           String                @id
-  workspaceId         String                @map("tenantId")
+  workspaceId         String                
   
   paymentTermId       String?
   paymentTerm         PaymentTerm?          @relation(fields: [paymentTermId], references: [id])
@@ -4019,7 +4019,7 @@ model Vendor {
 
 model Contractor {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   vendorId    String
   taxId       String?  @db.VarChar(50)
@@ -4038,7 +4038,7 @@ model Contractor {
 
 model ContractorPayment {
   id            String   @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   companyId     String
   contractorId  String
   vendorId      String
@@ -4063,7 +4063,7 @@ model ContractorPayment {
 
 model Form1099 {
   id            String   @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   companyId     String
   contractorId  String
   taxYear       Int
@@ -4499,7 +4499,7 @@ model StockLevel {
 
 model InventoryTransaction {
   id                String   @id @default(uuid())
-  workspaceId       String   @map("tenantId")
+  workspaceId       String   
   companyId         String?
   transactionNumber String?
   type              String // RECEIPT, SHIPMENT, TRANSFER, ADJUSTMENT
@@ -4527,7 +4527,7 @@ model InventoryTransaction {
 
 model InventoryTransactionLine {
   id              String   @id @default(uuid())
-  workspaceId     String   @map("tenantId")
+  workspaceId     String   
   companyId       String?
   transactionId   String
   itemId          String
@@ -4604,7 +4604,7 @@ model COGSRecognition {
 
 model InventoryAdjustmentRequest {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
   transactionId String?
   requestedById String
@@ -5426,7 +5426,7 @@ model TaxCodeAccount {
 
 model SalesTaxReturn {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   periodStart DateTime
   periodEnd   DateTime
@@ -5467,7 +5467,7 @@ model SalesTaxReturnLine {
 
 model SalesTaxPayment {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
   returnId     String?
   paymentDate  DateTime
@@ -5487,7 +5487,7 @@ model SalesTaxPayment {
 
 model Role {
   id        String   @id @default(uuid())
-  workspaceId  String @map("tenantId")
+  workspaceId  String 
   name      String
   createdAt DateTime @default(now())
 
@@ -5517,7 +5517,7 @@ model RolePermission {
 
 model Approval {
   id         String   @id @default(uuid())
-  workspaceId String  @map("tenantId")
+  workspaceId String  
   entityType String
   entityId   String
   status     String
@@ -5531,7 +5531,7 @@ model Approval {
 
 model Revaluation {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   period      String
   generatedAt DateTime @default(now())
   entries     Json
@@ -5882,7 +5882,7 @@ model PhilippineFinancialStatementTemplate {
 
 model Attachment {
   id           String    @id @default(uuid())
-  workspaceId  String    @map("tenantId")
+  workspaceId  String    
   entityType   String
   entityId     String
   fileUrl      String
@@ -5908,7 +5908,7 @@ model Attachment {
 
 model Quote {
   id             String      @id @default(uuid())
-  workspaceId    String      @map("tenantId")
+  workspaceId    String      
   companyId      String
   quoteNumber    String?
   customerId     String
@@ -5956,7 +5956,7 @@ model QuoteLine {
 
 model Invoice {
   id             String    @id @default(uuid())
-  workspaceId    String    @map("tenantId")
+  workspaceId    String    
   companyId      String
   invoiceNumber  String?
   customerId     String
@@ -6071,7 +6071,7 @@ model DebitNote {
 
 model RecurringInvoice {
   id           String    @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
   customerId   String
   frequency    String
@@ -6097,7 +6097,7 @@ model RecurringInvoice {
 
 model RecurringSchedule {
   id                String   @id @default(uuid())
-  workspaceId       String   @map("tenantId")
+  workspaceId       String   
   companyId         String?
   practiceId        String?
   name              String
@@ -6142,7 +6142,7 @@ model RecurringExecutionLog {
 
 model ExpenseClaim {
   id           String    @id @default(uuid())
-  workspaceId  String    @map("tenantId")
+  workspaceId  String    
   companyId    String
   employeeId   String
   paycheckId   String?
@@ -6181,7 +6181,7 @@ model ExpenseClaimLine {
 
 model Payout {
   id          String    @id @default(uuid())
-  workspaceId String    @map("tenantId")
+  workspaceId String    
   companyId   String?
   amount      Decimal   @db.Decimal(20, 4)
   status      String    @default("pending")
@@ -6196,7 +6196,7 @@ model Payout {
 
 model PaymentGatewaySettlement {
   id              String   @id @default(uuid())
-  workspaceId     String   @map("tenantId")
+  workspaceId     String   
   companyId       String?
   gatewayName     String   // STRIPE, PAYPAL, PAYMAYA, etc.
   externalId      String?  // gateway settlement id
@@ -6238,7 +6238,7 @@ model PaymentGatewayPayout {
 
 model SavedReport {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String?
   
   name        String   // e.g., "Board P&L Package"
@@ -6338,7 +6338,7 @@ model InvoiceLine {
   id              String   @id @default(uuid())
   companyId       String
   invoiceId       String
-  workspaceId     String @map("tenantId")
+  workspaceId     String 
   itemId          String?
   description     String
   quantity        Decimal  @db.Decimal(12, 4)
@@ -6368,7 +6368,7 @@ model InvoiceLine {
 
 model PaymentReceived {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
   customerId   String
   amount       Decimal  @db.Decimal(20, 4)
@@ -6415,7 +6415,7 @@ model PaymentReceived {
 
 model InvoicePaymentApplication {
   id        String   @id @default(uuid())
-  workspaceId String @map("tenantId")
+  workspaceId String 
   invoiceId String
   paymentId String
   amount    Decimal  @db.Decimal(20, 4)
@@ -6437,7 +6437,7 @@ model InvoicePaymentApplication {
 
 model DunningProfile {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   name        String
   isActive    Boolean  @default(true)
@@ -6481,7 +6481,7 @@ model DunningRun {
 model DunningNotice {
   id          String   @id @default(uuid())
   runId       String?
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   invoiceId   String
   customerId  String
@@ -6507,7 +6507,7 @@ model DunningNotice {
 
 model CustomerStatement {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   customerId  String
   periodStart DateTime
@@ -6528,7 +6528,7 @@ model CustomerStatement {
 
 model PaymentReminder {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   invoiceId   String
   remindAt    DateTime
@@ -6545,7 +6545,7 @@ model PaymentReminder {
 
 model SubscriptionReminder {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String?
   practiceId     String?
   subscriptionId String
@@ -6569,7 +6569,7 @@ model SubscriptionReminder {
 
 model DisputeReason {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   name        String
   isActive    Boolean  @default(true)
 
@@ -6582,7 +6582,7 @@ model DisputeReason {
 
 model Dispute {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   invoiceId   String
   reasonId    String?
@@ -6604,7 +6604,7 @@ model Dispute {
 
 model Chargeback {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   invoiceId   String
   paymentId   String?
@@ -6650,7 +6650,7 @@ model BankFeedRule {
 
 model BankFeedConnection {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
   provider     String   // PLAID, YODLEE, MANUAL
   externalId   String?  // provider item id
@@ -6730,7 +6730,7 @@ model BankTransactionRaw {
 
 model BankAccount {
   id            String   @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   name          String
   institution   String?
   accountNumber String?
@@ -6762,7 +6762,7 @@ model BankTransaction {
   amount        Decimal  @db.Decimal(20, 4)
   date          DateTime
   description   String
-  workspaceId    String @map("tenantId")
+  workspaceId    String 
 
   bankAccount            BankAccount              @relation(fields: [bankAccountId], references: [id])
   workspace              Workspace                 @relation(fields: [workspaceId], references: [id])
@@ -6776,7 +6776,7 @@ model BankTransaction {
 
 model BankDeposit {
   id            String   @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   companyId     String
   bankAccountId String
   depositDate   DateTime @default(now())
@@ -6973,7 +6973,7 @@ model Check {
 model Bill {
   id             String    @id @default(uuid())
   companyId      String
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   vendorId       String
   billNumber     String?
   status         BillStatus    @default(DRAFT)
@@ -7035,7 +7035,7 @@ model BillLine {
   id              String   @id @default(uuid())
   companyId       String
   billId          String
-  workspaceId     String   @map("tenantId")
+  workspaceId     String   
   accountId       String?
   itemId          String?
   description     String?
@@ -7067,7 +7067,7 @@ model BillLine {
 model PurchaseOrder {
   id                     String        @id @default(uuid())
   companyId              String
-  workspaceId            String   @map("tenantId")
+  workspaceId            String   
   vendorId               String
   poNumber               String?
   status                 PurchaseOrderStatus        @default(OPEN)
@@ -7118,7 +7118,7 @@ model PurchaseOrderLine {
   id              String  @id @default(uuid())
   companyId       String
   purchaseOrderId String
-  workspaceId     String @map("tenantId")
+  workspaceId     String 
   itemId          String?
   description     String?
   quantity        Decimal @db.Decimal(12, 4)
@@ -7140,7 +7140,7 @@ model PurchaseOrderLine {
 model VendorCredit {
   id           String   @id @default(uuid())
   companyId    String
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   vendorId     String
   creditNumber String?
   total        Decimal  @db.Decimal(20, 4)
@@ -7166,7 +7166,7 @@ model VendorCredit {
 model CustomerCredit {
   id           String   @id @default(uuid())
   companyId    String?
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   customerId   String
   creditNumber String?
   total        Decimal  @db.Decimal(20, 4)
@@ -7197,7 +7197,7 @@ model CustomerCreditLine {
   accountId        String?
   amount           Decimal @db.Decimal(20, 4)
   description      String?
-  workspaceId      String @map("tenantId")
+  workspaceId      String 
 
   customerCredit CustomerCredit @relation(fields: [customerCreditId], references: [id])
   company        Company?       @relation(fields: [companyId], references: [id])
@@ -7210,7 +7210,7 @@ model CustomerCreditLine {
 
 model CustomerCreditApplication {
   id        String   @id @default(uuid())
-  workspaceId String @map("tenantId")
+  workspaceId String 
   creditId  String
   invoiceId String
   amount    Decimal  @db.Decimal(20, 4)
@@ -7232,7 +7232,7 @@ model VendorCreditLine {
   accountId      String?
   amount         Decimal @db.Decimal(20, 4)
   description    String?
-  workspaceId    String @map("tenantId")
+  workspaceId    String 
 
   vendorCredit VendorCredit @relation(fields: [vendorCreditId], references: [id])
   company      Company?     @relation(fields: [companyId], references: [id])
@@ -7246,7 +7246,7 @@ model VendorCreditLine {
 model BillPayment {
   id                    String   @id @default(uuid())
   companyId             String?
-  workspaceId           String   @map("tenantId")
+  workspaceId           String   
   billId                String
   amount                Decimal  @db.Decimal(20, 4)
   paymentDate           DateTime @default(now())
@@ -7285,7 +7285,7 @@ model BillPayment {
 
 model BillPaymentApplication {
   id        String   @id @default(uuid())
-  workspaceId String @map("tenantId")
+  workspaceId String 
   billId    String
   paymentId String
   amount    Decimal  @db.Decimal(20, 4)
@@ -7303,7 +7303,7 @@ model BillPaymentApplication {
 model VendorPaymentMethod {
   id        String   @id @default(uuid())
   companyId String?
-  workspaceId String @map("tenantId")
+  workspaceId String 
   vendorId  String
   type      String // ACH, CARD, CHECK
   details   Json?
@@ -7321,7 +7321,7 @@ model VendorPaymentMethod {
 
 model CustomerRefund {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   customerId     String
   paymentReceivedId String?
@@ -7355,7 +7355,7 @@ model CustomerRefund {
 
 model VendorRefund {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   companyId      String
   vendorId       String
   billPaymentId  String?
@@ -7389,7 +7389,7 @@ model VendorRefund {
 
 model WriteOff {
   id           String   @id @default(uuid())
-  workspaceId  String   @map("tenantId")
+  workspaceId  String   
   companyId    String
   invoiceId    String?
   billId       String?
@@ -7416,7 +7416,7 @@ model WriteOff {
 
 model RefundApproval {
   id              String   @id @default(uuid())
-  workspaceId     String   @map("tenantId")
+  workspaceId     String   
   companyId       String
   customerRefundId String?
   vendorRefundId  String?
@@ -7439,7 +7439,7 @@ model RefundApproval {
 
 model RefundReason {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   name        String
   type        String   // CUSTOMER, VENDOR, BOTH
   isActive    Boolean  @default(true)
@@ -7454,7 +7454,7 @@ model RefundReason {
 
 model AuditLog {
   id        String   @id @default(uuid())
-  workspaceId  String @map("tenantId")
+  workspaceId  String 
   companyId String?
   practiceId String?
   userId    String
@@ -7479,7 +7479,7 @@ model AuditLog {
 
 model EventLog {
   id          BigInt   @id @default(autoincrement())
-  workspaceId String? @map("tenantId")
+  workspaceId String? 
   source      String
   type        String
   aggregateId String?
@@ -7515,7 +7515,7 @@ model DeadLetter {
 
 model SearchIndexingQueue {
   id            String    @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   indexableType String
   indexableId   String
   priority      Int       @default(50)
@@ -7530,7 +7530,7 @@ model SearchIndexingQueue {
 
 model SearchIndexedDoc {
   id             String   @id @default(uuid())
-  workspaceId    String   @map("tenantId")
+  workspaceId    String   
   indexableType  String
   indexableId    String
   indexName      String
@@ -7542,7 +7542,7 @@ model SearchIndexedDoc {
 
 model TenantBillingInvoice {
   id            String    @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   invoiceNumber String    @unique
   totalAmount   Decimal   @db.Decimal(18, 4)
   currency      String    @default("USD")
@@ -7555,7 +7555,7 @@ model TenantBillingInvoice {
 
 model TenantBillingUsage {
   id            String @id @default(uuid())
-  workspaceId   String @map("tenantId")
+  workspaceId   String 
   period        String
   invoicesCount Int    @default(0)
   apiCalls      Int    @default(0)
@@ -7566,7 +7566,7 @@ model TenantBillingUsage {
 
 model DsrExportRequest {
   id          String    @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   requesterId String?
   requestType String
   status      String    @default("PENDING")
@@ -7579,7 +7579,7 @@ model DsrExportRequest {
 
 model ConsentRecord {
   id            String    @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   userId        String?
   consentType   String
   consentStatus String
@@ -7596,7 +7596,7 @@ model ConsentRecord {
 // OPERATIONS / INFRA PRIMITIVES
 model IdempotencyKey {
   id          String    @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   userId      String?
   key         String    @unique
   method      String
@@ -7613,7 +7613,7 @@ model OutboxEvent {
 
   aggregateId   String?
   eventType     String
-  workspaceId   String?  @map("tenantId")
+  workspaceId   String?  
   payload       Json
   status        String    @default("pending")
   attempts      Int       @default(0)
@@ -7636,7 +7636,7 @@ model SchemaMigration {
 
 model ArchiveJob {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String?
   year        Int
   modules     String[] // e.g., ["INVOICE", "JOURNAL", "INVENTORY"]
@@ -7654,7 +7654,7 @@ model ArchiveJob {
 
 model EntityVersion {
   id         String   @id @default(uuid())
-  workspaceId String? @map("tenantId")
+  workspaceId String? 
   companyId  String?
   entityType String
   entityId   String
@@ -7688,7 +7688,7 @@ model FinancialMetric {
 
 model DataRetentionPolicy {
   id               String   @id @default(uuid())
-  workspaceId      String   @map("tenantId")
+  workspaceId      String   
   companyId        String?
   entityType       String   // INVOICE, CUSTOMER, AUDIT_LOG, etc.
   retentionYears   Int      @default(7)
@@ -7733,7 +7733,7 @@ enum DocumentTemplateType {
 
 model DocumentTemplate {
   id          String   @id @default(uuid())
-  workspaceId String   @map("tenantId")
+  workspaceId String   
   companyId   String
   
   name        String   // e.g., "Legal Professional", "Construction Progress"
@@ -7777,7 +7777,7 @@ model DocumentTemplate {
 
 model DocumentRenderLog {
   id            String   @id @default(uuid())
-  workspaceId   String   @map("tenantId")
+  workspaceId   String   
   companyId     String?
   documentType  String
   documentId    String
@@ -8026,7 +8026,7 @@ model ReconciliationException {
 
 model ApiRateLimit {
   id           String   @id @default(uuid())
-  workspaceId  String?  @map("tenantId")
+  workspaceId  String?  
   apiKeyId     String?
   windowStart  DateTime
   windowMs     Int
@@ -8067,7 +8067,7 @@ model ExternalSystemConfig {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  workspaceId String? @map("tenantId")
+  workspaceId String? 
   companyId   String?
 
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
@@ -8101,7 +8101,7 @@ model ExternalSystemAudit {
 
 model NotificationPreference {
   id          String   @id @default(uuid())
-  workspaceId String?  @map("tenantId")
+  workspaceId String?  
   companyId   String?
   userId      String?
 
@@ -8127,7 +8127,7 @@ model NotificationPreference {
 
 model ApiKey {
   id          String   @id @default(uuid())
-  workspaceId String?  @map("tenantId")
+  workspaceId String?  
   key         String   @unique
   ownerId     String?
   systemType  String   // e.g., BANK_API, PAYROLL_API, WEBHOOK
@@ -8195,7 +8195,7 @@ model SystemHealthStatus {
 
 model WebhookSubscription {
   id          String   @id @default(uuid())
-  workspaceId String?  @map("tenantId")
+  workspaceId String?  
   companyId   String?
   name        String
   url         String
