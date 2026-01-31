@@ -16,7 +16,11 @@ describe('Plan capacity defaults backfill', () => {
     const rows: any[] = await prisma.$queryRawUnsafe('SELECT key, value FROM "PlanCapacity" WHERE plan_id = $1::text', plan.id)
 
     const keys = rows.map(r => r.key)
-    expect(keys).toEqual(expect.arrayContaining(['max_xero_orgs','max_bank_connections','max_invoice_templates','max_contacts','max_api_calls_per_month','file_storage_mb']))
+    // Expect HaypBooks-specific keys plus legacy aliases to be populated
+    expect(keys).toEqual(expect.arrayContaining([
+      'max_companies','max_active_users','max_invoices_per_month','max_bank_accounts','max_storage_gb','enable_ai_insights',
+      'max_accounting_orgs','max_bank_connections'
+    ]))
 
     // cleanup
     await prisma.$executeRawUnsafe('DELETE FROM "PlanCapacity" WHERE plan_id = $1::text', plan.id)
