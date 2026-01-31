@@ -9,30 +9,29 @@ async function main() {
 
   console.log('\n=== Firm models backfill check ===\n');
 
-  // Count AccountingFirmSubscription rows
-  const subs = await prisma.accountingFirmSubscription.findMany({ select: { id: true, accountingFirmId: true, planId: true, workspaceId: true } });
-
+  // Count AccountingFirmSubscription rows using raw SQL (robust regardless of generated client types)
+  const subs = await prisma.$queryRawUnsafe(`SELECT id, "accountingFirmId", "planId", "workspaceId" FROM "AccountingFirmSubscription"`);
   console.log(`Found ${subs.length} AccountingFirmSubscription rows.`);
 
-  const planIds = Array.from(new Set(subs.map(s => s.planId)));
+  const planIds = Array.from(new Set(subs.map((s: any) => s.planId)));
   console.log(`Distinct plan ids: ${planIds.join(', ') || '<none>'}`);
 
-  // Dry-run: show what we'd create
+  // Check existence of FirmPlan by code
   for (const pid of planIds) {
-    const existing = await prisma.firmPlan.findUnique({ where: { code: pid } }).catch(() => null);
-    if (existing) {
-      console.log(`Plan already exists for code=${pid} (id=${existing.id})`);
+    const r = await prisma.$queryRawUnsafe(`SELECT id FROM "FirmPlan" WHERE code = $1`, pid);
+    if (r && r.length) {
+      console.log(`Plan already exists for code=${pid} (id=${r[0].id})`);
     } else {
       console.log(`Would create FirmPlan(code=${pid})`);
     }
   }
 
-  // Onboarding progress: check workspaces
-  const workspaces = await prisma.workspace.findMany({ select: { id: true } });
+  // Onboarding progress: check workspaces via raw SQL
+  const workspaces = await prisma.$queryRawUnsafe(`SELECT id FROM "Workspace"`);
   let missing = 0;
   for (const w of workspaces) {
-    const p = await prisma.firmOnboardingProgress.findUnique({ where: { workspaceId: w.id } }).catch(() => null);
-    if (!p) missing++;
+    const p = await prisma.$queryRawUnsafe(`SELECT id FROM "FirmOnboardingProgress" WHERE workspace_id = $1::uuid`, w.id);
+    if (!p || p.length === 0) missing++;
   }
   console.log(`Workspaces without onboarding progress: ${missing}`);
 
@@ -41,23 +40,19 @@ async function main() {
     return;
   }
 
-  console.log('\nApplying changes...');
+  console.log('\nApplying changes (idempotent inserts)...');
 
   for (const pid of planIds) {
-    const existing = await prisma.firmPlan.findUnique({ where: { code: pid } }).catch(() => null);
-    if (!existing) {
-      const created = await prisma.firmPlan.create({ data: { code: pid, name: pid, priceCents: 0 } });
-      console.log(`Created FirmPlan id=${created.id} code=${created.code}`);
-    }
+    await prisma.$executeRawUnsafe(`INSERT INTO "FirmPlan" (id, code, name, price_cents, created_at) SELECT gen_random_uuid(), $1, $2, 0, now() WHERE NOT EXISTS (SELECT 1 FROM "FirmPlan" WHERE code = $1)`, pid, pid);
+    const r = await prisma.$queryRawUnsafe(`SELECT id FROM "FirmPlan" WHERE code = $1`, pid);
+    if (r && r.length) console.log(`FirmPlan ensured for code=${pid} id=${r[0].id}`);
   }
 
   for (const w of workspaces) {
-    const p = await prisma.firmOnboardingProgress.findUnique({ where: { workspaceId: w.id } }).catch(() => null);
-    if (!p) {
-      const created = await prisma.firmOnboardingProgress.create({ data: { workspaceId: w.id } });
-      console.log(`Created FirmOnboardingProgress for workspace ${w.id}`);
-    }
+    await prisma.$executeRawUnsafe(`INSERT INTO "FirmOnboardingProgress" (id, workspace_id, step, meta, updated_at) SELECT gen_random_uuid(), $1::uuid, 0, '{}'::jsonb, now() WHERE NOT EXISTS (SELECT 1 FROM "FirmOnboardingProgress" WHERE workspace_id = $1::uuid)`, w.id);
   }
+
+  console.log('\nBackfill complete.');
 
   console.log('\nBackfill complete.');
 }
