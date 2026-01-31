@@ -1,12 +1,21 @@
-This migration adds plan & workspace capacity tables to support capacity-based features (Xero/org limits, API metering, file storage, etc.).
+This migration adds plan & workspace capacity tables to support capacity-based features (accounting provider / org limits, API metering, file storage, etc.).
 
 Capacity keys added (suggested):
-- max_xero_orgs (number of connected Xero orgs permitted)
-- max_bank_connections (connected bank feeds)
-- max_invoice_templates (invoice templates per workspace)
+
+HaypBooks-branded numeric limits (preferred):
+- max_companies (number of companies/workspaces a plan can create/connect)
+- max_active_users (concurrent/active users; -1 = unlimited)
+- max_invoices_per_month (monthly invoice emission quota; -1 = unlimited)
+- max_bank_accounts (connected bank accounts/feeds)
+- max_storage_gb (file/storage quota in GB)
+
+Legacy/compatibility keys (kept for backward compatibility):
+- max_accounting_orgs (alias for max_companies)
+- max_bank_connections (alias for max_bank_accounts)
+- max_invoice_templates (legacy invoice template quota)
 - max_contacts (contact/customer records)
 - max_api_calls_per_month (API call quota)
-- file_storage_mb (file storage quota in MB)
+- file_storage_mb (legacy file storage in MB)
 
 Notes:
 - The migration is additive and idempotent (CREATE TABLE IF NOT EXISTS).
