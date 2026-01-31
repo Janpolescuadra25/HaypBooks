@@ -1,5 +1,13 @@
 Summary of schema additions (per Grok AI recommendations)
 
+- 2026-01-31: Added firm billing & onboarding models:
+  - `FirmPlan`, `FirmPlanFeature`
+  - `FirmFeatureFlag`
+  - `FirmBillingInvoice`
+  - `FirmOnboardingProgress`
+
+These changes are additive and include a guarded SQL migration in `prisma/migrations/20260131_add_firm_billing_and_onboarding` and a safe backfill script `scripts/migrate_firm_models.ts` which supports dry-run mode and idempotent `--apply` mode.
+
 What I added to `prisma/schema.prisma`:
 
 1) Revenue recognition
