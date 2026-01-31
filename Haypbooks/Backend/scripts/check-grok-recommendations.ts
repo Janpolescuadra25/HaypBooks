@@ -5,69 +5,31 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('\n=== Checking Database State vs Grok Recommendations ===\n');
 
-  // Check Tenant table columns
-  const tenantColumns = await prisma.$queryRaw<any[]>`
-    SELECT column_name, data_type, is_nullable
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'Tenant'
-    ORDER BY ordinal_position;
-  `;
+  // Check existence of recommended Grok tables and a few basic sanity checks
+  const exists = async (tableName: string) => {
+    const r = await prisma.$queryRaw<any[]>`
+      SELECT to_regclass(${tableName::text}) IS NOT NULL AS exists
+    `;
+    return r && r[0] && (r[0].exists === true || r[0].exists === 't' || r[0].exists === 'true');
+  };
 
-  console.log('📊 Tenant table columns:');
-  console.table(tenantColumns);
+  const tablesToCheck = ['FirmPlan', 'FirmPlanFeature', 'FirmFeatureFlag', 'FirmBillingInvoice', 'FirmOnboardingProgress'];
+  for (const t of tablesToCheck) {
+    const q = await prisma.$queryRaw<any[]>`
+      SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ${t}
+    `;
+    console.log(`${t}: ${q.length ? '✓ exists' : '✗ missing'}`);
+  }
 
-  // Check User table columns
-  const userColumns = await prisma.$queryRaw<any[]>`
-    SELECT column_name, data_type, is_nullable
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'User'
-    ORDER BY ordinal_position;
-  `;
+  // Count a few rows to indicate health
+  const planCount = await prisma.firmPlan.count().catch(() => 0);
+  const flagCount = await prisma.firmFeatureFlag.count().catch(() => 0);
+  const onboardCount = await prisma.firmOnboardingProgress.count().catch(() => 0);
 
-  console.log('\n👤 User table columns:');
-  console.table(userColumns);
-
-  // Check Company table columns
-  const companyColumns = await prisma.$queryRaw<any[]>`
-    SELECT column_name, data_type, is_nullable
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'Company'
-    ORDER BY ordinal_position;
-  `;
-
-  console.log('\n🏢 Company table columns:');
-  console.table(companyColumns);
-
-  // Check TenantUser table
-  const tenantUserColumns = await prisma.$queryRaw<any[]>`
-    SELECT column_name, data_type, is_nullable
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'TenantUser'
-    ORDER BY ordinal_position;
-  `;
-
-  console.log('\n🔗 TenantUser table columns:');
-  console.table(tenantUserColumns);
-
-  console.log('\n\n=== Analysis vs Grok.7 Recommendations ===\n');
-  
-  // Check if recommendations are implemented
-  const hasTenantName = tenantColumns.some(col => col.column_name === 'name');
-  const hasUserFirmName = userColumns.some(col => col.column_name === 'firmname');
-  const hasTenantFirmName = tenantColumns.some(col => col.column_name === 'firmName');
-  const hasTrialStartsAt = tenantColumns.some(col => col.column_name === 'trialStartsAt');
-  const hasTenantUsername = tenantColumns.some(col => col.column_name === 'username');
-
-  console.log('✓ = Implemented | ✗ = Missing | ⚠ = Needs review\n');
-  console.log(`${hasTenantName ? '✓' : '✗'} Tenant.name (client/account display name)`);
-  console.log(`${hasUserFirmName ? '✓' : '✗'} User.firmName (accountant firm name)`);
-  console.log(`${hasTenantFirmName ? '⚠' : '✓'} Tenant.firmName should be removed (use User.firmName instead)`);
-  console.log(`${hasTrialStartsAt ? '✓' : '✗'} Tenant.trialStartsAt (trial period tracking)`);
-  console.log(`${hasTenantUsername ? '⚠' : '✓'} Tenant.username (should use User.email instead)`);
+  console.log('\n✓ = Implemented | ✗ = Missing | ⚠ = Needs review\n');
+  console.log(`${planCount > 0 ? '✓' : '✗'} FirmPlan entries (${planCount})`);
+  console.log(`${flagCount > 0 ? '✓' : '✗'} FirmFeatureFlag entries (${flagCount})`);
+  console.log(`${onboardCount > 0 ? '✓' : '✗'} FirmOnboardingProgress entries (${onboardCount})`);
 }
 
 main()
