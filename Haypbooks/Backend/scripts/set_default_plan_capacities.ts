@@ -18,6 +18,9 @@ async function main() {
     if (n.includes('free')) {
       return [
         { key: 'max_xero_orgs', value: 1 },
+        { key: 'max_bank_connections', value: 1 },
+        { key: 'max_invoice_templates', value: 5 },
+        { key: 'max_contacts', value: 500 },
         { key: 'max_api_calls_per_month', value: 1000 },
         { key: 'file_storage_mb', value: 50 }
       ]
@@ -25,6 +28,9 @@ async function main() {
     if (n.includes('pro')) {
       return [
         { key: 'max_xero_orgs', value: 3 },
+        { key: 'max_bank_connections', value: 3 },
+        { key: 'max_invoice_templates', value: 50 },
+        { key: 'max_contacts', value: 5000 },
         { key: 'max_api_calls_per_month', value: 10000 },
         { key: 'file_storage_mb', value: 1024 }
       ]
@@ -32,6 +38,9 @@ async function main() {
     // Default for other business plans
     return [
       { key: 'max_xero_orgs', value: 10 },
+      { key: 'max_bank_connections', value: 10 },
+      { key: 'max_invoice_templates', value: 200 },
+      { key: 'max_contacts', value: 20000 },
       { key: 'max_api_calls_per_month', value: 100000 },
       { key: 'file_storage_mb', value: 10240 }
     ]
