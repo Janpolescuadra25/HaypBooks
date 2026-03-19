@@ -1,19 +1,25 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common'
+import { Injectable, Inject, BadRequestException, Logger } from '@nestjs/common'
 import { IOnboardingRepository } from '../repositories/interfaces/onboarding.repository.interface'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { ONBOARDING_REPOSITORY, USER_REPOSITORY } from '../repositories/mock/mock-repositories.module'
 import { CompanyService } from '../companies/company.service'
 import { TenantsService } from '../tenants/tenants.service'
+import { AccountingService } from '../accounting/accounting.service'
 import { increment as incMetric } from '../common/metrics'
+import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
 export class OnboardingService {
+  private readonly logger = new Logger(OnboardingService.name)
+
   constructor(
     @Inject(ONBOARDING_REPOSITORY)
     private readonly onboardingRepository: IOnboardingRepository,
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly companyService: CompanyService,
+    private readonly accountingService: AccountingService,
+    private readonly prisma: PrismaService,
     // Optional: TenantsService is injected so we can update workspaceName early on saveStep
     private readonly tenantsService?: TenantsService,
   ) {
@@ -47,15 +53,15 @@ export class OnboardingService {
           }
         }
 
-        // If no owner tenant exists (or tenantsService not present), attempt to create a tenant
-        // via CompanyService (best-effort); this will create a Tenant and TenantUser for the user
+        // If no owner tenant exists, create a OWNER workspace directly using valid Workspace fields only
         try {
-          const payload: any = { ownerUserId: userId, type: 'OWNER', status: 'ACTIVE' }
-          // Prevent legacy backfill from creating a Company record that contains workspace name
-          payload.suppressCompanyCreation = true
-          // Ensure owner relation is connected for Prisma (avoid raw users array shape)
-          payload.owner = { connect: { id: userId } }
-          await this.companyService.createCompany(payload)
+          await this.prisma.workspace.create({
+            data: {
+              ownerUserId: userId,
+              type: 'OWNER' as any,
+              status: 'ACTIVE' as any,
+            }
+          })
         } catch (e) {
           // non-fatal
           console.warn('[ONBOARDING-SAVE] Failed to create tenant early (non-fatal):', e?.message || e)
@@ -63,39 +69,44 @@ export class OnboardingService {
       }
 
       // If accountant onboarding saves a firm name, attempt to persist it to an accountant tenant
-      if (step === 'accountant_firm' && data && data.firmName) {
-        const rawFirm = data.firmName
+      // Note: PracticeProfile sends the field as `name`; support both `firmName` (legacy) and `name`
+      const firmNameFromData = data?.firmName ?? data?.name ?? null
+      if (step === 'accountant_firm' && firmNameFromData) {
+        const rawFirm = firmNameFromData
         const normalizedFirm = String(rawFirm).trim().slice(0, 140)
 
-        if (this.tenantsService) {
-          try {
-            const tenants = await this.tenantsService.listTenantsForUser(userId)
-            const accountantTenant = (tenants || []).find((t: any) => t?.type === 'ACCOUNTANT')
-            if (accountantTenant && accountantTenant.id) {
-              try {
-                await this.tenantsService.updateWorkspaceName(accountantTenant.id, normalizedFirm)
-              } catch (e) {}
-              try {
-                await this.tenantsService.updateFirmName(accountantTenant.id, normalizedFirm)
-              } catch (e) {}
-              return { success: true }
+        // Look up workspace by ownerUserId directly (avoids WorkspaceUser table)
+        try {
+          const existingWs = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
+          if (existingWs) {
+            // Workspace exists — ensure/update Practice record
+            const existingPractice = await this.prisma.practice.findFirst({ where: { workspaceId: existingWs.id } })
+            if (existingPractice) {
+              try { await this.prisma.practice.update({ where: { id: existingPractice.id }, data: { name: normalizedFirm } }) } catch (e) { }
+            } else {
+              try { await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: existingWs.id } }) } catch (e) { }
             }
-          } catch (e) {
-            console.warn('[ONBOARDING-SAVE] Failed to update existing accountant tenant (non-fatal):', e?.message || e)
+            return { success: true }
           }
+        } catch (e) {
+          console.warn('[ONBOARDING-SAVE] Failed to update existing workspace/practice (non-fatal):', e?.message || e)
         }
 
-        // If no accountant tenant exists, attempt to create one (best-effort)
+        // No workspace yet — create a PRACTICE workspace and Practice record (best-effort)
         try {
-          const payload: any = { ownerUserId: userId, firmName: normalizedFirm, type: 'ACCOUNTANT', status: 'ACTIVE' }
-          // Prevent backfill company creation for early accountant tenant creation
-          payload.suppressCompanyCreation = true
-          // Connect owner explicitly
-          payload.owner = { connect: { id: userId } }
-          await this.companyService.createCompany(payload)
+          const newWs = await this.prisma.workspace.create({
+            data: {
+              ownerUserId: userId,
+              type: 'PRACTICE' as any,
+              status: 'ACTIVE' as any,
+            }
+          })
+          try {
+            await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: newWs.id } })
+          } catch (practiceErr) { /* non-fatal */ }
           return { success: true }
         } catch (e) {
-          console.warn('[ONBOARDING-SAVE] Failed to create accountant tenant early (non-fatal):', e?.message || e)
+          console.warn('[ONBOARDING-SAVE] Failed to create accountant workspace (non-fatal):', e?.message || e)
         }
       }
 
@@ -139,110 +150,170 @@ export class OnboardingService {
         }
       } catch (e) { /* ignore */ }
 
-      // Best-effort: create a Tenant (Owner Workspace) for the user
+      // Best-effort: ensure an Owner Workspace exists, create Company record, seed COA, and create bank account inside a single transaction.
+      let createdCompanyId: string | null = null
+      let ownerWorkspaceId: string | null = null
       try {
-        console.log('[ONBOARDING-COMPLETE] 🚀 Step 1: Starting Tenant creation for userId:', userId)
-        const payload: any = {}
+        this.logger.log('[ONBOARDING-COMPLETE] 🚀 Step 1: Upserting workspace and company for userId: ' + userId)
         const businessStep = steps?.business || {}
-        const fiscalStep = steps?.fiscal || {}
+        const fiscalStep = steps?.fiscal_tax || steps?.fiscal || {}
         const taxStep = steps?.tax || {}
         const brandingStep = steps?.branding || {}
 
-        // Set owner and workspace type/status; avoid passing legacy `workspaceName` field
-        payload.ownerUserId = userId
-        payload.owner = { connect: { id: userId } }
-        payload.type = 'OWNER'
-        payload.status = 'ACTIVE'
+        await this.prisma.$transaction(async (tx) => {
+          let workspaceId: string | null = null
+          const existingWorkspace = await tx.workspace.findUnique({ where: { ownerUserId: userId } })
+          if (existingWorkspace) {
+            workspaceId = existingWorkspace.id
+            this.logger.log('[ONBOARDING-COMPLETE] ✅ Found existing workspace: ' + workspaceId)
+          } else {
+            const newWorkspace = await tx.workspace.create({
+              data: {
+                ownerUserId: userId,
+                type: 'OWNER',
+                status: 'ACTIVE',
+              }
+            })
+            workspaceId = newWorkspace.id
+            createdTenant = newWorkspace
+            this.logger.log('[ONBOARDING-COMPLETE] ✅ Created new workspace: ' + workspaceId)
+          }
 
-        // Determine whether we have a true business/company step (company should be created)
-        const hasBusinessCompany = !!(businessStep && (businessStep.companyName || businessStep.businessName || businessStep.legalBusinessName))
+          ownerWorkspaceId = workspaceId
 
-        // If no business/company details were provided, suppress backfill when creating tenant
-        if (!hasBusinessCompany) payload.suppressCompanyCreation = true
+          if (workspaceId) {
+            const existingCompany = await tx.company.findFirst({ where: { workspaceId } })
+            if (!existingCompany) {
+              const companyName = (businessStep && (businessStep.businessName || businessStep.companyName || normalizedCompany)) || `Workspace ${workspaceId}`
 
-        // Do not use raw users array here (Prisma expects Role/roleId); we connected owner explicitly above
-        console.log('[ONBOARDING-COMPLETE] 🚀 Step 2: Calling createCompany (Tenant) with payload:', JSON.stringify(payload, null, 2))
+              const COUNTRY_NAME_TO_ISO2: Record<string, string> = {
+                'Philippines': 'PH', 'United States': 'US', 'United Kingdom': 'GB',
+                'Australia': 'AU', 'Canada': 'CA', 'Singapore': 'SG', 'Malaysia': 'MY',
+                'Indonesia': 'ID', 'Thailand': 'TH', 'Vietnam': 'VN', 'Japan': 'JP',
+                'South Korea': 'KR', 'China': 'CN', 'India': 'IN', 'Germany': 'DE',
+                'France': 'FR', 'Spain': 'ES', 'Italy': 'IT', 'Netherlands': 'NL',
+                'Brazil': 'BR', 'Mexico': 'MX', 'Other': '', '': '',
+              }
+              const rawCountry = businessStep?.country || 'PH'
+              const countryCode = (COUNTRY_NAME_TO_ISO2[rawCountry] ?? rawCountry).toUpperCase()
 
-        // Actually create the tenant (owner workspace) and capture the created tenant object
-        try {
-          createdTenant = await this.companyService.createCompany(payload)
-          console.log('[ONBOARDING-COMPLETE] ✅ Step 3: Tenant created successfully:', { workspaceId: createdTenant?.id })
-        } catch (e) {
-          console.error('[ONBOARDING-COMPLETE] ❌ Failed to create tenant (non-fatal):', e?.message || e)
-        }
+              let resolvedCountryId: string | undefined = undefined
+              try {
+                const countryRow = await tx.country.findFirst({ where: { code: countryCode as any } })
+                if (countryRow?.id) resolvedCountryId = countryRow.id
+              } catch { /* Country code may not be a valid enum value — proceed without countryId */ }
 
-        // Build Company payload from onboarding steps
-        const companyPayload: any = { name: normalizedCompany, currency: payload.baseCurrency || 'USD' }
-        if (businessStep.legalBusinessName) companyPayload.legalName = businessStep.legalBusinessName
-        if (businessStep.startDate) companyPayload.startDate = new Date(businessStep.startDate)
-        // Default to PH when not provided
-        companyPayload.country = businessStep.country || 'PH'
-        if (fiscalStep.fiscalStart) companyPayload.fiscalYearStart = parseInt(fiscalStep.fiscalStart || '') || undefined
-        if (businessStep.businessType) companyPayload.businessType = businessStep.businessType
-        if (businessStep.industry) companyPayload.industry = businessStep.industry
-        if (businessStep.address) companyPayload.address = businessStep.address
-        if (taxStep.taxId || taxStep.tin) companyPayload.taxId = taxStep.taxId || taxStep.tin
-        if (brandingStep.logo) companyPayload.logoUrl = brandingStep.logo
-        if (brandingStep.invoicePrefix) companyPayload.invoicePrefix = brandingStep.invoicePrefix
-        if (taxStep.vatRegistered !== undefined) companyPayload.vatRegistered = !!taxStep.vatRegistered
-        if (taxStep.collectTax !== undefined) companyPayload.vatRegistered = !!taxStep.collectTax
-        if (taxStep.taxRate !== undefined) companyPayload.vatRate = taxStep.taxRate
-        if (taxStep.vatRate !== undefined) companyPayload.vatRate = taxStep.vatRate
-        if (taxStep.pricesInclusive !== undefined) companyPayload.pricesInclusive = !!taxStep.pricesInclusive
-        if (taxStep.inclusive !== undefined) companyPayload.pricesInclusive = !!taxStep.inclusive
+              const monthNames: Record<string, number> = {
+                January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
+                July: 7, August: 8, September: 9, October: 10, November: 11, December: 12,
+              }
+              const fiscalStartMonth = monthNames[(fiscalStep?.fiscalStart ?? '').toString()] || undefined
 
-        // Attempt to create an actual Company under the tenant (best-effort)
-        if (hasBusinessCompany) {
-          try {
-            console.info('[ONBOARDING] 🚀 Creating Company record:', { workspaceId: createdTenant.id, name: normalizedCompany })
-            const createdCompany = await this.companyService.createCompanyUnderTenant(createdTenant.id, companyPayload)
-            console.log('[ONBOARDING-COMPLETE] ✅ Step 6: Company created successfully:', { companyId: createdCompany?.id, name: createdCompany?.name })
-            try { incMetric('onboarding.company_creation_success') } catch (mErr) { /* no-op */ }
-            if (createdCompany) (createdTenant as any).__createdCompany = createdCompany
-            console.info('[ONBOARDING] ✅ Created company record during onboarding:', { companyId: createdCompany?.id, workspaceId: createdTenant?.id, name: createdCompany?.name })
-          } catch (e) {
-            // Non-fatal; we already created the tenant so onboarding can proceed
-            console.error('[ONBOARDING] ❌ Failed to create Company record under tenant (non-fatal):', e?.message || e)
-            try { incMetric('onboarding.company_creation_failure') } catch (err) { /* no-op */ }
+              const countryCurrency: Record<string, string> = {
+                PH: 'PHP', US: 'USD', AU: 'AUD', GB: 'GBP', CA: 'CAD', SG: 'SGD',
+                MY: 'MYR', ID: 'IDR', TH: 'THB', VN: 'VND', JP: 'JPY', KR: 'KRW',
+                CN: 'CNY', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR',
+                BR: 'BRL', MX: 'MXN',
+              }
+              const finalCurrency = (fiscalStep?.currency as string) || countryCurrency[countryCode] || 'USD'
 
-            // Attempt to recover by finding an existing Company associated with this tenant (best-effort)
-            try {
-              const owned = await this.companyService.listCompaniesForUser(userId, 'owned')
-              const existing = (owned || []).find((c: any) => c.workspaceId === createdTenant.id)
-              if (existing) (createdTenant as any).__createdCompany = existing
-            } catch (ex) {
-              // ignore
+              const created = await tx.company.create({
+                data: {
+                  name: companyName,
+                  workspaceId,
+                  isActive: true,
+                  ...(resolvedCountryId ? { countryId: resolvedCountryId } : {}),
+                  ...(businessStep?.businessType ? { businessType: businessStep.businessType } : {}),
+                  ...(businessStep?.industry ? { industry: businessStep.industry } : {}),
+                  currency: finalCurrency,
+                  ...(fiscalStartMonth ? { fiscalYearStart: fiscalStartMonth } : {}),
+                  ...(fiscalStep?.accountingMethod ? { accountingMethod: fiscalStep.accountingMethod } : {}),
+                  ...(taxStep?.taxId ? { taxId: taxStep.taxId } : {}),
+                  ...(taxStep?.taxRate ? { vatRate: Number(taxStep.taxRate) } : {}),
+                  ...(typeof taxStep?.pricesInclusive === 'boolean' ? { pricesInclusive: taxStep.pricesInclusive } : {}),
+                },
+              } as any)
+
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ Created Company record: ' + companyName + ' (' + created.id + ')')
+              createdCompanyId = created.id
+              if (!createdTenant) createdTenant = { id: workspaceId, __createdCompany: created }
+              else (createdTenant as any).__createdCompany = created
+            } else {
+              this.logger.log('[ONBOARDING-COMPLETE] ℹ️ Company already exists for workspace: ' + existingCompany.id)
+              createdCompanyId = existingCompany.id
+              if (!createdTenant) createdTenant = { id: workspaceId }
+              ;(createdTenant as any).__createdCompany = existingCompany
+            }
+
+            const step5Data = steps?.coa || {}
+            if (step5Data?.choice === 'template' && createdCompanyId) {
+              await this.accountingService.seedDefaultAccounts(createdCompanyId, tx)
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ COA seeded for company: ' + createdCompanyId)
+            }
+
+            const step6Data = steps?.bank || {}
+            if (step6Data?.bankName && ownerWorkspaceId) {
+              await tx.bankAccount.create({
+                data: {
+                  workspaceId: ownerWorkspaceId,
+                  name: step6Data.bankName,
+                  institution: step6Data.bankInstitution || null,
+                  accountNumber: step6Data.accountNumber || null,
+                  routingNumber: step6Data.routingNumber || null,
+                  isDefault: true,
+                },
+              })
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ Bank account created for workspace: ' + ownerWorkspaceId)
             }
           }
-        } else {
-          // No company details present — do not create a Company record under this tenant
-          console.info('[ONBOARDING] Skipping Company creation because no business/company step data supplied')
-        }
+        })
       } catch (e) {
-        // Best-effort only: log and continue; failing tenant creation should not block onboarding entirely
-        console.warn('Failed to create tenant during onboarding (non-fatal):', e?.message || e)
-        try { incMetric('onboarding.company_creation_failure') } catch (err) { /* no-op */ }
-      } 
+        this.logger.warn('[ONBOARDING-COMPLETE] Onboarding workspace/company/financial setup failed: ' + (e?.message || e))
+        incMetric('onboarding.company_creation_failure')
+        throw e
+      }
 
     } else {
-      const fromStep = steps?.accountant_firm?.firmName
+      // Support PracticeProfile sending `name` field (newer) as well as legacy `firmName`
+      const fromStep = steps?.accountant_firm?.firmName ?? steps?.accountant_firm?.name
       const val = typeof fromStep === 'string' && fromStep.trim().length > 0 ? fromStep : null
-      if (!val) throw new BadRequestException('firmName is required to complete accountant onboarding')
+      if (!val) throw new BadRequestException('Practice name is required to complete onboarding')
       // Normalize & persist trimmed value on the accountant tenant
       const normalizedFirm = String(val).trim().slice(0, 140)
       try {
-        // Try to update existing accountant tenant first
-        if (this.tenantsService) {
-          const tenants = await this.tenantsService.listTenantsForUser(userId)
-          const accountantTenant = (tenants || []).find((t: any) => t?.type === 'ACCOUNTANT')
-          if (accountantTenant?.id) {
-            await this.tenantsService.updateWorkspaceName(accountantTenant.id, normalizedFirm)
-            try { await this.tenantsService.updateFirmName(accountantTenant.id, normalizedFirm) } catch (e) {}
-          } else {
-            // Create a firm tenant if none exists (best-effort)
-            const payload: any = { ownerUserId: userId, firmName: normalizedFirm, type: 'ACCOUNTANT', status: 'ACTIVE' }
-            payload.owner = { connect: { id: userId } }
-            await this.companyService.createCompany(payload)
+        // Look up workspace by ownerUserId directly (avoids WorkspaceUser table which doesn't include type)
+        const existingWorkspace = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
+        if (existingWorkspace) {
+          createdTenant = existingWorkspace
+          this.logger.log('[ONBOARDING-COMPLETE] ✅ Found existing workspace for accountant: ' + existingWorkspace.id)
+          // Ensure/update the Practice row for this workspace
+          try {
+            const existingPractice = await this.prisma.practice.findFirst({ where: { workspaceId: existingWorkspace.id } })
+            if (!existingPractice) {
+              await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: existingWorkspace.id } })
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ Created Practice record: ' + normalizedFirm)
+            } else {
+              await this.prisma.practice.update({ where: { id: existingPractice.id }, data: { name: normalizedFirm } })
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ Updated Practice record: ' + normalizedFirm)
+            }
+          } catch (e) { /* ignore */ }
+        } else {
+          // No workspace yet — create a PRACTICE workspace
+          const newPracticeWorkspace = await this.prisma.workspace.create({
+            data: {
+              ownerUserId: userId,
+              type: 'PRACTICE' as any,
+              status: 'ACTIVE' as any,
+            }
+          })
+          createdTenant = newPracticeWorkspace
+          this.logger.log('[ONBOARDING-COMPLETE] ✅ Created PRACTICE workspace: ' + newPracticeWorkspace.id)
+          // Create a Practice record under the new workspace
+          try {
+            await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: newPracticeWorkspace.id } })
+            this.logger.log('[ONBOARDING-COMPLETE] ✅ Created Practice record: ' + normalizedFirm)
+          } catch (practiceErr) {
+            this.logger.warn('[ONBOARDING-COMPLETE] Practice record creation failed (non-fatal): ' + (practiceErr as any)?.message)
           }
         }
       } catch (e) {
@@ -252,16 +323,15 @@ export class OnboardingService {
     }
 
     await this.onboardingRepository.markComplete(userId)
-    // Set per-hub onboarding flags (and preserve backward compatibility with global flag)
-    const updateData: any = { onboardingMode: onboardingType }
-    if (hub === 'ACCOUNTANT') {
-      updateData.accountantOnboardingComplete = true
-    } else {
-      updateData.ownerOnboardingComplete = true
+    // Update user's preferredHub to match the onboarding hub they just completed
+    // Note: onboardingComplete/ownerOnboardingComplete/accountantOnboardingComplete fields
+    // do NOT exist on the User model — completion is tracked via OnboardingData.complete and cookies
+    try {
+      const preferredHub = hub === 'ACCOUNTANT' ? 'ACCOUNTANT' : 'OWNER'
+      await this.userRepository.update(userId, { preferredHub } as any)
+    } catch (e) {
+      this.logger.warn('[ONBOARDING-COMPLETE] User preferredHub update failed (non-fatal): ' + (e?.message || e))
     }
-    // Also set the legacy global flag for compatibility
-    updateData.onboardingComplete = true
-    await this.userRepository.update(userId, updateData)
     // Return the created company (if any) for callers; fall back to tenant when necessary
     const createdCompany = (createdTenant as any)?.__createdCompany || null
     if (createdCompany) return { success: true, company: createdCompany }

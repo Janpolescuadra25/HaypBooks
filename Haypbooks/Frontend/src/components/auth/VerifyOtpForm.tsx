@@ -69,7 +69,7 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
         // Backend returns token+user only when ALL required verification steps are completed
         if (res && (res as any).token) {
           // Navigate into onboarding same as previously
-          if (role === 'accountant') router.push('/onboarding/accountant')
+          if (role === 'accountant') router.push('/onboarding/practice')
           else if (role === 'business') router.push('/get-started/plans')
           else router.push('/signup/choose-role')
           return
@@ -103,7 +103,7 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
         // server/client boundaries. This keeps props serializable.
         if (flow === 'signup') {
           // If role hint is present, forward into the appropriate flow
-          if (role === 'accountant') router.push('/onboarding/accountant')
+          if (role === 'accountant') router.push('/onboarding/practice')
           else if (role === 'business') router.push('/get-started/plans')
           else router.push('/signup/choose-role')
         } else if (flow === 'reset') {
@@ -111,8 +111,14 @@ export default function VerifyOtpForm({ email, phone, flow = 'reset', role, init
         } else router.push('/')
       } else setError('Code invalid or expired')
     } catch (e: any) {
-      // Prefer a clear message when the API client surfaces routing misconfig errors
-      setError(e?.message || e?.response?.data?.message || 'Verification failed')
+      // log so we can inspect in console during practice/ dev
+      console.error('OTP verify error', e)
+      if (e?.response?.status === 500) {
+        setError('Server error verifying code, please try again later or contact support.')
+      } else {
+        // Fallback to any message from backend
+        setError(e?.response?.data?.message || e?.message || 'Verification failed')
+      }
     } finally { setLoading(false) }
   }
 

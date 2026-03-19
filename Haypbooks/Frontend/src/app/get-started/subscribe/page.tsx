@@ -1,152 +1,284 @@
 "use client"
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
-const PLANS = [
-  { id: 'starter', name: 'Starter', monthly: 19, bullets: ['1 company', 'Owner + 2 team members', 'Unlimited invoices', 'Basic reports'] },
-  { id: 'growth', name: 'Growth', monthly: 49, bullets: ['Up to 5 companies', 'Unlimited team members', 'Recurring invoices + payments', 'Advanced reports'], popular: true },
-  { id: 'pro', name: 'Professional', monthly: 99, bullets: ['Unlimited companies', 'Advanced roles & permissions', 'Custom dashboards', 'Priority support'] },
-]
+import React, { Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { motion, AnimatePresence } from 'motion/react'
+import {
+  CreditCard, ShieldCheck, ArrowRight, ChevronLeft,
+  CheckCircle2, Lock, Calendar, Sparkles,
+  User as UserIcon,
+} from 'lucide-react'
 
-export default function SubscribePage() {
+const PLAN_LABELS: Record<string, string> = {
+  growth:       'Growth',
+  professional: 'Professional',
+  elite:        'Elite',
+  starter:      'Starter',
+  pro:          'Pro',
+  enterprise:   'Enterprise',
+}
+
+const PLAN_PRICES: Record<string, string> = {
+  growth:       '$29.00',
+  professional: '$79.00',
+  elite:        '$149.00',
+  starter:      '$9.00',
+  pro:          '$79.00',
+  enterprise:   'Custom',
+}
+
+function CheckoutInput({ label, placeholder, icon }: { label: string; placeholder: string; icon: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-bold text-slate-700 ml-1">{label}</label>
+      <div className="relative">
+        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>
+        <input
+          type="text"
+          placeholder={placeholder}
+          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium"
+        />
+      </div>
+    </div>
+  )
+}
+
+function CheckoutPage() {
   const router = useRouter()
-  const [step, setStep] = useState(1)
-  const [selectedPlan, setSelectedPlan] = useState(PLANS[1].id)
-  const [card, setCard] = useState({ number: '', expiry: '', cvc: '', name: '' })
-  const [address, setAddress] = useState({ street: '', city: '', state: '', postal: '', country: '' })
+  const params = useSearchParams()
+  const planKey   = params?.get('plan') ?? 'growth'
+  const planLabel = PLAN_LABELS[planKey] ?? 'Growth'
+  const price     = PLAN_PRICES[planKey] ?? '$29.00'
+  const isFree    = price === 'Custom' || price === '$0.00'
 
-  function next() {
-    if (step < 3) setStep(step + 1)
-    else finish()
-  }
-  function prev() {
-    if (step > 1) setStep(step - 1)
-    else router.push('/get-started/plans')
-  }
-  function finish() {
-    // Simulate success: show welcome page before onboarding flow
-    router.push('/onboarding/welcome')
+  const [isProcessing, setIsProcessing] = React.useState(false)
+  const [isSuccess,    setIsSuccess]    = React.useState(false)
+
+  const handlePayment = (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsProcessing(true)
+    fetch('/api/subscriptions/create', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ plan: planKey }),
+    }).catch(() => {})
+    setTimeout(() => {
+      setIsProcessing(false)
+      setIsSuccess(true)
+    }, 2500)
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center px-4 py-12 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white relative overflow-hidden">
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-float-delayed" />
-      </div>
-
-      <div className="max-w-4xl w-full relative z-10">
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center gap-6 text-sm text-slate-600">
-            <div className={`flex items-center gap-3 ${step === 1 ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step === 1 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}`}>1</div>
-              <div>Choose plan</div>
-            </div>
-            <div className={`flex items-center gap-3 ${step === 2 ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step === 2 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}`}>2</div>
-              <div>Billing details</div>
-            </div>
-            <div className={`flex items-center gap-3 ${step === 3 ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step === 3 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}`}>3</div>
-              <div>Review & Purchase</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-2xl p-8">
-          {step === 1 && (
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Step 1: Choose Your Plan</h2>
-              <p className="text-slate-600 mb-6">Select the plan that fits your business. Payment will be processed in the next steps.</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {PLANS.map((p) => (
-                  <div key={p.id} className={`rounded-2xl p-6 border ${selectedPlan === p.id ? 'border-emerald-600 shadow-xl' : 'border-slate-200 shadow'} cursor-pointer`} onClick={() => setSelectedPlan(p.id)}>
-                    {p.popular && <div className="absolute -mt-8 ml-6 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Most Popular</div>}
-                    <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
-                    <div className="text-3xl font-bold mb-3">${p.monthly}<span className="text-base text-slate-600">/month</span></div>
-                    <p className="text-slate-600 mb-4">{p.name === 'Growth' ? 'For growing teams needing automation and insights' : p.name === 'Starter' ? 'For solo entrepreneurs and small businesses' : 'For established businesses with advanced needs'}</p>
-                    <ul className="space-y-2 text-sm mb-4">
-                      {p.bullets.map((b, i) => (<li key={i}>✓ {b}</li>))}
-                    </ul>
-                    <button className={`w-full py-2 rounded-lg font-semibold ${selectedPlan === p.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-800'}`}>{selectedPlan === p.id ? 'Selected' : 'Select'}</button>
-                  </div>
-                ))}
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row relative">
+      <AnimatePresence mode="wait">
+        {!isSuccess ? (
+          <React.Fragment key="checkout-form">
+            {/* Left: Order Summary */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -100, filter: 'blur(10px)' }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="lg:w-1/3 lg:sticky lg:top-0 lg:h-screen bg-slate-900 p-8 lg:p-12 text-white flex flex-col justify-between relative overflow-hidden"
+            >
+              <div className="absolute inset-0 opacity-20 pointer-events-none">
+                <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-emerald-500 rounded-full blur-[120px]" />
               </div>
-            </div>
-          )}
 
-          {step === 2 && (
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Step 2: Billing Details</h2>
-              <p className="text-slate-600 mb-6">Add your payment method securely. Your card will be charged today after confirmation.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value })} placeholder="Card number" className="px-6 py-4 border rounded-xl" />
-                <input value={card.expiry} onChange={(e) => setCard({ ...card, expiry: e.target.value })} placeholder="MM / YY" className="px-6 py-4 border rounded-xl" />
-                <input value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value })} placeholder="CVC" className="px-6 py-4 border rounded-xl" />
-                <input value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} placeholder="Name on card" className="px-6 py-4 border rounded-xl md:col-span-2" />
+              <div className="relative z-10">
+                <button
+                  onClick={() => router.push('/get-started/plans')}
+                  className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-12 font-bold text-sm"
+                >
+                  <ChevronLeft size={18} />
+                  Back to Plan Selection
+                </button>
 
-                <input value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} placeholder="Street address" className="px-6 py-4 border rounded-xl md:col-span-2" />
-                <input value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} placeholder="City" className="px-6 py-4 border rounded-xl" />
-                <input value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} placeholder="State / Province" className="px-6 py-4 border rounded-xl" />
-                <input value={address.postal} onChange={(e) => setAddress({ ...address, postal: e.target.value })} placeholder="Postal code" className="px-6 py-4 border rounded-xl" />
-                <select value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })} className="px-6 py-4 border rounded-xl">
-                  <option value="">Country</option>
-                  <option>United States</option>
-                  <option>Canada</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">Step 3: Review & Purchase</h2>
-              <div className="bg-emerald-50 rounded-2xl p-6 mb-6">
-                <div className="flex justify-between">
-                  <div>
-                    <p className="text-xl font-bold">{PLANS.find(p => p.id === selectedPlan)?.name} Plan</p>
-                    <p className="text-slate-600">{PLANS.find(p => p.id === selectedPlan)?.name === 'Growth' ? 'Most popular — perfect for growing teams' : ''}</p>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/40">
+                      <Sparkles size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">{planLabel}</h3>
+                      <p className="text-slate-400 text-sm">Business Subscription</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-3xl font-bold text-emerald-600">${PLANS.find(p => p.id === selectedPlan)?.monthly}</p>
-                    <p className="text-slate-600">per month</p>
+
+                  <div className="pt-8 space-y-4 border-t border-white/10">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Subscription Plan</span>
+                      <span className="font-medium">{planLabel}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Monthly Fee</span>
+                      <span className="font-medium">{price}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Setup Fee</span>
+                      <span className="text-emerald-400 font-bold">WAIVED</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10">
+                    <div className="flex justify-between items-end">
+                      <span className="text-slate-400 font-bold uppercase tracking-widest text-xs">Total Amount</span>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold">{price}</div>
+                        <div className="text-[10px] text-slate-500 font-medium">Includes all applicable taxes</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t pt-6">
-                <div className="flex justify-between mb-3"><span className="text-slate-600">Plan cost</span><span className="font-medium">${PLANS.find(p => p.id === selectedPlan)?.monthly}.00</span></div>
-
-                <div className="flex justify-between text-xl font-bold pt-4 border-t"><span>Total due today</span><span className="text-emerald-600">${PLANS.find(p => p.id === selectedPlan)?.monthly}.00</span></div>
-                <p className="text-sm text-slate-600 mt-4">Your card will be charged ${PLANS.find(p => p.id === selectedPlan)?.monthly} today. You can cancel anytime.</p>
+              <div className="relative z-10 space-y-6 pt-12 lg:pt-0">
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-emerald-400 shrink-0">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Secure 256-bit SSL encrypted payment. Your data is protected by industry-leading security protocols.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            </motion.div>
 
-          <div className="mt-8 flex gap-3 justify-end">
-            <button onClick={prev} className="px-6 py-3 rounded-lg border border-slate-200">Back</button>
-            <button onClick={next} className="px-6 py-3 rounded-lg bg-emerald-600 text-white font-semibold">{step === 3 ? 'Confirm purchase' : 'Continue'}</button>
-          </div>
-        </div>
+            {/* Right: Payment Form */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100, filter: 'blur(10px)' }}
+              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="lg:w-2/3 p-8 lg:p-24 flex flex-col items-center justify-center bg-white"
+            >
+              <div className="w-full max-w-md space-y-10">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-bold text-slate-900">Payment Details</h2>
+                  <p className="text-slate-500">Complete your subscription to start onboarding.</p>
+                </div>
 
-      </div>
+                <form onSubmit={handlePayment} className="space-y-6">
+                  <div className="space-y-4">
+                    <CheckoutInput label="Cardholder Name" placeholder="Juan Dela Cruz" icon={<UserIcon size={18} />} />
+                    <CheckoutInput label="Card Number" placeholder="0000 0000 0000 0000" icon={<CreditCard size={18} />} />
+                    <div className="grid grid-cols-2 gap-4">
+                      <CheckoutInput label="Expiry Date" placeholder="MM / YY" icon={<Calendar size={18} />} />
+                      <CheckoutInput label="CVC" placeholder="123" icon={<Lock size={18} />} />
+                    </div>
+                  </div>
 
-      {/* Animations */}
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(30px, -30px) rotate(5deg); }
-          66% { transform: translate(-20px, 20px) rotate(-5deg); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(-30px, 30px) rotate(-5deg); }
-          66% { transform: translate(20px, -20px) rotate(5deg); }
-        }
-        .animate-float { animation: float 20s ease-in-out infinite; }
-        .animate-float-delayed { animation: float-delayed 25s ease-in-out infinite; }
-      `}</style>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex gap-3">
+                    <div className="w-5 h-5 rounded-full border-2 border-emerald-500 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      You will be charged <span className="font-bold text-slate-900">{price}</span> today. Your subscription will automatically renew next month.
+                    </p>
+                  </div>
+
+                  <button
+                    disabled={isProcessing}
+                    type="submit"
+                    className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Confirm & Pay {price}
+                        <ArrowRight size={18} />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <div className="flex items-center justify-center gap-8 opacity-40 grayscale">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-4" referrerPolicy="no-referrer" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-6" referrerPolicy="no-referrer" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-5" referrerPolicy="no-referrer" />
+                </div>
+              </div>
+            </motion.div>
+          </React.Fragment>
+        ) : (
+          <motion.div
+            key="success-screen"
+            initial={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full min-h-screen bg-white flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-md w-full text-center space-y-8"
+            >
+              <div className="relative inline-block">
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.5 }}
+                  className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto"
+                >
+                  <CheckCircle2 size={48} />
+                </motion.div>
+                <motion.div
+                  animate={{ scale: [1, 1.4, 1], opacity: [0, 0.5, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute inset-0 bg-emerald-400 rounded-full blur-2xl -z-10"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="text-4xl font-bold text-slate-900 tracking-tight"
+                >
+                  Payment Successful!
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                  className="text-slate-500 leading-relaxed text-lg"
+                >
+                  Your {planLabel} subscription is now active. Let&apos;s finish setting up your business profile.
+                </motion.p>
+              </div>
+
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 }}
+                onClick={() => router.push('/onboarding')}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-5 rounded-2xl transition-all shadow-2xl shadow-slate-200 flex items-center justify-center gap-3 group"
+              >
+                Continue to Onboarding
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+  )
+}
+
+export default function SubscribePage() {
+  return (
+    <Suspense>
+      <CheckoutPage />
+    </Suspense>
   )
 }

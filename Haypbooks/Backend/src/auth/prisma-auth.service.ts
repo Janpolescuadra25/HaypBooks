@@ -1,4 +1,5 @@
-import { Injectable, Inject, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common'
+import { Injectable, Inject, UnauthorizedException, ConflictException, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common'
+import { randomUUID } from 'crypto'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from '../utils/bcrypt-fallback'
 import { USER_REPOSITORY, SESSION_REPOSITORY, OTP_REPOSITORY, SECURITY_EVENT_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
@@ -15,7 +16,7 @@ export class PrismaAuthService {
     @Inject(OTP_REPOSITORY) private readonly otpRepo: IOtpRepository,
     @Inject(SECURITY_EVENT_REPOSITORY) private readonly securityEventRepo: ISecurityEventRepository,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async signup(email: string, password: string, name?: string, role?: string, phone?: string) {
     const existing = await this.userRepo.findByEmail(email)
@@ -46,7 +47,7 @@ export class PrismaAuthService {
 
     // Extended to 2h to prevent session expiry during onboarding flow
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
-    
+
     // Return consistent user object structure
     const userResponse = {
       id: user.id,
@@ -65,13 +66,25 @@ export class PrismaAuthService {
       // If the user has both roles and hasn't chosen a preferred hub, the frontend should show the Hub Selection modal
       requiresHubSelection: !!(user.isAccountant && (user.role !== 'accountant') && !user.preferredHub),
     }
-    
+
     return { token, user: userResponse }
+  }
+
+
+  /** Parse a human-readable device label from User-Agent string */
+  private parseDeviceName(ua?: string): string {
+    if (!ua) return 'Unknown Device'
+    if (/mobile|android|iphone|ipad/i.test(ua)) return 'Mobile Browser'
+    if (/chrome/i.test(ua) && !/edge|opr/i.test(ua)) return 'Chrome'
+    if (/safari/i.test(ua) && !/chrome/i.test(ua)) return 'Safari'
+    if (/firefox/i.test(ua)) return 'Firefox'
+    if (/edge/i.test(ua)) return 'Edge'
+    return 'Browser'
   }
 
   async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
     const user = await this.userRepo.findByEmail(email)
-    
+
     // Check for rate limiting - max 5 failed attempts per email in 15 minutes
     if (user) {
       let recentFailures = 0
@@ -107,7 +120,7 @@ export class PrismaAuthService {
     const emailVerified = !!user.isEmailVerified
     const phoneVerified = !!(user as any).isPhoneVerified
     const verifiedOk = hasPhone ? (emailVerified || phoneVerified) : emailVerified
-    
+
     // Debug logging to help diagnose verification issues
     console.log('[auth:login] Verification check:', {
       email,
@@ -118,7 +131,7 @@ export class PrismaAuthService {
       verifiedOk,
       policy: hasPhone ? 'OR (email OR phone)' : 'email required'
     })
-    
+
     if (!verifiedOk) {
       await this.logSecurityEvent({ userId: user.id, email, type: 'LOGIN_FAILED_UNVERIFIED_EMAIL', ipAddress, userAgent })
       throw new UnauthorizedException('Please verify your account before logging in')
@@ -130,9 +143,13 @@ export class PrismaAuthService {
     // Extended to 2h to prevent session expiry during onboarding flow
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
     // create refresh session (longer lived)
-    const refreshToken = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
+    const tokenFamily = randomUUID()
+    const refreshToken = this.jwtService.sign({ sub: user.id, nonce: randomUUID(), family: tokenFamily }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    await this.sessionRepo.create({ userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date() })
+    await this.sessionRepo.create({
+      userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date(),
+      deviceName: this.parseDeviceName(userAgent), tokenFamily,
+    } as any)
 
     // Return consistent user object structure for frontend
     const userResponse = {
@@ -169,11 +186,15 @@ export class PrismaAuthService {
 
     // Extended to 2h to prevent session expiry during onboarding flow
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
-    const refreshToken = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
+    const tokenFamily = randomUUID()
+    const refreshToken = this.jwtService.sign({ sub: user.id, nonce: randomUUID(), family: tokenFamily }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
     try {
-      await this.sessionRepo.create({ userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date() })
+      await this.sessionRepo.create({
+        userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date(),
+        deviceName: this.parseDeviceName(userAgent), tokenFamily,
+      } as any)
     } catch (e) {
       // ignore failures creating session to avoid blocking verification flow
       console.error('Failed to create session for user', e?.message || e)
@@ -199,38 +220,45 @@ export class PrismaAuthService {
   }
 
   async refresh(refreshToken: string) {
-    try { console.log(`[auth:refresh] incoming token prefix=${String(refreshToken || '').slice(0,12)}`) } catch (e) {}
+    try { console.log(`[auth:refresh] incoming token prefix=${String(refreshToken || '').slice(0, 12)}`) } catch (e) { }
     // find session
     const session = await this.sessionRepo.findByRefreshToken(refreshToken)
     if (!session) {
-      try { console.log(`[auth:refresh] no session found for token prefix=${String(refreshToken || '').slice(0,12)}`) } catch (e) {}
+      try { console.log(`[auth:refresh] no session found for token prefix=${String(refreshToken || '').slice(0, 12)}`) } catch (e) { }
       return null
     }
     const expired = (new Date(session.expiresAt)).getTime() < Date.now()
     if (expired || session.revoked) {
-      try { console.log(`[auth:refresh] session invalid: expired=${expired} revoked=${session.revoked} expiresAt=${session.expiresAt}`) } catch (e) {}
+      try { console.log(`[auth:refresh] session invalid: expired=${expired} revoked=${session.revoked} expiresAt=${session.expiresAt}`) } catch (e) { }
       return null
     }
 
     // sign a fresh access token
     const user = await this.userRepo.findById(session.userId)
     if (!user) {
-      try { console.log(`[auth:refresh] no user found for session.userId=${session.userId}`) } catch (e) {}
+      try { console.log(`[auth:refresh] no user found for session.userId=${session.userId}`) } catch (e) { }
       return null
     }
-    
+
     // Extended to 2h to prevent session expiry during onboarding flow
     const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '2h' })
     // Optional: rotate refresh token
-    const newRefresh = this.jwtService.sign({ sub: user.id, nonce: require('crypto').randomUUID() }, { expiresIn: '7d' })
+    // Inherit tokenFamily from old session for replay-attack detection
+    const tokenFamily = (session as any).tokenFamily ?? randomUUID()
+    const newRefresh = this.jwtService.sign({ sub: user.id, nonce: randomUUID(), family: tokenFamily }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    // delete old session and create new one
+    // Revoke old session with reason, create new one in the same family
     try {
-      await this.sessionRepo.delete(session.id)
-    } catch {}
-    await this.sessionRepo.create({ userId: user.id, refreshToken: newRefresh, expiresAt, ipAddress: session.ipAddress, userAgent: session.userAgent, lastUsedAt: new Date() })
+      await this.sessionRepo.update(session.id, { revoked: true, revokedReason: 'REFRESHED' } as any)
+    } catch { }
+    await this.sessionRepo.create({
+      userId: user.id, refreshToken: newRefresh, expiresAt,
+      ipAddress: session.ipAddress, userAgent: session.userAgent, lastUsedAt: new Date(),
+      deviceName: (session as any).deviceName ?? this.parseDeviceName(session.userAgent ?? ''),
+      tokenFamily,
+    } as any)
 
-    try { console.log(`[auth:refresh] success for user=${user.id} newRefreshPrefix=${String(newRefresh).slice(0,12)}`) } catch (e) {}
+    try { console.log(`[auth:refresh] success for user=${user.id} newRefreshPrefix=${String(newRefresh).slice(0, 12)}`) } catch (e) { }
 
     // Return consistent user structure
     const userResponse = {
@@ -287,7 +315,7 @@ export class PrismaAuthService {
       if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // If this OTP was used to VERIFY an email, mark user as verified
     try {
@@ -317,10 +345,44 @@ export class PrismaAuthService {
       if (consume || (row as any).purpose === 'VERIFY_EMAIL' || (row as any).purpose === 'MFA') {
         await this.otpRepo.delete(row.id)
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // No automatic user flags updated for phone-based OTPs
     return true
+  }
+
+  // ─── Session Dashboard ────────────────────────────────────────────────────
+
+  async getSessions(userId: string) {
+    const sessions = await this.sessionRepo.findByUserId(userId)
+    return sessions
+      .filter((s: any) => !s.revoked && new Date(s.expiresAt) > new Date())
+      .map((s: any) => ({
+        id: s.id,
+        deviceName: s.deviceName ?? 'Unknown Device',
+        ipAddress: s.ipAddress,
+        createdAt: s.createdAt,
+        lastUsedAt: s.lastUsedAt,
+        expiresAt: s.expiresAt,
+        activeCompanyId: s.activeCompanyId ?? null,
+      }))
+  }
+
+  async revokeSession(requestingUserId: string, sessionId: string) {
+    const session = await this.sessionRepo.findById(sessionId)
+    if (!session) throw new NotFoundException('Session not found')
+    if (session.userId !== requestingUserId) throw new ForbiddenException('Not your session')
+    await this.sessionRepo.update(sessionId, { revoked: true, revokedReason: 'USER_REVOKED' } as any)
+    await this.logSecurityEvent({ userId: requestingUserId, type: 'SESSION_REVOKED' })
+    return { success: true, sessionId }
+  }
+
+  async updateSessionCompany(sessionId: string, activeCompanyId: string) {
+    try {
+      await this.sessionRepo.update(sessionId, { activeCompanyId } as any)
+    } catch (e) {
+      // non-blocking — don't fail request if session context update fails
+    }
   }
 
   /**

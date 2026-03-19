@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('signup -> verify OTP -> quick business onboarding -> complete', async ({ page, request }) => {
+test.skip('signup -> verify OTP -> quick business onboarding -> complete (quick flow retired)', async ({ page, request }) => {
   const email = `ui-e2e-quick-${Date.now()}@haypbooks.test`
   const password = 'Quick12!'
 

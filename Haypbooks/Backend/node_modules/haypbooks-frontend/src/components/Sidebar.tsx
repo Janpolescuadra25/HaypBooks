@@ -8,138 +8,24 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { hasPermission, type Permission } from '@/lib/rbac-shared'
 
 function isItemActive(itemHref: string, path: string) {
-  if (itemHref === '/sales') {
-    return (
-      path === '/sales' ||
-      path.startsWith('/sales/') ||
-      path === '/invoices' || path.startsWith('/invoices/') ||
-      path === '/sales-receipts' || path.startsWith('/sales-receipts/')
-    )
-  }
-  if (itemHref === '/expenses') {
-    return (
-      path === '/expenses' || path.startsWith('/expenses/') ||
-      path === '/bills' || path.startsWith('/bills/') ||
-      path === '/purchase-orders' || path.startsWith('/purchase-orders/') ||
-      path === '/bill-payments' || path.startsWith('/bill-payments/') ||
-      path === '/vendors' || path.startsWith('/vendors/') ||
-      path === '/contractors' || path.startsWith('/contractors/') ||
-      path === '/mileage' || path.startsWith('/mileage/') ||
-      path === '/1099-filings' || path.startsWith('/1099-filings/')
-    )
-  }
-  if (itemHref === '/reports') {
-    return path === '/reports' || path.startsWith('/reports/')
-  }
-  if (itemHref === '/bank-transactions') {
-    return path === '/bank-transactions' || path.startsWith('/bank-transactions/') || path.startsWith('/transactions/')
-  }
-  if (itemHref === '/payroll') {
-    return path === '/payroll' || path.startsWith('/payroll/')
-  }
-  if (itemHref === '/time') {
-    return path === '/time' || path.startsWith('/time/')
-  }
-  if (itemHref === '/inventory') {
-    return path === '/inventory' || path.startsWith('/inventory/')
-  }
-  if (itemHref === '/taxes') {
-    return path === '/taxes' || path.startsWith('/taxes/')
-  }
-  if (itemHref === '/commerce') {
-    return path === '/commerce' || path.startsWith('/commerce/')
-  }
-  if (itemHref === '/customer-hub') {
-    return (
-      path === '/customer-hub' || path.startsWith('/customer-hub/') ||
-      path === '/customers' || path.startsWith('/customers/') ||
-      path === '/leads' || path.startsWith('/leads/') ||
-      path === '/appointments' || path.startsWith('/appointments/') ||
-      path === '/reviews' || path.startsWith('/reviews/')
-    )
-  }
   return path === itemHref || path.startsWith(itemHref + '/')
 }
 
+// Owner books sidebar — intentionally empty during redesign.
+// Add new navigation items here when the redesign is complete.
 const items: Array<{ href: string; label: string; perm?: Permission }> = [
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/sales', label: 'Sales', perm: 'invoices:read' },
-  { href: '/customer-hub', label: 'Customer Hub', perm: 'customers:read' },
-  // Route Expenses to the Expenses hub (not Bills) so the Expenses subnav and header appear
-  { href: '/expenses', label: 'Expenses & Bills', perm: 'bills:read' },
-  // Bank Transactions primary entry (formerly Transactions)
-  { href: '/bank-transactions', label: 'Transactions', perm: 'journal:read' },
-    { href: '/reports', label: 'Reports', perm: 'reports:read' },
-    { href: '/payroll', label: 'Payroll', perm: 'journal:read' },
-    { href: '/time', label: 'Time', perm: 'journal:read' },
-    { href: '/inventory', label: 'Inventory', perm: 'journal:read' },
-    { href: '/projects', label: 'Projects', perm: 'journal:read' },
-    { href: '/budgets', label: 'Budgets', perm: 'journal:read' },
-    { href: '/tasks', label: 'Tasks', perm: 'journal:read' },
-    { href: '/books-review', label: 'Books review', perm: 'journal:read' },
-    { href: '/client-overview', label: 'Client overview', perm: 'journal:read' },
-    { href: '/my-accountant', label: 'My accountant', perm: 'journal:read' },
-    { href: '/apps', label: 'Apps', perm: 'journal:read' },
-    { href: '/taxes', label: 'Taxes', perm: 'journal:read' },
-    { href: '/commerce', label: 'Commerce', perm: 'journal:read' },
 ]
 
 function iconFor(href: string) {
-  // Simple inline SVGs; replace with your icon set when available
-  switch (href) {
-    case '/':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
-      )
-    case '/dashboard':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
-      )
-    case '/sales':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v4H3z"/><path d="M7 13h10M7 17h10M7 9h10"/></svg>
-      )
-    case '/customer-hub':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-      )
-    case '/expenses':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22"/><path d="M5 6h8a4 4 0 110 8H7a4 4 0 100 8h10"/></svg>
-      )
-    case '/bank-transactions':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10l9-6 9 6v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
-      )
-    case '/reports':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v18H3z"/><path d="M7 17V7M12 17V11M17 17V13"/></svg>
-      )
-    case '/payroll':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>
-      )
-    case '/time':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg>
-      )
-    case '/inventory':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 17l9 4 9-4"/><path d="M3 12l9 4 9-4"/></svg>
-      )
-    case '/taxes':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16v6H4z"/><path d="M4 14h16v6H4z"/></svg>
-      )
-    case '/commerce':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6h15l-1.5 9h-13z"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>
-      )
-    default:
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="8"/></svg>
-      )
+  if (href === '/dashboard') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+    )
   }
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="8"/></svg>
+  )
 }
 
 export default function Sidebar() {

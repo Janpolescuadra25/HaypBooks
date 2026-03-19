@@ -7,9 +7,10 @@ const TopBar = dynamic(() => import('@/components/TopBar'), { ssr: false })
 import useViewportZoom from '@/hooks/useViewportZoom'
 import { useToast } from '@/components/ToastProvider'
 import AddCompanyModal from './AddCompanyModal'
+import AddPracticeModal from './AddPracticeModal'
 import InviteAccountantModal from './InviteAccountantModal'
 
-type Company = { id: string; name: string; status?: string; plan?: string; lastAccessedAt?: string; tenantId?: string; tenant?: { id: string } }
+type Company = { id: string; name: string; status?: string; plan?: string; lastAccessedAt?: string; workspaceId?: string }
 
 export default function CompanyHub() {
   const router = useRouter()
@@ -18,6 +19,7 @@ export default function CompanyHub() {
   const [tab, setTab] = useState<'owned' | 'invited'>('owned')
   const [loading, setLoading] = useState(true)
   const [showAddCompanyModal, setShowAddCompanyModal] = useState(false)
+  const [showAddPracticeModal, setShowAddPracticeModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
 
   const [searchInput, setSearchInput] = useState('')
@@ -132,7 +134,7 @@ export default function CompanyHub() {
       setAutoCreateAttempted(true)
       try {
         // Best-effort: request backend to create a company and attach the current user as owner.
-        const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: companyName }) })
+        const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: companyName, workspaceId: me?.ownedWorkspaceId }) })
         if (res.ok) {
           push({ type: 'success', message: `Your company ${companyName} was added to your Hub` })
           // Refresh the owned list
@@ -152,7 +154,7 @@ export default function CompanyHub() {
   async function handleCreateFromProfile() {
     if (!me || !me.companyName) return
     try {
-      const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: me.companyName }) })
+      const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: me.companyName, workspaceId: me?.ownedWorkspaceId }) })
       if (res.ok) {
         push({ type: 'success', message: `Your company ${me.companyName} was added to your Hub` })
         const r = await fetch('/api/companies?filter=owned', { cache: 'no-store' })
@@ -209,6 +211,12 @@ export default function CompanyHub() {
               </button>
               <div className="flex gap-3">
                 <button
+                  onClick={() => setShowAddPracticeModal(true)}
+                  className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+                >
+                  🏛️ Add Practice
+                </button>
+                <button
                   onClick={() => setShowInviteModal(true)}
                   className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                 >
@@ -245,7 +253,6 @@ export default function CompanyHub() {
         </div>
       </main>
 
-      {/* Add Company Modal */}
       {showAddCompanyModal && (
         <AddCompanyModal
           onClose={() => setShowAddCompanyModal(false)}
@@ -255,7 +262,19 @@ export default function CompanyHub() {
             loadCompanies()
             push({ type: 'success', message: 'Company added successfully!' })
           }}
-          tenantId={owned[0]?.tenantId || owned[0]?.tenant?.id} // Use tenantId from first company
+          workspaceId={me?.ownedWorkspaceId || owned[0]?.workspaceId}
+        />
+      )}
+
+      {showAddPracticeModal && (
+        <AddPracticeModal
+          onClose={() => setShowAddPracticeModal(false)}
+          onSuccess={() => {
+            setShowAddPracticeModal(false)
+            loadCompanies()
+            push({ type: 'success', message: 'Practice added successfully!' })
+          }}
+          workspaceId={me?.ownedWorkspaceId}
         />
       )}
 
@@ -267,7 +286,7 @@ export default function CompanyHub() {
             setShowInviteModal(false)
             push({ type: 'success', message: 'Invitation sent!' })
           }}
-          tenantId={owned[0]?.tenantId || owned[0]?.tenant?.id} // Use tenantId from first company
+          tenantId={me?.ownedWorkspaceId || owned[0]?.workspaceId}
         />
       )}
     </div>
@@ -311,7 +330,7 @@ function CompanyGrid({ companies, emptyMessage, searchTerm, me, onCreateFromProf
     <div className="flex flex-wrap justify-center gap-4">
       {filtered.map((c) => (
         <div key={c.id} className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/6">
-          <EntityCard id={c.id} name={c.name} subtitle={c.plan || 'Free'} members={typeof c.tenant?._count?.users === 'number' ? c.tenant._count.users : (c.members ?? 0)} connected={true} onLaunch={() => window.location.href = `/companies/${c.id}`} />
+          <EntityCard id={c.id} name={c.name} subtitle={c.plan || 'Free'} members={0} connected={true} onLaunch={() => window.location.href = `/companies/${c.id}`} />
         </div>
       ))}
 

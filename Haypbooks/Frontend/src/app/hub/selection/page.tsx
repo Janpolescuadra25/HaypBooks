@@ -8,6 +8,7 @@ import { getProfileCached } from '@/lib/profile-cache'
 
 export default function HubSelectionPage() {
   const router = useRouter()
+  const toast = useToast()
   const [user, setUser] = useState<any | null>(null)
 
   // Redirect old hub selection path to the new Workspace selection page to centralize UX

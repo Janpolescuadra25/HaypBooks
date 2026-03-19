@@ -2,12 +2,12 @@
 import { useState } from 'react'
 
 type Props = {
-  tenantId?: string
+  workspaceId?: string
   onClose: () => void
   onSuccess: () => void
 }
 
-export default function AddCompanyModal({ tenantId, onClose, onSuccess }: Props) {
+export default function AddCompanyModal({ workspaceId, onClose, onSuccess }: Props) {
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState('USD')
   const [loading, setLoading] = useState(false)
@@ -22,8 +22,8 @@ export default function AddCompanyModal({ tenantId, onClose, onSuccess }: Props)
       return
     }
 
-    if (!tenantId) {
-      setError('No tenant found - please create your first company first')
+    if (!workspaceId) {
+      setError('No workspace found - please complete onboarding first')
       return
     }
 
@@ -33,7 +33,7 @@ export default function AddCompanyModal({ tenantId, onClose, onSuccess }: Props)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId,
+          workspaceId,
           name: name.trim(),
           currency,
         }),

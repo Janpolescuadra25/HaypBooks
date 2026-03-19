@@ -1,0 +1,153 @@
+const { Test } = require('@nestjs/testing')
+const { INestApplication } = require('@nestjs/common')
+const request = require('supertest')
+const { AppModule } = require('../src/app.module')
+const { PrismaClient } = require('@prisma/client')
+const { execSync } = require('child_process')
+const path = require('path')
+
+const BACKEND_DIR = path.resolve(__dirname, '..')
+
+describe('Accounting company access (e2e)', () => {
+  let app
+  let prisma
+
+  beforeAll(async () => {
+    process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+
+    execSync('node ./scripts/test/setup-test-db.js --recreate', {
+      cwd: BACKEND_DIR,
+      stdio: 'inherit',
+      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+    })
+
+    const moduleFixture = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile()
+
+    app = moduleFixture.createNestApplication()
+    await app.init()
+
+    prisma = new PrismaClient()
+  }, 90000)
+
+  afterAll(async () => {
+    await app.close()
+    await prisma.$disconnect()
+  })
+
+  beforeEach(async () => {
+    // Ensure a clean slate between tests
+    await prisma.account.deleteMany().catch(() => {})
+  })
+
+  async function signupAndGetToken(email, password, name) {
+    const signupRes = await request(app.getHttpServer())
+      .post('/api/auth/signup')
+      .send({ email, password, name, phone: '+1 555 100 9999' })
+
+    // Some signup flows return the token immediately (no OTP required)
+    if (signupRes.body?.token) return signupRes.body.token
+
+    const signupToken = signupRes.body?.signupToken
+    if (!signupToken) {
+      throw new Error('Signup did not return signupToken: ' + JSON.stringify(signupRes.body))
+    }
+
+    // Retrieve the OTP that was stored in the DB (no real email required in tests)
+    const otpRow = await prisma.otp.findFirst({
+      where: { email },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!otpRow) throw new Error(`No OTP row found for ${email}`)
+
+    const completeRes = await request(app.getHttpServer())
+      .post('/api/auth/complete-signup')
+      .send({ signupToken, code: otpRow.otpCode, method: 'email' })
+      .expect(200)
+
+    return completeRes.body.token
+  }
+
+  it('returns only accounts for the requested company (Chart of Accounts isolation)', async () => {
+    const token = await signupAndGetToken(
+      `company-isolation-${Date.now()}@haypbooks.test`,
+      'SecurePass123!',
+      'CoA Isolation Test',
+    )
+
+    const user = await prisma.user.findFirst({ where: { email: { contains: 'company-isolation' } } })
+    expect(user).toBeTruthy()
+
+    // Ensure a workspace is present for the user (mimic onboarding infrastructure)
+    const workspace = await prisma.workspace.upsert({
+      where: { ownerUserId: user.id },
+      update: {},
+      create: { ownerUserId: user.id, type: 'OWNER', status: 'ACTIVE' },
+    })
+    const workspaceId = workspace.id
+
+    // Ensure user is a member of the workspace
+    const ownerRole = await prisma.role.upsert({
+      where: { workspaceId_name: { workspaceId, name: 'Owner' } },
+      update: {},
+      create: { workspaceId, name: 'Owner' },
+    })
+    await prisma.workspaceUser.upsert({
+      where: { workspaceId_userId: { workspaceId, userId: user.id } },
+      update: { status: 'ACTIVE', isOwner: true, roleId: ownerRole.id },
+      create: { workspaceId, userId: user.id, roleId: ownerRole.id, isOwner: true, status: 'ACTIVE' },
+    })
+
+    // Ensure at least one company exists in the workspace
+    const companyA = await prisma.company.upsert({
+      where: { workspaceId_name: { workspaceId, name: 'CoA Isolation A' } },
+      update: {},
+      create: { workspaceId, name: 'CoA Isolation A', industry: 'TEST', currency: 'USD' },
+    })
+
+    const companyB = await prisma.company.create({
+      data: { workspaceId, name: 'RLS Co B', industry: 'TEST', currency: 'USD' },
+    })
+
+    // Ensure an AccountType exists for our test accounts (use raw SQL to avoid Prisma type issues)
+    const existingType = await prisma.$queryRaw`SELECT id FROM "AccountType" WHERE name = 'Test Account Type' LIMIT 1`
+    let typeId
+    if (existingType.length > 0) {
+      typeId = existingType[0].id
+    } else {
+      const inserted = await prisma.$queryRaw`INSERT INTO "AccountType" (name, category, "normalSide") VALUES ('Test Account Type', 'ASSET', 'DEBIT') RETURNING id`
+      typeId = inserted[0].id
+    }
+
+    // Create distinct accounts for each company so we can verify isolation
+    const accountA = await prisma.account.create({
+      data: { companyId: companyA.id, code: 'RLS-A-ACCT', name: 'RLS A Account', typeId, normalSide: 'DEBIT' },
+    })
+    const accountB = await prisma.account.create({
+      data: { companyId: companyB.id, code: 'RLS-B-ACCT', name: 'RLS B Account', typeId, normalSide: 'DEBIT' },
+    })
+
+    // Fetch accounts for company A
+    const resA = await request(app.getHttpServer())
+      .get(`/api/companies/${companyA.id}/accounting/accounts`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    expect(Array.isArray(resA.body)).toBe(true)
+    const codesA = resA.body.map((a) => a.code)
+    expect(codesA).toContain('RLS-A-ACCT')
+    expect(codesA).not.toContain('RLS-B-ACCT')
+
+    // Fetch accounts for company B
+    const resB = await request(app.getHttpServer())
+      .get(`/api/companies/${companyB.id}/accounting/accounts`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    expect(Array.isArray(resB.body)).toBe(true)
+    const codesB = resB.body.map((a) => a.code)
+    expect(codesB).toContain('RLS-B-ACCT')
+    expect(codesB).not.toContain('RLS-A-ACCT')
+  })
+})

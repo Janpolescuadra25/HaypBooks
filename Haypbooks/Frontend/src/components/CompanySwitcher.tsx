@@ -2,11 +2,15 @@
 import { useEffect, useRef, useState } from 'react'
 import Popover from '@/components/Popover'
 
+import { useCompany } from '@/hooks/use-company'
+
 export default function CompanySwitcher() {
+  const { company, loading } = useCompany()
   const [open, setOpen] = useState(false)
   const [companies, setCompanies] = useState<any[]>([])
   const btnRef = useRef<HTMLButtonElement | null>(null)
 
+  // load recent companies (used for dropdown list and ordering)
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -41,7 +45,9 @@ export default function CompanySwitcher() {
         title="Switch company"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-        <span className="hidden md:inline">Companies</span>
+        <span className="hidden md:inline">
+          {loading ? 'My company' : company?.name || company?.id || 'My company'}
+        </span>
       </button>
 
       {open && (

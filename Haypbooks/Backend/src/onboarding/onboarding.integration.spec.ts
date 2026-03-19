@@ -22,10 +22,11 @@ describe('OnboardingService (integration)', () => {
     onboardingRepo = new PrismaOnboardingRepository(prisma)
     userRepo = new PrismaUserRepository(prisma)
     companyRepo = new CompanyRepository(prisma)
-    companySvc = new CompanyService(companyRepo)
+    companySvc = new CompanyService(companyRepo, prisma, { seedDefaultAccounts: async () => {} } as any)
     // Also create a TenantsService and inject it so saveStep can update/create tenants early
     const tenantsSvc = new (require('../tenants/tenants.service').TenantsService)(prisma)
-    svc = new OnboardingService(onboardingRepo as any, userRepo as any, companySvc as any, tenantsSvc as any)
+    const accountingSvc = new (require('../accounting/accounting.service').AccountingService)(null, prisma) // repo isn't used here
+    svc = new OnboardingService(onboardingRepo as any, userRepo as any, companySvc as any, accountingSvc as any, prisma, tenantsSvc as any)
   })
 
   test('saving owner workspace step creates tenant workspaceName when none exists', async () => {
@@ -175,6 +176,41 @@ describe('OnboardingService (integration)', () => {
       }
 
       try { await userRepo.delete(user.id) } catch (e) { /* ignore */ }
+    }
+  })
+
+  test('completing ACCOUNTANT onboarding creates a Practice record', async () => {
+    const timestamp = Date.now()
+    const email = `int-acct-onboard-${timestamp}@haypbooks.test`
+    const firmName = `INT Firm ${timestamp}`
+
+    // create accountant user
+    const user = await userRepo.create({ email, password: 'Test123!', name: 'Acct Tester', isEmailVerified: true, role: 'accountant' })
+
+    try {
+      await onboardingRepo.save(user.id, 'accountant_firm', { firmName })
+      const res = await svc.complete(user.id, 'full', 'ACCOUNTANT')
+      expect(res.success).toBe(true)
+
+      const workspace = await prisma.workspace.findUnique({ where: { ownerUserId: user.id } })
+      expect(workspace).toBeTruthy()
+      const tenantId = workspace!.id
+
+      // verify practice record exists
+      const practice = await prisma.practice.findFirst({ where: { workspaceId: tenantId, name: firmName } })
+      expect(practice).toBeTruthy()
+      expect(practice?.name).toEqual(firmName)
+    } finally {
+      // cleanup practice and tenant
+      try {
+        const tenant = await prisma.workspace.findUnique({ where: { ownerUserId: user.id } })
+        if (tenant) {
+          await prisma.practice.deleteMany({ where: { workspaceId: tenant.id } }).catch(() => {})
+          await prisma.workspaceUser.deleteMany({ where: { workspaceId: tenant.id } }).catch(() => {})
+          await prisma.workspace.delete({ where: { id: tenant.id } }).catch(() => {})
+        }
+      } catch (e) {}
+      try { await userRepo.delete(user.id) } catch (e) {}
     }
   })
 })

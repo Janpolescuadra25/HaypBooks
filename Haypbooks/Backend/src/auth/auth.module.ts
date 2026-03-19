@@ -9,6 +9,7 @@ import { MailService } from '../common/mail.service'
 import { VerificationService } from './verification.service'
 import { VerificationController } from './verification.controller'
 import { PendingSignupService } from './pending-signup.service'
+import { RolesGuard } from './guards/roles.guard'
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { PendingSignupService } from './pending-signup.service'
     }),
   ],
   controllers: [AuthController, VerificationController],
-  providers: [PrismaAuthService, JwtStrategy, MailService, VerificationService, PendingSignupService],
-  exports: [PrismaAuthService, VerificationService, PendingSignupService],
+  providers: [PrismaAuthService, JwtStrategy, MailService, VerificationService, PendingSignupService, RolesGuard],
+  exports: [PrismaAuthService, VerificationService, PendingSignupService, RolesGuard],
 })
 export class AuthModule {}

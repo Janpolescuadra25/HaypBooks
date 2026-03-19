@@ -3,10 +3,9 @@ import { ReactNode } from "react"
 import dynamic from 'next/dynamic'
 const ClientRoot = dynamic(() => import('./client-root'), { ssr: false })
 import { ToastProvider } from '@/components/ToastProvider'
-import { CurrencyProvider } from '@/components/CurrencyProvider'
 import { Inter } from 'next/font/google'
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-inter',
@@ -18,17 +17,13 @@ export const metadata = {
 }
 
 // NOTE: RootLayout is a Server Component; client interactivity handled in ClientRoot.
-
-export default function RootLayout({ children, modal }: { children: ReactNode; modal: ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`h-full ${inter.variable}`}>
       <body className="min-h-screen h-full text-slate-900 antialiased selection:bg-sky-200/60 selection:text-slate-900">
         <ClientRoot>
           <ToastProvider>
-            <CurrencyProvider>
-              {children}
-              {modal}
-            </CurrencyProvider>
+            {children}
           </ToastProvider>
         </ClientRoot>
       </body>

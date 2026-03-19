@@ -46,7 +46,8 @@ test('forgot -> verify -> reset -> login', async ({ page, request }) => {
 
     // On success, the backend has updated the password. Navigate back to login via the page's link.
     await page.click('text=Back to sign in')
-    await page.waitForURL(/.*login.*/)
+    // expect the login form query param so the form itself is visible
+    await page.waitForURL(/.*login\?showLogin=1.*/)
 
   // Validate login works using the API (reliable in automated tests)
   const loginApi = await request.post('http://localhost:4000/api/auth/login', { data: { email, password: newPassword } })

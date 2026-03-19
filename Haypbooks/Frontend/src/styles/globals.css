@@ -40,6 +40,42 @@
   /* Motion/animation tokens */
   --hb-sheen-duration: 900ms;
   --hb-underline-duration: 220ms;
+
+  /* Practice Hub layout — baked design values */
+  --hb-topbar-top: 0px;
+  --ph-sidebar-vertical-offset: 58px;
+  --ph-sidebar-bottom-gap: 40.9px;
+  --ph-sidebar-left-gap: -11.9px;
+  --ph-home-topbar-vert: 0px;
+  --ph-home-topbar-horiz: 0px;
+  --ph-home-topbar-ml: 0px;
+  --ph-home-topbar-mr: 0px;
+  --ph-home-topbar-width: auto;
+  --ph-dashboard-content-offset: 0px;
+  --ph-dashboard-content-horiz: 0px;
+  --ph-dashboard-content-ml: 0px;
+  --ph-dashboard-content-mr: 0px;
+  --ph-dashboard-content-width: auto;
+  --ph-pbar-ml: 9px;
+  --ph-pbar-mr: 9px;
+  --ph-sbar-ml: 9px;
+  --ph-sbar-mr: 9px;
+
+  /* Practice Hub edge adjustments — baked from design reference */
+  --ph-adj-tab-left:   9px;
+  --ph-adj-tab-right:  10px;
+  --ph-adj-tab-horiz:  0px;
+  --ph-adj-tab-vert:   -22.5px;
+  --ph-adj-page-width: auto;
+  --ph-adj-page-left:  10px;
+  --ph-adj-page-right: 9px; /* match main right-gap default */
+  --ph-adj-page-horiz: 0px;
+  --ph-adj-page-vert:  -24px;
+  /* ensure main container fills available space to eliminate excess gap */
+  --ph-main-width: 100%;
+  --ph-main-side-gap: 0px;
+  --ph-main-right-gap: 9px; /* new variable controlled by adjuster */
+  --ph-page-right-gap: 0px;
 }
 
 @media (min-width: 768px) {
@@ -1375,3 +1411,20 @@ td.tabular-nums, th.tabular-nums { text-align: right; white-space: nowrap; }
 .account-list li button { transition: background-color 140ms ease; }
 .account-list li button:hover { background-color: rgba(255,255,255,0.85); }
 .account-list li button:active { background-color: rgba(240,253,250,0.6); }
+
+/* ── Primary nav rail: emerald scrollbar ── */
+.rail-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+.rail-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+.rail-scrollbar::-webkit-scrollbar-thumb {
+  background: #047857; /* emerald-700 — dark default */
+  border-radius: 9999px;
+  transition: background 150ms ease;
+}
+.rail-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #34d399; /* emerald-400 — light on hover */
+}

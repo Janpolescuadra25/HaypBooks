@@ -4,7 +4,7 @@ import { ISessionRepository, Session } from '../interfaces/session.repository.in
 
 @Injectable()
 export class PrismaSessionRepository implements ISessionRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(data: Partial<Session>): Promise<Session> {
     // Retry if a unique constraint on refreshToken occurs (rare race in tests)
@@ -32,10 +32,20 @@ export class PrismaSessionRepository implements ISessionRepository {
     throw new Error('Failed to create session after retrying refreshToken')
   }
 
+  async findById(id: string): Promise<Session | null> {
+    const s = await this.prisma.session.findUnique({ where: { id } })
+    return s as any ?? null
+  }
+
   async findByRefreshToken(token: string): Promise<Session | null> {
     const s = await this.prisma.session.findUnique({ where: { refreshToken: token } })
     if (!s || (s as any).revoked) return null
     return s as any
+  }
+
+  async update(id: string, data: Partial<Session>): Promise<Session> {
+    const updated = await this.prisma.session.update({ where: { id }, data: data as any })
+    return updated as any
   }
 
   async findByUserId(userId: string, includeRevoked = false): Promise<Session[]> {

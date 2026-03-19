@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common'
-import { PrismaRepositoriesModule } from '../repositories/prisma/prisma-repositories.module'
 import { PayrollService } from './payroll.service'
 import { PayrollController } from './payroll.controller'
-import { JournalService } from '../accounting/journal.service'
+import { PayrollRepository } from './payroll.repository'
+import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Module({
-  imports: [PrismaRepositoriesModule],
-  controllers: [PayrollController],
-  providers: [PayrollService, JournalService],
-  exports: [PayrollService]
+    providers: [PayrollService, PayrollRepository, PrismaService],
+    controllers: [PayrollController],
+    exports: [PayrollService],
 })
-export class PayrollModule {}
+export class PayrollModule { }

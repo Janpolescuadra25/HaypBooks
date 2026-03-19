@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Res, HttpCode, HttpStatus, Inject, NotFoundException, Req, UnauthorizedException, UseGuards, Get, ConflictException } from '@nestjs/common'
+import { Controller, Post, Body, Res, HttpCode, HttpStatus, Inject, NotFoundException, Req, UnauthorizedException, UseGuards, Get, ConflictException, InternalServerErrorException, Logger } from '@nestjs/common'
+import { Throttle, SkipThrottle } from '@nestjs/throttler'
 import * as bcrypt from '../utils/bcrypt-fallback'
 import { Response } from 'express'
 import { PrismaAuthService } from './prisma-auth.service'
@@ -17,6 +18,7 @@ function normalizeEmail(email: string): string {
 
 @Controller('api/auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name)
   constructor(
     private readonly authService: PrismaAuthService,
     @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
@@ -25,9 +27,21 @@ export class AuthController {
     @Inject(SECURITY_EVENT_REPOSITORY) private readonly securityEventRepo: ISecurityEventRepository,
     private readonly mailService: MailService,
     private readonly pendingSignupService: PendingSignupService,
-  ) {}
+  ) { }
+
+  /** Map backend role strings to frontend RBAC vocabulary */
+  private mapRoleForFrontend(role: string): string {
+    const r = (role || '').toLowerCase()
+    if (r === 'owner' || r === 'admin') return 'admin'
+    if (r === 'manager') return 'manager'
+    if (r === 'accountant') return 'admin'
+    if (r === 'ap-clerk' || r === 'clerk') return 'ap-clerk'
+    if (r === 'viewer' || r === 'readonly') return 'viewer'
+    return 'admin'
+  }
 
   @Post('login')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     const ua = req.headers['user-agent'] || ''
@@ -65,7 +79,9 @@ export class AuthController {
     }
     res.cookie('email', result.user.email, cookieOptions)
     res.cookie('userId', result.user.id, cookieOptions)
-    res.cookie('role', result.user.role, cookieOptions)
+    // Normalize role to frontend RBAC vocabulary (admin, manager, viewer, etc.)
+    const frontendRole = this.mapRoleForFrontend(result.user.role)
+    res.cookie('role', frontendRole, cookieOptions)
     // Reflect onboarding status to frontend via cookie so middleware/client can
     // redirect users into onboarding when needed without relying solely on JS
     if (result.user.onboardingComplete) {
@@ -79,230 +95,237 @@ export class AuthController {
     // Set per-hub onboarding cookies (if available) and keep legacy compatibility
     try {
       if ((result.user as any).ownerOnboardingCompleted) {
-        res.cookie('onboardingOwnerComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('ownerOnboardingComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
       } else {
-        res.clearCookie('onboardingOwnerComplete')
+        res.clearCookie('ownerOnboardingComplete')
       }
       if ((result.user as any).accountantOnboardingCompleted) {
-        res.cookie('onboardingAccountantComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('accountantOnboardingComplete', 'true', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
       } else {
-        res.clearCookie('onboardingAccountantComplete')
+        res.clearCookie('accountantOnboardingComplete')
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Set accountant flag cookie for middleware/client
     try {
       res.cookie('isAccountant', result.user.isAccountant ? 'true' : 'false', cookieOptions)
-    } catch (e) {}
+    } catch (e) { }
 
     return result
   }
 
   @Post('pre-signup')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   async preSignup(@Body() body: { email: string; password: string; name?: string; role?: string; phone?: string; phoneCountry?: string; companyName?: string }) {
-    const { password, name, role, phone, phoneCountry, companyName } = body
-    const email = normalizeEmail(body.email)
-    // Ensure no verified user exists with that email
-    const existing = await this.userRepository.findByEmail(email)
-    if (existing && existing.isEmailVerified) {
-      throw new ConflictException('Email already registered')
-    }
-
-    // Hash password and store pending signup in-memory (replace with Redis in prod)
-    const hashed = await bcrypt.hash(password, 10)
-    const token = await this.pendingSignupService.create({
-      email,
-      hashedPassword: hashed,
-      name,
-      role,
-      phone,
-      phoneCountry,
-      companyName: companyName || undefined,
-      emailOtpVerified: false,
-      phoneOtpVerified: false,
-    }, 60 * 30)
-
-    // Start OTP to provided contact(s)
-    let devOtpEmail: string | undefined
-    let devOtpPhone: string | undefined
+    this.logger.log(`[pre-signup] email=${body.email} phone=${body.phone} role=${body.role}`)
     try {
-      // Always start email OTP and normalize returned shape (Prisma returns `otpCode`)
-      const emailOtp = await this.authService.startOtp(email, undefined, 10, 'VERIFY_EMAIL')
-      if (process.env.NODE_ENV !== 'production') devOtpEmail = (emailOtp as any).otpCode || (emailOtp as any).otp
+      const { password, name, role, phone, phoneCountry, companyName } = body
+      const email = normalizeEmail(body.email)
+      // Ensure no verified user exists with that email
+      const existing = await this.userRepository.findByEmail(email)
+      if (existing && existing.isEmailVerified) {
+        throw new ConflictException('Email already registered')
+      }
+
+      // Hash password and store pending signup in-memory (replace with Redis in prod)
+      const hashed = await bcrypt.hash(password, 10)
+      const token = await this.pendingSignupService.create({
+        email,
+        hashedPassword: hashed,
+        name,
+        role,
+        phone,
+        phoneCountry,
+        companyName: companyName || undefined,
+        emailOtpVerified: false,
+        phoneOtpVerified: false,
+      }, 60 * 30)
+
+      // Start OTP to provided contact(s)
+      let devOtpEmail: string | undefined
+      let devOtpPhone: string | undefined
       try {
-        const html = this.mailService.buildVerifyEmailOtpHtml(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
-        const text = this.mailService.buildVerifyEmailOtpText(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
-        await this.mailService.sendEmail(email, `Your Haypbooks verification code`, html, text)
+        // Always start email OTP and normalize returned shape (Prisma returns `otpCode`)
+        const emailOtp = await this.authService.startOtp(email, undefined, 10, 'VERIFY_EMAIL')
+        if (process.env.NODE_ENV !== 'production') devOtpEmail = (emailOtp as any).otpCode || (emailOtp as any).otp
+        try {
+          const html = this.mailService.buildVerifyEmailOtpHtml(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
+          const text = this.mailService.buildVerifyEmailOtpText(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
+          await this.mailService.sendEmail(email, `Your Haypbooks verification code`, html, text)
+        } catch (e) {
+          this.logger.warn('Failed to send verification email: ' + (e?.message || e))
+        }
+
+        // If a phone number exists, also start phone OTP (keep phone OTP creation for dev/test compatibility)
+        if (phone) {
+          const phoneOtp = await this.authService.startOtpByPhone(phone, undefined, 10, 'MFA')
+          if (process.env.NODE_ENV !== 'production') devOtpPhone = (phoneOtp as any).otpCode || (phoneOtp as any).otp
+        }
       } catch (e) {
-        console.log('Failed to send verification email', e?.message || e)
+        // ignore
       }
 
-      // If a phone number exists, also start phone OTP (keep phone OTP creation for dev/test compatibility)
-      if (phone) {
-        const phoneOtp = await this.authService.startOtpByPhone(phone, undefined, 10, 'MFA')
-        if (process.env.NODE_ENV !== 'production') devOtpPhone = (phoneOtp as any).otpCode || (phoneOtp as any).otp
-      }
+      // Back-compat: return `otp` as the email OTP (first step)
+      return { signupToken: token, otp: devOtpEmail, otpEmail: devOtpEmail, otpPhone: devOtpPhone }
     } catch (e) {
-      // ignore
+      this.logger.error('[pre-signup] unexpected error', e instanceof Error ? e.stack : String(e))
+      // pass through known HTTP exceptions, otherwise convert
+      if (!(e instanceof ConflictException)) {
+        throw new InternalServerErrorException('Unable to start signup, please try again')
+      }
+      throw e
     }
-
-    // Back-compat: return `otp` as the email OTP (first step)
-    return { signupToken: token, otp: devOtpEmail, otpEmail: devOtpEmail, otpPhone: devOtpPhone }
   }
-
   @Post('complete-signup')
   @HttpCode(HttpStatus.OK)
-  async completeSignup(@Body() body: { signupToken: string; code: string; method?: 'email'|'phone' }, @Res({ passthrough: true }) res: Response) {
+  async completeSignup(@Body() body: { signupToken: string; code: string; method?: 'email' | 'phone' }, @Res({ passthrough: true }) res: Response) {
     const { signupToken, code, method } = body
-    const pending = await this.pendingSignupService.get(signupToken)
-    if (!pending) throw new NotFoundException('Signup token not found or expired')
+    this.logger.log(`[complete-signup] method=${method}`)
+    try {
+      const pending = await this.pendingSignupService.get(signupToken)
+      if (!pending) throw new NotFoundException('Signup token not found or expired')
 
-    const desiredMethod: 'email' | 'phone' = method === 'phone' ? 'phone' : 'email'
+      const desiredMethod: 'email' | 'phone' = method === 'phone' ? 'phone' : 'email'
 
-    // Verify OTP
-    let verified = false
-    if (desiredMethod === 'phone') {
-      if (!pending.phone) throw new UnauthorizedException('Phone verification not available for this signup')
-      verified = await this.authService.verifyOtpByPhone(pending.phone, code, true)
-    } else {
-      verified = await this.authService.verifyOtp(normalizeEmail(pending.email), code, true)
-    }
-    if (!verified) throw new UnauthorizedException('Invalid or expired code')
-
-    // Mark pending as verified for this method (do not create DB user until all required methods are verified)
-    const now = Date.now()
-    const updated = await this.pendingSignupService.update(signupToken, desiredMethod === 'phone'
-      ? { phoneOtpVerified: true, phoneOtpVerifiedAt: now }
-      : { emailOtpVerified: true, emailOtpVerifiedAt: now }
-    )
-    const pendingAfter = updated || await this.pendingSignupService.get(signupToken)
-    if (!pendingAfter) throw new NotFoundException('Signup token not found or expired')
-
-    const hasPhone = !!pendingAfter.phone
-    const emailOk = !!pendingAfter.emailOtpVerified
-    const phoneOk = !!pendingAfter.phoneOtpVerified
-
-    // Policy: if a phone exists, user may verify EITHER email OR phone to complete signup.
-    // If no phone exists, email verification is required.
-    const canComplete = hasPhone ? (emailOk || phoneOk) : emailOk
-    if (!canComplete) {
-      const nextMethod: 'email' | 'phone' = hasPhone ? (desiredMethod === 'email' ? 'phone' : 'email') : 'email'
-      return {
-        success: true,
-        signupToken,
-        verified: { email: emailOk, phone: hasPhone ? phoneOk : false },
-        nextMethod,
-        token: null,
+      // Verify OTP
+      let verified = false
+      if (desiredMethod === 'phone') {
+        if (!pending.phone) throw new UnauthorizedException('Phone verification not available for this signup')
+        verified = await this.authService.verifyOtpByPhone(pending.phone, code, true)
+      } else {
+        verified = await this.authService.verifyOtp(normalizeEmail(pending.email), code, true)
       }
-    }
+      if (!verified) throw new UnauthorizedException('Invalid or expired code')
 
-    const normalizedEmail = normalizeEmail(pendingAfter.email)
+      // Mark pending as verified for this method (do not create DB user until all required methods are verified)
+      const now = Date.now()
+      const updated = await this.pendingSignupService.update(signupToken, desiredMethod === 'phone'
+        ? { phoneOtpVerified: true, phoneOtpVerifiedAt: now }
+        : { emailOtpVerified: true, emailOtpVerifiedAt: now }
+      )
+      const pendingAfter = updated || await this.pendingSignupService.get(signupToken)
+      if (!pendingAfter) throw new NotFoundException('Signup token not found or expired')
 
-    // If a verified user exists, block and clean up pending.
-    // If an unverified user exists (legacy direct-signup), upgrade it instead of creating a duplicate.
-    const existing = await this.userRepository.findByEmail(normalizedEmail)
-    if (existing && existing.isEmailVerified) {
-      try { await this.pendingSignupService.delete(signupToken) } catch (e) {}
-      throw new ConflictException('Email already registered')
-    }
+      const hasPhone = !!pendingAfter.phone
+      const emailOk = !!pendingAfter.emailOtpVerified
+      const phoneOk = !!pendingAfter.phoneOtpVerified
 
-    const role = pendingAfter.role || 'owner'
-    const isAccountant = role === 'accountant' || role === 'both'
-    const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
-
-    // Normalize phone if present (avoid storing unnormalized values)
-    let normalizedPhone: string | null = null
-    let phoneHmac: string | undefined = undefined
-    if (pendingAfter.phone) {
-      try {
-        normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(pendingAfter.phone)
-        try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
-      } catch (e) {
-        // If phone normalization fails, still allow completion based on email OTP verification.
-        normalizedPhone = pendingAfter.phone
+      // Policy: if a phone exists, user may verify EITHER email OR phone to complete signup.
+      // If no phone exists, email verification is required.
+      const canComplete = hasPhone ? (emailOk || phoneOk) : emailOk
+      if (!canComplete) {
+        const nextMethod: 'email' | 'phone' = hasPhone ? (desiredMethod === 'email' ? 'phone' : 'email') : 'email'
+        return {
+          success: true,
+          signupToken,
+          verified: { email: emailOk, phone: hasPhone ? phoneOk : false },
+          nextMethod,
+          token: null,
+        }
       }
+
+      const normalizedEmail = normalizeEmail(pendingAfter.email)
+
+      // If a verified user exists, block and clean up pending.
+      // If an unverified user exists (legacy direct-signup), upgrade it instead of creating a duplicate.
+      const existing = await this.userRepository.findByEmail(normalizedEmail)
+      if (existing && existing.isEmailVerified) {
+        try { await this.pendingSignupService.delete(signupToken) } catch (e) { }
+        throw new ConflictException('Email already registered')
+      }
+
+      const role = pendingAfter.role || 'owner'
+      const isAccountant = role === 'accountant' || role === 'both'
+      const preferredHub = isAccountant ? 'ACCOUNTANT' : 'OWNER'
+
+      // Normalize phone if present (avoid storing unnormalized values)
+      let normalizedPhone: string | null = null
+      let phoneHmac: string | undefined = undefined
+      if (pendingAfter.phone) {
+        try {
+          normalizedPhone = require('../utils/phone.util').normalizePhoneOrThrow(pendingAfter.phone)
+          try { phoneHmac = require('../utils/hmac.util').hmacPhone(normalizedPhone) } catch (e) { phoneHmac = undefined }
+        } catch (e) {
+          // If phone normalization fails, still allow completion based on email OTP verification.
+          normalizedPhone = pendingAfter.phone
+        }
+      }
+
+      let created: any
+      // Determine verification flags to persist.
+      const finalEmailVerified = emailOk
+      const finalPhoneVerified = hasPhone ? phoneOk : false
+
+      this.logger.log(`[complete-signup] Creating user email=${normalizedEmail} emailOk=${emailOk} phoneOk=${phoneOk}`)
+
+      if (existing && !existing.isEmailVerified) {
+        created = await this.userRepository.update(existing.id, {
+          email: normalizedEmail,
+          password: pendingAfter.hashedPassword,
+          name: pendingAfter.name || null,
+          isEmailVerified: finalEmailVerified,
+          role,
+          preferredHub,
+          phone: normalizedPhone,
+          ...(phoneHmac ? { phoneHmac } : {}),
+          ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
+          ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
+        } as any)
+      } else {
+        // Create final user record
+        created = await this.userRepository.create({
+          email: normalizedEmail,
+          password: pendingAfter.hashedPassword,
+          name: pendingAfter.name || null,
+          isEmailVerified: finalEmailVerified,
+          role,
+          preferredHub,
+          phone: normalizedPhone,
+          ...(phoneHmac ? { phoneHmac } : {}),
+          ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
+          ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
+        } as any)
+      }
+
+      this.logger.log(`[complete-signup] User id=${created.id} emailVerified=${created.isEmailVerified}`)
+
+      // Log signup success
+      try { await this.securityEventRepo.create({ userId: created.id, email: created.email, type: 'SIGNUP_SUCCESS' }) } catch (e) { /* ignore */ }
+
+      // Set session cookies as in signup
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax' as const,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      }
+
+      const session = await this.authService.createSessionForUser(created.id)
+      try { if (session) res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) } catch (e) { } // 2h for token
+      try { if (session?.refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions) } catch (e) { }
+      try { res.cookie('email', created.email, cookieOptions) } catch (e) { }
+      try { res.cookie('userId', created.id, cookieOptions) } catch (e) { }
+      try { res.cookie('role', this.mapRoleForFrontend(created.role), cookieOptions) } catch (e) { }
+      try { res.cookie('isAccountant', isAccountant ? 'true' : 'false', cookieOptions) } catch (e) { }
+
+      // Delete pending
+      await this.pendingSignupService.delete(signupToken)
+
+      // Return created user (consistent shape)
+      return { token: session?.token || null, user: { id: created.id, email: created.email, name: created.name, role: created.role, isEmailVerified: !!(created as any).isEmailVerified } }
+    } catch (e) {
+      this.logger.error('[complete-signup] unexpected error', e instanceof Error ? e.stack : String(e))
+      // convert generic errors to 500 with message
+      if (!(e instanceof UnauthorizedException) && !(e instanceof NotFoundException) && !(e instanceof ConflictException)) {
+        throw new InternalServerErrorException('Unable to complete signup; please try again later.')
+      }
+      throw e
     }
-
-    let created: any
-    // Determine verification flags to persist.
-    const finalEmailVerified = emailOk
-    const finalPhoneVerified = hasPhone ? phoneOk : false
-
-    console.log('[complete-signup] Creating user with verification flags:', {
-      email: normalizedEmail,
-      hasPhone,
-      emailOk,
-      phoneOk,
-      finalEmailVerified,
-      finalPhoneVerified,
-    })
-
-    if (existing && !existing.isEmailVerified) {
-      created = await this.userRepository.update(existing.id, {
-        email: normalizedEmail,
-        password: pendingAfter.hashedPassword,
-        name: pendingAfter.name || null,
-        isEmailVerified: finalEmailVerified,
-        role,
-        isAccountant,
-        preferredHub,
-        phone: normalizedPhone,
-        ...(phoneHmac ? { phoneHmac } : {}),
-        ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
-        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
-      } as any)
-    } else {
-      // Create final user record
-      created = await this.userRepository.create({
-        email: normalizedEmail,
-        password: pendingAfter.hashedPassword,
-        name: pendingAfter.name || null,
-        isEmailVerified: finalEmailVerified,
-        role,
-        isAccountant,
-        preferredHub,
-        phone: normalizedPhone,
-        ...(phoneHmac ? { phoneHmac } : {}),
-        ...(normalizedPhone && finalPhoneVerified ? { isPhoneVerified: true, phoneVerifiedAt: new Date() } : {}),
-        ...(pendingAfter.companyName ? { companyName: pendingAfter.companyName } : {}),
-      } as any)
-    }
-
-    console.log('[complete-signup] User created/updated:', {
-      userId: created.id,
-      email: created.email,
-      isEmailVerified: created.isEmailVerified,
-      isPhoneVerified: (created as any).isPhoneVerified,
-      phone: created.phone
-    })
-
-    // Log signup success
-    try { await this.securityEventRepo.create({ userId: created.id, email: created.email, type: 'SIGNUP_SUCCESS' }) } catch (e) { /* ignore */ }
-
-    // Set session cookies as in signup
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    }
-
-    const session = await this.authService.createSessionForUser(created.id)
-    try { if (session) res.cookie('token', session.token, { ...cookieOptions, maxAge: 1000 * 60 * 120 }) } catch (e) {} // 2h for token
-    try { if (session?.refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions) } catch (e) {}
-    try { res.cookie('email', created.email, cookieOptions) } catch (e) {}
-    try { res.cookie('userId', created.id, cookieOptions) } catch (e) {}
-    try { res.cookie('role', created.role, cookieOptions) } catch (e) {}
-
-    // Delete pending
-    await this.pendingSignupService.delete(signupToken)
-
-    // Return created user (consistent shape)
-    return { token: session?.token || null, user: { id: created.id, email: created.email, name: created.name, role: created.role, isEmailVerified: !!(created as any).isEmailVerified } }
   }
 
   @Post('signup')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   async signup(@Body() signupDto: SignupDto, @Res({ passthrough: true }) res: Response) {
     // Always use the pending-signup flow so unverified users are not persisted to DB.
     // A real user record is only created once the OTP is verified via `complete-signup`.
@@ -325,7 +348,7 @@ export class AuthController {
       try {
         const recent = await this.otpRepo.countRecentByEmail(email, 60)
         if (recent >= 5) {
-          console.log(`sendVerification rate limit hit for ${email}`)
+          this.logger.warn(`sendVerification rate limit hit for ${email}`)
           return { success: true }
         }
       } catch (e) {
@@ -333,13 +356,13 @@ export class AuthController {
       }
 
       const created = await this.authService.startOtp(normalizeEmail(email), undefined, 5, 'VERIFY_EMAIL')
-      console.log(`Verification OTP for ${email}: ${created.otpCode}`)
+      this.logger.debug(`Verification OTP created for ${email}`)
       try {
         const html = this.mailService.buildVerifyEmailOtpHtml(email, created.otpCode)
         const text = this.mailService.buildVerifyEmailOtpText(email, created.otpCode)
         await this.mailService.sendEmail(email, `Your Haypbooks verification code`, html, text)
       } catch (e) {
-        console.log('Failed to send verification email', e?.message || e)
+        this.logger.warn('Failed to send verification email: ' + (e?.message || e))
       }
 
       if (process.env.NODE_ENV !== 'production') {
@@ -365,7 +388,7 @@ export class AuthController {
           const tokenFromHeader = cookieMatch.split('=')[1]
           refreshToken = tokenFromHeader ? String(tokenFromHeader).split(/;|\s/)[0].trim() : refreshToken
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     if (refreshToken) {
       try {
@@ -436,9 +459,9 @@ export class AuthController {
     try {
       if (process.env.ALLOW_TEST_ENDPOINTS === 'true' || (process.env.NODE_ENV || 'development') !== 'production') {
         // eslint-disable-next-line no-console
-        console.log('[DEV] Refresh raw cookies:', req.headers.cookie || 'NONE', 'ip=', req.ip, 'ua=', String(req.headers['user-agent'] || ''))
+        this.logger.debug(`[DEV] Refresh ip=${req.ip}`)
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Dev-only: if debug header present, return diagnostic info or execute refresh on demand
     try {
@@ -454,7 +477,7 @@ export class AuthController {
           if (tokenFromHeader) s = await this.sessionRepo.findByRefreshToken(tokenFromHeader)
         } catch (e) { /* ignore */ }
         if (debugHeader === 'info') {
-          const tokenCharCodes = tokenFromHeader ? Array.from(String(tokenFromHeader)).slice(0,40).map((c: string) => c.charCodeAt(0)) : null
+          const tokenCharCodes = tokenFromHeader ? Array.from(String(tokenFromHeader)).slice(0, 40).map((c: string) => c.charCodeAt(0)) : null
           return { debug: true, rawCookie: rawCookie, tokenFromHeader, tokenLen: tokenFromHeader ? String(tokenFromHeader).length : 0, tokenCharCodes, session: s }
         }
         if (debugHeader === 'exec') {
@@ -480,7 +503,7 @@ export class AuthController {
           return { token: result.token, user: result.user, debug: true }
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     let refreshToken = req.cookies?.refreshToken
     // Fallback: if cookie parsing middleware isn't present (e.g., in some test environments),
@@ -498,7 +521,7 @@ export class AuthController {
         if (tokenFromHeader) {
           refreshToken = tokenFromHeader
           // record a dev-only event to indicate we used fallback parsing
-          try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FALLBACK_HEADER_USED', email: String(refreshToken ?? '').slice(0,12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) {}
+          try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FALLBACK_HEADER_USED', email: String(refreshToken ?? '').slice(0, 12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { }
         }
       } catch (e) {
         // ignore parsing errors
@@ -507,14 +530,14 @@ export class AuthController {
 
     if (!refreshToken) {
       // record dev-only event to help debug cookie issues
-      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_NO_COOKIE', ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) {}
+      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_NO_COOKIE', ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { }
       throw new UnauthorizedException()
     }
 
     const result = await this.authService.refresh(refreshToken)
     if (!result) {
       // record dev-only event with token prefix so we can inspect DB when console logs aren't available
-      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_INVALID', email: String(refreshToken ?? '').slice(0,12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) {}
+      try { if ((process.env.NODE_ENV || 'development') !== 'production') await this.securityEventRepo.create({ type: 'REFRESH_FAILED_INVALID', email: String(refreshToken ?? '').slice(0, 12), ipAddress: req.ip, userAgent: String(req.headers['user-agent'] || '') }) } catch (e) { }
       throw new UnauthorizedException()
     }
 
@@ -532,6 +555,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() body: ForgotPasswordDto) {
     // extra runtime validation using zod as a defensive layer
@@ -549,7 +573,7 @@ export class AuthController {
     try {
       const recent = await this.otpRepo.countRecentByEmail(email, 60)
       if (recent >= 5) {
-        console.log(`Rate limit hit for forgot-password: ${email}`)
+        this.logger.warn(`Rate limit hit for forgot-password: ${email}`)
         return { success: true }
       }
     } catch (e) {
@@ -558,48 +582,53 @@ export class AuthController {
 
     // generate 6-digit numeric OTP and save to Otp table via authService
     try {
-      const created = await this.authService.startOtp(email, undefined, 5)
-      // In production: send email with OTP. For dev, log it so we can test.
-      console.log(`Password reset OTP for ${email}: ${created.otpCode} (expires ${created.expiresAt})`)
+      const created = await this.authService.startOtp(email, undefined, 60)
+      this.logger.debug(`Password reset OTP created for ${email}`)
+      // Send password-reset email (both prod and dev)
+      try {
+        const html = this.mailService.buildPasswordResetHtml(user.name || '', created.otpCode)
+        const text = this.mailService.buildPasswordResetText(user.name || '', created.otpCode)
+        await this.mailService.sendEmail(email, 'Reset your HaypBooks password', html, text)
+      } catch (mailErr) {
+        this.logger.warn('Failed to send password reset email: ' + (mailErr?.message || mailErr))
+      }
       if (process.env.NODE_ENV !== 'production') {
         // In development return the OTP so automated testing / manual testing is convenient
         return { success: true, otp: created.otpCode }
       }
     } catch (e) {
       // ignore creating failure; don't reveal errors to client
-      console.log('Failed to create OTP for forgot-password', e?.message || e)
+      this.logger.warn('Failed to create OTP for forgot-password: ' + (e?.message || e))
     }
 
     return { success: true }
   }
 
   @Post('verify-otp')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   async verifyOtp(@Body() body: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
     const parsed = VerifyOtpSchema.safeParse(body)
     if (!parsed.success) return { success: false }
     // Debug logging for e2e — avoid logging raw phone to reduce PII exposure
-    // eslint-disable-next-line no-console
-    console.log('[auth] verify-otp attempt', { email: parsed.data.email, otpCode: parsed.data.otpCode })
+    this.logger.log(`[verify-otp] attempt email=${parsed.data.email}`)
 
     // Determine whether this is an email or phone verification
     let ok = false
     if (parsed.data.email) {
       const email = normalizeEmail(parsed.data.email)
       ok = await this.authService.verifyOtp(email, parsed.data.otpCode, false)
-      // eslint-disable-next-line no-console
-      console.log('[auth] verify-otp result (email)', { email, ok })
+      this.logger.log(`[verify-otp] email=${email} ok=${ok}`)
       if (!ok) return { success: false }
 
       // If this OTP was for email verification, explicitly consume it now; for RESET flows leave it for the reset endpoint to consume
       try {
         const latest = await this.otpRepo.findLatestByEmail(email)
-        // eslint-disable-next-line no-console
-        console.log('[auth] verify-otp latest row', { email, latest: latest ? { id: latest.id, otpCode: latest.otpCode, purpose: latest.purpose } : null })
+        this.logger.debug(`[verify-otp] latest row for ${email} purpose=${latest?.purpose}`)
         if (latest && (((latest as any).purpose === 'VERIFY_EMAIL') || ((latest as any).purpose === 'MFA'))) {
-          try { await this.otpRepo.delete(latest.id) } catch (e) {}
+          try { await this.otpRepo.delete(latest.id) } catch (e) { }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // Mark user as email verified
       try {
@@ -609,7 +638,7 @@ export class AuthController {
         }
       } catch (e) {
         // Don't surface this to client; verification is already successful
-        console.log('Failed to update email verified flag', e?.message || e)
+        this.logger.warn('Failed to update email verified flag: ' + (e?.message || e))
       }
 
       return { success: true }
@@ -619,17 +648,16 @@ export class AuthController {
       const normalized = require('../utils/phone.util').normalizePhoneOrThrow(parsed.data.phone)
       ok = await this.authService.verifyOtpByPhone(normalized, parsed.data.otpCode, false)
       const maskedPhone = require('../utils/phone.util').maskPhoneForDisplay(normalized)
-      // eslint-disable-next-line no-console
-      console.log('[auth] verify-otp result (phone)', { phone: maskedPhone, ok })
+      this.logger.log(`[verify-otp] phone=${maskedPhone} ok=${ok}`)
       if (!ok) return { success: false }
 
       // For phone flows, consume any matching MFA row
       try {
         const latest = await this.otpRepo.findLatestByPhone(normalized)
         if (latest && (latest as any).purpose === 'MFA') {
-          try { await this.otpRepo.delete(latest.id) } catch (e) {}
+          try { await this.otpRepo.delete(latest.id) } catch (e) { }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // Mark user as phone verified (persist flag/timestamp)
       try {
@@ -639,7 +667,7 @@ export class AuthController {
         }
       } catch (e) {
         // Don't surface to client; verification succeeded already
-        console.log('Failed to update phone verified flag', e?.message || e)
+        this.logger.warn('Failed to update phone verified flag: ' + (e?.message || e))
       }
 
       return { success: true }
@@ -683,15 +711,15 @@ export class AuthController {
               if ((session as any).refreshToken) res.cookie('refreshToken', (session as any).refreshToken, cookieOptions)
               res.cookie('email', user.email, cookieOptions)
               res.cookie('userId', user.id, cookieOptions)
-              res.cookie('role', user.role, cookieOptions)
-              try { res.cookie('isAccountant', user.isAccountant ? 'true' : 'false', cookieOptions) } catch (e) {}
+              res.cookie('role', this.mapRoleForFrontend(user.role), cookieOptions)
+              try { res.cookie('isAccountant', user.isAccountant ? 'true' : 'false', cookieOptions) } catch (e) { }
             }
           } catch (e) {
             // Do not block verification when session creation fails
-            console.log('Failed to create session on email verification', e?.message || e)
+            this.logger.warn('Failed to create session on email verification: ' + (e?.message || e))
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // Redirect to frontend success page and include the user's name + email for friendly messaging
       const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000')
@@ -721,7 +749,7 @@ export class AuthController {
     if (!parsed.success) throw new NotFoundException('Invalid reset payload')
     const email = parsed.data.email ? normalizeEmail(parsed.data.email) : parsed.data.email
     const { otpCode, password, token } = parsed.data
-    
+
     // Validate password strength
     if (!password || password.length < 8) {
       throw new NotFoundException('Password must be at least 8 characters')
@@ -729,7 +757,7 @@ export class AuthController {
     if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
       throw new NotFoundException('Password must include uppercase letter and number')
     }
-    
+
     // support token reset flow in future
     if (!token && (!email || !otpCode)) throw new NotFoundException('Missing token or email/otp')
     const user = await this.userRepository.findByEmail(email!)
@@ -750,10 +778,10 @@ export class AuthController {
   async getSecurityEvents(@Req() req: any) {
     const userId = req.user?.userId
     if (!userId) throw new UnauthorizedException()
-    
+
     const limit = parseInt(req.query?.limit) || 50
     const events = await this.securityEventRepo.findByUserId(userId, limit)
-    
+
     return events.map((e: any) => ({
       id: e.id,
       type: e.type,

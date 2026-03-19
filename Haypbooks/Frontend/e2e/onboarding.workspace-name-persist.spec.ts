@@ -2,9 +2,11 @@ import { test, expect } from '@playwright/test'
 
 // This test requires a staging environment with DB access and the helper API to look up companies.
 // Guarded to run only when E2E_ENV=staging (so it doesn't run in local CI without DB access).
-const isStaging = process.env.E2E_ENV === 'staging'
+// eslint-disable-next-line prefer-const
+var isStaging = process.env.E2E_ENV === 'staging'
 
-(test as any)[isStaging ? 'describe' : 'skip']('Onboarding -> Owner Workspace persists to Tenant.workspace_name (staging only)', () => {
+// eslint-disable-next-line @typescript-eslint/no-extra-semi
+;(test as any)[isStaging ? 'describe' : 'skip']('Onboarding -> Owner Workspace persists to Tenant.workspace_name (staging only)', () => {
   test('fills owner workspace and verifies tenant workspace name persisted', async ({ page, request }) => {
     const ownerWorkspace = `Playwright Workspace ${Date.now()}`
 

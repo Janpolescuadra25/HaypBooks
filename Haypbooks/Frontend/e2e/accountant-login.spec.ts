@@ -41,12 +41,14 @@ test('Accountant login: selecting Accountant signs in to Accountant Hub', async 
     page.waitForURL(/\/onboarding\/accountant/, { timeout: 15000 }),
   ])
 
-  if (page.url().includes('/onboarding/accountant')) {
-    // Complete the accountant onboarding
-    await page.fill('#firmName', 'Playwright Firm')
-    // Click either the page or modal submit button
-    await page.getByRole('button', { name: /Create Accountant Workspace|Finish setup/i }).click()
-    await page.waitForURL(/\/hub\/accountant/, { timeout: 15000 })
+  if (page.url().includes('/onboarding')) {
+    // Onboarding flow triggered; finish it via API since UI no longer exists
+    await page.request.post('http://127.0.0.1:4000/api/onboarding/save', { data: { step: 'accountant_firm', data: { firmName: 'Playwright Firm' } } })
+    await page.request.post('http://127.0.0.1:4000/api/onboarding/complete', { data: { type: 'full', hub: 'ACCOUNTANT' } })
+    // manually navigate to hub
+    await page.goto('/hub/accountant')
+    // hub route now redirects to dashboard
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 })
   }
 
   await expect(page.locator('text=Clients & Practice')).toBeVisible()

@@ -185,7 +185,17 @@ export class CompanyRepository {
 
           const requiredCols = colsInfo.filter(c => c.is_nullable === 'NO' && (c.column_default === null || c.column_default === undefined)).map(c => ({ name: c.column_name, type: c.data_type }))
 
+          // Whitelist of column names allowed in dynamic SQL to prevent any schema-level injection
+          const ALLOWED_TENANT_COLUMNS = new Set([
+            'id', 'id_old', 'name', 'subdomain', 'baseCurrency', 'status', 'type',
+            'isActive', 'trialUsed', 'trialStartsAt', 'trialEndsAt', 'companiesCreated',
+            'activeNonOwnerUsersCount', 'activeCompaniesCount', 'activeFirmCount',
+            'activeProjectCount', 'createdAt', 'updatedAt', 'deletedAt', 'ownerUserId',
+            'maxCompanies', 'practiceTier', 'practiceXp', 'workspace_name', 'workspaceName',
+          ])
+
           for (const rc of requiredCols) {
+            if (!ALLOWED_TENANT_COLUMNS.has(rc.name)) continue // skip unknown columns
             if (insertCols.includes(`"${rc.name}"`)) continue
             // Add a reasonable default based on column name or data type
             if (rc.name === 'status') {
@@ -504,9 +514,27 @@ export class CompanyRepository {
   async updateTenantUserLastAccessed(userId: string, companyId: string) {
     if (!userId || !companyId) return { success: false }
 
-    // Use raw SQL to fetch the tenantId for the company to remain resilient to schema mismatches
-    const rows: any[] = await this.prisma.$queryRaw`SELECT "tenantId" FROM public."Company" WHERE "id" = ${companyId} LIMIT 1`
-    const companyTenantId = rows && rows.length ? ((rows[0] as any).tenantId || (rows[0] as any).tenantid || (rows[0] as any).workspaceId) : null
+    // Resolve the workspace/tenant that owns this company and update the user's last-accessed time.
+    // Prefer Prisma schema columns (workspaceId) but fall back to raw SQL for legacy schemas.
+    let companyTenantId: string | null = null
+
+    try {
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { workspaceId: true },
+      })
+      companyTenantId = company?.workspaceId ?? null
+    } catch (e) {
+      // Ignore and fall through to raw SQL fallback below.
+      // eslint-disable-next-line no-console
+      console.debug('[CompanyRepository] workspaceId lookup failed (fallback to raw SQL):', e?.message)
+    }
+
+    if (!companyTenantId) {
+      const rows: any[] = await this.prisma.$queryRaw`SELECT "tenantId" FROM public."Company" WHERE "id" = ${companyId} LIMIT 1`
+      companyTenantId = rows && rows.length ? ((rows[0] as any).tenantId || (rows[0] as any).tenantid || (rows[0] as any).workspaceId) : null
+    }
+
     if (!companyTenantId) return { success: false }
 
     const res = await this.prisma.workspaceUser.updateMany({ where: { workspaceId: companyTenantId, userId }, data: { lastAccessedAt: new Date() } })
@@ -516,12 +544,15 @@ export class CompanyRepository {
   // Return recent tenants (companies) the user has accessed, ordered by lastAccessedAt desc
   async findRecentForUser(userId: string, limit = 10) {
     if (!userId) return []
+    // Use WorkspaceUser.lastAccessedAt to determine the most-recently-used workspace,
+    // and then return the companies belonging to those workspaces.
+    // This replaces the legacy Tenant/TenantUser tables used in older schemas.
     const rows: any[] = await this.prisma.$queryRaw`
-      SELECT t.id, tu."lastAccessedAt"
-      FROM public."Tenant" t
-      JOIN public."TenantUser" tu ON tu."tenantId" = t.id
-      WHERE tu."userId" = ${userId}
-      ORDER BY tu."lastAccessedAt" DESC NULLS LAST
+      SELECT c.id, c.name, wu."lastAccessedAt"
+      FROM public."Company" c
+      JOIN public."WorkspaceUser" wu ON wu."workspaceId" = c."workspaceId"
+      WHERE wu."userId" = ${userId}
+      ORDER BY wu."lastAccessedAt" DESC NULLS LAST
       LIMIT ${limit}
     `
     return rows || []
@@ -676,8 +707,9 @@ export class CompanyRepository {
     const user = await this.prisma.user.findUnique({ where: { id: userId } })
     if (!user) return { success: false, reason: 'user_not_found' }
 
-    // Only the invited email may accept the invite
-    if ((invite.email || '').toLowerCase() !== (user.email || '').toLowerCase()) {
+    // Only the invited email may accept the invite (unless it's a generic link invite)
+    const isLinkInvite = !!invite.isLinkInvite
+    if (!isLinkInvite && (invite.email || '').toLowerCase() !== (user.email || '').toLowerCase()) {
       return { success: false, reason: 'email_mismatch' }
     }
 

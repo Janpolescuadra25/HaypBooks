@@ -102,63 +102,104 @@ export default function PlanSelector({ selected, onSelect }: { selected?: PlanKe
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      {/* Billing toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <div className="text-sm font-medium">Billing:</div>
-          <div className="inline-flex gap-2 bg-slate-100 p-1 rounded-full">
-            <button type="button" aria-pressed={billing === 'monthly'} onClick={() => setBilling('monthly')} className={`px-3 py-1 rounded-full ${billing === 'monthly' ? 'bg-white shadow' : 'text-slate-600'}`}>Monthly</button>
-            <button type="button" aria-pressed={billing === 'annual'} onClick={() => setBilling('annual')} className={`px-3 py-1 rounded-full ${billing === 'annual' ? 'bg-white shadow' : 'text-slate-600'}`}>Annual <span className="ml-2 text-xs text-emerald-600 font-semibold">Save 20%</span></button>
+          <span className="text-sm font-medium text-slate-700">Billing:</span>
+          <div className="inline-flex bg-slate-100 p-1 rounded-full">
+            <button
+              type="button"
+              onClick={() => setBilling('monthly')}
+              className={`px-4 py-1.5 text-sm rounded-full transition font-medium ${billing === 'monthly' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setBilling('annual')}
+              className={`px-4 py-1.5 text-sm rounded-full transition font-medium flex items-center gap-1.5 ${billing === 'annual' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Annual
+              <span className="text-xs text-emerald-600 font-semibold">Save 20%</span>
+            </button>
           </div>
         </div>
-        <div className="text-sm text-slate-500">Choose a plan that fits your business</div>
+        <span className="text-sm text-slate-400">Choose a plan that fits your business</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {plans.map(p => (
-          <div key={p.key}>
+      {/* Plan cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {plans.map(p => {
+          const isSelected = selected === p.key
+          return (
             <div
+              key={p.key}
               data-testid={`plan-${p.key}`}
-              role="button"
               onClick={() => onSelect(p.key)}
-              aria-pressed={selected === p.key}
               tabIndex={0}
-              className={`flex flex-col justify-between min-h-[200px] p-6 rounded-lg border text-left focus:outline-none transition-shadow cursor-pointer ${selected === p.key ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200 shadow-md' : 'border-slate-200 hover:shadow-md'}`}
+              onKeyDown={e => e.key === 'Enter' && onSelect(p.key)}
+              className={`relative flex flex-col rounded-2xl border-2 p-5 text-left cursor-pointer focus:outline-none transition-all ${
+                isSelected
+                  ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 shadow-lg'
+                  : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-md'
+              }`}
             >
-              <div>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold text-lg leading-5">{p.title}</div>
-                      {p.badge && <div className="text-xs text-slate-500 ml-2">{p.badge}</div>}
-                    </div>
-                    {p.subtitle && <div className="text-xs text-slate-500 mt-1">{p.subtitle}</div>}
-                  </div>
-                  <div className="text-sm text-slate-600 whitespace-nowrap font-medium text-right">{displayPrice(p)}</div>
-                </div>
+              {/* Badge */}
+              {p.badge && (
+                <span className={`self-start mb-3 inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold leading-tight ${
+                  isSelected ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {p.badge}
+                </span>
+              )}
 
-                <ul className="mt-3 text-sm text-slate-600 space-y-1">
-                  {p.features.slice(0, 3).map((f, i) => <li key={i}>• {f}</li>)}
-                </ul>
-
-                {expanded === p.key && (
-                  <div className="mt-3 text-sm text-slate-600 space-y-1">
-                    {p.features.map((f, i) => <div key={i}>• {f}</div>)}
-                  </div>
-                )}
+              {/* Title + price */}
+              <div className="mb-1">
+                <p className="text-lg font-bold text-slate-900 leading-tight">{p.title}</p>
+                <p className="text-sm font-semibold text-emerald-600 mt-0.5">{displayPrice(p)}</p>
               </div>
 
-              <div className="mt-4 flex items-center justify-between">
-                <div>
-                  {selected === p.key ? <span className="inline-block text-xs font-semibold text-blue-700">Selected</span> : null}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button type="button" className="text-xs text-slate-500" onClick={(e) => { e.stopPropagation(); setExpanded(expanded === p.key ? null : p.key) }} data-testid={`plan-${p.key}-see-full`}>{expanded === p.key ? 'Hide' : 'See full features'}</button>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); onSelect(p.key) }} className={`btn-sm ${selected === p.key ? 'btn-ghost' : 'btn-outline'}`} data-testid={`plan-${p.key}-select`}>{selected === p.key ? 'Selected' : 'Select'}</button>
-                </div>
+              {/* Subtitle */}
+              {p.subtitle && (
+                <p className="text-xs text-slate-500 mb-3">{p.subtitle}</p>
+              )}
+
+              {/* Features */}
+              <ul className="flex-1 space-y-1.5 mt-1">
+                {(expanded === p.key ? p.features : p.features.slice(0, 3)).map((f, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
+                    <span className={`mt-0.5 w-3.5 h-3.5 flex-shrink-0 rounded-full flex items-center justify-center text-[9px] font-bold ${isSelected ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Footer */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  className="text-[11px] text-slate-400 hover:text-slate-600 underline underline-offset-2"
+                  onClick={e => { e.stopPropagation(); setExpanded(expanded === p.key ? null : p.key) }}
+                  data-testid={`plan-${p.key}-see-full`}
+                >
+                  {expanded === p.key ? 'Hide' : 'See all features'}
+                </button>
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); onSelect(p.key) }}
+                  data-testid={`plan-${p.key}-select`}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow'
+                      : 'border border-slate-300 text-slate-600 hover:border-emerald-500 hover:text-emerald-700'
+                  }`}
+                >
+                  {isSelected ? '✓ Selected' : 'Select'}
+                </button>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

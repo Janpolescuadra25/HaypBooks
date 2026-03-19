@@ -1,0 +1,165 @@
+# Chart of Accounts
+
+## 🏦 Assets
+- Bank
+- Cash on hand
+- Checking
+- Money Market
+- Rents Held in Trust
+- Savings
+- Trust account
+- Accounts Receivable (A/R)
+- Allowance for Bad Debts
+- Development Costs
+- Employee Cash Advances
+- Inventory
+- Investment - Mortgage/Real Estate Loans
+- Investment - Tax-Exempt Securities
+- Investment - U.S. Government Obligations
+- Investments - Other
+- Loans to Officers
+- Loans to Others
+- Loans to Stockholders
+- Other Current Assets
+- Prepaid Expenses
+- Retainage
+- Undeposited Funds
+- Fixed Assets
+  - Buildings
+  - Computers
+  - Copiers
+  - Furniture
+  - Other Tools & Equipment
+  - Phone
+  - Photo/Video
+  - Software
+  - Vehicles
+  - Machinery & Equipment
+  - Other Fixed Assets
+- Intangible Assets
+  - Goodwill
+  - Licenses
+  - Organizational Costs
+- Other Long-term Assets
+- Security Deposits
+- Leasehold Improvements
+- Land
+
+---
+
+## 📉 Liabilities
+- Credit Card
+- Accounts Payable (A/P)
+- Other Current Liabilities
+- Deferred Revenue
+- Notes Payable
+- Federal Income Tax Payable
+- Insurance Payable
+- Line of Credit
+- Loan Payable
+- Health Insurance Premium
+- Health Savings Account Contribution
+- Payroll Clearing
+- Payroll Tax Payable
+- Prepaid Expenses Payable
+- Rents in Trust - Liability
+- Sales Tax Payable
+- State/Local Income Tax Payable
+- Trust Accounts - Liabilities
+- Undistributed Tips
+- Other Long Term Liabilities
+- Shareholder Notes Payable
+- Estimated Taxes
+
+---
+
+## 📊 Equity
+- Equity
+- Accumulated Adjustment
+- Opening Balance Equity
+- Owner's Equity
+- Paid-In Capital or Surplus
+- Partner Contributions
+- Partner Distributions
+- Partner's Equity
+- Personal Expense
+- Personal Income
+- Preferred Stock
+- Retained Earnings
+- Treasury Stock
+- Common Stock
+
+---
+
+## 💰 Income
+- Income
+- Other Income
+- Non-Profit Income
+- Interest Earned
+- Sales of Product Income
+- Service/Fee Income
+- Other Primary Income
+- Other Investment Income
+- Other Miscellaneous Income
+- Unapplied Cash Payment Income
+- Tax-Exempt Interest
+- Dividend Income
+
+---
+
+## 💸 Expenses
+- Advertising/Promotional
+- Amortization
+- Auto
+- Bad Debts
+- Bank Charges
+- Charitable Contributions
+- Communication
+- Cost of Labor
+- Depreciation
+- Dues & Subscriptions
+- Entertainment
+- Entertainment Meals
+- Equipment Rental
+- Exchange Gain or Loss
+- Finance Costs
+- Gas and Fuel
+- Home Office
+  - Mortgage Interest
+  - Other Expenses
+  - Rental Insurance
+  - Repairs and Maintenance
+  - Utilities
+- Insurance
+- Interest Paid
+- Legal & Professional Fees
+- Office/General Administrative Expenses
+- Other Business Expenses
+- Other Miscellaneous Expense
+- Other Miscellaneous Service Cost
+- Other Vehicle Expenses
+- Parking and Tolls
+- Penalties & Settlements
+- Promotional Meals
+- Property Tax (Home Office)
+- Rent or Lease of Buildings
+- Rent and Lease (Home Office)
+- Repairs and Maintenance
+- Shipping, Freight & Delivery
+- Supplies & Materials
+- Taxes Paid
+- Travel
+- Travel Meals
+- Unapplied Cash Bill Payment Expense
+- Utilities
+- Vehicle
+  - Insurance
+  - Lease
+  - Loan
+  - Loan Interest
+  - Registration
+  - Repairs
+- Wash and Road Services
+- Payroll Expenses
+  - Payroll Tax Expenses
+  - Payroll Wage Expenses

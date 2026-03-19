@@ -1,20 +1,20 @@
-import { Controller, Post, Get, Body, UseGuards, Request, Res, HttpCode, HttpStatus } from '@nestjs/common'
+import { Controller, Post, Get, Body, UseGuards, Request, Res, HttpCode, HttpStatus, Logger } from '@nestjs/common'
 import { Response } from 'express'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { OnboardingService } from './onboarding.service'
-import { SaveStepDto } from './dto/onboarding.dto'
+import { SaveStepDto, CompleteDto } from './dto/onboarding.dto'
 
 @Controller('api/onboarding')
 export class OnboardingController {
+  private readonly logger = new Logger(OnboardingController.name)
   constructor(private readonly onboardingService: OnboardingService) {}
 
   @Post('save')
   @UseGuards(JwtAuthGuard)
   async saveStep(@Request() req, @Body() saveStepDto: SaveStepDto) {
     const userId = req.user.userId
-    console.log('[ONBOARDING-SAVE] 📝 Request received:', { userId, step: saveStepDto.step, dataKeys: Object.keys(saveStepDto.data || {}) })
+    this.logger.log(`[save] step=${saveStepDto.step} userId=${userId}`)
     const result = await this.onboardingService.saveStep(userId, saveStepDto.step, saveStepDto.data)
-    console.log('[ONBOARDING-SAVE] ✅ Step saved successfully:', { userId, step: saveStepDto.step })
     return result
   }
 
@@ -22,20 +22,18 @@ export class OnboardingController {
   @UseGuards(JwtAuthGuard)
   async loadProgress(@Request() req) {
     const userId = req.user.userId
-    console.log('[ONBOARDING-LOAD] 📖 Request received:', { userId })
     const steps = await this.onboardingService.loadProgress(userId)
-    console.log('[ONBOARDING-LOAD] ✅ Progress loaded:', { userId, stepKeys: Object.keys(steps || {}) })
     return { steps }
   }
 
   @Post('complete')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async complete(@Request() req, @Res({ passthrough: true }) res: Response, @Body() body: { type?: 'quick' | 'full', hub?: 'OWNER' | 'ACCOUNTANT' }) {
+  async complete(@Request() req, @Res({ passthrough: true }) res: Response, @Body() body: CompleteDto & { hub?: 'OWNER' | 'ACCOUNTANT' }) {
     const userId = req.user.userId
-    console.log('[ONBOARDING-COMPLETE] 🎯 Request received:', { userId, type: body.type, hub: body.hub })
     const type = body?.type || 'full'
     const hub = body?.hub || 'OWNER'
+    this.logger.log(`[complete] userId=${userId} type=${type} hub=${hub}`)
     // Return the result from the service so callers can access the created company (if any)
     const result = await this.onboardingService.complete(userId, type, hub)
 

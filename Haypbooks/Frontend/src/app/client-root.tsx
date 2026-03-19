@@ -1,13 +1,14 @@
 "use client"
 import { ReactNode, useEffect } from 'react'
-import AppShellHeader from '@/components/AppShellHeader'
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 import { PUBLIC_PATH_PREFIXES } from '../config/publicPaths'
-import Sidebar from '@/components/Sidebar'
+import PracticeHeader from '@/components/PracticeHeader'
 import CommandPalette from '@/components/CommandPalette'
 import { useCommandPalette } from '@/stores/commandPalette'
 import useUI from '@/stores/ui'
+import OwnerTopBar from '@/components/owner/OwnerTopBar'
+import OwnerSidebar from '@/components/owner/OwnerSidebar'
 
 const MockInit = dynamic(() => import('@/components/MockInit'), { ssr: false })
 
@@ -96,29 +97,32 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
   // Use centralized public path prefixes so new public pages can be registered
   // in one place and tests / runtime logic stay consistent.
   const isPublic = pathname === '/' || PUBLIC_PATH_PREFIXES.some(p => p !== '/' && pathname.startsWith(p))
+  const isPractice = pathname.startsWith('/practice-hub')
 
   return (
     <>
       {process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_MOCK_API === 'true' && <MockInit />}
-      {/* Early return for public pages to avoid rendering the app chrome */}
+      {/* Early return only for public pages (login, signup, etc.) */}
       {isPublic ? (
         <main id="main">{children}</main>
+      ) : isPractice ? (
+        // all practice-hub routes render without any header/secondary bar
+        <main id="main" className="w-full h-full">{children}</main>
       ) : (
+        /* Owner accounting app — full layout: green topbar + collapsible sidebar */
         <>
-          <a
-            href="#main"
-            className="absolute left-[-999px] top-2 z-[70] focus:left-2 inline-flex items-center rounded-xl bg-white px-3 py-2 text-slate-800 shadow-glass border border-slate-200"
-          >
-            Skip to content
-          </a>
-          <AppShellHeader />
-          <div className="layout-shell w-full mt-0 grid gap-4 md:[grid-template-columns:auto_minmax(0,1fr)]">
-            <Sidebar />
-            <main id="main">{children}</main>
+          <div className="h-screen flex flex-col overflow-hidden">
+            <OwnerTopBar />
+            <div className="flex flex-1 min-h-0 overflow-hidden">
+              <OwnerSidebar />
+              <main
+                id="main"
+                className="flex-1 min-w-0 bg-slate-50 overflow-y-auto"
+              >
+                {children}
+              </main>
+            </div>
           </div>
-          <footer className="w-[calc(100%-1rem)] md:w-[calc(100%-2rem)] mx-auto p-6 text-center text-slate-600 site-footer">
-            © {new Date().getFullYear()} HaypBooks
-          </footer>
           <CommandPalette />
         </>
       )}

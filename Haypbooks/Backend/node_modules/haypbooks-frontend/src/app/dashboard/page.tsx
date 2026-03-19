@@ -1,7 +1,7 @@
-import BusinessOverviewClient from '@/components/BusinessOverviewClient'
+import DashboardClient from './DashboardClient'
 
-export const metadata = { title: 'Overview' }
+export const metadata = { title: 'Dashboard — Haypbooks' }
 
-export default function DashboardPage(){
-  return <BusinessOverviewClient />
+export default function DashboardPage() {
+  return <DashboardClient />
 }

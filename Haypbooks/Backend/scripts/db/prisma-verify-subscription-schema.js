@@ -4,11 +4,11 @@ async function main() {
   const prisma = new PrismaClient()
   try {
     const cols = ['trialEndsAt','trialUsed','maxCompanies']
-    const res = await prisma.$queryRawUnsafe(`SELECT column_name FROM information_schema.columns WHERE table_name = 'Tenant' AND column_name = ANY($1)`, cols)
+    const res = await prisma.$queryRawUnsafe(`SELECT column_name FROM information_schema.columns WHERE table_name = 'Workspace' AND column_name = ANY($1)`, cols)
     const found = (res || []).map(r => r.column_name || r.column_name)
     const missing = cols.filter(c => !found.includes(c))
     if (missing.length) {
-      console.error('❌ Missing Tenant subscription/trial columns:', missing)
+      console.error('❌ Missing Workspace subscription/trial columns:', missing)
       process.exit(2)
     }
 
