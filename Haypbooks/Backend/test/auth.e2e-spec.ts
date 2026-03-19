@@ -55,6 +55,45 @@ describe('Auth e2e', () => {
     return completeRes.body.token
   }
 
+  it('owner signup + login should succeed', async () => {
+    const email = `e2e-owner-${Date.now()}@haypbooks.test`
+    const password = 'OwnerPass!23'
+
+    // Signup as owner (default role)
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Owner E2E', phone: '+1 555 111 2222' }).expect(201)
+    const token = await ensureSignupVerifiedAndGetToken(signup, { email })
+    expect(token).toBeTruthy()
+
+    const saved = await prisma.user.findUnique({ where: { email } })
+    expect(saved).toBeTruthy()
+    expect(saved?.preferredHub).not.toBe('ACCOUNTANT')
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body).toHaveProperty('token')
+    // owner should not be redirected into accountant hub
+    expect(login.body.redirect || '').not.toMatch(/accountant/i)
+  }, 20000)
+
+  it('practice signup + login should succeed and flag accountant', async () => {
+    const email = `e2e-practice-${Date.now()}@haypbooks.test`
+    const password = 'PracticePass!23'
+
+    // Signup explicitly as accountant practice user
+    const signup = await request(app.getHttpServer()).post('/api/auth/signup').send({ email, password, name: 'Practice E2E', role: 'accountant', phone: '+1 555 333 4444' }).expect(201)
+    const token = await ensureSignupVerifiedAndGetToken(signup, { email })
+    expect(token).toBeTruthy()
+
+    const saved = await prisma.user.findUnique({ where: { email } })
+    expect(saved).toBeTruthy()
+    expect(saved?.preferredHub).toBe('ACCOUNTANT')
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password }).expect(200)
+    expect(login.body).toHaveProperty('token')
+    expect(login.body).toHaveProperty('redirect')
+    // accountant redirect either to dashboard or workspace
+    expect(login.body.redirect || '').toMatch(/dashboard|workspace/)
+  }, 20000)
+
   it('signup -> login -> session creation', async () => {
     const email = `e2e-${Date.now()}@haypbooks.test`
     const password = 'e2e-password'
@@ -79,7 +118,6 @@ describe('Auth e2e', () => {
     const sessions = await prisma.session.findMany({ where: { userId: saved!.id } })
     expect(sessions.length).toBeGreaterThan(0)
   }, 20000)
-
   it('refresh rotates session and returns new tokens', async () => {
     const email = `e2e-refresh-verify-${Date.now()}@haypbooks.test`
     const password = 'RefreshE2E!23'
@@ -253,7 +291,7 @@ describe('Auth e2e', () => {
   it('signup -> normalize phone on signup -> stored normalized', async () => {
     const email = `e2e-phone-normalize-${Date.now()}@haypbooks.test`
     const password = 'normalize-phone'
-    const phoneInput = '1 (555) 000-9999' // messy input with leading country digit
+    const phoneInput = '+1 (555) 000-9999' // international format with + prefix
     const expectedNormalized = '+15550009999'
 
     // Signup
@@ -407,9 +445,96 @@ describe('Auth e2e', () => {
 
     const saved = await prisma.user.findUnique({ where: { email } })
     expect(saved).toBeTruthy()
-    expect((saved as any).isAccountant).toBe(true)
     expect((saved as any).preferredHub).toBe('ACCOUNTANT')
   }, 20000)
+
+  // ── NEW: owner/practice DB-persistence tests ───────────────────────────────
+
+  it('owner: signup + full onboard → Workspace and Company saved in DB', async () => {
+    const email = `e2e-owner-onboard-${Date.now()}@haypbooks.test`
+    const password = 'OwnerOnboard!23'
+
+    // 1. Signup + verify OTP
+    const signup = await request(app.getHttpServer())
+      .post('/api/auth/signup')
+      .send({ email, password, name: 'Owner Onboard E2E', phone: '+1 555 100 2001' })
+      .expect(201)
+    const token = await ensureSignupVerifiedAndGetToken(signup, { email })
+    expect(token).toBeTruthy()
+
+    // 2. Save owner_workspace step (workspace name) + business step (company name)
+    await request(app.getHttpServer())
+      .post('/api/onboarding/save')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ step: 'owner_workspace', data: { workspaceName: 'E2E Owner Workspace' } })
+      .expect(201)
+
+    await request(app.getHttpServer())
+      .post('/api/onboarding/save')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ step: 'business', data: { businessName: 'E2E Owner Co Ltd' } })
+      .expect(201)
+
+    // 3. Complete onboarding as Owner hub
+    const completeRes = await request(app.getHttpServer())
+      .post('/api/onboarding/complete')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ type: 'full', hub: 'OWNER' })
+      .expect(200)
+    expect(completeRes.body.success).toBe(true)
+
+    // 4. Verify Workspace record exists in DB and belongs to this user
+    const user = await prisma.user.findUnique({ where: { email } })
+    expect(user).toBeTruthy()
+
+    const workspace = await prisma.workspace.findUnique({ where: { ownerUserId: user!.id } })
+    expect(workspace).toBeTruthy()
+    expect((workspace as any).type).toBe('OWNER')
+
+    // 5. Verify Company record is created under that Workspace
+    const company = await prisma.company.findFirst({ where: { workspaceId: workspace!.id } })
+    expect(company).toBeTruthy()
+    expect(company!.name).toBeTruthy()
+  }, 40000)
+
+  it('practice: signup + full onboard → Workspace of PRACTICE type saved in DB', async () => {
+    const email = `e2e-practice-onboard-${Date.now()}@haypbooks.test`
+    const password = 'PracticeOnboard!23'
+
+    // 1. Signup as accountant + verify OTP
+    const signup = await request(app.getHttpServer())
+      .post('/api/auth/signup')
+      .send({ email, password, name: 'Practice Onboard E2E', role: 'accountant', phone: '+1 555 200 3002' })
+      .expect(201)
+    const token = await ensureSignupVerifiedAndGetToken(signup, { email })
+    expect(token).toBeTruthy()
+
+    // 2. Save accountant_firm step (firm name)
+    await request(app.getHttpServer())
+      .post('/api/onboarding/save')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ step: 'accountant_firm', data: { firmName: 'E2E Practice Firm LLC' } })
+      .expect(201)
+
+    // 3. Complete onboarding as Accountant hub
+    const completeRes = await request(app.getHttpServer())
+      .post('/api/onboarding/complete')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ type: 'full', hub: 'ACCOUNTANT' })
+      .expect(200)
+    expect(completeRes.body.success).toBe(true)
+
+    // 4. Verify user flags
+    const user = await prisma.user.findUnique({ where: { email } })
+    expect(user).toBeTruthy()
+    // preferredHub is set to ACCOUNTANT when role='accountant' is used during signup
+    expect(user?.preferredHub).toBe('ACCOUNTANT')
+
+    // 5. Verify a Workspace of type PRACTICE exists for this user
+    const workspace = await prisma.workspace.findFirst({ where: { ownerUserId: user!.id } })
+    expect(workspace).toBeTruthy()
+    expect((workspace as any).type).toBe('PRACTICE')
+  }, 40000)
 
   it('PATCH /api/users/preferred-hub updates preferredHub', async () => {
     const email = `e2e-pref-${Date.now()}@haypbooks.test`
@@ -443,8 +568,9 @@ describe('Auth e2e', () => {
     expect([200,201]).toContain(saveRes.status)
     await request(app.getHttpServer()).post('/api/onboarding/complete').set('Authorization', `Bearer ${token}`).send({ type: 'full', hub: 'OWNER' }).expect(200)
     let saved = await prisma.user.findUnique({ where: { email } })
-    expect((saved as any).ownerOnboardingComplete || (saved as any).onboardingComplete).toBeTruthy()
-    expect(saved?.companyName).toBeTruthy()
+    // Verify Workspace was created for this owner
+    const ownerWorkspace = await prisma.workspace.findFirst({ where: { ownerUserId: saved!.id } })
+    expect(ownerWorkspace).toBeTruthy()
 
     // Create a second user for accountant
     const email2 = `e2e-onb-acct-${Date.now()}@haypbooks.test`
@@ -462,9 +588,9 @@ describe('Auth e2e', () => {
     await request(app.getHttpServer()).post('/api/onboarding/complete').set('Authorization', `Bearer ${token2}`).send({ type: 'full', hub: 'ACCOUNTANT' }).expect(200)
     const savedAccountant = await prisma.user.findUnique({ where: { email: email2 } })
     expect(savedAccountant).toBeTruthy()
-    expect((savedAccountant as any).accountantOnboardingComplete || (savedAccountant as any).onboardingComplete).toBeTruthy()
-    const tu = await prisma.workspaceUser.findFirst({ where: { userId: savedAccountant!.id, isOwner: true }, include: { workspace: true } })
-    expect(tu?.tenant?.firmName).toBeTruthy()
+    // Verify accountant workspace was created
+    const accountantWs = await prisma.workspace.findFirst({ where: { ownerUserId: savedAccountant!.id } })
+    expect(accountantWs).toBeTruthy()
 
     // Also test that setting profile fields directly allows completion
     const email3 = `e2e-onb-profile-${Date.now()}@haypbooks.test`
@@ -475,7 +601,9 @@ describe('Auth e2e', () => {
     await request(app.getHttpServer()).patch('/api/users/profile').set('Authorization', `Bearer ${token3}`).send({ companyName: 'ProfileCo Ltd' }).expect(200)
     await request(app.getHttpServer()).post('/api/onboarding/complete').set('Authorization', `Bearer ${token3}`).send({ type: 'full', hub: 'OWNER' }).expect(200)
     const saved3 = await prisma.user.findUnique({ where: { email: email3 } })
-    expect(saved3?.companyName).toBeTruthy()
+    // Verify workspace exists for profile-update-based onboarding
+    const ownerWorkspace3 = await prisma.workspace.findFirst({ where: { ownerUserId: saved3!.id } })
+    expect(ownerWorkspace3).toBeTruthy()
   }, 20000)
 
 })

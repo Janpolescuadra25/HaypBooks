@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, HttpCode, HttpStatus, Query } from '@nestjs/common'
+import { CreateInviteDto } from './dto/create-invite.dto'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { TenantsService } from './tenants.service'
 
@@ -30,6 +31,20 @@ export class TenantsController {
   }
 
   /**
+   * Create a Practice under the authenticated user's owned workspace.
+   * POST /api/tenants/practices  { name: string, servicesOffered?: string }
+   */
+  @Post('practices')
+  @UseGuards(JwtAuthGuard)
+  async createPractice(
+    @Req() req: any,
+    @Body() body: { name: string; servicesOffered?: string },
+  ) {
+    const userId = req.user?.userId
+    return this.tenantsService.createPractice(userId, body.name, body.servicesOffered)
+  }
+
+  /**
    * Create an invite for a user to join a tenant
    * Owner invites accountant to access their tenant
    */
@@ -38,21 +53,38 @@ export class TenantsController {
   async createInvite(
     @Req() req: any,
     @Param('tenantId') workspaceId: string,
-    @Body() body: { email: string; roleId?: string }
+    @Body() dto: CreateInviteDto,
   ) {
     const userId = req.user?.userId
-    return this.tenantsService.createInvite(workspaceId, body.email, userId, body.roleId)
+    return this.tenantsService.createInvite(workspaceId, dto.email ?? null, userId, dto.roleId, dto.roleName, dto.isLinkInvite ?? false, dto.contactName, dto.message)
   }
 
   /**
    * Get pending invites for the current user
-   * Shows invitations the user hasn't accepted yet
+   * Shows invitations the user hasn't accepted yet (and any accepted/declined invite history)
    */
   @Get('invites/pending')
   @UseGuards(JwtAuthGuard)
   async getPendingInvites(@Req() req: any) {
     const email = req.user?.email
     return this.tenantsService.getPendingInvitesForEmail(email)
+  }
+
+  /**
+   * Decline a pending invite for the current user
+   */
+  @Post('invites/:inviteId/decline')
+  @UseGuards(JwtAuthGuard)
+  async declineInvite(@Req() req: any, @Param('inviteId') inviteId: string) {
+    const email = req.user?.email
+    return this.tenantsService.declineInviteForEmail(email, inviteId)
+  }
+
+  @Post(':tenantId/invites/:inviteId/cancel')
+  @UseGuards(JwtAuthGuard)
+  async cancelInvite(@Req() req: any, @Param('tenantId') tenantId: string, @Param('inviteId') inviteId: string) {
+    const userId = req.user?.userId
+    return this.tenantsService.cancelInviteByOwner(tenantId, userId, inviteId)
   }
 
   /**

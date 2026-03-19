@@ -11,6 +11,8 @@ const BACKEND_DIR = path.resolve(__dirname, '..')
 describe('Companies recent API (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaClient
+  // hold onto the token from login so other tests can reuse
+  let token: string
 
   beforeAll(async () => {
     process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
@@ -61,7 +63,9 @@ describe('Companies recent API (e2e)', () => {
     // Call recent API and assert ordering (demo tenant should be first because seeded with now())
     const res1 = await request(app.getHttpServer()).get('/api/companies/recent').set('Authorization', `Bearer ${token}`).expect(200)
     expect(Array.isArray(res1.body)).toBe(true)
-    // Find positions for demo and second
+    // each item should include id and name
+    expect(res1.body.every((i: any) => i.id && typeof i.name === 'string')).toBe(true)
+    // Find positions for demo and second by id
     const ids = res1.body.map((r: any) => r.id)
     const demoIdx = ids.indexOf(tenant!.id)
     const secondIdx = ids.indexOf(secondTenantId)
@@ -76,5 +80,10 @@ describe('Companies recent API (e2e)', () => {
     const res2 = await request(app.getHttpServer()).get('/api/companies/recent').set('Authorization', `Bearer ${token}`).expect(200)
     const ids2 = res2.body.map((r: any) => r.id)
     expect(ids2[0]).toBe(secondTenantId)
+
+    // and ensure the convenience /current endpoint returns that same company object
+    const cur = await request(app.getHttpServer()).get('/api/company/current').set('Authorization', `Bearer ${token}`).expect(200)
+    expect(cur.body).toMatchObject({ id: secondTenantId, name: 'Second Company' })
+    expect(cur.body.id).toBe(secondTenantId) // sanity check
   }, 30000)
 })

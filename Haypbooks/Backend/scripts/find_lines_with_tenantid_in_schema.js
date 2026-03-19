@@ -1,0 +1,1 @@
+const fs=require('fs'); const path=require('path'); const fp=path.resolve(__dirname,'..','prisma','schema.prisma'); const s=fs.readFileSync(fp,'utf8'); const lines=s.split(/\r?\n/); let found=0; for(let i=0;i<lines.length;i++){ if(lines[i].includes('tenantId')){ console.log('Line',i+1,':',lines[i]); found++; } } console.log('Total lines containing tenantId:',found);

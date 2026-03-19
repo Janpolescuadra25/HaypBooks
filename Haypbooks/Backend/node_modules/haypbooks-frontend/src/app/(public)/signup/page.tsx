@@ -1,7 +1,7 @@
 "use client"
-"use client"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ArrowRight } from 'lucide-react'
 import { authService } from '@/services/auth.service'
 import AuthLayout from '@/components/auth/AuthLayout' 
 import { useForm } from 'react-hook-form'
@@ -12,14 +12,11 @@ import { z } from 'zod'
 export default function SignupPage() {
   const router = useRouter()
 
-  // If navigated to signup with explicit showSignup=1, opt out of the cinematic intro immediately
+  // Always suppress the cinematic intro when landing on the signup page
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        const p = new URLSearchParams(window.location.search)
-        if (p.get('showSignup') === '1') {
-          try { localStorage.setItem('hasSeenIntro', 'true') } catch {}
-        }
+        try { localStorage.setItem('hasSeenIntro', 'true') } catch {}
       }
     } catch (e) {}
   }, [])
@@ -35,7 +32,8 @@ export default function SignupPage() {
         await authService.getCurrentUser()
         
         if (!mounted) return
-        router.replace('/')
+        // Redirect to the main app, not '/' which may trigger the cinematic intro
+        router.replace('/companies')
       } catch (e) {
         // If stored user is stale, clear it and allow signup
         if (typeof window !== 'undefined') {
@@ -58,7 +56,10 @@ export default function SignupPage() {
 
     return () => { mounted = false }
   }, [router])
-  // Basic shape validation with zod; companyName is validated dynamically based on selected role
+  
+  // no default role otherwise – leave both buttons unselected until user chooses
+  // (role stays null so neither button gets the selected styling)
+
   const signupSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
@@ -80,7 +81,8 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   // roleSelectionStep: 'role' shows the initial choice UI; 'form' shows the signup form
   const [step, setStep] = useState<'role'|'form'>('role')
-  const [role, setRole] = useState<'business'|'accountant'>('business')
+  // start with no role selected to avoid automatically highlighting Business Owner
+  const [role, setRole] = useState<'business'|'accountant'|null>(null)
 
   const passwordStrength = (password: string) => {
     if (password.length === 0) return { strength: 0, label: '', color: '' }
@@ -145,61 +147,62 @@ export default function SignupPage() {
   }
 
   return (
-    <AuthLayout innerClassName="max-w-sm w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20 relative z-10 animate-slide-up">
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-3 shadow-lg animate-scale-in">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Create your account</h1>
-          <p className="text-sm text-slate-600 mt-1">Manage your accounting with clarity and confidence using HaypBooks.</p>
+    <AuthLayout>
+        <div className="mb-10">
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            {step === 'role' ? 'Join Haypbooks' : 'Create your account'}
+          </h2>
+          <p className="text-slate-500">
+            {step === 'role'
+              ? 'Which best describes your role?'
+              : `Setting up for ${role === 'accountant' ? 'My Practice' : 'My Business'}`}
+          </p>
+        </div>
 
           {/* Role selection step */}
           {step === 'role' ? (
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Which best describes your role?</h3>
-              <div className="flex flex-col gap-3">
-                <style>{`@keyframes breatheRole { 0%,100% { transform: translateY(-4px) scale(1.02); } 50% { transform: translateY(-6px) scale(1.03); } } @media (prefers-reduced-motion: reduce) { .breatheRole { animation: none !important; } }`}</style>
+            <div>
+              <div className="flex flex-col gap-4">
 
                 <button
                   type="button"
                   data-testid="signup-role-business"
-                  aria-pressed={role === 'business'}
                   onClick={() => { setRole('business'); setStep('form') }}
-className={`option-card text-center p-3 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-102 hover:-translate-y-0.5 hover:shadow-sm hover:border-emerald-600 hover:ring-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'business' ? 'bg-emerald-50 shadow-sm breatheRole border-emerald-500' : ''}` }
+                  className={`flex items-start gap-4 p-5 border-2 rounded-2xl text-left transition-all hover:border-emerald-400 hover:bg-emerald-50/50 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'business' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'}`}
                 >
-                  <div className="font-medium">My Business</div>
-                  <div className="text-sm text-slate-500">I’m the owner running and managing my business</div>
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900">Business Owner</div>
+                    <div className="text-sm text-slate-500 mt-0.5">I want to manage my company's finances and ledgers.</div>
+                  </div>
                 </button>
 
                 <button
                   type="button"
                   data-testid="signup-role-accountant"
-                  aria-pressed={role === 'accountant'}
                   onClick={() => { setRole('accountant'); setStep('form') }}
-className={`option-card text-center p-4 rounded-2xl border-2 border-slate-200 bg-white shadow-sm transform-gpu transition-transform duration-200 ease-out hover:scale-105 hover:-translate-y-1 hover:shadow-md hover:border-emerald-600 hover:ring-4 hover:ring-emerald-100 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'accountant' ? 'bg-teal-50 shadow-md breatheRole border-emerald-500' : ''}` }
+                  className={`flex items-start gap-4 p-5 border-2 rounded-2xl text-left transition-all hover:border-emerald-400 hover:bg-emerald-50/50 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${role === 'accountant' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'}`}
                 >
-                  <div className="font-medium">Accountant</div>
-                  <div className="text-sm text-slate-500">I support clients by managing their accounts</div>
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900">Accounting Professional</div>
+                    <div className="text-sm text-slate-500 mt-0.5">I want to manage multiple client practices and advisory services.</div>
+                  </div>
                 </button>
               </div>
             </div>
           ) : null}
 
-        </div>
-
-        {/* Add small style block to ensure hover border/shadow match other option-cards */}
-        <style>{`.option-card:hover { transform: translateY(-2px); box-shadow: 0 12px 18px -4px rgba(0,0,0,0.08), 0 6px 8px -4px rgba(0,0,0,0.03); border-color: #10b981; }
-          .option-card:focus-visible { box-shadow: 0 0 0 4px rgba(16,185,129,0.08); }
-        `}</style>
-
         {step === 'form' ? (
           <>
-            <div className="mb-4 flex items-center justify-start">
-              <button data-testid="signup-back-to-role" type="button" onClick={() => setStep('role')} aria-label="Back to role selection" className="text-sm text-slate-600 hover:text-slate-800 inline-flex items-center gap-2">
+            <div className="mb-6 flex items-center justify-start">
+              <button data-testid="signup-back-to-role" type="button" onClick={() => setStep('role')} aria-label="Change role" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-semibold text-sm">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
-                Back
+                Change role
               </button>
             </div>
             <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5" noValidate>
@@ -208,11 +211,11 @@ className={`option-card text-center p-4 rounded-2xl border-2 border-slate-200 bg
                 <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-2">
                   First name
                 </label>
-                <input
+                <input aria-label="First name"
                   id="firstName"
                   type="text"
                   {...register('firstName')}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
+                  className="w-full px-5 py-3.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                   placeholder="Juan"
                   required
                 />
@@ -221,11 +224,11 @@ className={`option-card text-center p-4 rounded-2xl border-2 border-slate-200 bg
                 <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-2">
                   Last name
                 </label>
-                <input
+                <input aria-label="Last name"
                   id="lastName"
                   type="text"
                   {...register('lastName')}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white"
+                  className="w-full px-5 py-3.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                   placeholder="Dela Cruz"
                   required
                 />
@@ -243,7 +246,7 @@ className={`option-card text-center p-4 rounded-2xl border-2 border-slate-200 bg
                   id="email"
                   type="email"
                   {...register('email')}
-                  className="truncate w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/50 hover:bg-white pr-12"
+                  className="truncate w-full px-5 py-3.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all pr-12"
                   placeholder="name@company.com"
                   required
                 />
@@ -378,7 +381,7 @@ className={`option-card text-center p-4 rounded-2xl border-2 border-slate-200 bg
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.98]"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
             disabled={loading || isSubmitting || !isValid}
             aria-disabled={loading || isSubmitting || !isValid}
           >
@@ -390,7 +393,7 @@ className={`option-card text-center p-4 rounded-2xl border-2 border-slate-200 bg
                 </svg>
                 Creating account...
               </span>
-            ) : 'Create account'}
+            ) : (<><span>Create account</span><ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>)}
           </button>
 
           <p className="text-xs text-slate-500 text-center">

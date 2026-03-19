@@ -1,156 +1,87 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
-import { AppModule } from './../src/app.module'
-import { PrismaService } from '../src/repositories/prisma/prisma.service'
+import { AppModule } from '../src/app.module'
+import { PrismaClient } from '@prisma/client'
+import { execSync } from 'child_process'
+import * as path from 'path'
 
-describe('Payroll submit flow (e2e)', () => {
+const BACKEND_DIR = path.resolve(__dirname, '..')
+
+// migrations and DB setup can take a while in CI – bump jest timeout
+jest.setTimeout(120000)
+
+describe('Payroll run submission e2e', () => {
   let app: INestApplication
-  let prisma: PrismaService
-  let workspaceId: string
+  let prisma: PrismaClient
+  let companyId: string
   let employeeId: string
+  let payScheduleId: string
+  let runId: string
 
   beforeAll(async () => {
+    process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
+    execSync('node ./scripts/test/setup-test-db.js --recreate', { cwd: BACKEND_DIR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL } })
+
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleFixture.createNestApplication()
-    prisma = app.get<PrismaService>(PrismaService)
     await app.init()
-    // backup tenantId_uuid_old columns have been removed; no test DB alterations required
 
-    const tenantId = require('crypto').randomUUID()
-    await prisma.$executeRawUnsafe('INSERT INTO public."Tenant" ("id","createdAt","updatedAt") VALUES ($1::uuid, now(), now())', tenantId)
-    const tenant = { id: tenantId }
-    tenantId = tenant.id
-    const emp = await prisma.employee.create({ data: { workspaceId, firstName: 'Pay', lastName: 'Run', payRate: 20.0, payType: 'HOURLY' } })
-    employeeId = emp.id
-    // create basic tax rates for tenant to ensure payroll calculates taxes
-    await prisma.taxRate.create({ data: { workspaceId, jurisdiction: 'FEDERAL', name: 'Federal Tax', rate: 0.1, effectiveFrom: new Date('2020-01-01') } })
-    await prisma.taxRate.create({ data: { workspaceId, jurisdiction: 'STATE', name: 'State Tax', rate: 0.05, effectiveFrom: new Date('2020-01-01') } })
-  })
+    prisma = new PrismaClient()
+
+    const comp = await prisma.company.findFirst()
+    companyId = comp ? comp.id : ''
+
+    // pick seeded employee and pay schedule from seed script
+    const emp = await prisma.employee.findFirst({ where: { companyId } })
+    employeeId = emp ? emp.id : ''
+    const ps  = await prisma.paySchedule.findFirst({ where: { companyId } })
+    payScheduleId = ps ? ps.id : ''
+  }, 60000)
 
   afterAll(async () => {
-    // clean up Journal Entries first, then payroll artifacts, then tenant
-    await prisma.journalEntryLine.deleteMany({ where: { journal: { workspaceId } } }).catch(() => {})
-    await prisma.journalEntry.deleteMany({ where: { workspaceId } }).catch(() => {})
-    // delete paycheck dependents in correct order: taxes, lines, then paychecks
-    await prisma.paycheckTax.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.paycheckLine.deleteMany({ where: { paycheck: { workspaceId } } }).catch(() => {})
-    await prisma.paycheck.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.payrollRunEmployee.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.payrollRun.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.account.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.taxRate.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.employee.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.taxRate.deleteMany({ where: { workspaceId } }).catch(() => {})
-    try {
-      await prisma.tenant.deleteMany({ where: { id: workspaceId } })
-    } catch (err) {
-      console.error('Failed deleting tenant during teardown:', err)
-      try {
-        const tables: Array<{ table_name: string }> = await prisma.$queryRaw`
-          SELECT DISTINCT table_name FROM information_schema.columns
-          WHERE column_name = 'tenantId' AND table_schema = 'public'
-        `
-        for (const t of tables) {
-          try {
-            const counts: Array<{ c: string }> = await prisma.$queryRawUnsafe(
-              `SELECT count(*) AS c FROM "${t.table_name}" WHERE "tenantId" = '${tenantId}'`
-            )
-            console.error(`Rows in ${t.table_name}:`, counts[0]?.c)
-          } catch (innerErr) {
-            // ignore per-table errors but log them
-            console.error(`Error counting rows in ${t.table_name}:`, innerErr)
-          }
-        }
-      } catch (diagErr) {
-        console.error('Error during teardown diagnostics:', diagErr)
-      }
-    }
     await app.close()
+    await prisma.$disconnect()
   })
 
-  it('submits payroll and creates journal entry', async () => {
-    const payload = { tenantId, startDate: new Date().toISOString(), endDate: new Date().toISOString(), rows: [{ employeeId, hours: 40 }], description: 'Pay run' }
-    const res = await request(app.getHttpServer()).post('/api/payroll/submit').send(payload)
-    if (res.status !== 201) console.error('Payroll submit failed:', res.status, JSON.stringify(res.body, null, 2), 'text:', res.text)
-    expect(res.status).toBe(201)
-    expect(res.body.payrollRun).toBeTruthy()
-    expect(res.body.paychecks.length).toBe(1)
+  it('can create, process, post and void a payroll run', async () => {
+    // create run
+    const start = new Date().toISOString().slice(0, 10)
+    const end = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-    // verify journal entry created
-    const je = await prisma.journalEntry.findFirst({ where: { workspaceId, description: { contains: 'Pay run' } } })
-    expect(je).toBeTruthy()
+    const createRes = await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/payroll/runs`)
+      .send({ startDate: start, endDate: end, payScheduleId, employeeIds: [employeeId] })
+      .expect(201)
+    expect(createRes.body).toHaveProperty('id')
+    runId = createRes.body.id
 
-    // verify paycheck taxes persisted
-    const paychecks = res.body.paychecks
-    expect(paychecks.length).toBeGreaterThan(0)
-    const taxes = await prisma.paycheckTax.findMany({ where: { workspaceId, paycheckId: paychecks[0].id } })
-    expect(taxes.length).toBeGreaterThan(0)
+    // list runs and ensure draft
+    const listRes = await request(app.getHttpServer()).get(`/api/companies/${companyId}/payroll/runs`).expect(200)
+    expect(Array.isArray(listRes.body)).toBe(true)
+    const draft = listRes.body.find((r: any) => r.id === runId)
+    expect(draft).toBeDefined()
+    expect(draft.status).toBe('DRAFT')
 
-    // verify journal entry lines sum to zero
-    if (!je) throw new Error('JournalEntry missing')
-    const lines = await prisma.journalEntryLine.findMany({ where: { journalId: je.id } })
-    const total = lines.reduce((acc, l) => acc + Number(l.debit || 0) - Number(l.credit || 0), 0)
-    expect(Math.abs(total)).toBeLessThan(0.001)
-  })
+    // process run -> status should become SUBMITTED
+    await request(app.getHttpServer()).post(`/api/companies/${companyId}/payroll/runs/${runId}/process`).expect(200)
+    const afterProcess = await request(app.getHttpServer()).get(`/api/companies/${companyId}/payroll/runs/${runId}`).expect(200)
+    expect(afterProcess.body.status).toBe('SUBMITTED')
 
-  it('allows tenant deletion after payroll run (regression)', async () => {
-    // replicate cleanup steps to verify no FK RESTRICT prevents tenant deletion
-    await prisma.paycheckTax.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.paycheckLine.deleteMany({ where: { paycheck: { workspaceId } } }).catch(() => {})
-    await prisma.paycheck.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.payrollRunEmployee.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.payrollRun.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.employee.deleteMany({ where: { workspaceId } }).catch(() => {})
-    // Remove journal entries first, then attempt to remove rows that reference tenant accounts (by accountId) before deleting accounts
-    await prisma.journalEntryLine.deleteMany({ where: { journal: { workspaceId } } }).catch(() => {})
-    await prisma.journalEntry.deleteMany({ where: { workspaceId } }).catch(() => {})
-    try {
-      const acctTables: Array<{ table_name: string }> = await prisma.$queryRaw`
-        SELECT DISTINCT table_name FROM information_schema.columns
-        WHERE column_name = 'accountId' AND table_schema = 'public'
-      `
-      const accs = await prisma.account.findMany({ where: { workspaceId }, select: { id: true } })
-      const accIds = accs.map(a => a.id)
-      if (accIds.length > 0) {
-        for (const t of acctTables) {
-          try {
-            await prisma.$executeRawUnsafe(
-              `DELETE FROM "${t.table_name}" WHERE "accountId" IN (${accIds.map(a => `'${a}'`).join(',')}) OR "tenantId" = '${tenantId}'`
-            )
-          } catch (e) {
-            // ignore per-table delete errors
-          }
-        }
-      }
-    } catch (cleanupErr) {
-      // ignore diagnostic errors
-    }
+    // paychecks should exist
+    const payRes = await request(app.getHttpServer()).get(`/api/companies/${companyId}/payroll/paychecks`).expect(200)
+    expect(Array.isArray(payRes.body)).toBe(true)
+    expect(payRes.body.length).toBeGreaterThan(0)
+    expect(payRes.body[0]).toHaveProperty('employee')
 
-    await prisma.account.deleteMany({ where: { workspaceId } }).catch(() => {})
-    await prisma.taxRate.deleteMany({ where: { workspaceId } }).catch(() => {})
+    // post run
+    await request(app.getHttpServer()).post(`/api/companies/${companyId}/payroll/runs/${runId}/post`).expect(200)
+    const afterPost = await request(app.getHttpServer()).get(`/api/companies/${companyId}/payroll/runs/${runId}`).expect(200)
+    expect(afterPost.body.status).toBe('POSTED')
 
-    // Best-effort multi-pass cleanup across all tenant-scoped tables to avoid FK RESTRICT ordering issues
-    const tenantTables: Array<{ table_name: string }> = await prisma.$queryRaw`
-      SELECT DISTINCT table_name FROM information_schema.columns
-      WHERE column_name = 'tenantId' AND table_schema = 'public'
-    `
-    let deleted = false
-    for (let pass = 0; pass < 5 && !deleted; pass++) {
-      for (const t of tenantTables) {
-        try {
-          await prisma.$executeRawUnsafe(`DELETE FROM "${t.table_name}" WHERE "tenantId" = '${tenantId}'`)
-        } catch (e) {
-          // ignore table-level errors and continue
-        }
-      }
-      try {
-        const del = await prisma.tenant.deleteMany({ where: { id: workspaceId } })
-        if (del.count && del.count > 0) deleted = true
-      } catch (e) {
-        // continue to next pass
-      }
-    }
-    expect(deleted).toBe(true)
+    // void run (should still succeed but mark voided)
+    await request(app.getHttpServer()).post(`/api/companies/${companyId}/payroll/runs/${runId}/void`).expect(200)
+    const afterVoid = await request(app.getHttpServer()).get(`/api/companies/${companyId}/payroll/runs/${runId}`).expect(200)
+    expect(afterVoid.body.status).toBe('VOID')
   })
 })

@@ -10,6 +10,9 @@ export interface Toast {
 
 interface ToastContextValue {
   push: (t: Omit<Toast, 'id'>) => void;
+  success: (message: string, ttl?: number) => void;
+  error: (message: string, ttl?: number) => void;
+  info: (message: string, ttl?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -21,6 +24,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const id = Math.random().toString(36).slice(2, 8);
     setToasts((prev) => [...prev, { id, ttl: 4000, ...t }]);
   }, []);
+
+  const success = useCallback((message: string, ttl?: number) => push({ type: 'success', message, ttl }), [push]);
+  const error   = useCallback((message: string, ttl?: number) => push({ type: 'error', message, ttl: ttl ?? 6000 }), [push]);
+  const info    = useCallback((message: string, ttl?: number) => push({ type: 'info', message, ttl }), [push]);
 
   useEffect(() => {
     if (!toasts.length) return;
@@ -34,7 +41,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, [toasts]);
 
   return (
-    <ToastContext.Provider value={{ push }}>
+    <ToastContext.Provider value={{ push, success, error, info }}>
       {children}
       {/* Portal container */}
       <div aria-live="polite" className="fixed z-[100] inset-0 pointer-events-none flex flex-col items-end gap-2 p-4 sm:p-6">
@@ -61,16 +68,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast() {
   // Early return during SSR to avoid invoking React hooks in a non-react render context
   if (typeof window === 'undefined') {
-    return { push: () => {} } as ToastContextValue
+    const noop = () => {};
+    return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue
   }
 
   try {
     const ctx = useContext(ToastContext);
-    // Return a no-op push when a provider is not present (helps tests and non-critical render paths)
-    if (!ctx) return { push: () => {} } as ToastContextValue;
+    // Return a no-op when a provider is not present (helps tests and non-critical render paths)
+    if (!ctx) {
+      const noop = () => {};
+      return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue;
+    }
     return ctx;
   } catch (e) {
-    // Defensive: if React.useContext is unavailable during some server prerender path, return no-op
-    return { push: () => {} } as ToastContextValue;
+    const noop = () => {};
+    return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue;
   }
 }

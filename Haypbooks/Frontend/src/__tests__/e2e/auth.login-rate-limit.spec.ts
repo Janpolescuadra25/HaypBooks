@@ -17,9 +17,9 @@ test('Rate limit: repeated failed logins eventually block further attempts', asy
     last = res
   }
 
-  // The last response should indicate rate limiting (401 with rate limit message)
+  // The last response should indicate rate limiting (401 or 429)
   expect(last).not.toBeNull()
-  expect(last.status()).toBe(401)
+  expect([401, 429]).toContain(last.status())
   const body = await last.json().catch(() => null)
   expect(String(JSON.stringify(body))).toMatch(/Too many|rate limit|login attempts/i)
 

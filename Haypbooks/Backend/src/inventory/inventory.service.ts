@@ -1,193 +1,367 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
+import { InventoryRepository } from './inventory.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
-import { JournalService } from '../accounting/journal.service'
-import { assertCompanyBelongsToTenant } from '../common/company-utils'
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService, private readonly journal: JournalService) {}
+    constructor(private readonly repo: InventoryRepository, private readonly prisma: PrismaService) { }
 
-  async createItem(tenantId: string, payload: any) {
-    const workspaceId = tenantId
-
-    if (!payload.name) throw new BadRequestException('name is required')
-    return this.prisma.item.create({ data: { workspaceId, sku: payload.sku, name: payload.name, type: payload.type || 'INVENTORY' } as any })
-  }
-
-  async getItem(id: string) {
-    const item = await this.prisma.item.findUnique({ where: { id } })
-    if (!item) throw new NotFoundException('Item not found')
-    return item
-  }
-
-  async listItems(tenantId: string, filter?: any) {
-    const workspaceId = tenantId
-
-    return this.prisma.item.findMany({ where: { workspaceId, ...(filter || {}) } })
-  }
-
-  async createStockLocation(tenantId: string, payload: any) {
-    const workspaceId = tenantId
-
-    if (!payload.name) throw new BadRequestException('name is required')
-    await assertCompanyBelongsToTenant(this.prisma, payload.companyId, tenantId)
-    return this.prisma.stockLocation.create({ data: { workspaceId, companyId: payload.companyId || null, name: payload.name, description: payload.description || null, isDefault: !!payload.isDefault } as any })
-  }
-
-  async getStockLevel(tenantId: string, itemId: string, stockLocationId: string) {
-    const workspaceId = tenantId
-
-    return this.prisma.stockLevel.findUnique({ where: { companyId_itemId_stockLocationId: { workspaceId, itemId, stockLocationId } } } as any)
-  }
-
-  async ensureStockLevel(tx, workspaceId: string, itemId: string, stockLocationId: string, companyId?: string | null) {
-    // returns the stockLevel record, creating it if missing
-    let sl = await tx.stockLevel.findUnique({ where: { companyId_itemId_stockLocationId: { workspaceId, itemId, stockLocationId } } } as any)
-    if (!sl) {
-    if (companyId) await assertCompanyBelongsToTenant(this.prisma, companyId, workspaceId)
-      sl = await tx.stockLevel.create({ data: { workspaceId, companyId: companyId || null, itemId, stockLocationId, quantity: 0, reserved: 0 } as any })
+    private async getWorkspaceId(companyId: string) {
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { workspaceId: true } })
+        if (!company) throw new NotFoundException('Company not found')
+        return company.workspaceId
     }
-    return sl
-  }
 
-  async receiveStock(tenantId: string, payload: any) {
-    const workspaceId = tenantId
-    // payload: { transactionNumber?, lines: [ { itemId, stockLocationId, qty, unitCost } ], companyId }
-    if (!payload.lines || payload.lines.length === 0) throw new BadRequestException('lines required')
-    // Debug: log companyId for failing tests where company lookup unexpectedly fails
-    // Remove after troubleshooting
-    if (payload.companyId) console.debug('receiveStock companyId:', payload.companyId)
-    await assertCompanyBelongsToTenant(this.prisma, payload.companyId, tenantId)
-    return this.prisma.$transaction(async (tx) => {
-      const txRecord = await tx.inventoryTransaction.create({ data: { workspaceId, companyId: payload.companyId || null, transactionNumber: payload.transactionNumber || null, type: 'RECEIPT', reference: payload.reference || null } as any })
-      for (const l of payload.lines) {
-        const itemId = l.itemId
-        const stockLocationId = l.stockLocationId
-        const qty = Number(l.qty)
-        if (!itemId || !stockLocationId || qty <= 0) throw new BadRequestException('invalid line')
+    private async assertAccess(userId: string, companyId: string) {
+        const m = await this.prisma.workspaceUser.findFirst({
+            where: { status: 'ACTIVE', userId, workspace: { companies: { some: { id: companyId } } } },
+        })
+        if (!m) throw new ForbiddenException('Access denied')
+    }
 
-        const txLine = await tx.inventoryTransactionLine.create({ data: { workspaceId, companyId: payload.companyId || null, transactionId: txRecord.id, itemId, stockLocationId, qty, unitCost: l.unitCost || null, lineType: 'RECEIPT_LINE' } as any })
+    // ─── Items ────────────────────────────────────────────────────────────────
 
-        const sl = await this.ensureStockLevel(tx, tenantId, itemId, stockLocationId, payload.companyId || null)
-        // create a cost layer for the received qty
-        await tx.inventoryCostLayer.create({ data: { workspaceId, companyId: payload.companyId || null, itemId, inventoryTxLineId: txLine.id, quantity: qty, remainingQty: qty, unitCost: l.unitCost || 0 } as any })
-        await tx.stockLevel.update({ where: { id: sl.id }, data: { quantity: { increment: qty } } as any })
-      }
-      // Create journal entries per item aggregated
-      // Aggregate debits by account
-      const jLines = [] as any[]
-      for (const l of payload.lines) {
-        const item = await tx.item.findUnique({ where: { id: l.itemId } })
-        const unitCost = Number(l.unitCost || 0)
-        const amount = unitCost * Number(l.qty)
-        if (item?.inventoryAssetAccountId) {
-          jLines.push({ accountId: item.inventoryAssetAccountId, debitAmount: amount })
-          // offset: if company provided, use AP account as a default offset if exists; otherwise skip entry
-          // For now we will credit a 'inventorySuspense' placeholder account if exists
-          const suspenseAcc = await tx.account.findFirst({ where: { code: 'INV-SUSPENSE' } })
-          if (suspenseAcc) {
-            jLines.push({ accountId: suspenseAcc.id, creditAmount: amount })
-          }
-        }
-      }
-      if (jLines.length > 0) {
-          await this.journal.createEntry(payload.companyId || null, { tenantId, date: new Date().toISOString(), description: `Inventory receipt ${txRecord.transactionNumber || txRecord.id}`, lines: jLines } as any)
-      }
-      return txRecord
-    })
-  }
+    async listItems(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.findItems(companyId, { search: opts.search, type: opts.type, limit: opts.limit ? parseInt(opts.limit) : 50, offset: opts.offset ? parseInt(opts.offset) : 0 })
+    }
 
-  async shipStock(tenantId: string, payload: any) {
-    const workspaceId = tenantId
-    // payload: { transactionNumber?, lines: [ { itemId, stockLocationId, qty } ], companyId }
-    if (!payload.lines || payload.lines.length === 0) throw new BadRequestException('lines required')
-    await assertCompanyBelongsToTenant(this.prisma, payload.companyId, tenantId)
-    return this.prisma.$transaction(async (tx) => {
-      const txRecord = await tx.inventoryTransaction.create({ data: { workspaceId, companyId: payload.companyId || null, transactionNumber: payload.transactionNumber || null, type: 'SHIPMENT', reference: payload.reference || null } })
-      for (const l of payload.lines) {
-        const itemId = l.itemId
-        const stockLocationId = l.stockLocationId
-        const qty = Number(l.qty)
-        if (!itemId || !stockLocationId || qty <= 0) throw new BadRequestException('invalid line')
+    async getItem(userId: string, companyId: string, itemId: string) {
+        await this.assertAccess(userId, companyId)
+        const item = await this.repo.findItemById(companyId, itemId)
+        if (!item) throw new NotFoundException('Item not found')
+        return item
+    }
 
-        const sl = await tx.stockLevel.findUnique({ where: { companyId_itemId_stockLocationId: { companyId: payload.companyId || null, itemId, stockLocationId } } } as any)
-        if (!sl || sl.quantity.toNumber() < qty) throw new BadRequestException('insufficient stock')
+    async createItem(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.name) throw new BadRequestException('name is required')
+        if (!data.type) throw new BadRequestException('type is required')
+        return this.repo.createItem(companyId, {
+            ...data,
+            salesPrice: data.salesPrice ? Number(data.salesPrice) : undefined,
+            purchaseCost: data.purchaseCost ? Number(data.purchaseCost) : undefined,
+        })
+    }
 
-        const txLine = await tx.inventoryTransactionLine.create({ data: { workspaceId, companyId: payload.companyId || null, transactionId: txRecord.id, itemId, stockLocationId, qty, lineType: 'SHIPMENT_LINE' } })
+    async updateItem(userId: string, companyId: string, itemId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const item = await this.repo.findItemById(companyId, itemId)
+        if (!item) throw new NotFoundException('Item not found')
+        return this.repo.updateItem(companyId, itemId, data)
+    }
 
-        await tx.stockLevel.update({ where: { id: sl.id }, data: { quantity: { decrement: qty } } as any })
-        // consume cost layers FIFO to compute COGS
-        let remaining = qty
-        let totalCogs = 0
-        const costLayers = await tx.inventoryCostLayer.findMany({ where: { itemId, remainingQty: { gt: 0 } }, orderBy: { createdAt: 'asc' } })
-        for (const layer of costLayers) {
-          if (remaining <= 0) break
-          const available = Number(layer.remainingQty)
-          const consume = Math.min(available, remaining)
-          const cogsPart = consume * Number(layer.unitCost)
-          totalCogs += cogsPart
-          // decrement layer.remainingQty
-          await tx.inventoryCostLayer.update({ where: { id: layer.id }, data: { remainingQty: { decrement: consume } as any } as any })
-          remaining -= consume
-        }
-        // create journal entry for COGS if item has mapping
-        const itemRow = await tx.item.findUnique({ where: { id: itemId } })
-        if (itemRow?.cogsAccountId && itemRow?.inventoryAssetAccountId) {
-          // debit COGS, credit inventory asset
-          await this.journal.createEntry(payload.companyId || null, { tenantId, date: new Date().toISOString(), description: `COGS for shipment ${txRecord.transactionNumber || txRecord.id}`, lines: [ { accountId: itemRow.cogsAccountId, debitAmount: totalCogs }, { accountId: itemRow.inventoryAssetAccountId, creditAmount: totalCogs } ] } as any)
-        }
-      }
-      return txRecord
-    })
-  }
+    async deleteItem(userId: string, companyId: string, itemId: string) {
+        await this.assertAccess(userId, companyId)
+        const item = await this.repo.findItemById(companyId, itemId)
+        if (!item) throw new NotFoundException('Item not found')
+        return this.repo.softDeleteItem(itemId, userId)
+    }
 
-  async transferStock(tenantId: string, payload: any) {
-    const workspaceId = tenantId
-    // payload: { transactionNumber?, fromLocationId, toLocationId, lines: [ { itemId, qty } ], companyId }
-    if (!payload.lines || payload.lines.length === 0) throw new BadRequestException('lines required')
-    if (!payload.fromLocationId || !payload.toLocationId) throw new BadRequestException('from/to required')
-    await assertCompanyBelongsToTenant(this.prisma, payload.companyId, tenantId)
-    return this.prisma.$transaction(async (tx) => {
-      const txRecord = await tx.inventoryTransaction.create({ data: { workspaceId, companyId: payload.companyId || null, transactionNumber: payload.transactionNumber || null, type: 'TRANSFER', reference: payload.reference || null } })
-      for (const l of payload.lines) {
-        const itemId = l.itemId
-        const qty = Number(l.qty)
-        if (!itemId || qty <= 0) throw new BadRequestException('invalid line')
+    // ─── Stock ────────────────────────────────────────────────────────────────
 
-        const slFrom = await tx.stockLevel.findUnique({ where: { companyId_itemId_stockLocationId: { companyId: payload.companyId || null, itemId, stockLocationId: payload.fromLocationId } } } as any)
-        if (!slFrom || slFrom.quantity.toNumber() < qty) throw new BadRequestException('insufficient stock at source')
+    async getStockSummary(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.getStockSummary(companyId)
+    }
 
-        const slTo = await this.ensureStockLevel(tx, tenantId, itemId, payload.toLocationId, payload.companyId || null)
-        await tx.inventoryTransactionLine.create({ data: { workspaceId, companyId: payload.companyId || null, transactionId: txRecord.id, itemId, stockLocationId: payload.fromLocationId, qty: qty * -1, lineType: 'TRANSFER_LINE' } })
-        await tx.inventoryTransactionLine.create({ data: { workspaceId, companyId: payload.companyId || null, transactionId: txRecord.id, itemId, stockLocationId: payload.toLocationId, qty: qty, lineType: 'TRANSFER_LINE' } })
+    async listLocations(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.findLocations(companyId)
+    }
 
-        await tx.stockLevel.update({ where: { id: slFrom.id }, data: { quantity: { decrement: qty } } as any })
-        await tx.stockLevel.update({ where: { id: slTo.id }, data: { quantity: { increment: qty } } as any })
-      }
-      return txRecord
-    })
-  }
+    async createLocation(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.name) throw new BadRequestException('name is required')
+        return this.repo.createLocation(companyId, data)
+    }
 
-  async adjustStock(tenantId: string, payload: any) {
-    const workspaceId = tenantId
-    // payload: { transactionNumber?, lines: [ { itemId, stockLocationId, qty } ] }
-    if (!payload.lines || payload.lines.length === 0) throw new BadRequestException('lines required')
-    await assertCompanyBelongsToTenant(this.prisma, payload.companyId, tenantId)
-    return this.prisma.$transaction(async (tx) => {
-      const txRecord = await tx.inventoryTransaction.create({ data: { workspaceId, companyId: payload.companyId || null, transactionNumber: payload.transactionNumber || null, type: 'ADJUSTMENT', reference: payload.reference || null } })
-      for (const l of payload.lines) {
-        const itemId = l.itemId
-        const stockLocationId = l.stockLocationId
-        const qty = Number(l.qty)
-        if (!itemId || !stockLocationId || qty === 0) throw new BadRequestException('invalid line')
+    async updateLocation(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.stockLocation.findFirst({ where: { id, companyId } })
+        if (!existing) throw new NotFoundException('Location not found')
+        return this.repo.updateLocation(id, { name: data.name, description: data.description, isDefault: data.isDefault })
+    }
 
-        await tx.inventoryTransactionLine.create({ data: { workspaceId, companyId: payload.companyId || null, transactionId: txRecord.id, itemId, stockLocationId, qty, lineType: 'ADJUSTMENT_LINE' } })
+    async deleteLocation(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.stockLocation.findFirst({ where: { id, companyId } })
+        if (!existing) throw new NotFoundException('Location not found')
+        return this.repo.deleteLocation(id)
+    }
 
-        const sl = await this.ensureStockLevel(tx, tenantId, itemId, stockLocationId, payload.companyId || null)
-        if (qty > 0) await tx.stockLevel.update({ where: { id: sl.id }, data: { quantity: { increment: qty } } as any })
-        else await tx.stockLevel.update({ where: { id: sl.id }, data: { quantity: { decrement: Math.abs(qty) } } as any })
-      }
-      return txRecord
-    })
-  }
+    // ─── Inventory Transactions ───────────────────────────────────────────────
+
+    async listTransactions(userId: string, companyId: string, opts: any) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        return this.repo.findTransactions(workspaceId, companyId, { type: opts.type, limit: opts.limit ? parseInt(opts.limit) : 50, offset: opts.offset ? parseInt(opts.offset) : 0 })
+    }
+
+    async createTransaction(userId: string, companyId: string, data: any) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!data.type) throw new BadRequestException('type is required')
+        if (!data.lines?.length) throw new BadRequestException('At least one line is required')
+        return this.repo.createInventoryTransaction(workspaceId, companyId, {
+            type: data.type, reference: data.reference,
+            lines: data.lines.map((l: any) => ({ ...l, qty: Number(l.qty), unitCost: l.unitCost ? Number(l.unitCost) : undefined })),
+        })
+    }
+
+    // ─── Fixed Assets ─────────────────────────────────────────────────────────
+
+    async listFixedAssets(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.findFixedAssets(companyId, { status: opts.status })
+    }
+
+    async getFixedAsset(userId: string, companyId: string, assetId: string) {
+        await this.assertAccess(userId, companyId)
+        const a = await this.repo.findFixedAssetById(companyId, assetId)
+        if (!a) throw new NotFoundException('Fixed asset not found')
+        return a
+    }
+
+    async createFixedAsset(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.name) throw new BadRequestException('name is required')
+        if (!data.acquisitionDate) throw new BadRequestException('acquisitionDate is required')
+        if (!data.cost) throw new BadRequestException('cost is required')
+        return this.repo.createFixedAsset(companyId, {
+            ...data, cost: Number(data.cost), acquisitionDate: new Date(data.acquisitionDate),
+            salvageValue: data.salvageValue ? Number(data.salvageValue) : undefined,
+        })
+    }
+
+    async runDepreciation(userId: string, companyId: string, assetId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.periodStart || !data.periodEnd) throw new BadRequestException('periodStart and periodEnd are required')
+        const result = await this.repo.runDepreciation(companyId, assetId, new Date(data.periodStart), new Date(data.periodEnd))
+        if (!result) throw new NotFoundException('Asset not found or fully depreciated')
+        return result
+    }
+
+    async disposeFixedAsset(userId: string, companyId: string, assetId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.disposalDate) throw new BadRequestException('disposalDate is required')
+        if (!data.method) throw new BadRequestException('method is required (SALE, SCRAPPED, DONATED)')
+        const result = await this.repo.disposeFixedAsset(companyId, assetId, {
+            disposalDate: new Date(data.disposalDate), method: data.method, proceeds: data.proceeds ? Number(data.proceeds) : undefined,
+        })
+        if (!result) throw new NotFoundException('Asset not found')
+        return result
+    }
+
+    async getDepreciationSchedule(userId: string, companyId: string, assetId: string) {
+        await this.assertAccess(userId, companyId)
+        const schedule = await this.repo.getDepreciationSchedule(companyId, assetId)
+        if (!schedule) throw new NotFoundException('Asset not found')
+        return schedule
+    }
+
+    async updateFixedAsset(userId: string, companyId: string, assetId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.fixedAsset.findFirst({ where: { id: assetId, companyId } })
+        if (!existing) throw new NotFoundException('Asset not found')
+        return this.prisma.fixedAsset.update({
+            where: { id: assetId },
+            data: {
+                name: data.name,
+                description: data.description,
+                categoryId: data.categoryId,
+                salvageValue: data.salvageValue != null ? Number(data.salvageValue) : undefined,
+                usefulLifeMonths: data.usefulLifeMonths ? Number(data.usefulLifeMonths) : undefined,
+                depreciationMethod: data.depreciationMethod,
+            },
+        })
+    }
+
+    // ─── Asset Categories ─────────────────────────────────────────────────────
+
+    async listAssetCategories(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.fixedAssetCategory.findMany({ where: { companyId }, orderBy: { name: 'asc' } })
+    }
+
+    async createAssetCategory(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.name) throw new BadRequestException('name is required')
+        return this.prisma.fixedAssetCategory.create({
+            data: {
+                companyId, name: data.name, description: data.description,
+                defaultUsefulLifeMonths: data.defaultUsefulLifeMonths ? Number(data.defaultUsefulLifeMonths) : undefined,
+                defaultDepreciationMethod: data.defaultDepreciationMethod ?? 'STRAIGHT_LINE',
+                isActive: data.isActive ?? true,
+            },
+        })
+    }
+
+    async updateAssetCategory(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.fixedAssetCategory.findFirst({ where: { id, companyId } })
+        if (!existing) throw new NotFoundException('Category not found')
+        return this.prisma.fixedAssetCategory.update({ where: { id }, data })
+    }
+
+    async deleteAssetCategory(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.fixedAssetCategory.findFirst({ where: { id, companyId } })
+        if (!existing) throw new NotFoundException('Category not found')
+        const assetCount = await this.prisma.fixedAsset.count({ where: { categoryId: id } })
+        if (assetCount > 0) throw new BadRequestException(`Cannot delete: ${assetCount} assets use this category`)
+        return this.prisma.fixedAssetCategory.delete({ where: { id } })
+    }
+
+    // ─── Units of Measure ─────────────────────────────────────────────────────
+
+    async listUnitsOfMeasure(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.unitOfMeasure.findMany({ where: { companyId }, orderBy: { name: 'asc' } })
+    }
+
+    async createUnitOfMeasure(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.name) throw new BadRequestException('name is required')
+        if (!data.abbreviation) throw new BadRequestException('abbreviation is required')
+        return this.prisma.unitOfMeasure.create({
+            data: { companyId, name: data.name, abbreviation: data.abbreviation, isActive: data.isActive ?? true },
+        })
+    }
+
+    async updateUnitOfMeasure(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.unitOfMeasure.findFirst({ where: { id, companyId } })
+        if (!existing) throw new NotFoundException('Unit of measure not found')
+        return this.prisma.unitOfMeasure.update({ where: { id }, data })
+    }
+
+    // ─── Bin Locations ────────────────────────────────────────────────────────
+
+    async listBinLocations(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.binLocation.findMany({
+            where: { warehouseId: opts.warehouseId ?? undefined },
+            orderBy: { name: 'asc' },
+        })
+    }
+
+    async createBinLocation(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.name) throw new BadRequestException('name is required')
+        if (!data.warehouseId) throw new BadRequestException('warehouseId is required')
+        return this.prisma.binLocation.create({
+            data: { warehouseId: data.warehouseId, name: data.name, code: data.code, isActive: data.isActive ?? true },
+        })
+    }
+
+    // ─── Physical Counts (Stock Counts) ───────────────────────────────────────
+
+    async listPhysicalCounts(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.stockCount.findMany({
+            where: { companyId, ...(opts.status ? { status: opts.status } : {}) },
+            include: { lines: true },
+            orderBy: { countDate: 'desc' },
+        })
+    }
+
+    async createPhysicalCount(userId: string, companyId: string, data: any) {
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!data.warehouseId) throw new BadRequestException('warehouseId is required')
+        if (!data.countDate) throw new BadRequestException('countDate is required')
+        return this.prisma.stockCount.create({
+            data: {
+                workspaceId,
+                companyId,
+                warehouseId: data.warehouseId,
+                countDate: new Date(data.countDate),
+                status: data.status ?? 'OPEN',
+            },
+        })
+    }
+
+    async getPhysicalCount(userId: string, companyId: string, countId: string) {
+        await this.assertAccess(userId, companyId)
+        const count = await this.prisma.stockCount.findFirst({ where: { id: countId, companyId }, include: { lines: true } })
+        if (!count) throw new NotFoundException('Physical count not found')
+        return count
+    }
+
+    // ─── Reorder Rules ───────────────────────────────────────────────────────
+
+    async listReorderRules(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.reorderRule.findMany({
+            where: { companyId, ...(opts.itemId ? { itemId: opts.itemId } : {}) },
+        })
+    }
+
+    async createReorderRule(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.itemId) throw new BadRequestException('itemId is required')
+        if (data.reorderPoint === undefined) throw new BadRequestException('reorderPoint is required')
+        if (data.reorderQty === undefined) throw new BadRequestException('reorderQty is required')
+        return this.prisma.reorderRule.create({
+            data: {
+                companyId,
+                itemId: data.itemId,
+                warehouseId: data.warehouseId,
+                reorderPoint: Number(data.reorderPoint),
+                reorderQty: Number(data.reorderQty),
+                safetyStockLevel: data.safetyStockLevel ? Number(data.safetyStockLevel) : undefined,
+                maxStockLevel: data.maxStockLevel ? Number(data.maxStockLevel) : undefined,
+                leadTimeDays: data.leadTimeDays ? Number(data.leadTimeDays) : undefined,
+                preferredVendorId: data.preferredVendorId,
+                isActive: data.isActive ?? true,
+            },
+        })
+    }
+
+    async updateReorderRule(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.prisma.reorderRule.findFirst({ where: { id, companyId } })
+        if (!existing) throw new NotFoundException('Reorder rule not found')
+        return this.prisma.reorderRule.update({ where: { id }, data })
+    }
+
+    // ─── Backorders ───────────────────────────────────────────────────────────
+
+    async listBackorders(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.backOrder.findMany({
+            where: { companyId, ...(opts.itemId ? { itemId: opts.itemId } : {}), ...(opts.status ? { status: opts.status } : {}) },
+            orderBy: { createdAt: 'desc' },
+        })
+    }
+
+    // ─── Lot / Serial Numbers ──────────────────────────────────────────────────
+
+    async listLotSerial(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.prisma.lotSerialNumber.findMany({
+            where: { companyId, ...(opts.itemId ? { itemId: opts.itemId } : {}), ...(opts.status ? { status: opts.status } : {}) },
+            orderBy: { createdAt: 'desc' },
+        })
+    }
+
+    async createLotSerial(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.itemId) throw new BadRequestException('itemId is required')
+        if (!data.type) throw new BadRequestException('type (LOT or SERIAL) is required')
+        if (!data.lotNumber && !data.serialNumber) throw new BadRequestException('lotNumber or serialNumber is required')
+        return this.prisma.lotSerialNumber.create({
+            data: {
+                companyId,
+                itemId: data.itemId,
+                type: data.type,
+                lotNumber: data.lotNumber,
+                serialNumber: data.serialNumber,
+                expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+                quantity: data.quantity ? Number(data.quantity) : undefined,
+                status: data.status ?? 'available',
+            },
+        })
+    }
 }

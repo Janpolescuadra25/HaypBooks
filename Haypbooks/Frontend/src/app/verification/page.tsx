@@ -8,6 +8,7 @@ import PhoneCodeForm from '@/components/auth/PhoneCodeForm'
 import AddPhoneForm from '@/components/auth/AddPhoneForm'
 import AuthLayout from '@/components/auth/AuthLayout' 
 import { maskPhoneForDisplay } from '@/utils/phone.util'
+import VerificationService from '@/services/verification.service'
 import { authService } from '@/services/auth.service'
 
 function maskEmail(email: string | null) {
@@ -23,6 +24,8 @@ export default function VerificationPage() {
   const [userPhone, setUserPhone] = useState<string | null>(null)
   const [view, setView] = useState<'options'|'email'|'phone'>('options')
   const [emailFlowPurpose, setEmailFlowPurpose] = useState<'login'|'reset'>('login')
+  // track whether we were redirected here after sign‑in; used to auto-send code and skip options
+  const [fromSignin, setFromSignin] = useState(false)
   // Non-blocking developer hint when session cookies may not be attaching (e.g. localhost vs 127.0.0.1)
   const [cookieHint, setCookieHint] = useState<string | null>(null)
 
@@ -34,10 +37,10 @@ export default function VerificationPage() {
         const emailFromQuery = params?.get('email') || null
         setUserEmail(emailFromQuery)
 
-        // If we arrived from sign-in, show a short contextual banner so user understands why
-        // they were taken here automatically.
+        // Redirect source flag – will also trigger auto‑send below
         const from = params?.get('from') || null
         if (from === 'signin') {
+          setFromSignin(true)
           setCookieHint('You were redirected here after signing in. Choose Email or Text Message (SMS) to receive your verification code.')
         }
 
@@ -71,6 +74,23 @@ export default function VerificationPage() {
 
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  // when arriving from signin we want to immediately jump to the email view and
+  // send a code without showing the choices
+  useEffect(() => {
+    if (fromSignin && view === 'options' && userEmail) {
+      setEmailFlowPurpose('login')
+      setView('email')
+    }
+  }, [fromSignin, view, userEmail])
+
+  // if we've entered the email view via the signin redirect, dispatch the email code
+  useEffect(() => {
+    if (fromSignin && view === 'email' && userEmail) {
+      const svc = new (VerificationService as any)()
+      svc.sendEmailCode(userEmail).catch(() => {})
+    }
+  }, [fromSignin, view, userEmail])
 
   const onVerified = React.useCallback(() => {
     try {
@@ -107,11 +127,31 @@ export default function VerificationPage() {
   }
 
   return (
-    <AuthLayout innerClassName="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8">
-        <div className="text-center mb-6">
+    <AuthLayout>
+        <div className="text-center mb-6 relative">
+          {view !== 'options' && (
+            <button
+              type="button"
+              onClick={() => router.push('/login?showLogin=1')}
+              className="absolute left-0 top-0 text-sm text-slate-600 hover:underline flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to sign in
+            </button>
+          )}
+
           <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold mx-auto mb-3 shadow-md">HB</div>
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-1">Let’s verify it’s really you</h2>
-          <p className="text-sm text-slate-600">To keep your account secure, choose how you’d like to receive your verification code.</p> 
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-1">
+            {view === 'options' ? "Let’s verify it’s really you" : "Two-step verification"}
+          </h2>
+          <p className="text-base text-slate-600">
+            {view === 'options'
+              ? "To keep your account secure, choose how you’d like to receive your verification code."
+              : "For your security, we’ve sent a code to your email."
+            }
+          </p>
         </div>
 
         {/* Hidden state for tests/e2e: exposes current view for deterministic waits */}
@@ -136,7 +176,7 @@ export default function VerificationPage() {
                 </div>
                 <div className="flex flex-col items-start text-left">
                   <div className="font-bold text-lg md:text-lg text-slate-900 leading-tight">Email</div>
-                  <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold">{maskEmail(userEmail)}</span></div>
+                  <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold break-all">{maskEmail(userEmail)}</span></div>
                 </div>
               </div>
             </button>
@@ -155,7 +195,7 @@ export default function VerificationPage() {
                 <div className="flex flex-col items-start text-left">
                   <div className="font-bold text-lg md:text-lg text-slate-900 leading-tight">Text Message (SMS)</div>
                   {userPhone ? (
-                    <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold">{maskPhoneForDisplay(userPhone)}</span></div>
+                    <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Verification code will be sent to:<br /><span className="font-semibold break-all">{maskPhoneForDisplay(userPhone)}</span></div>
                   ) : (
                     <div className="text-sm md:text-sm text-slate-600 mt-1 leading-tight">Add a phone number to receive a verification code</div>
                   )}

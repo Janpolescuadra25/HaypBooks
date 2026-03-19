@@ -39,6 +39,26 @@ const { Client } = require('pg')
     await q(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantClient' AND p.polname = 'rls_tenant') THEN EXECUTE $p$ CREATE POLICY rls_tenant ON public."AccountantClient" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR ("tenantId")::text = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR ("tenantId")::text = current_setting('haypbooks.tenant_id', true)); $p$; END IF; END$$;`)
     await q(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'AccountantActivity' AND p.polname = 'rls_tenant') THEN EXECUTE $p$ CREATE POLICY rls_tenant ON public."AccountantActivity" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR "tenantId" = current_setting('haypbooks.tenant_id', true)); $p$; END IF; END$$;`)
 
+    // Add RLS policy for core accounting tables (prevents cross-company access even if the app query is wrong)
+    await q(`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='Account') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'Account' AND p.polname = 'rls_company') THEN
+          EXECUTE $p$ CREATE POLICY rls_company ON public."Account" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR ("companyId")::text = current_setting('haypbooks.company_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR ("companyId")::text = current_setting('haypbooks.company_id', true)); $p$;
+        END IF;
+      END IF; END$$;`)
+
+    await q(`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='JournalEntry') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'JournalEntry' AND p.polname = 'rls_company') THEN
+          EXECUTE $p$ CREATE POLICY rls_company ON public."JournalEntry" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR ("companyId")::text = current_setting('haypbooks.company_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR ("companyId")::text = current_setting('haypbooks.company_id', true)); $p$;
+        END IF;
+      END IF; END$$;`)
+
+    // Add workspace-level RLS on Task (for isolation in tests and real workloads)
+    await q(`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='Task') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON p.polrelid = c.oid WHERE c.relname = 'Task' AND p.polname = 'rls_workspace') THEN
+          EXECUTE $p$ CREATE POLICY rls_workspace ON public."Task" USING (current_setting('haypbooks.rls_bypass', true) = '1' OR ("workspaceId")::text = current_setting('haypbooks.workspace_id', true)) WITH CHECK (current_setting('haypbooks.rls_bypass', true) = '1' OR ("workspaceId")::text = current_setting('haypbooks.workspace_id', true)); $p$;
+        END IF;
+      END IF; END$$;`)
+
     // Create indexes and unique constraint
     await q(`CREATE UNIQUE INDEX IF NOT EXISTS "AccountantClient_accountant_tenant_uq" ON public."AccountantClient" ("accountantId", "tenantId")`)
     await q(`CREATE INDEX IF NOT EXISTS "AccountantClient_tenantId_idx" ON public."AccountantClient" ("tenantId")`)

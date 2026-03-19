@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
+import { getCompanyId, getUserId, getWorkspaceId } from '../../shared/async-context'
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -10,6 +11,57 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   get tenantInvite(): any { return (this as any).workspaceInvite }
 
   async onModuleInit() {
+    // Attach request-scoped metadata (company/workspace/user) into the PostgreSQL session
+    // so that RLS policies can enforce tenant isolation without relying solely on app filtering.
+    this.$use(async (params, next) => {
+      // Skip setting session vars for raw SQL executions to avoid recursion.
+      if (params.action === 'executeRaw' || params.action === 'queryRaw') return next(params)
+
+      const companyId = getCompanyId()
+      const workspaceId = getWorkspaceId()
+      const userId = getUserId()
+
+      if (companyId || workspaceId || userId) {
+        try {
+          if (companyId) {
+            await this.$executeRaw(Prisma.sql`SET LOCAL haypbooks.company_id = ${companyId}`)
+          }
+          if (workspaceId) {
+            await this.$executeRaw(Prisma.sql`SET LOCAL haypbooks.workspace_id = ${workspaceId}`)
+          }
+          if (userId) {
+            await this.$executeRaw(Prisma.sql`SET LOCAL haypbooks.user_id = ${userId}`)
+          }
+        } catch (e) {
+          // best-effort: if we can't set the session variable, continue without blocking the request
+        }
+      }
+
+      // Soft-delete read filtering
+      const softDeleteModels = [
+        'Workspace', 'User', 'Invoice', 'Bill', 'Contact', 'Customer', 'Vendor',
+        'Employee', 'Item', 'FixedAsset', 'TaxRate', 'BankAccount'
+      ]
+      if (params.model && softDeleteModels.includes(params.model)) {
+        if (params.action === 'findUnique' || params.action === 'findFirst') {
+          params.action = 'findFirst'
+          if (!params.args) params.args = { where: {} }
+          if (!params.args.where) params.args.where = {}
+          if (params.args.where.deletedAt === undefined) {
+            params.args.where.deletedAt = null
+          }
+        }
+        if (params.action === 'findMany' || params.action === 'count') {
+          if (!params.args) params.args = { where: {} }
+          if (!params.args.where) params.args.where = {}
+          if (params.args.where.deletedAt === undefined) {
+            params.args.where.deletedAt = null
+          }
+        }
+      }
+      return next(params)
+    })
+
     this.$use(async (params, next) => {
       if (params.model !== 'WorkspaceUser' && params.model !== 'Company' && params.model !== 'AccountingFirm' && params.model !== 'Project') return next(params)
 

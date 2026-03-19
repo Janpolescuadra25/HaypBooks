@@ -3,12 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { buildDefaultCommands, filterAndRank, useCommandPalette } from '@/stores/commandPalette'
 import type { Route } from 'next'
-import { useAllFilterKeys, useResetAllFilters } from '@/stores/reportFilters'
 
 export default function CommandPalette() {
   const { open, closePalette, query, setQuery, items, setItems, recent, markUsed } = useCommandPalette()
-  const activeFilterKeys = useAllFilterKeys()
-  const resetAllFilters = useResetAllFilters()
   const [mounted, setMounted] = useState(false)
   const listRef = useRef<HTMLUListElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -22,17 +19,7 @@ export default function CommandPalette() {
     // Only seed if list empty to avoid repeated state churn w/ StrictMode double invoke
     if (allItems.length === 0) {
       const base = buildDefaultCommands((href: Route) => router.push(href))
-      const dynamic = [
-        {
-          id: 'filters:reset-all',
-          label: 'Reset All Active Filters',
-          group: 'Filters',
-          hint: activeFilterKeys.length ? `${activeFilterKeys.length} set${activeFilterKeys.length>1?'s':''}` : 'None',
-          action: () => { resetAllFilters(); markUsed('filters:reset-all'); closePalette() },
-          keywords: 'clear filters reporting reset'
-        }
-      ]
-      setItems([...base, ...dynamic])
+      setItems(base)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, /* intentionally omit dependencies that would re-seed */, allItems.length])

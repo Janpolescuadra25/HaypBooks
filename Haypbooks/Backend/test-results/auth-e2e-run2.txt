@@ -1,0 +1,81 @@
+ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is deprecated. Please do
+transform: {
+    <transform_regex>: ['ts-jest', { /* ts-jest config goes here in Jest */ }],
+},
+See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/presets#advanced
+> node ./scripts/migrate/init-db.js --recreate
+Recreating database haypbooks_test (--recreate provided)
+Database recreated
+> npx prisma migrate deploy --schema=prisma/schema.prisma
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "haypbooks_test", schema "public" at "localhost:5432"
+
+9 migrations found in prisma/migrations
+
+Applying migration `20260302000000_baseline_v10`
+Applying migration `20260302181133_nav_completeness_lastmile_ux`
+Applying migration `20260307024316_add_xor_constraints`
+Applying migration `20260307025648_standardize_decimals`
+Applying migration `20260307044205_generalize_ph_models`
+Applying migration `20260307051800_schema_enhancements`
+Applying migration `20260307062732_practice_hub_enhancements`
+Applying migration `20260307142933_phase1_admin_security`
+Applying migration `20260307144237_phase2_3_admin_security`
+
+The following migrations have been applied:
+
+migrations/
+  ΓööΓöÇ 20260302000000_baseline_v10/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260302181133_nav_completeness_lastmile_ux/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260307024316_add_xor_constraints/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260307025648_standardize_decimals/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260307044205_generalize_ph_models/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260307051800_schema_enhancements/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260307062732_practice_hub_enhancements/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260307142933_phase1_admin_security/
+    ΓööΓöÇ migration.sql
+  ΓööΓöÇ 20260307144237_phase2_3_admin_security/
+    ΓööΓöÇ migration.sql
+      
+All migrations have been successfully applied.
+> npm run prisma:generate
+
+> haypbooks-backend@0.0.1 prisma:generate
+> npx prisma generate --schema=prisma/schema.prisma
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Error: 
+EPERM: operation not permitted, unlink 'C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Backend\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+
+Command failed (attempt 1/3): npm run prisma:generate
+Retrying in 500ms...
+> npm run prisma:generate
+
+> haypbooks-backend@0.0.1 prisma:generate
+> npx prisma generate --schema=prisma/schema.prisma
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Error: 
+EPERM: operation not permitted, unlink 'C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Backend\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+
+Command failed (attempt 2/3): npm run prisma:generate
+Retrying in 1000ms...
+> npm run prisma:generate
+
+> haypbooks-backend@0.0.1 prisma:generate
+> npx prisma generate --schema=prisma/schema.prisma
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma

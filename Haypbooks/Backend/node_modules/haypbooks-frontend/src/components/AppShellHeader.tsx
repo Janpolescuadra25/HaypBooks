@@ -7,10 +7,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Popover from '@/components/Popover'
 import useUI from '@/stores/ui'
 import { getProfileCached } from '@/lib/profile-cache'
-import Breadcrumbs from '@/components/Breadcrumbs'
-import DashboardBrand from '@/components/DashboardBrand'
 import CompanySwitcher from '@/components/CompanySwitcher'
 import HubSwitcher from '@/components/HubSwitcher'
+import NotificationsPanel from '@/components/NotificationsPanel'
 
 export default function AppShellHeader() {
   const pathname = usePathname() ?? ''
@@ -22,6 +21,10 @@ export default function AppShellHeader() {
   const [showHelp, setShowHelp] = useState(false)
   const [showNews, setShowNews] = useState(false)
   const [showApps, setShowApps] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const notifTriggerRef = useRef<HTMLButtonElement | null>(null)
+  // Unread count (mirrors mock data — replace with real data later)
+  const NOTIF_UNREAD = 4
   const [features, setFeatures] = useState<{ payments?: boolean } | null>(null)
   const [closedThrough, setClosedThrough] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -57,14 +60,69 @@ export default function AppShellHeader() {
     // Refresh on route change in case close date changes while navigating
   }, [pathname])
   const isAccountant = useMemo(() => perms?.includes('accountant:tools') || false, [perms])
+
+  // ── Second-bar offset (fixed) ─────────────────────────────────────────────
+  const [secondBarOffset] = useState<number>(8)
+
+  // Topbar right-edge adjustment (primary+secondary)
+  const EDGE_KEY = 'hb.topbar.edge'
+  type EdgeState = { prim: number; sec: number }
+  const EDGE_DEF: EdgeState = { prim: 24, sec: 24 }
+  const EDGE_MIN = -200
+  const EDGE_MAX = 400
+
+  const [edge, setEdge] = useState<EdgeState>(EDGE_DEF)
+  const [edgeDraft, setEdgeDraft] = useState<{ prim: string; sec: string }>({ prim: '24', sec: '24' })
+  const [showEdgePanel, setShowEdgePanel] = useState(false)
+  const edgeBtnRef = useRef<HTMLButtonElement | null>(null)
+  const edgePanelRef = useRef<HTMLDivElement | null>(null)
+
+  // Apply fixed offset to CSS var on mount
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ph-secondary-top-offset', `${secondBarOffset}px`)
+  }, [secondBarOffset])
+
+  // load stored edge values
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(EDGE_KEY)
+      if (raw) {
+        const v: EdgeState = { ...EDGE_DEF, ...JSON.parse(raw) }
+        setEdge(v)
+        setEdgeDraft({ prim: String(v.prim), sec: String(v.sec) })
+      }
+    } catch {}
+  }, [])
+
+  // apply edge changes & persist
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ph-topbar-right-primary', `${edge.prim}px`)
+    document.documentElement.style.setProperty('--ph-topbar-right-secondary', `${edge.sec}px`)
+    try { localStorage.setItem(EDGE_KEY, JSON.stringify(edge)) } catch {}
+  }, [edge])
+
+  // hide edge panel on outside click
+  useEffect(() => {
+    if (!showEdgePanel) return
+    function onDown(e: MouseEvent) {
+      if (
+        edgePanelRef.current && !edgePanelRef.current.contains(e.target as Node) &&
+        edgeBtnRef.current && !edgeBtnRef.current.contains(e.target as Node)
+      ) setShowEdgePanel(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [showEdgePanel])
+
+
   if (pathname === '/login') return null
 
   return (
     <>
-      <div className="glass-topbar flex items-center gap-3">
+      <div className="topbar-floating hidden md:flex items-center gap-3 justify-between" style={{ top: 'var(--hb-topbar-top)', minHeight: 'var(--hb-topbar-height)', zIndex: 70, right: 'var(--ph-topbar-right-primary, var(--ph-topbar-right))' }}>
         <div className="flex items-center gap-3 shrink-0">
           <button
-            className="md:hidden inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+            className="md:hidden inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
             onClick={toggleSidebar}
             aria-label="Open navigation"
           >
@@ -95,7 +153,7 @@ export default function AppShellHeader() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search customers, vendors, accounts… (Ctrl/Cmd+K opens command palette)"
-            className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-sm"
+            className="w-full rounded-full border border-slate-200 bg-white px-3 h-7 text-sm"
             aria-label="Global search"
             onKeyDown={(e) => {
               if (e.key === 'Enter') window.location.href = `/search?q=${encodeURIComponent(query)}`
@@ -103,11 +161,14 @@ export default function AppShellHeader() {
             ref={searchInputRef}
           />
           <button
-            className="btn-secondary shrink-0 !px-3 !py-1 text-sm"
+            className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors shrink-0"
             onClick={() => (window.location.href = `/search?q=${encodeURIComponent(query)}`)}
             aria-label="Run search"
           >
-            Search
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
           </button>
         </div>
 
@@ -115,7 +176,7 @@ export default function AppShellHeader() {
         <div className="flex items-center gap-2 shrink-0">
           {/* Closed-through pill (visible when set) */}
           {closedThrough && (
-            <div className="hidden md:inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700" title={`Closed through ${closedThrough}`}>
+            <div className="hidden md:inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 h-7 text-xs text-slate-700" title={`Closed through ${closedThrough}`}>
               <a href="/reports/closing-date" className="inline-flex items-center gap-1" aria-label={`Closed through ${closedThrough}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M8 7V3m8 4V3M3 11h18M7 20h10a2 2 0 002-2v-7H5v7a2 2 0 002 2z"/></svg>
                 <span>Closed through</span>
@@ -131,11 +192,114 @@ export default function AppShellHeader() {
             </div>
           )}
           <NewMenu />
+          {/* edge adjustment button */}
+          <div className="relative">
+            <button
+              ref={edgeBtnRef}
+              aria-label="Adjust topbar right edge"
+              title="Adjust topbar right edge"
+              onClick={() => setShowEdgePanel(e => !e)}
+              className={`inline-flex items-center justify-center h-7 w-7 rounded-full border transition-colors ${
+                showEdgePanel
+                  ? 'bg-slate-800 border-slate-700 text-white'
+                  : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M3 12h18M15 6l6 6-6 6M9 6l-6 6 6 6" />
+              </svg>
+            </button>
+            {showEdgePanel && (
+              <div
+                ref={edgePanelRef}
+                className="absolute right-0 top-full mt-2 z-[200] w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-4 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-700 tracking-wide uppercase">Topbar Edge</p>
+                  <button
+                    onClick={() => {
+                      setEdge(EDGE_DEF)
+                      setEdgeDraft({ prim: String(EDGE_DEF.prim), sec: String(EDGE_DEF.sec) })
+                    }}
+                    className="text-xs text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                  >Reset</button>
+                </div>
+                {([['Primary', 'prim'], ['Secondary', 'sec']] as [string, keyof EdgeState][]).map(([label, key]) => (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs text-slate-500">{label}</span>
+                      <span className="text-[10px] font-mono text-slate-400">{edge[key]>=0?'+':''}{edge[key]}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={EDGE_MIN}
+                      max={EDGE_MAX}
+                      step={0.5}
+                      value={edge[key]}
+                      onChange={e => {
+                        const v=parseFloat(e.target.value)
+                        setEdge(t=>({...t,[key]:v}))
+                        setEdgeDraft(d=>({...d,[key]:String(v)}))
+                      }}
+                      className="w-full accent-emerald-600 h-1.5 cursor-pointer"
+                    />
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <label className="text-[10px] text-slate-400 shrink-0">px</label>
+                      <input
+                        type="number"
+                        step="any"
+                        min={EDGE_MIN}
+                        max={EDGE_MAX}
+                        value={edgeDraft[key]}
+                        onChange={e=>{
+                          const raw=e.target.value
+                          setEdgeDraft(d=>({...d,[key]:raw}))
+                          const v=parseFloat(raw)
+                          if(!isNaN(v)) setEdge(t=>({...t,[key]:Math.max(EDGE_MIN,Math.min(EDGE_MAX,v))}))
+                        }}
+                        onBlur={()=>{
+                          const v=parseFloat(edgeDraft[key])
+                          if(!isNaN(v)) setEdge(t=>({...t,[key]:Math.max(EDGE_MIN,Math.min(EDGE_MAX,v))}))
+                        }}
+                        className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Notifications bell */}
+          <div className="relative">
+            <button
+              ref={notifTriggerRef}
+              onClick={() => setShowNotifications((v) => !v)}
+              aria-label="Notifications"
+              title="Notifications"
+              className="relative inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+              {NOTIF_UNREAD > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold px-1 leading-none">
+                  {NOTIF_UNREAD}
+                </span>
+              )}
+            </button>
+            <NotificationsPanel
+              open={showNotifications}
+              anchorRef={notifTriggerRef}
+              onClose={() => setShowNotifications(false)}
+            />
+          </div>
+
           <div className="hidden md:flex items-center gap-1">
             {/* Activity icon */}
             <a
               href="/activity"
-              className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+              className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
               title="Activity"
               aria-label="View all recent activity"
             >
@@ -147,7 +311,7 @@ export default function AppShellHeader() {
             {/* Developers portal */}
             <a
               href="/developers"
-              className="hidden md:inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+              className="hidden md:inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
               title="Developers"
               aria-label="Open developer portal"
             >
@@ -163,7 +327,7 @@ export default function AppShellHeader() {
                 <button
                     id="apps-menu-button"
                     ref={appsTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowApps(false)}
                   aria-haspopup="true"
                   aria-expanded="true"
@@ -182,7 +346,7 @@ export default function AppShellHeader() {
                 <button
                   id="apps-menu-button"
                   ref={appsTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowApps(true)}
                   aria-haspopup="true"
                   aria-expanded="false"
@@ -222,7 +386,7 @@ export default function AppShellHeader() {
                 <button
                   id="accountant-menu-button"
                   ref={acctTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowAcct(false)}
                   aria-haspopup="true"
                   aria-expanded="true"
@@ -241,7 +405,7 @@ export default function AppShellHeader() {
                 <button
                   id="accountant-menu-button"
                   ref={acctTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowAcct(true)}
                   aria-haspopup="true"
                   aria-expanded="false"
@@ -288,7 +452,7 @@ export default function AppShellHeader() {
                 <button
                   id="help-menu-button"
                   ref={helpTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowHelp(false)}
                   aria-haspopup="true"
                   aria-expanded="true"
@@ -308,7 +472,7 @@ export default function AppShellHeader() {
                 <button
                   id="help-menu-button"
                   ref={helpTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowHelp(true)}
                   aria-haspopup="true"
                   aria-expanded="false"
@@ -351,7 +515,7 @@ export default function AppShellHeader() {
                 <button
                   id="settings-menu-button"
                   ref={settingsTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowGear(false)}
                   aria-haspopup="true"
                   aria-expanded="true"
@@ -371,7 +535,7 @@ export default function AppShellHeader() {
                 <button
                   id="settings-menu-button"
                   ref={settingsTriggerRef}
-                  className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                   onClick={() => setShowGear(true)}
                   aria-haspopup="true"
                   aria-expanded="false"
@@ -422,7 +586,7 @@ export default function AppShellHeader() {
             {showNews ? (
               <button
                 id="more-menu-button"
-                className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                 onClick={() => setShowNews(false)}
                 aria-haspopup="true"
                 aria-expanded="true"
@@ -442,7 +606,7 @@ export default function AppShellHeader() {
             ) : (
               <button
                 id="more-menu-button"
-                className="inline-flex items-center justify-center size-8 rounded-xl border border-slate-200 bg-white text-slate-700"
+                className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                 onClick={() => setShowNews(true)}
                 aria-haspopup="true"
                 aria-expanded="false"
@@ -494,11 +658,9 @@ export default function AppShellHeader() {
         </div>
       </div>
 
-      <header className="glass-header">
-        {/* Right-aligned brand inside the second header */}
-        <div className="hidden sm:flex items-center absolute right-4 top-1/2 -translate-y-1/2">
-          <DashboardBrand />
-        </div>
+      <header className="topbar-floating hidden md:flex items-center justify-center" style={{ top: 'calc(var(--hb-topbar-top) + var(--hb-topbar-height) + 0.5rem + var(--ph-secondary-top-offset, 0px))', minHeight: 'var(--hb-topbar-height)', zIndex: 50, right: 'var(--ph-topbar-right-secondary, var(--ph-topbar-right))' }}>
+
+
         <div className="text-center">
           <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">
             {(() => {
@@ -542,8 +704,7 @@ export default function AppShellHeader() {
                 .join(' / ')
             })()}
           </h1>
-          {/* Breadcrumbs below title on larger screens */}
-          <div className="hidden md:block mt-1"><Breadcrumbs /></div>
+          {/* Breadcrumbs removed */}
           {/* Optional description tagline (hidden on Sales, Expenses, Transactions) */}
           {/* NOTE: The tagline was removed for clarity across the Overview/Cash flow/Workflow tabs. */}
         </div>

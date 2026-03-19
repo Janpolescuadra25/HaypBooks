@@ -1,0 +1,17 @@
+import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { act } from 'react-dom/test-utils'
+import PracticeHubPage from '@/app/practice-hub/page'
+import PracticeHubLayout from '@/app/practice-hub/layout'
+import HomeTopBar from '@/components/practice-hub/HomeTopBar'
+import DashboardPage from '@/app/practice-hub/dashboard/page'
+import GettingStartedPage from '@/app/practice-hub/dashboard/getting-started/page'
+import AnnouncementPage from '@/app/practice-hub/dashboard/announcement/page'
+
+let mockPath = '/practice-hub/dashboard'
+jest.mock('next/navigation', () => ({
+  usePathname: () => mockPath,
+  useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }))
+}))
+
+describe('Practice Hub Page', () => {

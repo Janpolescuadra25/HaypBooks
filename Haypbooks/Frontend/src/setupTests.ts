@@ -68,8 +68,6 @@ try {
 	const originalLocation = window.location
 	// Create a fake location object that intercepts href assignments.
 	const fakeLocation: any = {
-		assign: jest.fn(),
-		replace: jest.fn(),
 		// Keep other original properties accessible
 		...originalLocation,
 		// internal storage for href
@@ -80,6 +78,8 @@ try {
 		set href(val) {
 			this._isHref = String(val)
 		},
+		assign: jest.fn(),
+		replace: jest.fn(),
 	}
 	Object.defineProperty(window, 'location', {
 		configurable: true,

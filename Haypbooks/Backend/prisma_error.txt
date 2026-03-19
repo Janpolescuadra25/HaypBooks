@@ -1,0 +1,16 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+
+Error: Prisma schema validation - (validate wasm)
+Error code: P1012
+error: Error validating: The argument `references` must refer only to existing fields in the related model `PracticeUser`. The following fields do not exist in the related model: id
+  -->  schema.prisma:12154
+   | 
+12153 |   engagement   Engagement   @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+12154 |   practiceUser PracticeUser @relation(fields: [practiceUserId], references: [id], onDelete: Restrict)
+   | 
+
+Validation Error Count: 1
+[Context: validate]
+
+Prisma CLI Version : 4.15.0

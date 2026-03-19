@@ -6,10 +6,6 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
   const modalRef = React.useRef<HTMLDivElement | null>(null)
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
-  const [showAcctForm, setShowAcctForm] = React.useState(false)
-  const [firmName, setFirmName] = React.useState('')
-  const [firmError, setFirmError] = React.useState('')
-  const [isSavingAcct, setIsSavingAcct] = React.useState(false)
 
   // Basic focus trap: keep focus within modal
   React.useEffect(() => {
@@ -86,57 +82,18 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
     return () => { mounted = false; if (timer) clearInterval(timer) }
   }, [])
 
-  async function submitAccountantForm() {
-    if (!firmName.trim()) { setFirmError('Accountant Workspace name is required'); return }
-    setFirmError('')
-    setIsSavingAcct(true)
-    try {
-      // Save a business step for the accountant hub if needed
-      await fetch('/api/onboarding/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ step: 'accountant_firm', data: { firmName } }) })
-      const res = await fetch('/api/onboarding/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'full', hub: 'ACCOUNTANT', details: { firmName } }) })
-      if (!res.ok) throw new Error('Failed to complete onboarding')
 
-      // Analytics (best-effort)
-      try { (await import('@/lib/analytics')).trackEvent('accountant_workspace_saved', { source: 'hub-modal' }) } catch (e) {}
-
-      // Also set preferred hub server-side
-      await fetch('/api/users/preferred-hub', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferredHub: 'ACCOUNTANT' }) })
-
-      // update localStorage user if present
-      if (typeof window !== 'undefined') {
-        const u = localStorage.getItem('user')
-        if (u) {
-          try { const parsed = JSON.parse(u); parsed.preferredHub = 'ACCOUNTANT'; parsed.accountantOnboardingCompleted = true; localStorage.setItem('user', JSON.stringify(parsed)) } catch {} 
-        }
-      }
-
-      router.replace('/dashboard')
-    } catch (e) {
-      console.error('Failed to complete accountant onboarding', e)
-      alert('Failed to complete onboarding. Please try again.')
-      setIsSavingAcct(false)
-    }
-  }
 
   async function chooseHub(hub: 'OWNER' | 'ACCOUNTANT') {
-    // If choosing accountant and onboarding is incomplete, show inline form
-    if (hub === 'ACCOUNTANT' && !(user as any)?.accountantOnboardingCompleted) {
-      setShowAcctForm(true)
-      return
-    }
-
     setLoading(true)
     try {
       await fetch('/api/users/preferred-hub', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferredHub: hub }) })
-      // update localStorage user if present
       if (typeof window !== 'undefined') {
         const u = localStorage.getItem('user')
         if (u) {
           try { const parsed = JSON.parse(u); parsed.preferredHub = hub; localStorage.setItem('user', JSON.stringify(parsed)) } catch {} 
         }
       }
-      // Redirect to chosen hub
-      // Redirect to unified Dashboard
       router.replace('/dashboard')
     } catch (e) {
       console.error('Failed to set preferred hub', e)
@@ -184,7 +141,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
 
             <div className="mt-auto pt-6">
               {(!hasOwnerCompanies && userRole === 'accountant') ? (
-                <button data-testid="create-company" onClick={() => router.replace('/companies?create=1')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">ADD NEW VOLUME</button>
+                <button data-testid="create-company" onClick={() => router.push('/get-started/plans')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">ADD NEW VOLUME</button>
               ) : (
                 <button data-testid="enter-owner" disabled={loading} onClick={() => chooseHub('OWNER')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">ADD NEW VOLUME</button>
               )}
@@ -217,23 +174,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
             </ul>
 
             <div className="mt-auto pt-6">
-              {!showAcctForm ? (
-                hasAccountantHub ? (
-                  <button data-testid="enter-acct" disabled={loading} onClick={() => chooseHub('ACCOUNTANT')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">OPEN NEW FIRM</button>
-                ) : (
-                  <button data-testid="create-acct" onClick={() => setShowAcctForm(true)} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">OPEN NEW FIRM</button>
-                )
-              ) : (
-                <div className="space-y-2">
-                  <label htmlFor="acctFirmName" className="block text-xs font-medium">Accountant Workspace name</label>
-                  <input id="acctFirmName" name="acctFirmName" aria-label="Accountant Workspace name" value={firmName} onChange={(e) => { setFirmName(e.target.value); setFirmError('') }} placeholder="e.g., Maria Santos Accounting" className={`w-full px-2 py-2 border rounded ${firmError ? 'border-red-500' : 'border-slate-200'} text-sm`} />
-                  {firmError && <p className="text-xs text-red-600">{firmError}</p>}
-                  <div className="flex gap-2 items-center">
-                    <button onClick={submitAccountantForm} disabled={isSavingAcct} className="btn-primary flex-1 text-sm">{isSavingAcct ? 'Saving…' : 'Finish setup'}</button>
-                    <button onClick={() => setShowAcctForm(false)} disabled={isSavingAcct} className="btn-secondary text-sm">Back</button>
-                  </div>
-                </div>
-              )}
+                <button data-testid="enter-acct" disabled={loading} onClick={() => { if (!hasAccountantHub) { router.push('/onboarding/practice') } else { chooseHub('ACCOUNTANT') } }} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">+ New Practice</button>
             </div>
           </div>
         </div>
@@ -282,7 +223,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
 
             <div className="mt-auto pt-6">
               {(!hasOwnerCompanies && userRole === 'accountant') ? (
-                <button data-testid="create-company" onClick={() => router.replace('/companies?create=1')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">ADD NEW VOLUME</button>
+                <button data-testid="create-company" onClick={() => router.push('/get-started/plans')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">ADD NEW VOLUME</button>
               ) : (
                 <button data-testid="enter-owner" disabled={loading} onClick={() => chooseHub('OWNER')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">ADD NEW VOLUME</button>
               )}
@@ -315,23 +256,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
             </ul>
 
             <div className="mt-auto pt-6">
-              {!showAcctForm ? (
-                hasAccountantHub ? (
-                  <button data-testid="enter-acct" disabled={loading} onClick={() => chooseHub('ACCOUNTANT')} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">OPEN NEW FIRM</button>
-                ) : (
-                  <button data-testid="create-acct" onClick={() => setShowAcctForm(true)} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">OPEN NEW FIRM</button>
-                )
-              ) : (
-                <div className="space-y-3">
-                  <label htmlFor="acctFirmName" className="block text-sm font-medium">Accountant Workspace name</label>
-                  <input id="acctFirmName" name="acctFirmName" aria-label="Accountant Workspace name" value={firmName} onChange={(e) => { setFirmName(e.target.value); setFirmError('') }} placeholder="e.g., Maria Santos Accounting" className={`w-full px-3 py-2 border rounded ${firmError ? 'border-red-500' : 'border-slate-200'}`} />
-                  {firmError && <p className="text-sm text-red-600">{firmError}</p>}
-                  <div className="flex gap-2 items-center">
-                    <button onClick={submitAccountantForm} disabled={isSavingAcct} className="btn-primary flex-1">{isSavingAcct ? 'Saving…' : 'Finish setup'}</button>
-                    <button onClick={() => setShowAcctForm(false)} disabled={isSavingAcct} className="btn-secondary">Back</button>
-                  </div>
-                </div>
-              )}
+                <button data-testid="enter-acct" disabled={loading} onClick={() => { if (!hasAccountantHub) { router.push('/onboarding/practice') } else { chooseHub('ACCOUNTANT') } }} className="w-full bg-emerald-600 text-white py-3 rounded-2xl text-xs font-semibold tracking-wide hover:bg-emerald-700">+ New Practice</button>
             </div>
           </div>
         </div>

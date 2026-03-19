@@ -9,7 +9,7 @@ beforeEach(() => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: 'c1', name: 'Owned Co', plan: 'Pro', lastAccessedAt: new Date().toISOString(), tenant: { _count: { users: 7 } } }]) })
     }
     if (String(url).includes('filter=invited')) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: 'c2', name: 'Invited Co', tenant: { _count: { users: 3 } }, tenant: { _count: { users: 3 } } }]) })
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: 'c2', name: 'Invited Co', tenant: { _count: { users: 3 } } }]) })
     }
     return Promise.resolve({ ok: false })
   }) as any

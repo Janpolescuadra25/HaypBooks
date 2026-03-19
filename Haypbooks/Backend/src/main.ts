@@ -1,5 +1,9 @@
+// load environment variables from .env before anything else
+require('dotenv').config();
+
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 
 // Global handlers to surface crashes in logs quickly
@@ -30,10 +34,41 @@ process.on('SIGINT', () => {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+  const isProduction = process.env.NODE_ENV === 'production'
 
-  // Enable CORS for frontend
+  // Log the database hostname only (not the full URL with credentials) in production
+  if (!isProduction) {
+    // eslint-disable-next-line no-console
+    console.log('Using database URL:', process.env.DATABASE_URL)
+  } else {
+    try {
+      const dbUrl = new URL(process.env.DATABASE_URL || '')
+      // eslint-disable-next-line no-console
+      console.log('Using database host:', dbUrl.hostname)
+    } catch {
+      // eslint-disable-next-line no-console
+      console.log('Database URL configured (redacted)')
+    }
+  }
+
+  // Security headers via Helmet (must be first middleware)
+  try {
+    const helmet = require('helmet')
+    app.use(helmet({
+      // Allow inline scripts/styles needed for Swagger UI in development
+      contentSecurityPolicy: isProduction ? undefined : false,
+    }))
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('helmet not available, skipping security headers')
+  }
+
+  // Enable CORS — restrict to explicit frontend origin in production
+  const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
+    : (isProduction ? [] : true)
   app.enableCors({
-    origin: true, // In production: specify frontend URL
+    origin: allowedOrigins,
     credentials: true,
   })
 
@@ -83,8 +118,30 @@ async function bootstrap() {
     }),
   )
 
+  // Swagger API documentation (development + staging only)
+  if (!isProduction) {
+    const config = new DocumentBuilder()
+      .setTitle('Haypbooks API')
+      .setDescription('Haypbooks accounting platform REST API — Philippine market edition')
+      .setVersion('1.0')
+      .addCookieAuth('token')
+      .addTag('auth', 'Authentication & session management')
+      .addTag('companies', 'Company management')
+      .addTag('accounting', 'Chart of Accounts, Journal Entries, Periods')
+      .addTag('ar', 'Accounts Receivable — Customers, Invoices, Payments')
+      .addTag('ap', 'Accounts Payable — Vendors, Bills, Bill Payments')
+      .addTag('banking', 'Bank Accounts, Reconciliation, Deposits')
+      .addTag('reporting', 'P&L, Balance Sheet, Cash Flow, Dashboards')
+      .build()
+    const document = SwaggerModule.createDocument(app, config)
+    SwaggerModule.setup('api/docs', app, document)
+    // eslint-disable-next-line no-console
+    console.log('📚 Swagger docs available at /api/docs')
+  }
+
   const port = process.env.PORT || 4000
   await app.listen(port)
+  // eslint-disable-next-line no-console
   console.log(`🚀 Haypbooks Backend running on http://localhost:${port}`)
 }
 

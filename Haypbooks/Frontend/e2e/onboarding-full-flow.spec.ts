@@ -116,7 +116,7 @@ test('Complete flow: signup → verify → onboarding → company appears in Own
     
     // Still on verify page - find and click the verify/submit button
     const buttons = await page.$$('button')
-    let verifyButton = null
+    let verifyButton: any = null
     for (const button of buttons) {
       const text = await button.textContent()
       if (text && (text.toLowerCase().includes('verify') || text.toLowerCase().includes('submit') || text.toLowerCase().includes('continue'))) {
@@ -275,7 +275,7 @@ test('Complete flow: signup → verify → onboarding → company appears in Own
     
     // Debug: Log page content
     const bodyText = await page.textContent('body')
-    console.log('📄 Page content:', bodyText.substring(0, 500))
+    console.log('📄 Page content:', (bodyText ?? '').substring(0, 500))
     
     // Output captured console messages for debugging
     console.log('\n📋 Captured Console Messages:', consoleMessages.slice(-20))

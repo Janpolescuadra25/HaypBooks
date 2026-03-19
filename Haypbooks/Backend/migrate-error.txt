@@ -1,0 +1,15 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "haypbooks_dev", schema "public" at "localhost:5432"
+
+Error: P3006
+
+Migration `20260307044205_generalize_ph_models` failed to apply cleanly to the shadow database. 
+Error:
+db error: ERROR: relation "PhilippinePayrollDeduction_deductionType_idx" already exists
+   0: sql_schema_connector::validate_migrations
+           with namespaces=None
+             at schema-engine\connectors\sql-schema-connector\src\lib.rs:301
+   1: schema_core::state::DevDiagnostic
+             at schema-engine\core\src\state.rs:266
+

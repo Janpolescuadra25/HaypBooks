@@ -32,8 +32,8 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async updateProfile(@Request() req, @Body() body: UpdateProfileDto) {
     const userId = req.user.userId
-    // sanitize input: trim strings and convert empty -> null
     const payload: any = {}
+    if ((body as any)?.companyName) payload.companyName = (body as any).companyName
     return this.usersService.updateProfile(userId, payload)
   }
 

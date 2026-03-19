@@ -54,13 +54,15 @@ export default function VerifyOtpPage() {
   // During signup with an active signupToken, default to email verification and auto-send
   const [selectedMethod, setSelectedMethod] = useState<'email'|'phone'|undefined>(() => {
     if (flow === 'signup' && signupToken) return 'email'
-    return (flow === 'signup' && !method) ? 'email' : undefined
+    // default to email for new signup and sign‑in flows when no method specified
+    if ((flow === 'signup' || flow === 'signin') && !method) return 'email'
+    return undefined
   })
   const [autoSent, setAutoSent] = useState(false)
 
   useEffect(() => {
-    // Auto-send email when arriving to signup verify page with a signupToken and no explicit method/code
-    if (flow === 'signup' && signupToken && !method && !initialCode && !autoSent) {
+    // Auto-send email when arriving for signup or signin flows without a method/code
+    if ((flow === 'signup' || flow === 'signin') && !method && !initialCode && !autoSent) {
       setAutoSent(true)
       requestMethodSend('email').catch(() => setAutoSent(false))
     }
@@ -126,16 +128,31 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <AuthLayout innerClassName="max-w-sm w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20 relative z-10 animate-slide-up">
-        <div className="text-center mb-6">
+    <AuthLayout>
+        <div className="text-center mb-6 relative">
+          {flow === 'signin' && (
+            <button
+              type="button"
+              onClick={() => router.push('/login?showLogin=1')}
+              className="absolute left-0 top-0 text-sm text-slate-600 hover:underline flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to sign in
+            </button>
+          )}
+
           <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-3 shadow-lg animate-scale-in">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">{flow === 'signin' ? 'Confirm Your Identity' : 'Confirm your account'}</h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">
+            {flow === 'signin' ? 'Two-step verification' : 'Confirm your account'}
+          </h1>
           {flow === 'signin' ? (
-            <p className="text-sm text-slate-600 mb-4">Choose how you'd like to verify it's you</p>
+            <p className="text-sm text-slate-600 mb-4">For your security, we've sent a code to your email.</p>
           ) : flow === 'reset' ? (
             <p className="text-sm text-slate-600 mb-4">We’ve emailed you a 6-digit code. Enter it here to continue resetting your account.</p>
           ) : (

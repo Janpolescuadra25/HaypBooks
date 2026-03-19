@@ -36,7 +36,39 @@ export class MailService {
   buildVerifyEmailOtpText(name: string, code: string) {
     return `Hi there,\n\nTo keep your account secure, we need to confirm it's really you. Please enter the verification code we just sent to your email.\n\n🔐 Your Verification Code: ${code}\n\n(This code will expire in 10 minutes.)\n\nIf you didn’t request this, you can safely ignore this message.\n\nThanks for helping us keep HaypBooks secure and owner-friendly.\n\n— The HaypBooks Team`
   }
+  buildPasswordResetHtml(name: string, code: string) {
+    return `
+      <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; color: #111">
+        <h2>Hi ${name || 'there'},</h2>
+        <p>We received a request to reset your HaypBooks password. Use the code below to set a new one.</p>
+        <p style="font-size:24px;font-weight:700;letter-spacing:3px">🔑 ${code}</p>
+        <p><em>(This code expires in 60 minutes.)</em></p>
+        <p>If you did not request a password reset, please ignore this email — your account remains secure.</p>
+        <p>— The HaypBooks Team</p>
+      </div>
+    `
+  }
 
+  buildPasswordResetText(name: string, code: string) {
+    return `Hi ${name || 'there'},\n\nWe received a request to reset your HaypBooks password. Use the code below to set a new one.\n\n🔑 Reset Code: ${code}\n\n(This code expires in 60 minutes.)\n\nIf you did not request a password reset, please ignore this email.\n\n— The HaypBooks Team`
+  }
+
+  buildInviteHtml(inviterName: string, workspaceName: string, link: string) {
+    return `
+      <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; color: #111">
+        <h2>You have been invited to HaypBooks</h2>
+        <p><strong>${inviterName}</strong> has invited you to join <strong>${workspaceName}</strong> on HaypBooks.</p>
+        <p><a href="${link}" style="display:inline-block;padding:12px 18px;background:#059669;color:#fff;border-radius:8px;text-decoration:none;">Accept Invitation</a></p>
+        <p>This invitation expires in <strong>7 days</strong>.</p>
+        <p>If you don't want to accept this invitation, you can safely ignore this email.</p>
+        <p>— The HaypBooks Team</p>
+      </div>
+    `
+  }
+
+  buildInviteText(inviterName: string, workspaceName: string, link: string) {
+    return `You have been invited to HaypBooks\n\n${inviterName} has invited you to join ${workspaceName} on HaypBooks.\n\nAccept here: ${link}\n\nThis invitation expires in 7 days.\n\n— The HaypBooks Team`
+  }
   async sendEmail(to: string, subject: string, html: string, text: string) {
     // Prefer SendGrid if configured
     if (process.env.SENDGRID_API_KEY) {

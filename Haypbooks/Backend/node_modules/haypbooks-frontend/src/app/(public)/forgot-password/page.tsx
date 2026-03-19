@@ -28,15 +28,10 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <AuthLayout innerClassName="max-w-sm w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20 relative z-10 animate-slide-up">
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-3 shadow-lg animate-scale-in">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">Forgot your password?</h1>
-          <p className="text-slate-600 text-sm">Enter the email associated with your account and we'll send you instructions to reset your password.</p>
+    <AuthLayout>
+        <div className="mb-10">
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Forgot your password?</h2>
+          <p className="text-slate-500">Enter the email associated with your account and we'll send you instructions to reset your password.</p>
         </div>
 
         {success ? (

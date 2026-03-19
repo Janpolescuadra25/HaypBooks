@@ -1,120 +1,286 @@
 "use client"
+
+import React from 'react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import apiClient from '@/lib/api-client'
+import { motion, AnimatePresence } from 'motion/react'
+import { CheckCircle2, ArrowRight, ArrowLeft, Check, X, Info } from 'lucide-react'
+import { BackgroundEffects } from '@/components/auth/BackgroundEffects'
+
+const PLANS = [
+  {
+    id: 'growth',
+    title: 'Growth',
+    priceMonthly: '$29',
+    priceAnnual: '$23',
+    desc: 'For growing businesses',
+    badge: 'Most Popular 💼',
+    features: ['Unlimited invoices & bills', 'Advanced reports & analytics', 'Priority email support'],
+    allFeatures: [
+      'Unlimited invoices & bills',
+      'Advanced reports & analytics',
+      'Priority email support',
+      'Up to 3 users',
+      'Automated bank feeds',
+      'Custom chart of accounts',
+      'Multi-currency support',
+      'Project tracking',
+      'Recurring invoices',
+    ],
+  },
+  {
+    id: 'professional',
+    title: 'Professional',
+    priceMonthly: '$79',
+    priceAnnual: '$63',
+    desc: 'For established companies',
+    badge: '⭐ Premium',
+    features: ['Everything in Growth', 'Up to 15 users', 'Advanced inventory management'],
+    allFeatures: [
+      'Everything in Growth',
+      'Up to 15 users',
+      'Advanced inventory management',
+      'Purchase orders',
+      'Budgeting & forecasting',
+      'Custom reporting engine',
+      'API access',
+      'Dedicated account manager',
+      'Batch transactions',
+    ],
+  },
+  {
+    id: 'elite',
+    title: 'Elite',
+    priceMonthly: '$149',
+    priceAnnual: '$119',
+    desc: 'For large scale operations',
+    badge: '🏆 High Performance',
+    features: ['Everything in Professional', 'Unlimited users', 'Custom integrations'],
+    allFeatures: [
+      'Everything in Professional',
+      'Unlimited users',
+      'Custom integrations',
+      'SSO & advanced security',
+      'White-labeling options',
+      '24/7 Priority support',
+      'Dedicated success manager',
+      'SLA guarantees',
+      'Advanced workflow automation',
+    ],
+  },
+]
 
 export default function GetStartedPlansPage() {
   const router = useRouter()
-  const [workspaceName, setWorkspaceName] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [selectedPlan, setSelectedPlan] = React.useState('Growth')
+  const [billingCycle, setBillingCycle] = React.useState<'monthly' | 'annual'>('monthly')
+  const [viewingFeatures, setViewingFeatures] = React.useState<string | null>(null)
 
-  async function persistCompanyAndNavigate(next: string) {
-    setError('')
-    if (!workspaceName.trim()) { setError('Owner Workspace name is required'); return }
-    setLoading(true)
-    try {
-      // Save workspace name to onboarding steps (prefer explicit workspaceName key)
-      try {
-        await apiClient.post('/api/onboarding/save', { step: 'owner_workspace', data: { workspaceName: workspaceName.trim() } })
-        // Reflect immediately in local storage by storing workspaceName (best-effort)
-        if (typeof window !== 'undefined') {
-          try {
-            const s = localStorage.getItem('user')
-            if (s) {
-              const parsed = JSON.parse(s)
-              parsed.workspaceName = workspaceName.trim()
-              localStorage.setItem('user', JSON.stringify(parsed))
-            }
-          } catch (err) {
-            // ignore localStorage errors
-          }
-        }
-      } catch (e) {
-        // Non-fatal: log and continue
-        // eslint-disable-next-line no-console
-        console.warn('[GET-STARTED] Failed to save onboarding business step (non-fatal):', e)
-      }
+  const currentViewingPlan = PLANS.find(p => p.id === viewingFeatures)
 
-      router.push(next)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function handleGetStarted() {
-    // proceed into the 3-step subscribe flow
-    persistCompanyAndNavigate('/get-started/subscribe')
+  const handleContinue = () => {
+    const plan = PLANS.find(p => p.title === selectedPlan)
+    if (plan) router.push(`/get-started/subscribe?plan=${plan.id}`)
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center px-4 py-10 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white relative overflow-hidden">
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-float-delayed" />
-      </div>
-
-      <div className="max-w-xl w-full relative z-10">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-lg">
-            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
+    <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center py-4 px-4 overflow-y-auto">
+      <BackgroundEffects showFlashlight={true} />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-5xl bg-white rounded-[24px] shadow-xl shadow-slate-200/60 overflow-hidden border border-slate-100 p-5 lg:p-7 relative"
+      >
+        {/* Header */}
+        <div className="text-center max-w-2xl mx-auto mb-5 flex flex-col items-center gap-1.5">
+          <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+            <CheckCircle2 size={16} />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Welcome to HaypBooks 👋</h1>
-          <p className="text-base text-slate-700">We’re glad you’re here. HaypBooks helps you manage accounting with clarity and confidence.</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Choose your plan</h2>
+          <p className="text-slate-400 text-xs">Subscribe now and get started immediately, or try free for 30 days — no card required.</p>
         </div>
 
-
-
-        <div className="bg-white rounded-2xl shadow p-6 border border-white/40">
-          <h2 className="text-xl font-semibold text-slate-800 mb-3">Let's get started</h2>
-          <p className="text-slate-600 mb-6">Tell us the name of your workspace to personalize your experience.</p>
-
-          <div className="max-w-md mx-auto">
-            <label htmlFor="workspace-name" className="block text-sm font-medium text-slate-700 mb-2">Workspace name</label>
-            <input id="workspace-name" value={workspaceName} onChange={(e)=>{ setWorkspaceName(e.target.value); setError('') }} type="text" placeholder="e.g., Acme Widgets LLC" className={`w-full px-4 py-3 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white/90 ${error ? 'border-red-500' : 'border-slate-300'}`} required aria-required="true" />
-            {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : <p className="mt-2 text-xs text-slate-500">This will be used to personalize your account and help identify your business in HaypBooks.</p>}
-          </div>
-
-          <div className="mt-6">
-            <div className="flex items-center justify-center gap-3 flex-col sm:flex-row">
-              {/* Primary: Start Free Trial (solid) */}
-              <button onClick={() => persistCompanyAndNavigate('/get-started/trial')} aria-label="Start free trial" disabled={loading} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow">{loading ? 'Saving…' : 'Start Free Trial'}</button>
-
-              {/* Secondary: Get Started with Plans (outlined) */}
-              <button onClick={handleGetStarted} className="w-full sm:w-auto px-5 py-3 border border-emerald-600 text-emerald-600 rounded-lg text-sm font-semibold bg-white hover:bg-emerald-50">Get Started with Plans</button>
+        {/* Billing Toggle */}
+        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-3">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold text-slate-700">Billing:</span>
+            <div className="bg-slate-100 p-1.5 rounded-2xl flex items-center gap-1">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${billingCycle === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle('annual')}
+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${billingCycle === 'annual' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Annual <span className="text-[10px] text-emerald-600 font-black uppercase tracking-tighter">Save 20%</span>
+              </button>
             </div>
           </div>
+          <p className="text-sm font-bold text-slate-400">Choose a plan that fits your business</p>
         </div>
 
-        <div className="mt-6 text-center">
-          <p className="text-slate-600 mb-4">Need help? Our support team is always ready to assist.</p>
+        {/* Plans Grid */}
+        <div className="grid md:grid-cols-3 gap-4 mb-5">
+          {PLANS.map((plan) => {
+            const price = billingCycle === 'monthly' ? plan.priceMonthly : plan.priceAnnual
+            const isSelected = selectedPlan === plan.title
+            return (
+              <div
+                key={plan.id}
+                onClick={() => setSelectedPlan(plan.title)}
+                className={`p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden flex flex-col h-full cursor-pointer group ${
+                  isSelected
+                    ? 'border-emerald-500 bg-white ring-8 ring-emerald-500/5 shadow-xl'
+                    : 'border-slate-100 bg-white hover:border-emerald-200 shadow-sm'
+                }`}
+              >
+                <div className="mb-3">
+                  <span className="inline-block px-2 py-0.5 rounded-full bg-slate-50 text-[10px] font-bold text-slate-500 border border-slate-100 mb-2">
+                    {plan.badge}
+                  </span>
+                  <h4 className="font-bold text-slate-900 text-lg mb-0.5">{plan.title}</h4>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="text-xl font-bold text-slate-900">{price}</span>
+                    <span className="text-xs text-slate-400 font-medium">/month</span>
+                  </div>
+                  <p className="text-xs text-slate-400">{plan.desc}</p>
+                </div>
+
+                <div className="space-y-2 flex-grow mb-3">
+                  {plan.features.map((feature, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-50 text-slate-300'}`}>
+                        <Check size={10} strokeWidth={4} />
+                      </div>
+                      <span className="text-xs font-bold text-slate-600 leading-tight">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-auto pt-3 border-t border-slate-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setViewingFeatures(plan.id) }}
+                      className="text-[10px] font-bold text-slate-400 hover:text-emerald-600 underline underline-offset-4 uppercase tracking-widest transition-colors"
+                    >
+                      See all features
+                    </button>
+                  </div>
+                  <button
+                    className={`w-full py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600'
+                    }`}
+                  >
+                    {isSelected && <Check size={16} strokeWidth={3} />}
+                    {isSelected ? 'Selected' : 'Select'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Mobile sticky CTA for trial */}
-        <div className="fixed left-4 right-4 bottom-6 sm:hidden z-50">
-          <a href="/trial" aria-label="Start free trial" className="w-full inline-flex justify-center items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold shadow-lg">Start Free Trial</a>
+        {/* Footer Actions */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 text-slate-400 font-bold text-sm hover:text-slate-900 transition-colors"
+            >
+              <ArrowLeft size={18} />
+              Back
+            </button>
+            <div className="hidden md:block w-px h-4 bg-slate-200" />
+            <p className="text-sm font-bold text-slate-500">
+              Not sure yet?{' '}
+              <button
+                onClick={() => router.push('/get-started/trial')}
+                className="text-emerald-600 hover:underline"
+              >
+                Start your free 30-day trial — no credit card needed.
+              </button>
+            </p>
+          </div>
+          <button
+            onClick={handleContinue}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-emerald-200 flex items-center gap-2 group"
+          >
+            Continue to checkout
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Animations */}
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(30px, -30px) rotate(5deg); }
-          66% { transform: translate(-20px, 20px) rotate(-5deg); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(-30px, 30px) rotate(-5deg); }
-          66% { transform: translate(20px, -20px) rotate(5deg); }
-        }
-        .animate-float { animation: float 20s ease-in-out infinite; }
-        .animate-float-delayed { animation: float-delayed 25s ease-in-out infinite; }
-      `}</style>
+      {/* Features Modal */}
+      <AnimatePresence>
+        {viewingFeatures && currentViewingPlan && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewingFeatures(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
+                    <Info size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900">{currentViewingPlan.title} Features</h3>
+                    <p className="text-sm text-slate-500 font-medium">Everything included in this plan</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setViewingFeatures(null)}
+                  className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto">
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+                  {currentViewingPlan.allFeatures.map((feature, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                        <Check size={12} strokeWidth={4} />
+                      </div>
+                      <span className="text-sm font-bold text-slate-700">{feature}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button
+                  onClick={() => { setSelectedPlan(currentViewingPlan.title); setViewingFeatures(null) }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-200"
+                >
+                  Select this plan
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

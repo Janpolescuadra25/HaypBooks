@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { MailService } from '../common/mail.service'
 
 @Injectable()
 export class TenantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(TenantsService.name)
+  constructor(private readonly prisma: PrismaService, private readonly mailService: MailService) {}
 
 async updateWorkspaceName(tenantId: string, workspaceName: string) {
     const workspaceId = tenantId
@@ -13,7 +15,7 @@ async updateWorkspaceName(tenantId: string, workspaceName: string) {
       // Cast to any to allow runtime DB fields that may be missing from Prisma schema in some environments
       return await this.prisma.workspace.update({ where: { id: workspaceId }, data: { workspaceName } as any })
     } catch (e) {
-      console.warn('[TenantsService] Failed to update workspaceName (non-fatal):', e?.message || e)
+      this.logger.warn('[TenantsService] Failed to update workspaceName (non-fatal): ' + (e?.message || e))
       return null
     }
   }
@@ -27,9 +29,28 @@ async updateFirmName(tenantId: string, firmName: string) {
       // Cast as any to tolerate missing schema fields at type-check/runtime parity
       return await this.prisma.workspace.update({ where: { id: workspaceId }, data: { firmName } as any })
     } catch (e) {
-      console.warn('[TenantsService] Failed to update firmName (non-fatal):', e?.message || e)
+      this.logger.warn('[TenantsService] Failed to update firmName (non-fatal): ' + (e?.message || e))
       return null
     }
+  }
+
+  /**
+   * Create a Practice under the owned workspace of the given user.
+   */
+  async createPractice(userId: string, name: string, servicesOffered?: string) {
+    const workspace = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
+    if (!workspace) {
+      throw new BadRequestException('No workspace found for user. Complete onboarding first.')
+    }
+    const practice = await this.prisma.practice.create({
+      data: {
+        name: name.trim().slice(0, 140),
+        workspaceId: workspace.id,
+        isActive: true,
+        ...(servicesOffered ? { servicesOffered } : {}),
+      },
+    })
+    return practice
   }
 
   /**
@@ -116,7 +137,7 @@ async updateFirmName(tenantId: string, firmName: string) {
    * Create a tenant invite
    * Owner invites accountant to access their tenant
    */
-  async createInvite(tenantId: string, email: string, invitedBy: string, roleId?: string) {
+  async createInvite(tenantId: string, email: string | null, invitedBy: string, roleId?: string, roleName?: string, isLinkInvite: boolean = false, contactName?: string, message?: string) {
     // Defensive validation: ensure tenantId is a valid UUID to avoid DB errors from malformed input
     if (!tenantId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tenantId)) {
       throw new ForbiddenException('Invalid tenant')
@@ -139,23 +160,29 @@ async updateFirmName(tenantId: string, firmName: string) {
     }
 
     // Check if invite already exists
-    const existingInvite = await this.prisma.workspaceInvite.findUnique({
-      where: {
-        workspaceId_email: {
-          workspaceId,
-          email,
-        },
-      },
-    })
+    let existingInvite: any | null = null
 
-    if (existingInvite && existingInvite.status === 'PENDING') {
-      throw new BadRequestException('An invitation is already pending for this email')
+    if (isLinkInvite) {
+      existingInvite = await this.prisma.workspaceInvite.findFirst({
+        where: { workspaceId, isLinkInvite: true, status: 'PENDING' },
+      })
+    } else if (email) {
+      existingInvite = await this.prisma.workspaceInvite.findUnique({
+        where: {
+          workspaceId_email: {
+            workspaceId,
+            email,
+          },
+        },
+      })
     }
 
-    // Check if user is already a member
-    const invitedUser = await this.prisma.user.findUnique({
-      where: { email },
-    })
+    if (existingInvite && existingInvite.status === 'PENDING') {
+      return existingInvite
+    }
+
+    // Check if user is already a member (only applies to email invites)
+    const invitedUser = email ? await this.prisma.user.findUnique({ where: { email } }) : null
 
     if (invitedUser) {
       const existingMembership = await this.prisma.workspaceUser.findUnique({
@@ -172,15 +199,40 @@ async updateFirmName(tenantId: string, firmName: string) {
       }
     }
 
+    // Ensure roleId is always set (WorkspaceUser.roleId is required by schema).
+    // If the caller did not provide a roleId, we can optionally accept a roleName (e.g. "Client")
+    // and resolve/create it. Otherwise default to an 'Accountant' role.
+    let effectiveRoleId = roleId
+
+    const resolveRoleByName = async (name: string) => {
+      const existingRole = await this.prisma.role.findFirst({
+        where: { workspaceId, name: { equals: name, mode: 'insensitive' } },
+      })
+      if (existingRole) return existingRole.id
+      const createdRole = await this.prisma.role.create({ data: { workspaceId, name } })
+      return createdRole.id
+    }
+
+    if (!effectiveRoleId) {
+      if (roleName) {
+        effectiveRoleId = await resolveRoleByName(roleName)
+      } else {
+        effectiveRoleId = await resolveRoleByName('Accountant')
+      }
+    }
+
     // Create the invite
     const invite = await this.prisma.workspaceInvite.create({
       data: {
         workspaceId,
-        email,
-        roleId,
+        email: isLinkInvite ? null : email,
+        roleId: effectiveRoleId,
         invitedBy,
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        isLinkInvite,
+        message,
+        contactName,
       },
       include: {
         workspace: {
@@ -197,8 +249,23 @@ async updateFirmName(tenantId: string, firmName: string) {
       },
     })
 
-    // TODO: Send email notification to invitee
-    // await this.mailService.sendInviteEmail(email, invite)
+    this.logger.log(`Created tenant invite for ${email} in workspace ${workspaceId}`)
+
+    // Send the invite email asynchronously (failure should not block the API)
+    // For link-based invites, we do not have a real recipient email and should not attempt to email.
+    if (!isLinkInvite && email) {
+      try {
+        const inv = invite as any
+        const workspaceName = inv.workspace?.workspaceName || 'your workspace'
+        const inviterName = inv.invitedByUser?.name || inv.invitedByUser?.email || 'a colleague'
+        const link = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/accept-invite?code=${invite.id}`
+        const html = this.mailService.buildInviteHtml(inviterName, workspaceName, link)
+        const text = this.mailService.buildInviteText(inviterName, workspaceName, link)
+        await this.mailService.sendEmail(email, 'You have been invited to HaypBooks', html, text)
+      } catch (e) {
+        this.logger.warn('Failed to send invite email: ' + (e?.message || e))
+      }
+    }
 
     return invite
   }
@@ -210,10 +277,7 @@ async updateFirmName(tenantId: string, firmName: string) {
     const invites = await this.prisma.workspaceInvite.findMany({
       where: {
         email,
-        status: 'PENDING',
-        expiresAt: {
-          gt: new Date(),
-        },
+        status: { in: ['PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED'] },
       },
       include: {
         workspace: {
@@ -239,7 +303,69 @@ async updateFirmName(tenantId: string, firmName: string) {
       },
     })
 
-    return invites
+    // For backwards-compatibility with older client code/tests that expect a `tenant` key
+    // (legacy naming from when the system used a Tenant model), provide it alongside `workspace`.
+    const now = new Date()
+    return invites.map(invite => {
+      const expired = invite.expiresAt ? invite.expiresAt.getTime() < now.getTime() : false
+      const displayStatus = expired && invite.status === 'PENDING' ? 'EXPIRED' : invite.status
+      return {
+        ...invite,
+        status: displayStatus,
+        isExpired: expired,
+        tenant: (invite as any).workspace,
+      }
+    })
+  }
+
+  async declineInviteForEmail(email: string, inviteId: string) {
+    const invite = await this.prisma.workspaceInvite.findUnique({ where: { id: inviteId } })
+    if (!invite) {
+      throw new Error('Invite not found')
+    }
+    if ((invite.email || '').toLowerCase() !== (email || '').toLowerCase()) {
+      throw new Error('Invite does not belong to this email')
+    }
+    if (invite.status !== 'PENDING') {
+      throw new Error('Only pending invites can be declined')
+    }
+
+    await this.prisma.workspaceInvite.update({
+      where: { id: inviteId },
+      data: { status: 'DECLINED' },
+    })
+
+    return { success: true }
+  }
+
+  async cancelInviteByOwner(tenantId: string, userId: string, inviteId: string) {
+    // Verify owner permission
+    const tenantUser = await this.prisma.workspaceUser.findUnique({
+      where: { workspaceId_userId: { workspaceId: tenantId, userId } },
+    })
+
+    if (!tenantUser || !tenantUser.isOwner) {
+      throw new ForbiddenException('Only tenant owners can cancel invites')
+    }
+
+    const invite = await this.prisma.workspaceInvite.findUnique({ where: { id: inviteId } })
+    if (!invite) {
+      throw new Error('Invite not found')
+    }
+    if (invite.workspaceId !== tenantId) {
+      throw new ForbiddenException('Invite does not belong to this tenant')
+    }
+
+    if (invite.status !== 'PENDING') {
+      throw new Error('Only pending invites can be cancelled')
+    }
+
+    await this.prisma.workspaceInvite.update({
+      where: { id: inviteId },
+      data: { status: 'CANCELLED' },
+    })
+
+    return { success: true }
   }
 
   /**

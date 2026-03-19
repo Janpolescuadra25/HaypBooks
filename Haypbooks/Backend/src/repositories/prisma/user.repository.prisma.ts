@@ -4,7 +4,7 @@ import { IUserRepository, User } from '../interfaces/user.repository.interface'
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private normalizeEmail(email: string): string {
     return String(email || '').trim().toLowerCase()
@@ -22,32 +22,94 @@ export class PrismaUserRepository implements IUserRepository {
         },
       },
     })
-    return u as any
+    if (!u) return null
+    return {
+      ...u,
+      role: u.preferredHub === 'ACCOUNTANT' ? 'accountant' : 'business',
+    } as any
   }
 
   async findById(id: string): Promise<User | null> {
-    const u = await this.prisma.user.findUnique({ where: { id } })
-    return u as any
+    const u = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        ownedWorkspace: {
+          include: { companies: true, practices: true }
+        },
+        workspaceUsers: {
+          include: {
+            workspace: {
+              include: { companies: true, practices: true }
+            }
+          }
+        }
+      }
+    })
+    if (!u) return null
+    return {
+      ...u,
+      role: u.preferredHub === 'ACCOUNTANT' ? 'accountant' : 'business',
+    } as any
   }
 
   async create(data: Partial<User>): Promise<User> {
     const toCreate: any = { ...(data as any) }
     if (toCreate.email) toCreate.email = this.normalizeEmail(toCreate.email)
-    // Backwards-compat: accept `role` in legacy test/seed fixtures and map to `systemRole`
-    if (toCreate.role) { toCreate.systemRole = toCreate.role; delete toCreate.role }
-    const created = await this.prisma.user.create({ data: toCreate })
-    return created as any
+
+    // Map legacy `role` into `preferredHub` and enforce `SystemRole` as 'USER' 
+    if (toCreate.role) {
+      if (['accountant', 'business', 'owner', 'both'].includes(toCreate.role)) {
+        // Only set default if preferredHub isn't already explicitly set
+        if (!toCreate.preferredHub) {
+          toCreate.preferredHub = (toCreate.role === 'accountant' || toCreate.role === 'both') ? 'ACCOUNTANT' : 'OWNER'
+        }
+      } else {
+        toCreate.systemRole = toCreate.role // e.g. SUPER_ADMIN
+      }
+      delete toCreate.role
+    }
+
+    // Ensure systemRole is valid (default to USER if not provided or valid)
+    if (!['USER', 'SUPPORT', 'ADMIN', 'SUPER_ADMIN'].includes(toCreate.systemRole)) {
+      toCreate.systemRole = 'USER'
+    }
+
+    // Whitelist scalar user fields to avoid passing unknown legacy flags (e.g., onboarding flags, companyName)
+    const allowed = new Set([
+      'email', 'systemRole', 'name', 'password', 'isEmailVerified', 'resetToken', 'resetTokenExpiry', 'preferredHub', 'phone', 'phoneHmac', 'isPhoneVerified', 'phoneVerifiedAt', 'auditReviewer'
+    ])
+    const filtered: any = {}
+    for (const k of Object.keys(toCreate)) {
+      if (allowed.has(k)) filtered[k] = toCreate[k]
+    }
+
+    const created = await this.prisma.user.create({ data: filtered })
+
+    // Return with `role` projected for back-compat
+    return {
+      ...created,
+      role: created.preferredHub === 'ACCOUNTANT' ? 'accountant' : 'business',
+    } as any
   }
 
   async update(id: string, data: Partial<User>): Promise<User> {
     // Use the generated Prisma client for updates now that `prisma generate` has been run.
     let toUpdate: any = { ...(data as any) }
     if (toUpdate.email) toUpdate.email = this.normalizeEmail(toUpdate.email)
-    if (toUpdate.role) { toUpdate.systemRole = toUpdate.role; delete toUpdate.role }
+    if (toUpdate.role) {
+      if (['accountant', 'business', 'owner', 'both'].includes(toUpdate.role)) {
+        if (!toUpdate.preferredHub) {
+          toUpdate.preferredHub = (toUpdate.role === 'accountant' || toUpdate.role === 'both') ? 'ACCOUNTANT' : 'OWNER'
+        }
+      } else {
+        toUpdate.systemRole = toUpdate.role
+      }
+      delete toUpdate.role
+    }
 
     // Whitelist scalar user fields to avoid passing unknown legacy flags (e.g., onboarding flags)
     const allowed = new Set([
-      'email','systemRole','name','password','isEmailVerified','resetToken','resetTokenExpiry','preferredHub','phone','phoneHmac','isPhoneVerified','phoneVerifiedAt','auditReviewer'
+      'email', 'systemRole', 'name', 'password', 'isEmailVerified', 'resetToken', 'resetTokenExpiry', 'preferredHub', 'phone', 'phoneHmac', 'isPhoneVerified', 'phoneVerifiedAt', 'auditReviewer'
     ])
     const filtered: any = {}
     for (const k of Object.keys(toUpdate)) {
@@ -55,7 +117,10 @@ export class PrismaUserRepository implements IUserRepository {
     }
 
     const updated = await this.prisma.user.update({ where: { id }, data: filtered })
-    return updated as any
+    return {
+      ...updated,
+      role: updated.preferredHub === 'ACCOUNTANT' ? 'accountant' : 'business',
+    } as any
   }
 
   async delete(id: string): Promise<boolean> {

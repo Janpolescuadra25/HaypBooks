@@ -5,8 +5,13 @@ type CurrencyCode = string
 
 const currencyFormatters = new Map<string, Intl.NumberFormat>()
 const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 })
+let defaultCurrency: CurrencyCode = 'USD'
 
-export function formatCurrency(value: number | null | undefined, currency: CurrencyCode = 'USD') {
+export function setDefaultCurrency(currency: CurrencyCode) {
+  defaultCurrency = currency
+}
+
+export function formatCurrency(value: number | null | undefined, currency: CurrencyCode = defaultCurrency) {
   if (value == null || isNaN(value)) return '—'
   const key = `${currency}`
   let fmt = currencyFormatters.get(key)

@@ -48,11 +48,12 @@ try {
   // Ensure Prisma migrations are deployed non-interactively to the test DB (creates tables like EmailVerificationToken)
   try {
     runWithRetry('npx prisma migrate deploy --schema=prisma/schema.prisma', 3, 500)
-    // Ensure Prisma client is generated for any ts-node scripts that require it during seeding/tests
-    runWithRetry('npm run prisma:generate', 3, 500)
   } catch (e) {
-    console.warn('Prisma migrate deploy/generate step failed (continuing):', e && e.message ? e.message : e)
+    console.warn('Prisma migrate deploy step failed (continuing):', e && e.message ? e.message : e)
   }
+  // NOTE: prisma:generate is intentionally skipped here — when called from jest's beforeAll,
+  // the Jest process already holds a lock on query_engine-windows.dll.node, causing a deadlock.
+  // The client is pre-built in node_modules and does not need regeneration at test time.
   // Fall back to running SQL migration files (idempotent) for compatibility with older setups
   runWithRetry('node ./scripts/migrate/run-sql.js', 3, 500)
   // Ensure tenantId columns are UUID and Task.archivedAt exists before seeding / applying RLS

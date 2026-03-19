@@ -1,5 +1,4 @@
 import { db } from './db'
-import { evaluatePromises } from '@/lib/promise-eval'
 
 interface DateRange { start?: string; end?: string }
 
@@ -668,8 +667,6 @@ export interface CustomerARSnapshot {
 
 export function computeCustomerARSnapshot(customerId: string, asOf: Date): CustomerARSnapshot {
   const asOfIso = asOf.toISOString().slice(0,10)
-  // Normalize promise statuses relative to the as-of date to ensure metrics reflect reality
-  try { evaluatePromises(asOfIso) } catch {}
   let openInvoices = 0
   let openBalance = 0
   let lastPaymentDate: string | null = null
@@ -762,8 +759,6 @@ export interface CollectionsOverviewResult {
 
 export function computeCollectionsOverview(asOf: Date): CollectionsOverviewResult {
   const asOfIso = asOf.toISOString().slice(0,10)
-  // Normalize promise statuses relative to the as-of date to ensure metrics reflect reality
-  try { evaluatePromises(asOfIso) } catch {}
   const rows: CollectionsCustomerRow[] = []
   for (const cust of db.customers) {
     const snap = computeCustomerARSnapshot(cust.id, asOf)

@@ -9,13 +9,21 @@ export default function CompanyModal({ company, onClose }: any) {
   const confirm = async () => {
     setLoading(true)
     try {
+      // mark preferred workspace so user lands in owner hub
       await fetch('/api/users/preferred-workspace', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'company', id: company.id }) })
-      // If successful, go to dashboard
-      router.replace('/dashboard')
+      // record last-accessed so the company appears first in /api/companies/recent
+      try {
+        await fetch(`/api/companies/${company.id}/last-accessed`, { method: 'PATCH' })
+      } catch (e) {
+        // non-fatal; we still navigate even if patch fails
+        console.warn('[CompanyModal] failed to patch last-accessed (tolerance)', e)
+      }
+      // navigate with explicit query param to make behaviour consistent with CompanySwitcher
+      router.replace(`/dashboard?company=${encodeURIComponent(company.id)}`)
     } catch (err) {
       // In test environment relative fetches can throw; log and continue to dashboard for flow
       console.warn('[CompanyModal] preferred-workspace update failed (test-env tolerance)', err)
-      router.replace('/dashboard')
+      router.replace(`/dashboard?company=${encodeURIComponent(company.id)}`)
     }
   }
 

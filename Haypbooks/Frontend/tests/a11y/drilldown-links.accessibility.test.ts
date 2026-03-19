@@ -58,7 +58,7 @@ describe('Drilldown link accessibility', () => {
 
   test('Balance Sheet: account and totals rows are keyboard-focusable links with correct href', async () => {
     const { default: BalanceSheetPage } = await import('@/app/reports/balance-sheet/page')
-    const element = await BalanceSheetPage({ searchParams: { period: 'YTD' } as any })
+    const element = await BalanceSheetPage()
     render(element as any)
 
     // Account line link: Cash → account 1000
@@ -87,7 +87,7 @@ describe('Drilldown link accessibility', () => {
 
   test('Profit & Loss: section rows are links with preserved filters', async () => {
     const { default: ProfitLossPage } = await import('@/app/reports/profit-loss/page')
-    const element = await ProfitLossPage({ searchParams: { period: 'YTD', start: '2025-01-01', end: '2025-01-31' } as any })
+    const element = await ProfitLossPage()
     render(element as any)
 
     const revLink = await screen.findByRole('link', { name: 'Revenue' })

@@ -20,9 +20,16 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 15000,
 });
 
-// Request interceptor - attach JWT from localStorage if available
+// Request interceptor — ensure all requests go through the /api proxy.
+// Many components use paths like `/companies/...` without the `/api/` prefix;
+// the Next.js rewrite rule only matches `/api/:path*`, so we normalise here.
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => config,
+  (config: InternalAxiosRequestConfig) => {
+    if (config.url && !config.url.startsWith('/api/') && !config.url.startsWith('http')) {
+      config.url = '/api' + (config.url.startsWith('/') ? '' : '/') + config.url;
+    }
+    return config;
+  },
   (error) => {
     return Promise.reject(error);
   }

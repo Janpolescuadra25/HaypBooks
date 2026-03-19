@@ -8,10 +8,16 @@ describe('UsersService', () => {
     update: jest.fn(),
     findByEmail: jest.fn(),
   }
+  const mockPrisma: any = {
+    onboardingData: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+    },
+  }
 
   beforeEach(() => {
     jest.resetAllMocks()
-    usersService = new UsersService(mockUserRepo)
+    usersService = new UsersService(mockUserRepo, mockPrisma)
   })
 
   test('setPreferredHub updates and returns user without password', async () => {

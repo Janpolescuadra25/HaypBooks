@@ -1,0 +1,44 @@
+[
+  {
+    "id": "base",
+    "name": "Base Template",
+    "description": "Minimal core chart of accounts used for all companies.",
+    "industryKeywords": [],
+    "lines": [
+      { "code": "1000", "name": "Current Assets", "typeKey": "ASSET", "normalSide": "DEBIT", "isHeader": true, "liquidityType": "CURRENT" },
+      { "code": "2000", "name": "Current Liabilities", "typeKey": "LIABILITY", "normalSide": "CREDIT", "isHeader": true, "liquidityType": "CURRENT" },
+      { "code": "3000", "name": "Owner's Equity", "typeKey": "EQUITY", "normalSide": "CREDIT", "isHeader": true },
+      { "code": "4000", "name": "Operating Revenue", "typeKey": "INCOME", "normalSide": "CREDIT", "isHeader": true },
+      { "code": "5000", "name": "Cost of Sales", "typeKey": "EXPENSE", "normalSide": "DEBIT", "isHeader": true },
+      { "code": "6000", "name": "Operating Expenses", "typeKey": "EXPENSE", "normalSide": "DEBIT", "isHeader": true }
+    ]
+  },
+  {
+    "id": "retail",
+    "name": "Retail",
+    "description": "Adds inventory and COGS accounts typically used by retail businesses.",
+    "industryKeywords": ["retail"],
+    "lines": [
+      { "code": "1200", "name": "Inventory", "typeKey": "ASSET", "normalSide": "DEBIT", "isHeader": false, "parentCode": "1000", "liquidityType": "CURRENT" },
+      { "code": "5005", "name": "Cost of Goods Sold - Retail", "typeKey": "EXPENSE", "normalSide": "DEBIT", "isHeader": false, "parentCode": "5000" }
+    ]
+  },
+  {
+    "id": "saas",
+    "name": "SaaS / Software",
+    "description": "Adds deferred revenue accounts commonly used by subscription-based businesses.",
+    "industryKeywords": ["saas", "software"],
+    "lines": [
+      { "code": "4800", "name": "Deferred Revenue", "typeKey": "LIABILITY", "normalSide": "CREDIT", "isHeader": false, "parentCode": "2000", "liquidityType": "CURRENT" }
+    ]
+  },
+  {
+    "id": "construction",
+    "name": "Construction",
+    "description": "Adds work-in-progress tracking for construction projects.",
+    "industryKeywords": ["construction"],
+    "lines": [
+      { "code": "1450", "name": "Work in Progress", "typeKey": "ASSET", "normalSide": "DEBIT", "isHeader": false, "parentCode": "1000", "liquidityType": "CURRENT" }
+    ]
+  }
+]

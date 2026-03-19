@@ -105,77 +105,53 @@ export default function PhoneCodeForm({ phone, onSuccess, onBack, enableAutoSubm
   const masked = maskPhoneForDisplay(phone)
 
   return (
-    <main role="main">
-      <style>{`
-        :root{--brand:#0a9b63;--bg:#eef7f3;--text:#0f172a;--muted:#64748b;--border:#d1d5db;--radius:16px}
-        .vh-card{width:100%;max-width:420px;background:#fff;padding:2.5rem;border-radius:var(--radius);box-shadow:0 20px 40px rgba(0,0,0,0.08);color:var(--text)}
-        .logo{width:56px;height:56px;border-radius:16px;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:1.25rem;font-weight:700;margin:0 auto 1rem}
-        h1{font-size:1.5rem;margin:0 0 .5rem;text-align:center}
-        p.lead{margin:0 0 1.25rem;color:var(--muted);line-height:1.5;text-align:center}
-        .email{font-weight:500;color:var(--text);word-break:break-all;display:block;margin-top:.25rem}
-        .otp-group{display:flex;justify-content:center;gap:.5rem;margin-bottom:1.25rem}
-        .otp-group input{width:48px;height:56px;text-align:center;font-size:1.25rem;border-radius:12px;border:1px solid var(--border)}
-        .otp-group input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(10,155,99,0.2)}
-        .actions{display:flex;gap:.75rem}
-        .secondary{flex:1;padding:.75rem 1rem;border-radius:12px;background:#f1f5f9;color:var(--text);border:none;font-weight:600;cursor:pointer}
-        .primary{flex:1;padding:.75rem 1rem;border-radius:12px;background:var(--brand);color:#fff;border:none;font-weight:600;cursor:pointer}
-        .resend{margin-top:1.25rem;text-align:center;font-size:.875rem}
-        .resend button{background:none;border:none;color:var(--brand);font-weight:600;cursor:pointer;padding:0}
-        .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-      `}</style>
+    <div className="w-full">
+      <p className="lead text-center mb-4"><strong>Enter the 6‑digit code we sent to</strong><br /><span className="email"><strong>{masked || phone}</strong></span></p>
 
-      <div className="vh-card" aria-live="polite">
-        <p className="lead"><strong>Enter the 6‑digit code we sent to</strong><br /><span className="email"><strong>{masked || phone}</strong></span></p>
-
-        <form onSubmit={submit} aria-label="Verification code form">
-          <label htmlFor="otp-1" className="sr-only">Verification code</label>
-          <div className="otp-group" role="group" aria-describedby="otp-hint">
-            {digits.map((d, i) => (
-              <input
-                key={i}
-                id={i === 0 ? 'otp-1' : undefined}
-                name={`otp[${i}]`}
-                inputMode="numeric"
-                pattern="[0-9]"
-                maxLength={1}
-                autoComplete={i === 0 ? 'one-time-code' : undefined}
-                required
-                ref={(el) => { inputsRef.current[i] = el; /* return void for typing */ }}
-                aria-label={`Verification code digit ${i + 1}`}
-                value={d}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9]/g, '').slice(-1)
-                  const next = [...digits]
-                  next[i] = v
-                  setDigits(next)
-                  if (v) {
-                    if (i < 5) focusNext(i)
-                    else {
-                      if (next.every((c) => c !== '') && enableAutoSubmit) submit(undefined)
-                    }
-                  }
-                }}
-                onKeyDown={(e) => handleKey(e, i)}
-                onPaste={(e) => handlePaste(e, i)}
-              />
-            ))}
-          </div>
-
-          <p id="otp-hint" className="sr-only">Enter the 6-digit code sent to your phone number</p>
-
-          {error && <div className="text-red-600" role="alert">{error}</div>}
-
-          <div className="actions">
-            <button type="button" className="secondary" onClick={() => { if (onBack) onBack(); else window.history.back() }}>Change method</button>
-            <button type="submit" className="primary" disabled={loading}>Verify code</button>
-          </div>
-        </form>
-
-        <div className="resend">
-          Didn’t receive the code? <button type="button" onClick={async () => { await send() }}>Resend</button>
+      <form onSubmit={submit} aria-label="Verification code form" className="max-w-xs mx-auto">
+        <label htmlFor="otp-1" className="sr-only">Verification code</label>
+        <div className="otp-group grid gap-1 sm:gap-2 md:gap-3" role="group" aria-describedby="otp-hint" style={{ gridTemplateColumns: `repeat(6, minmax(0, 1fr))` }}>
+          {digits.map((d, i) => (
+            <input
+              key={i}
+              id={i === 0 ? 'otp-1' : undefined}
+              name={`otp[${i}]`}
+              inputMode="numeric"
+              pattern="[0-9]"
+              maxLength={1}
+              autoComplete={i === 0 ? 'one-time-code' : undefined}
+              required
+              ref={(el) => { inputsRef.current[i] = el }}
+              aria-label={`Verification code digit ${i + 1}`}
+              value={d}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, '').slice(-1)
+                const next = [...digits]
+                next[i] = v
+                setDigits(next)
+                if (v && i < length - 1) focusNext(i + 1)
+              }}
+              onKeyDown={(e) => handleKey(e, i)}
+              onPaste={(e) => handlePaste(e, i)}
+              className="w-full h-11 sm:h-11 md:h-14 text-center rounded-xl border-2 border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-lg md:text-xl font-semibold transition-transform bg-white"
+            />
+          ))}
         </div>
-        {info && <div className="text-slate-600 mt-2" role="status" aria-live="polite">{info}</div>} 
+
+        <p id="otp-hint" className="sr-only">Enter the 6-digit code sent to your phone number</p>
+
+        {error && <div className="text-red-600 mt-3" role="alert">{error}</div>}
+
+        <div className="actions mt-6">
+          <button type="button" className="secondary" onClick={() => { if (onBack) onBack(); else window.history.back() }}>Change method</button>
+          <button type="submit" className="primary" disabled={loading}>Verify code</button>
+        </div>
+      </form>
+
+      <div className="resend mt-4 text-center text-sm">
+        Didn’t receive the code? <button type="button" onClick={async () => { await send() }} className="text-emerald-600 hover:underline">Resend</button>
       </div>
-    </main>
+      {info && <div className="text-slate-600 mt-2 text-center" role="status" aria-live="polite">{info}</div>} 
+    </div>
   )
 }

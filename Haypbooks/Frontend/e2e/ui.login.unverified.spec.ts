@@ -74,13 +74,22 @@ test('ui: unverified account shows resend verification action and navigates to v
     }
     expect(page.url()).toMatch(/\/verify-otp|\/verification/)
 
-    // The redirect target should show the card-style selection (Email & Phone)
-    await page.waitForSelector('button[data-testid="verif-email-card"]', { timeout: 5000 }).catch(() => {})
-    await page.waitForSelector('button[data-testid="option-email"]', { timeout: 5000 }).catch(() => {})
-    await page.waitForSelector('text=Text Message (SMS)', { timeout: 5000 }).catch(() => {})
-    await expect(page.locator('button[data-testid="option-email"]')).toBeVisible()
-    await expect(page.locator('button[data-testid="verif-email-card"]')).toBeVisible().catch(() => {})
-    await expect(page.locator('text=Text Message (SMS)')).toBeVisible()
+    // The redirect target may either show the card-style options or drop directly
+    // into the email code form (the new two‑step flow). Handle both paths.
+    const hasOtp = await page.locator('input#otp-1').count()
+    if (hasOtp) {
+      // OTP layout should display the new branding
+      await expect(page.locator('text=Two-step verification')).toBeVisible()
+      await expect(page.locator('text=Back to sign in')).toBeVisible()
+    } else {
+      // The redirect target should show the card-style selection (Email & Phone)
+      await page.waitForSelector('button[data-testid="verif-email-card"]', { timeout: 5000 }).catch(() => {})
+      await page.waitForSelector('button[data-testid="option-email"]', { timeout: 5000 }).catch(() => {})
+      await page.waitForSelector('text=Text Message (SMS)', { timeout: 5000 }).catch(() => {})
+      await expect(page.locator('button[data-testid="option-email"]')).toBeVisible()
+      await expect(page.locator('button[data-testid="verif-email-card"]')).toBeVisible().catch(() => {})
+      await expect(page.locator('text=Text Message (SMS)')).toBeVisible()
+    }
 
     // And a contextual banner should explain why we were redirected after sign-in
     // (the banner text is set when arriving with `from=signin`)

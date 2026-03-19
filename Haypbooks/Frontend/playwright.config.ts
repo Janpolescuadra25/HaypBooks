@@ -17,10 +17,17 @@ export default defineConfig({
     actionTimeout: 10_000,
   },
   webServer: {
-    command: 'npm run dev',
+    // Clean up any prior Next.js build/cache to avoid stale/corrupted artifacts causing
+    // memory allocation failures when running in CI or constrained environments.
+    command: "node -e \"require('fs').rmSync('.next', { recursive: true, force: true });\" && npm run dev",
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120_000,
+    env: {
+      // Allow Next.js to use more heap when compiling, which can help avoid
+      // "Array buffer allocation failed" errors under heavy build load.
+      NODE_OPTIONS: '--max-old-space-size=4096',
+    },
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
