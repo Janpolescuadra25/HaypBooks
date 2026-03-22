@@ -69,8 +69,12 @@ export const navigationData: NavSection[] = [
     items: [
       { title: 'Dashboard', path: '/home/dashboard' },
       { title: 'Business Health', path: '/home/business-health' },
+      { title: 'Performance', path: '/home/performance' },
+      { title: 'Cash Position', path: '/home/cash-position' },
       { title: 'Shortcuts', path: '/home/shortcuts' },
       { title: 'Setup Center', path: '/home/setup-center' },
+      { title: 'Notifications Inbox', path: '/home/notifications' },
+      { title: 'Help & Support', path: '/home/help' },
     ],
   },
   {
@@ -86,6 +90,7 @@ export const navigationData: NavSection[] = [
           { title: 'My Exceptions', path: '/tasks-approvals/my-work/my-exceptions' },
           { title: 'Overdue Items', path: '/tasks-approvals/my-work/overdue-items' },
           { title: 'Notifications', path: '/tasks-approvals/my-work/notifications' },
+          { title: 'Calendar', path: '/tasks-approvals/my-work/calendar' },
         ],
       },
       {
@@ -94,6 +99,8 @@ export const navigationData: NavSection[] = [
           { title: 'Team Tasks', path: '/tasks-approvals/management/team-tasks' },
           { title: 'Delegated Tasks', path: '/tasks-approvals/management/delegated-tasks' },
           { title: 'Approval Queue', path: '/tasks-approvals/management/approval-queue' },
+          { title: 'Approval History', path: '/tasks-approvals/management/approval-history' },
+          { title: 'Task Templates', path: '/tasks-approvals/management/task-templates' },
         ],
       },
       {
@@ -101,6 +108,22 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Completed Tasks', path: '/tasks-approvals/history/completed-tasks' },
           { title: 'Approval History', path: '/tasks-approvals/history/approval-history' },
+        ],
+      },
+      {
+        title: 'Exceptions',
+        items: [
+          { title: 'Exception Queue', path: '/tasks-approvals/exceptions/exception-queue' },
+          { title: 'By Type', path: '/tasks-approvals/exceptions/by-type' },
+          { title: 'Resolution Log', path: '/tasks-approvals/exceptions/resolution-log' },
+        ],
+      },
+      {
+        title: 'Follow-ups',
+        items: [
+          { title: 'Scheduled Follow-ups', path: '/tasks-approvals/follow-ups/scheduled' },
+          { title: 'Overdue Follow-ups', path: '/tasks-approvals/follow-ups/overdue' },
+          { title: 'Completed', path: '/tasks-approvals/follow-ups/completed' },
         ],
       },
     ],
@@ -122,6 +145,7 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Locations & Divisions', path: '/organization/operational-structure/locations-divisions' },
           { title: 'Departments', path: '/organization/operational-structure/departments' },
+          { title: 'Classes & Tags', path: '/organization/operational-structure/classes-tags' },
           { title: 'Org Chart', path: '/organization/operational-structure/org-chart' },
         ],
       },
@@ -213,6 +237,22 @@ export const navigationData: NavSection[] = [
           { title: 'Lock Period', path: '/accounting/period-close/lock-period' },
           { title: 'Sign-Offs', path: '/accounting/period-close/sign-offs' },
           { title: 'Close Archive', path: '/accounting/period-close/close-archive' },
+        ],
+      },
+      {
+        title: 'Allocations',
+        items: [
+          { title: 'Allocation Rules', path: '/accounting/allocations/allocation-rules' },
+          { title: 'Allocation Runs', path: '/accounting/allocations/allocation-runs' },
+          { title: 'Allocation History', path: '/accounting/allocations/allocation-history' },
+        ],
+      },
+      {
+        title: 'Revaluations',
+        items: [
+          { title: 'Currency Revaluation', path: '/accounting/revaluations/currency-revaluation' },
+          { title: 'Revaluation Schedule', path: '/accounting/revaluations/revaluation-schedule' },
+          { title: 'Revaluation History', path: '/accounting/revaluations/revaluation-history' },
         ],
       },
     ],
@@ -350,6 +390,14 @@ export const navigationData: NavSection[] = [
         ],
       },
       {
+        title: 'Refunds',
+        items: [
+          { title: 'Refund List', path: '/sales/refunds/refund-list' },
+          { title: 'Process Refund', path: '/sales/refunds/process-refund' },
+          { title: 'Refund History', path: '/sales/refunds/refund-history' },
+        ],
+      },
+      {
         title: 'Revenue Management',
         items: [
           { title: 'Revenue Recognition', path: '/sales/revenue-management/revenue-recognition' },
@@ -389,6 +437,7 @@ export const navigationData: NavSection[] = [
           { title: 'Approval Workflows', path: '/expenses/purchasing/approval-workflows' },
           { title: 'Bill Approval Hierarchies', path: '/expenses/purchasing/bill-approval-hierarchies' },
           { title: 'Budget Checks', path: '/expenses/purchasing/budget-checks', isEnterprise: true },
+          { title: 'RFQ (Request for Quote)', path: '/expenses/purchasing/rfq' },
         ],
       },
       {
@@ -397,6 +446,7 @@ export const navigationData: NavSection[] = [
           { title: 'Expenses', path: '/expenses/expense-capture/expenses' },
           { title: 'Receipts', path: '/expenses/expense-capture/receipts' },
           { title: 'Mileage', path: '/expenses/expense-capture/mileage' },
+          { title: 'Per Diem', path: '/expenses/expense-capture/per-diem' },
           { title: 'Employee Reimbursements', path: '/expenses/expense-capture/employee-reimbursements' },
           { title: 'Company Card Activity', path: '/expenses/expense-capture/company-card-activity' },
         ],
@@ -409,6 +459,22 @@ export const navigationData: NavSection[] = [
           { title: 'Bill Payments', path: '/expenses/payables/bill-payments' },
           { title: 'A/P Aging', path: '/expenses/payables/ap-aging' },
           { title: 'Payment Runs', path: '/expenses/payables/payment-runs' },
+          { title: 'Vendor Credits', path: '/expenses/payables/vendor-credits' },
+        ],
+      },
+      {
+        title: 'Company Cards',
+        items: [
+          { title: 'Card Management', path: '/expenses/company-cards/card-management' },
+          { title: 'Card Transactions', path: '/expenses/company-cards/card-transactions' },
+          { title: 'Card Statements', path: '/expenses/company-cards/card-statements' },
+        ],
+      },
+      {
+        title: 'Checks',
+        items: [
+          { title: 'Print Checks', path: '/expenses/checks/print-checks' },
+          { title: 'Check Register', path: '/expenses/checks/check-register' },
         ],
       },
       {
@@ -577,7 +643,18 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Time by Project', path: '/time/analysis/time-by-project' },
           { title: 'Time by Customer', path: '/time/analysis/time-by-customer' },
+          { title: 'Time by Employee', path: '/time/analysis/time-by-employee' },
+          { title: 'Time by Task', path: '/time/analysis/time-by-task' },
           { title: 'Utilization Report', path: '/time/analysis/utilization-report' },
+          { title: 'Productivity', path: '/time/analysis/productivity' },
+        ],
+      },
+      {
+        title: 'Setup',
+        items: [
+          { title: 'Time Types', path: '/time/setup/time-types' },
+          { title: 'Time Rules', path: '/time/setup/time-rules' },
+          { title: 'Timesheet Templates', path: '/time/setup/timesheet-templates' },
         ],
       },
     ],
@@ -822,12 +899,47 @@ export const navigationData: NavSection[] = [
     title: 'REPORTING',
     icon: BarChart3,
     items: [
-      { title: 'Financial Statements', path: '/reporting/financial-statements' },
-      { title: 'Standard Reports', path: '/reporting/standard-reports' },
-      { title: 'Custom Reports', path: '/reporting/custom-reports' },
-      { title: 'Saved Views', path: '/reporting/saved-views' },
-      { title: 'Performance Center', path: '/reporting/performance-center' },
-      { title: 'ESG Reporting', path: '/reporting/esg-reporting', isEnterprise: true },
+      {
+        title: 'Reports Center',
+        items: [
+          { title: 'Financial Statements', path: '/reporting/reports-center/financial-statements' },
+          { title: 'Accountant Reports', path: '/reporting/reports-center/accountant-reports' },
+          { title: 'Banking Reports', path: '/reporting/reports-center/banking-reports' },
+          { title: 'Sales Reports', path: '/reporting/reports-center/sales-reports' },
+          { title: 'Expense Reports', path: '/reporting/reports-center/expense-reports' },
+          { title: 'Inventory Reports', path: '/reporting/reports-center/inventory-reports' },
+          { title: 'Project Reports', path: '/reporting/reports-center/project-reports' },
+          { title: 'Payroll Reports', path: '/reporting/reports-center/payroll-reports' },
+          { title: 'Tax Reports', path: '/reporting/reports-center/tax-reports' },
+        ],
+      },
+      {
+        title: 'Analytics',
+        items: [
+          { title: 'Executive Dashboard', path: '/reporting/analytics/executive-dashboard' },
+          { title: 'KPI Dashboard', path: '/reporting/analytics/kpi-dashboard' },
+          { title: 'Revenue Trends', path: '/reporting/analytics/revenue-trends' },
+          { title: 'Forecasts', path: '/reporting/analytics/forecasts' },
+          { title: 'Benchmarks', path: '/reporting/analytics/benchmarks' },
+        ],
+      },
+      {
+        title: 'Custom Reports',
+        items: [
+          { title: 'Report Builder', path: '/reporting/custom-reports/report-builder' },
+          { title: 'Saved Reports', path: '/reporting/custom-reports/saved-reports' },
+          { title: 'Report Templates', path: '/reporting/custom-reports/report-templates' },
+          { title: 'Scheduled Reports', path: '/reporting/custom-reports/scheduled-reports' },
+        ],
+      },
+      {
+        title: 'Performance Center',
+        items: [
+          { title: 'Business Performance', path: '/reporting/performance-center/business-performance' },
+          { title: 'Saved Views', path: '/reporting/performance-center/saved-views' },
+          { title: 'ESG Reporting', path: '/reporting/performance-center/esg-reporting', isEnterprise: true },
+        ],
+      },
     ],
   },
   {
@@ -907,15 +1019,70 @@ export const navigationData: NavSection[] = [
     ],
   },
   {
-    title: 'ACCOUNTANT',
+    title: 'MY ACCOUNTANT',
+    label: 'ACCT',
     icon: UserCog,
     items: [
-      { title: 'Books Review', path: '/accountant-workspace/books-review' },
-      { title: 'Reconciliation Hub', path: '/accountant-workspace/reconciliation-hub' },
-      { title: 'Adjusting Entries', path: '/accountant-workspace/adjusting-entries' },
-      { title: 'Client Requests', path: '/accountant-workspace/client-requests' },
-      { title: 'My Accountant', path: '/accountant-workspace/my-accountant' },
-      { title: 'Live Experts', path: '/accountant-workspace/live-experts' },
+      {
+        title: 'Accountant Management',
+        items: [
+          { title: 'My Accountants', path: '/accountant-workspace/my-accountant' },
+          { title: 'Access Control', path: '/accountant-workspace/access-control' },
+          { title: 'Invitations', path: '/accountant-workspace/invitations' },
+        ],
+      },
+      {
+        title: 'Document Exchange',
+        items: [
+          { title: 'Request Documents', path: '/accountant-workspace/documents/request' },
+          { title: 'Send Documents', path: '/accountant-workspace/documents/send' },
+          { title: 'Received Documents', path: '/accountant-workspace/documents/received' },
+          { title: 'Sent Documents', path: '/accountant-workspace/documents/sent' },
+          { title: 'Document Archive', path: '/accountant-workspace/documents/archive' },
+        ],
+      },
+      {
+        title: 'Communication',
+        items: [
+          { title: 'Accountant Chat', path: '/accountant-workspace/chat' },
+          { title: 'Shared Notes', path: '/accountant-workspace/shared-notes' },
+          { title: 'Client Requests', path: '/accountant-workspace/client-requests' },
+        ],
+      },
+      {
+        title: 'Tasks & Requests',
+        items: [
+          { title: 'Pending Tasks', path: '/accountant-workspace/tasks/pending' },
+          { title: 'Completed Tasks', path: '/accountant-workspace/tasks/completed' },
+          { title: 'Information Requests', path: '/accountant-workspace/tasks/information-requests' },
+        ],
+      },
+      {
+        title: 'Collaboration',
+        items: [
+          { title: 'Shared Reports', path: '/accountant-workspace/collaboration/shared-reports' },
+          { title: 'Review Comments', path: '/accountant-workspace/collaboration/review-comments' },
+          { title: 'Approval Requests', path: '/accountant-workspace/collaboration/approval-requests' },
+          { title: 'Work Papers', path: '/accountant-workspace/collaboration/work-papers' },
+        ],
+      },
+      {
+        title: 'Scheduling',
+        items: [
+          { title: 'Appointments', path: '/accountant-workspace/scheduling/appointments' },
+          { title: 'Deadlines', path: '/accountant-workspace/scheduling/deadlines' },
+          { title: 'Reminders', path: '/accountant-workspace/scheduling/reminders' },
+        ],
+      },
+      {
+        title: 'Books & Review',
+        items: [
+          { title: 'Books Review', path: '/accountant-workspace/books-review' },
+          { title: 'Adjusting Entries', path: '/accountant-workspace/adjusting-entries' },
+          { title: 'Reconciliation Hub', path: '/accountant-workspace/reconciliation-hub' },
+          { title: 'Live Experts', path: '/accountant-workspace/live-experts' },
+        ],
+      },
     ],
   },
   {
@@ -1078,6 +1245,15 @@ export const navigationData: NavSection[] = [
           { title: 'Data Export', path: '/settings/data-privacy/data-export' },
           { title: 'Data Backup', path: '/settings/data-privacy/data-backup' },
           { title: 'Trash / Deleted Records', path: '/settings/data-privacy/trash-deleted-records' },
+        ],
+      },
+      {
+        title: 'Localization',
+        items: [
+          { title: 'Language', path: '/settings/localization/language' },
+          { title: 'Date & Number Formats', path: '/settings/localization/formats' },
+          { title: 'Regional Settings', path: '/settings/localization/regional' },
+          { title: 'Time Zone', path: '/settings/localization/timezone' },
         ],
       },
     ],

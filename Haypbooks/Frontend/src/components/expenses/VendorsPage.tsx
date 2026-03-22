@@ -26,7 +26,7 @@ export default function VendorsPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ap/vendors`)
+      const { data } = await apiClient.get(`/companies/${companyId}/vendors`)
       setVendors(Array.isArray(data) ? data : data.vendors ?? [])
       setError('')
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load vendors') }
@@ -43,7 +43,7 @@ export default function VendorsPage() {
 
   const handleDelete = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.delete(`/companies/${companyId}/ap/vendors/${id}`); fetchVendors() }
+    try { await apiClient.delete(`/companies/${companyId}/vendors/${id}`); fetchVendors() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to delete vendor') }
   }
 
@@ -118,8 +118,8 @@ function VendorFormModal({ companyId, vendor, onClose, onSaved }: { companyId: s
     if (!form.name.trim()) { setError('Name is required.'); return }
     setSaving(true); setError('')
     try {
-      if (isEdit) await apiClient.put(`/companies/${companyId}/ap/vendors/${vendor!.id}`, form)
-      else await apiClient.post(`/companies/${companyId}/ap/vendors`, form)
+      if (isEdit) await apiClient.put(`/companies/${companyId}/vendors/${vendor!.id}`, form)
+      else await apiClient.post(`/companies/${companyId}/vendors`, form)
       onSaved()
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to save') }
     finally { setSaving(false) }

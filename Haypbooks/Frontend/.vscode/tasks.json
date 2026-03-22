@@ -1059,6 +1059,15 @@
 				"$eslint-stylish"
 			],
 			"group": "build"
+		},
+		{
+			"label": "build-frontend",
+			"type": "shell",
+			"command": "cd c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\Frontend && npm run build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
 		}
 	]
 }

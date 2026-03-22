@@ -1,0 +1,92 @@
+
+> haypbooks-frontend@0.1.0 build
+> next build
+
+ ΓÜá You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+  Γû▓ Next.js 14.2.32
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./src/app/practice-hub/page.tsx
+Error: 
+  x You're importing a component that needs useState. It only works in a Client Component but none of its parents are marked with "use client", so they're Server Components by default.
+  | Learn more: https://nextjs.org/docs/getting-started/react-essentials
+  | 
+  | 
+   ,-[C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\src\app\practice-hub\page.tsx:1:1]
+ 1 | import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } from 'react'
+   :                 ^^^^^^^^
+ 2 | import { useRouter, useSearchParams } from 'next/navigation'
+ 3 | import { motion } from 'motion/react'
+ 4 | import {
+   `----
+
+  x You're importing a component that needs useEffect. It only works in a Client Component but none of its parents are marked with "use client", so they're Server Components by default.
+  | Learn more: https://nextjs.org/docs/getting-started/react-essentials
+  | 
+  | 
+   ,-[C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\src\app\practice-hub\page.tsx:1:1]
+ 1 | import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } from 'react'
+   :                           ^^^^^^^^^
+ 2 | import { useRouter, useSearchParams } from 'next/navigation'
+ 3 | import { motion } from 'motion/react'
+ 4 | import {
+   `----
+
+  x You're importing a component that needs useLayoutEffect. It only works in a Client Component but none of its parents are marked with "use client", so they're Server Components by default.
+  | Learn more: https://nextjs.org/docs/getting-started/react-essentials
+  | 
+  | 
+   ,-[C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\src\app\practice-hub\page.tsx:1:1]
+ 1 | import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } from 'react'
+   :                                                            ^^^^^^^^^^^^^^^
+ 2 | import { useRouter, useSearchParams } from 'next/navigation'
+ 3 | import { motion } from 'motion/react'
+ 4 | import {
+   `----
+
+  x You're importing a component that needs useRef. It only works in a Client Component but none of its parents are marked with "use client", so they're Server Components by default.
+  | Learn more: https://nextjs.org/docs/getting-started/react-essentials
+  | 
+  | 
+   ,-[C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\src\app\practice-hub\page.tsx:1:1]
+ 1 | import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } from 'react'
+   :                                                                             ^^^^^^
+ 2 | import { useRouter, useSearchParams } from 'next/navigation'
+ 3 | import { motion } from 'motion/react'
+ 4 | import {
+   `----
+
+  x You're importing a component that needs useRouter. It only works in a Client Component but none of its parents are marked with "use client", so they're Server Components by default.
+  | Learn more: https://nextjs.org/docs/getting-started/react-essentials
+  | 
+  | 
+   ,-[C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\src\app\practice-hub\page.tsx:1:1]
+ 1 | import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } from 'react'
+ 2 | import { useRouter, useSearchParams } from 'next/navigation'
+   :          ^^^^^^^^^
+ 3 | import { motion } from 'motion/react'
+ 4 | import {
+ 5 |   LayoutDashboard, HeartPulse, Zap,
+   `----
+
+  x You're importing a component that needs useSearchParams. It only works in a Client Component but none of its parents are marked with "use client", so they're Server Components by default.
+  | Learn more: https://nextjs.org/docs/getting-started/react-essentials
+  | 
+  | 
+   ,-[C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\src\app\practice-hub\page.tsx:1:1]
+ 1 | import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } from 'react'
+ 2 | import { useRouter, useSearchParams } from 'next/navigation'
+   :                     ^^^^^^^^^^^^^^^
+ 3 | import { motion } from 'motion/react'
+ 4 | import {
+ 5 |   LayoutDashboard, HeartPulse, Zap,
+   `----
+
+Import trace for requested module:
+./src/app/practice-hub/page.tsx
+
+
+> Build failed because of webpack errors

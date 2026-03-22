@@ -44,6 +44,17 @@ export default function AcceptInvitePage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
+        if (res.status === 403) {
+          setError(
+            data.message ||
+              'This invitation was sent to a different email address. Please sign in using the invited email and try again.',
+          )
+          return
+        }
+        if (res.status === 404) {
+          setError(data.message || 'Invite not found or expired. Please request a new invitation.')
+          return
+        }
         throw new Error(data.message || 'Failed to accept invite')
       }
 

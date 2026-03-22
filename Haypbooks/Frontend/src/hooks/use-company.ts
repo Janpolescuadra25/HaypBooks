@@ -18,7 +18,7 @@ interface Company {
  *
  * The hook will re-fetch whenever the `company` query parameter changes.
  * If a query param is present it will fetch the specific company by ID
- * rather than relying solely on `/api/company/current`.
+ * rather than relying solely on `/api/companies/current`.
  */
 export function useCompany() {
   const search = useSearchParams()
@@ -37,11 +37,11 @@ export function useCompany() {
           const res = await fetch(`/api/companies/${encodeURIComponent(queryCompany)}`)
           if (res.ok) data = await res.json()
         } else {
-          const res = await fetch('/api/company/current')
+          const res = await fetch('/api/companies/current')
           if (res.ok) data = await res.json()
         }
 
-        // If we got just a lightweight company object (e.g., from /api/company/current),
+        // If we got just a lightweight company object (e.g., from /api/companies/current),
         // fetch the full company details by ID to ensure we have fields like country.
         if (data?.id && !data?.country) {
           const res2 = await fetch(`/api/companies/${encodeURIComponent(data.id)}`)

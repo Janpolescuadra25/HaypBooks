@@ -1,7 +1,6 @@
 import "@/styles/globals.css"
 import { ReactNode } from "react"
-import dynamic from 'next/dynamic'
-const ClientRoot = dynamic(() => import('./client-root'), { ssr: false })
+import ClientRoot from './client-root'
 import { ToastProvider } from '@/components/ToastProvider'
 import { Inter } from 'next/font/google'
 

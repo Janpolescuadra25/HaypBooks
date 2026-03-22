@@ -1,5 +1,9 @@
-import ComingSoon from '@/components/owner/ComingSoon'
+'use client'
+
+import dynamic from 'next/dynamic'
+
+const CustomersPage = dynamic(() => import('@/components/sales/CustomersPage'), { ssr: false })
 
 export default function Page() {
-  return <ComingSoon title="Customers" />
+  return <CustomersPage />
 }

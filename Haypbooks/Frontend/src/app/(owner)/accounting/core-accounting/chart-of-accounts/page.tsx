@@ -5,17 +5,20 @@ import {
   Plus, Upload, Download, Search, ChevronRight, ChevronDown,
   MoreHorizontal, Edit2, Eye, Trash2, PlusSquare,
   CheckCircle2, TrendingUp, TrendingDown, Layers, X,
-  RefreshCw, BookOpen,
+  RefreshCw, BookOpen, Settings,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { onboardingService } from '@/services/onboarding.service'
+import { useToast } from '@/components/ToastProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense'
 type NormalSide = 'Debit' | 'Credit'
+type CardKey = 'Total Accounts' | 'Active Accounts' | 'Total Debits' | 'Total Credits'
 
 interface Account {
   id: string
@@ -676,14 +679,35 @@ export default function ChartOfAccountsPage() {
   const [showInactive, setShowInactive] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [modalOpen, setModalOpen] = useState(false)
+  const [docOpen, setDocOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [defaultParentId, setDefaultParentId] = useState<string | undefined>(undefined)
   const [importModal, setImportModal] = useState(false)
+  const [hiddenCards, setHiddenCards] = useState<Record<CardKey, boolean>>({
+    'Total Accounts': false,
+    'Active Accounts': false,
+    'Total Debits': false,
+    'Total Credits': false,
+  })
+  const toast = useToast()
 
   // If company loading finishes with no company, stop loading
   useEffect(() => {
     if (!companyLoading && !companyId) setLoading(false)
   }, [companyLoading, companyId])
+
+  // Mark COA customization step complete (Setup Center phase: Financial Setup)
+  useEffect(() => {
+    try {
+      onboardingService.saveStep('coa_custom', {
+        completed: true,
+        updatedAt: new Date(),
+      })
+    } catch {
+      // best-effort; non-blocking if onboarding service is temporarily unavailable
+    }
+  }, [])
 
   // Load accounts from API
   const loadAccounts = useCallback(async () => {
@@ -737,8 +761,14 @@ export default function ChartOfAccountsPage() {
     try {
       await apiClient.delete(`/companies/${companyId}/accounting/accounts/${acc.id}`)
       loadAccounts()
+      toast.success('Account deactivated successfully.')
     } catch (e: any) {
-      alert(e?.response?.data?.message ?? 'Cannot deactivate this account')
+      const msg = e?.response?.data?.message ?? ''
+      if (msg.toLowerCase().includes('active children')) {
+        toast.error('Cannot deactivate account with active children.')
+      } else {
+        toast.error(msg || 'Failed to deactivate account. Please try again.')
+      }
     }
   }
 
@@ -792,6 +822,8 @@ export default function ChartOfAccountsPage() {
     { label: 'Total Credits', value: fmt(totalCredits), sub: 'Normal credit balances', icon: TrendingDown, bg: 'bg-rose-100', iconColor: 'text-rose-600' },
   ]
 
+  const visibleSummary = SUMMARY.filter(item => !hiddenCards[item.label as CardKey])
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       {/* ── Sticky Header ── */}
@@ -831,6 +863,41 @@ export default function ChartOfAccountsPage() {
             <button onClick={collapseAll} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
               <ChevronRight size={13} /> Collapse
             </button>
+            <div className="relative">
+              <button
+                onClick={() => setSettingsOpen(o => !o)}
+                className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center"
+                aria-label="Chart of accounts summary settings"
+                type="button"
+              >
+                <Settings size={14} />
+              </button>
+              <AnimatePresence>
+                {settingsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-3"
+                  >
+                    <p className="text-xs font-semibold text-slate-500 mb-2">Show summary cards</p>
+                    {(['Total Accounts', 'Active Accounts', 'Total Debits', 'Total Credits'] as CardKey[]).map(label => (
+                      <label key={label} className="flex items-center justify-between gap-2 py-1 text-sm">
+                        <span>{label}</span>
+                        <input
+                          type="checkbox"
+                          checked={!hiddenCards[label]}
+                          onChange={e => setHiddenCards(prev => ({ ...prev, [label]: !e.target.checked }))}
+                          className="accent-emerald-600"
+                        />
+                      </label>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <button onClick={() => setDocOpen(true)} className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold" aria-label="Open documentation for chart of accounts">?</button>
             <button onClick={expandAll} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
               <ChevronDown size={13} /> Expand All
             </button>
@@ -851,17 +918,37 @@ export default function ChartOfAccountsPage() {
           </div>
         </div>
 
+        {docOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
+              <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                <h2 className="text-lg font-bold">Chart of Accounts Help</h2>
+                <button onClick={() => setDocOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
+              </div>
+              <div className="p-4 text-sm text-slate-700 space-y-3">
+                <p>This modal offers detailed documentation of functions in the Chart of Accounts module. Use this to understand each UI control and workflow.</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Search and filter accounts in realtime.</li>
+                  <li>Import and export chart templates.</li>
+                  <li>Create new accounts and manage hierarchy visibility.</li>
+                </ul>
+                <p>Click the help button (?) in the header to come back here.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-4 gap-3 px-6 pb-4">
-          {SUMMARY.map(s => (
-            <div key={s.label} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.bg}`}>
-                <s.icon size={18} className={s.iconColor} />
+        <div className="grid grid-cols-4 gap-2 px-6 pb-3">
+          {visibleSummary.map(s => (
+            <div key={s.label} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${s.bg}`}>
+                <s.icon size={14} className={s.iconColor} />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-slate-500 truncate">{s.label}</p>
+                <p className="text-[10px] font-semibold text-slate-500 truncate">{s.label}</p>
                 <p className="text-sm font-bold text-slate-900 truncate">{s.value}</p>
-                <p className="text-[10px] text-slate-400 truncate">{s.sub}</p>
+                <p className="text-[9px] text-slate-400 truncate">{s.sub}</p>
               </div>
             </div>
           ))}

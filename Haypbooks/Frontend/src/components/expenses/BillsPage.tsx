@@ -36,7 +36,7 @@ export default function BillsPage() {
   const fetchBills = useCallback(async () => {
     if (!companyId) return; setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ap/bills`)
+      const { data } = await apiClient.get(`/companies/${companyId}/bills`)
       setBills(Array.isArray(data) ? data : data.bills ?? []); setError('')
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load bills') }
     finally { setLoading(false) }
@@ -53,13 +53,13 @@ export default function BillsPage() {
 
   const handleApprove = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ap/bills/${id}/approve`); fetchBills() }
+    try { await apiClient.post(`/companies/${companyId}/bills/${id}/approve`); fetchBills() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to approve') }
   }
 
   const handleVoid = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ap/bills/${id}/void`); fetchBills() }
+    try { await apiClient.post(`/companies/${companyId}/bills/${id}/void`); fetchBills() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
   }
 
@@ -153,7 +153,7 @@ function BillFormModal({ companyId, onClose, onSaved }: { companyId: string; onC
   const [error, setError] = useState('')
 
   useEffect(() => {
-    apiClient.get(`/companies/${companyId}/ap/vendors`).then(({ data }) => setVendors(Array.isArray(data) ? data : data.vendors ?? [])).catch(() => {})
+    apiClient.get(`/companies/${companyId}/vendors`).then(({ data }) => setVendors(Array.isArray(data) ? data : data.vendors ?? [])).catch(() => {})
   }, [companyId])
 
   const addItem = () => setItems(p => [...p, { description: '', quantity: 1, unitPrice: 0 }])

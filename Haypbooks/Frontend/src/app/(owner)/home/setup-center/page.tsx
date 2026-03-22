@@ -1,5 +1,8 @@
-import SetupCenterComponent from '@/components/owner/SetupCenter'
+'use client'
+
+import SetupCenter from '@/components/owner/SetupCenter'
 
 export default function Page() {
-  return <SetupCenterComponent />
+  return <SetupCenter />
 }
+
