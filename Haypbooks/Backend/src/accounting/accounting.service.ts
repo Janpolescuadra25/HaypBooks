@@ -612,20 +612,31 @@ export class AccountingService {
         const trialBalance = await this.getTrialBalance(userId, companyId)
         const periods = await this.listPeriods(userId, companyId)
 
+        const coaCheck = accountCount > 0
+        const journalEntryCheck = draftJournalCount === 0
+        const trialBalanceCheck = trialBalance.balanced
+
         return {
+            checks: {
+                coa: coaCheck,
+                journalEntries: journalEntryCheck,
+                trialBalance: trialBalanceCheck,
+            },
             steps: [
                 {
                     id: 'coa',
                     name: 'Chart of Accounts',
-                    status: accountCount > 0 ? 'Completed' : 'Pending',
-                    description: accountCount > 0 ? `${accountCount} accounts configured` : 'No accounts detected',
+                    status: coaCheck ? 'Completed' : 'Pending',
+                    valid: coaCheck,
+                    description: coaCheck ? `${accountCount} accounts configured` : 'No accounts detected',
                     action: { type: 'go', label: 'Go to COA', link: '/accounting/core-accounting/chart-of-accounts' },
                 },
                 {
                     id: 'journal',
                     name: 'Journal Entries',
-                    status: postedJournalCount > 0 ? 'Completed' : (draftJournalCount > 0 ? 'Pending' : 'Pending'),
-                    description: `${postedJournalCount} posted, ${draftJournalCount} draft entries`,
+                    status: journalEntryCheck ? 'Completed' : 'Pending',
+                    valid: journalEntryCheck,
+                    description: journalEntryCheck ? 'No unposted journal entries' : `${draftJournalCount} unposted journal entries`,
                     action: { type: 'go', label: 'Go to Journal', link: '/accounting/core-accounting/journal-entries' },
                 },
                 {
@@ -638,15 +649,16 @@ export class AccountingService {
                 {
                     id: 'trial-balance',
                     name: 'Trial Balance',
-                    status: trialBalance.balanced ? 'Completed' : 'Error',
-                    description: trialBalance.balanced ? 'Balances in balance' : 'Debits and credits mismatch',
+                    status: trialBalanceCheck ? 'Completed' : 'Error',
+                    valid: trialBalanceCheck,
+                    description: trialBalanceCheck ? 'Balanced: total debits equal total credits' : 'Debits and credits mismatch',
                     action: { type: 'go', label: 'View Trial Balance', link: '/accounting/core-accounting/trial-balance' },
                 },
                 {
                     id: 'period-close',
                     name: 'Period Close',
                     status: periods.length > 0 ? 'Completed' : 'Pending',
-                    description: periods.length > 0 ? `Latest period found: ${periods[periods.length - 1].name}` : 'No periods created',
+                    description: periods.length > 0 ? `Latest period found: ${(periods[periods.length - 1] as any).name ?? (periods[periods.length - 1] as any).id ?? 'Unknown'}` : 'No periods created',
                     action: { type: 'go', label: 'Manage Periods', link: '/accounting/period-close/close-checklist' },
                 },
             ],
