@@ -75,6 +75,39 @@ export default function JournalEntriesPage() {
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
 
+  const unpostedTotal = useMemo(() => {
+    return entries
+      .filter(e => e.status === 'DRAFT')
+      .reduce((sum, e) => {
+        const debit = e.totalDebit ?? e.lines?.reduce((s, l) => s + (l.debit ?? 0), 0) ?? 0
+        const credit = e.totalCredit ?? e.lines?.reduce((s, l) => s + (l.credit ?? 0), 0) ?? 0
+        return sum + Math.max(debit, credit)
+      }, 0)
+  }, [entries])
+
+  const hasDiscrepancy = useMemo(() => {
+    return entries.some(e => {
+      const debit = e.totalDebit ?? e.lines?.reduce((s, l) => s + (l.debit ?? 0), 0) ?? 0
+      const credit = e.totalCredit ?? e.lines?.reduce((s, l) => s + (l.credit ?? 0), 0) ?? 0
+      return Math.abs(debit - credit) > 0.005
+    })
+  }, [entries])
+
+  const volumeTrend = useMemo(() => {
+    // simple daily count for last 7 days
+    const counts: number[] = Array(7).fill(0)
+    const now = new Date()
+    entries.forEach(e => {
+      const d = new Date(e.date)
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(now)
+        day.setDate(now.getDate() - i)
+        if (d.toDateString() === day.toDateString()) counts[i]++
+      }
+    })
+    return counts.reverse()
+  }, [entries])
+
   const filtered = useMemo(() => {
     let list = entries
     if (statusFilter !== 'ALL') list = list.filter(e => e.status === statusFilter)
@@ -138,6 +171,24 @@ export default function JournalEntriesPage() {
         >
           <Plus size={16} /> New Entry
         </button>
+      </div>
+
+      {/* KPI ribbon */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+          <h3 className="text-xs font-semibold uppercase text-emerald-500">Unposted Total</h3>
+          <p className="text-2xl font-bold text-emerald-900">{fmt(unpostedTotal)}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+          <h3 className="text-xs font-semibold uppercase text-rose-500">Discrepancy Alert</h3>
+          <p className={`text-2xl font-bold ${hasDiscrepancy ? 'text-rose-600' : 'text-emerald-600'}`}>
+            {hasDiscrepancy ? 'Yes' : 'No'}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+          <h3 className="text-xs font-semibold uppercase text-emerald-500">Volume Trend (7d)</h3>
+          <p className="mt-2 text-sm text-emerald-700">{volumeTrend.join(' / ')}</p>
+        </div>
       </div>
 
       {/* filters */}
