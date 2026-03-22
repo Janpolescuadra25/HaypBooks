@@ -8,6 +8,26 @@ export class AccountingRepository {
 
     // ─── Chart of Accounts ───────────────────────────────────────────────────
 
+    async countAccounts(companyId: string, includeInactive = false, includeDeleted = false) {
+        return this.prisma.account.count({
+            where: {
+                companyId,
+                ...(includeInactive ? {} : { isActive: true }),
+                ...(includeDeleted ? {} : { deletedAt: null }),
+            },
+        })
+    }
+
+    async countJournalEntries(companyId: string, status?: 'DRAFT' | 'POSTED' | 'VOIDED') {
+        return this.prisma.journalEntry.count({
+            where: {
+                companyId,
+                deletedAt: null,
+                ...(status ? { postingStatus: status } : {}),
+            },
+        })
+    }
+
     async findAccounts(companyId: string, opts: { includeInactive?: boolean; includeDeleted?: boolean } = {}) {
         return this.prisma.account.findMany({
             where: {
