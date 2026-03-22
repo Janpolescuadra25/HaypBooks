@@ -29,6 +29,7 @@ interface JELine {
   accountId: string
   accountName?: string
   accountCode?: string
+  account?: { id: string; code?: string; name?: string }
   debit: number
   credit: number
   description?: string
@@ -281,7 +282,10 @@ function JEDetailModal({ entry, onClose }: { entry: JournalEntry; onClose: () =>
             <tbody>
               {(entry.lines ?? []).map((line, i) => (
                 <tr key={line.id ?? i} className="border-t border-emerald-50">
-                  <td className="py-2 text-emerald-800">{line.accountCode ? `${line.accountCode} - ` : ''}{line.accountName ?? line.accountId}</td>
+                  <td className="py-2 text-emerald-800">
+                    {line.accountCode ? `${line.accountCode} - ` : ''}
+                    {line.account?.name ?? line.accountName ?? line.accountId}
+                  </td>
                   <td className="py-2 text-emerald-600/60">{line.description ?? '—'}</td>
                   <td className="py-2 text-right font-semibold tabular-nums">{line.debit ? fmt(line.debit) : '—'}</td>
                   <td className="py-2 text-right font-semibold tabular-nums">{line.credit ? fmt(line.credit) : '—'}</td>
