@@ -165,6 +165,7 @@ export const navigationData: NavSection[] = [
       {
         title: 'Core Accounting',
         items: [
+          { title: 'Close Workflow', path: '/accounting/close-workflow' },
           { title: 'Chart of Accounts', path: '/accounting/core-accounting/chart-of-accounts' },
           { title: 'Journal Entries', path: '/accounting/core-accounting/journal-entries' },
           { title: 'General Ledger', path: '/accounting/core-accounting/general-ledger' },

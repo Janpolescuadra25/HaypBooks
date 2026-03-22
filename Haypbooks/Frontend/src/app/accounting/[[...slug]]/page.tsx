@@ -9,6 +9,8 @@ const JournalEntriesPage = dynamic(() => import('@/components/accounting/Journal
 const TrialBalancePage = dynamic(() => import('@/components/accounting/TrialBalancePage'), { ssr: false })
 const GeneralLedgerPage = dynamic(() => import('@/components/accounting/GeneralLedgerPage'), { ssr: false })
 const AccountingPeriodsPage = dynamic(() => import('@/components/accounting/AccountingPeriodsPage'), { ssr: false })
+const AccountingHubPage = dynamic(() => import('@/components/accounting/AccountingHubPage'), { ssr: false })
+const CloseWorkflowPage = dynamic(() => import('@/app/(owner)/accounting/close-workflow/page'), { ssr: false })
 
 type Props = { params: { slug?: string[] } }
 
@@ -29,6 +31,8 @@ function resolveTitle(sectionId: string, slug: string[] | undefined): string {
 function resolveComponent(slug: string[] | undefined) {
   const path = (slug ?? []).join('/')
   switch (path) {
+    case 'core-accounting': return <AccountingHubPage />
+    case 'close-workflow': return <CloseWorkflowPage />
     case 'core-accounting/chart-of-accounts': return <ChartOfAccountsPage />
     case 'core-accounting/journal-entries': return <JournalEntriesPage />
     case 'core-accounting/general-ledger': return <GeneralLedgerPage />

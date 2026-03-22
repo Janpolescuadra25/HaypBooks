@@ -156,8 +156,29 @@ export class AccountingService {
 
     // ─── Default COA Seeding ─────────────────────────────────────────────────
     /** Auto-seeds the default Philippine Chart of Accounts for a company if none exist */
-    async seedDefaultAccounts(companyId: string, prismaClient?: PrismaService | import('@prisma/client').Prisma.TransactionClient): Promise<void> {
+    async assertCompanyOwner(userId: string, companyId: string) {
+        const owner = await this.prisma.workspaceUser.findFirst({
+            where: {
+                userId,
+                isOwner: true,
+                status: 'ACTIVE',
+                workspace: {
+                    companies: { some: { id: companyId } },
+                },
+            },
+        })
+        if (!owner) throw new ForbiddenException('Only company owner can perform this action')
+        return owner
+    }
+
+    async seedDefaultAccounts(companyId: string, prismaClient?: PrismaService | import('@prisma/client').Prisma.TransactionClient): Promise<{ message: string }> {
         const db = prismaClient ?? this.prisma
+
+        const existingAccounts = await db.account.count({ where: { companyId } })
+        if (existingAccounts > 0) {
+            return { message: 'Default Chart of Accounts already seeded' }
+        }
+
         const company = await db.company.findUnique({ where: { id: companyId } })
         const currency = company?.currency ?? 'USD'
         const industry = company?.industry ?? null
@@ -222,6 +243,8 @@ export class AccountingService {
                 codeToId.set(acct.code, created.id)
             } catch { /* skip duplicates */ }
         }
+
+        return { message: 'Default Chart of Accounts seeded successfully' }
     }
 
 
@@ -578,6 +601,56 @@ export class AccountingService {
         const totalCredits = rows.reduce((s, r) => s + (Number(r.credit) > 0 ? Number(r.credit) : 0), 0)
         const balanced = Math.abs(totalDebits - totalCredits) < 0.01
         return { rows, totalDebits, totalCredits, balanced, asOf: asOf ?? new Date().toISOString() }
+    }
+
+    async getCloseWorkflow(userId: string, companyId: string) {
+        await this.assertCompanyAccess(userId, companyId)
+
+        const accountCount = await this.repo.countAccounts(companyId)
+        const draftJournalCount = await this.repo.countJournalEntries(companyId, 'DRAFT')
+        const postedJournalCount = await this.repo.countJournalEntries(companyId, 'POSTED')
+        const trialBalance = await this.getTrialBalance(userId, companyId)
+        const periods = await this.listPeriods(userId, companyId)
+
+        return {
+            steps: [
+                {
+                    id: 'coa',
+                    name: 'Chart of Accounts',
+                    status: accountCount > 0 ? 'Completed' : 'Pending',
+                    description: accountCount > 0 ? `${accountCount} accounts configured` : 'No accounts detected',
+                    action: { type: 'go', label: 'Go to COA', link: '/accounting/core-accounting/chart-of-accounts' },
+                },
+                {
+                    id: 'journal',
+                    name: 'Journal Entries',
+                    status: postedJournalCount > 0 ? 'Completed' : (draftJournalCount > 0 ? 'Pending' : 'Pending'),
+                    description: `${postedJournalCount} posted, ${draftJournalCount} draft entries`,
+                    action: { type: 'go', label: 'Go to Journal', link: '/accounting/core-accounting/journal-entries' },
+                },
+                {
+                    id: 'general-ledger',
+                    name: 'General Ledger',
+                    status: postedJournalCount > 0 ? 'Completed' : 'Pending',
+                    description: postedJournalCount > 0 ? 'GL entries available' : 'No posted entries for ledger',
+                    action: { type: 'go', label: 'View Ledger', link: '/accounting/core-accounting/general-ledger' },
+                },
+                {
+                    id: 'trial-balance',
+                    name: 'Trial Balance',
+                    status: trialBalance.balanced ? 'Completed' : 'Error',
+                    description: trialBalance.balanced ? 'Balances in balance' : 'Debits and credits mismatch',
+                    action: { type: 'go', label: 'View Trial Balance', link: '/accounting/core-accounting/trial-balance' },
+                },
+                {
+                    id: 'period-close',
+                    name: 'Period Close',
+                    status: periods.length > 0 ? 'Completed' : 'Pending',
+                    description: periods.length > 0 ? `Latest period found: ${periods[periods.length - 1].name}` : 'No periods created',
+                    action: { type: 'go', label: 'Manage Periods', link: '/accounting/period-close/close-checklist' },
+                },
+            ],
+        }
     }
 
     // ─── Accounting Periods ───────────────────────────────────────────────────
