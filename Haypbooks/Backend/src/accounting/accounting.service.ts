@@ -542,15 +542,23 @@ export class AccountingService {
         await this.assertCompanyAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
         try {
-            return await this.repo.createJournalEntry({
+            const created = await this.repo.createJournalEntry({
                 workspaceId,
                 companyId,
                 date: new Date(data.date),
                 description: data.description,
                 currency: data.currency,
+                postingStatus: data.postingStatus ?? 'DRAFT',
                 createdById: userId,
                 lines: data.lines ?? [],
             })
+
+            if ((data.postingStatus ?? 'DRAFT') === 'POSTED') {
+                // Post the entry to update account balances
+                return this.repo.postJournalEntry(companyId, created.id, userId)
+            }
+
+            return created
         } catch (e: any) {
             throw new BadRequestException(e.message)
         }

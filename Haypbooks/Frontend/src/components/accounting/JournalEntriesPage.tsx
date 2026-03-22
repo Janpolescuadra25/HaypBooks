@@ -283,7 +283,7 @@ function JEDetailModal({ entry, onClose }: { entry: JournalEntry; onClose: () =>
               {(entry.lines ?? []).map((line, i) => (
                 <tr key={line.id ?? i} className="border-t border-emerald-50">
                   <td className="py-2 text-emerald-800">
-                    {line.accountCode ? `${line.accountCode} - ` : ''}
+                    {line.account?.code ? `${line.account.code} - ` : line.accountCode ? `${line.accountCode} - ` : ''}
                     {line.account?.name ?? line.accountName ?? line.accountId}
                   </td>
                   <td className="py-2 text-emerald-600/60">{line.description ?? '—'}</td>
@@ -311,6 +311,7 @@ function JEFormModal({ companyId, onClose, onSaved }: { companyId: string; onClo
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [memo, setMemo] = useState('')
   const [reference, setReference] = useState('')
+  const [postingStatus, setPostingStatus] = useState<'DRAFT' | 'POSTED'>('DRAFT')
   const [lines, setLines] = useState<JELine[]>([
     { accountId: '', debit: 0, credit: 0, description: '' },
     { accountId: '', debit: 0, credit: 0, description: '' },
@@ -337,7 +338,7 @@ function JEFormModal({ companyId, onClose, onSaved }: { companyId: string; onClo
   const { currency } = useCompanyCurrency()
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
-  const handleSave = async () => {
+  const handleSave = async (status: 'DRAFT' | 'POSTED') => {
     if (!balanced) { setError('Debits must equal credits.'); return }
     const validLines = lines.filter(l => l.accountId)
     if (validLines.length < 2) { setError('At least 2 lines required.'); return }
@@ -346,6 +347,7 @@ function JEFormModal({ companyId, onClose, onSaved }: { companyId: string; onClo
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries`, {
         date, memo, reference,
+        postingStatus: status,
         lines: validLines.map(l => ({
           accountId: l.accountId,
           debit: Number(l.debit) || 0,
@@ -463,9 +465,13 @@ function JEFormModal({ companyId, onClose, onSaved }: { companyId: string; onClo
 
         <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2 sticky bottom-0 bg-white">
           <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving || !balanced}
+          <button onClick={() => handleSave('DRAFT')} disabled={saving || !balanced}
+            className="px-4 py-2 text-sm border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-50">
+            Save as Draft
+          </button>
+          <button onClick={() => handleSave('POSTED')} disabled={saving || !balanced}
             className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-1.5">
-            {saving && <Loader2 size={14} className="animate-spin" />} Create Entry
+            {saving && <Loader2 size={14} className="animate-spin" />} Create & Post
           </button>
         </div>
       </motion.div>
