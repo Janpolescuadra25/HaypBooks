@@ -28,6 +28,7 @@ function resolveTitle(sectionId: string, slug: string[] | undefined): string {
 function resolveComponent(slug: string[] | undefined) {
   const path = (slug ?? []).join('/')
   switch (path) {
+    case 'customers':
     case 'customers/customers': return <CustomersPage />
     case 'billing/invoices': return <InvoicesPage />
     case 'collections/customer-payments': return <PaymentsPage />

@@ -1,0 +1,20 @@
+const fs = require('fs');
+const glob = require('glob');
+const files = glob.sync('src/app/**/page.tsx');
+let count = 0;
+for (const file of files) {
+  const content = fs.readFileSync(file, 'utf8');
+  if (content.includes("import PageDocumentation") && /^\s*['\"]use client['\"]/.test(content)) {
+    const lines = content.split(/\r?\n/);
+    let i = 0;
+    if (/^\s*['\"]use client['\"]/.test(lines[i])) {
+      i++;
+      if (i < lines.length && /^\s*$/.test(lines[i])) i++;
+    }
+    const newContent = lines.slice(i).join('\n');
+    fs.writeFileSync(file, newContent, 'utf8');
+    count++;
+    console.log(`Removed use client from ${file}`);
+  }
+}
+console.log(`Total PageDocumentation pages fixed: ${count}`);

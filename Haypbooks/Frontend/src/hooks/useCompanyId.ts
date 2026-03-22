@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation'
 
 /**
  * Resolves the active company ID for the current session.
- * Tries URL query param `company` first, then /api/companies/recent, then /api/company/current.
+ * Tries URL query param `company` first, then /api/companies/recent, then /api/companies/current.
  */
 export function useCompanyId() {
   const search = useSearchParams()
@@ -42,7 +42,7 @@ export function useCompanyId() {
         }
 
         // fallback
-        const res2 = await fetch('/api/company/current', { cache: 'no-store' })
+        const res2 = await fetch('/api/companies/current', { cache: 'no-store' })
         if (res2.ok) {
           const data = await res2.json()
           if (!cancelled && data?.id) {

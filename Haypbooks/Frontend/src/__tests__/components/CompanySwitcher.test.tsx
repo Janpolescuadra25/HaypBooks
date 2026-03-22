@@ -20,7 +20,7 @@ describe('CompanySwitcher', () => {
 
     ;(global as any).fetch = jest.fn((input: RequestInfo) => {
       const url = String(input)
-      if (url.endsWith('/api/company/current')) {
+      if (url.endsWith('/api/companies/current')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(current) })
       }
       if (url.endsWith('/api/companies/recent')) {
@@ -41,7 +41,7 @@ describe('CompanySwitcher', () => {
     const recent = [{ id: 'a', name: 'One' }, { id: 'b', name: 'Two' }]
     ;(global as any).fetch = jest.fn((input: RequestInfo) => {
       const url = String(input)
-      if (url.endsWith('/api/company/current')) {
+      if (url.endsWith('/api/companies/current')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 'a', name: 'One' }) })
       }
       if (url.endsWith('/api/companies/recent')) {

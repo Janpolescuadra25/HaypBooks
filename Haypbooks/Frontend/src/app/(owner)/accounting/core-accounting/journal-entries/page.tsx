@@ -1,5 +1,7 @@
-import ComingSoon from '@/components/owner/ComingSoon'
+'use client'
+
+import JournalEntriesPage from '@/components/accounting/JournalEntriesPage'
 
 export default function Page() {
-  return <ComingSoon title="Journal Entries" />
+  return <JournalEntriesPage />
 }

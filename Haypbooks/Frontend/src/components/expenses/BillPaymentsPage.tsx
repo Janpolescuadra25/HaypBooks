@@ -26,7 +26,7 @@ export default function BillPaymentsPage() {
   const fetchPayments = useCallback(async () => {
     if (!companyId) return; setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ap/bill-payments`)
+      const { data } = await apiClient.get(`/companies/${companyId}/bill-payments`)
       setPayments(Array.isArray(data) ? data : data.payments ?? []); setError('')
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load payments') }
     finally { setLoading(false) }
@@ -42,7 +42,7 @@ export default function BillPaymentsPage() {
 
   const handleVoid = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ap/bill-payments/${id}/void`); fetchPayments() }
+    try { await apiClient.post(`/companies/${companyId}/bill-payments/${id}/void`); fetchPayments() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
   }
 
@@ -112,7 +112,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
   const [error, setError] = useState('')
 
   useEffect(() => {
-    apiClient.get(`/companies/${companyId}/ap/bills`).then(({ data }) => {
+    apiClient.get(`/companies/${companyId}/bills`).then(({ data }) => {
       const all = Array.isArray(data) ? data : data.bills ?? []
       setBills(all.filter((b: Bill) => ['APPROVED', 'PARTIALLY_PAID', 'PENDING'].includes(b.status)))
     }).catch(() => {})

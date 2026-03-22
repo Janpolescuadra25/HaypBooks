@@ -37,7 +37,7 @@ export default function CustomersPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const { data } = await apiClient.get(`/companies/${companyId}/customers`)
       setCustomers(Array.isArray(data) ? data : data.customers ?? [])
       setError('')
     } catch (e: any) {
@@ -58,7 +58,7 @@ export default function CustomersPage() {
   const handleDelete = async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.delete(`/companies/${companyId}/ar/customers/${id}`)
+      await apiClient.delete(`/companies/${companyId}/customers/${id}`)
       fetchCustomers()
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to delete customer')
@@ -164,9 +164,9 @@ function CustomerFormModal({ companyId, customer, onClose, onSaved }: { companyI
     setSaving(true); setError('')
     try {
       if (isEdit) {
-        await apiClient.put(`/companies/${companyId}/ar/customers/${customer!.id}`, form)
+        await apiClient.put(`/companies/${companyId}/customers/${customer!.id}`, form)
       } else {
-        await apiClient.post(`/companies/${companyId}/ar/customers`, form)
+        await apiClient.post(`/companies/${companyId}/customers`, form)
       }
       onSaved()
     } catch (e: any) {

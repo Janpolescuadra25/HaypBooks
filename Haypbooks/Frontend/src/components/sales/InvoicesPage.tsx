@@ -58,7 +58,7 @@ export default function InvoicesPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices`)
+      const { data } = await apiClient.get(`/companies/${companyId}/invoices`)
       setInvoices(Array.isArray(data) ? data : data.invoices ?? [])
       setError('')
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load invoices') }
@@ -82,13 +82,13 @@ export default function InvoicesPage() {
 
   const handleSend = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`); fetchInvoices() }
+    try { await apiClient.post(`/companies/${companyId}/invoices/${id}/send`); fetchInvoices() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to send') }
   }
 
   const handleVoid = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`); fetchInvoices() }
+    try { await apiClient.post(`/companies/${companyId}/invoices/${id}/void`); fetchInvoices() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
   }
 
@@ -255,7 +255,7 @@ function InvoiceFormModal({ companyId, onClose, onSaved }: { companyId: string; 
   const [error, setError] = useState('')
 
   useEffect(() => {
-    apiClient.get(`/companies/${companyId}/ar/customers`).then(({ data }) => setCustomers(Array.isArray(data) ? data : data.customers ?? [])).catch(() => {})
+    apiClient.get(`/companies/${companyId}/customers`).then(({ data }) => setCustomers(Array.isArray(data) ? data : data.customers ?? [])).catch(() => {})
   }, [companyId])
 
   const addItem = () => setItems(p => [...p, { description: '', quantity: 1, unitPrice: 0 }])
@@ -272,7 +272,7 @@ function InvoiceFormModal({ companyId, onClose, onSaved }: { companyId: string; 
     if (validItems.length === 0) { setError('Add at least one item.'); return }
     setSaving(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/invoices`, {
+      await apiClient.post(`/companies/${companyId}/invoices`, {
         customerId, date, dueDate, memo,
         items: validItems.map(it => ({ description: it.description, quantity: Number(it.quantity), unitPrice: Number(it.unitPrice), amount: Number(it.quantity) * Number(it.unitPrice) })),
       })

@@ -1,0 +1,24 @@
+
+> haypbooks-frontend@0.1.0 build
+> next build
+
+ ΓÜá You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+  Γû▓ Next.js 14.2.32
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+unhandledRejection Error [PageNotFoundError]: Cannot find module for page: /_document
+    at getPagePath (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\next\dist\server\require.js:94:15)
+    at requirePage (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\next\dist\server\require.js:99:22)
+    at C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\next\dist\server\load-components.js:72:65
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Promise.all (index 0)
+    at async loadComponentsImpl (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\next\dist\server\load-components.js:71:33)
+    at async Object.hasCustomGetInitialProps (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\next\dist\build\utils.js:1274:24) {
+  type: 'PageNotFoundError',
+  code: 'ENOENT'
+}

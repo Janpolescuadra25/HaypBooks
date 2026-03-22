@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCompanyId } from '@/hooks/useCompanyId'
 import { onboardingService } from '@/services/onboarding.service'
 
 type SetupTask = {
@@ -22,11 +24,13 @@ const SETUP_PHASES: SetupPhase[] = [
     id: 'phase_1',
     title: 'Account Setup (Quick Setup)',
     tasks: [
+      { id: 'business_profile', title: 'Business Profile', description: 'Enter company name and address', path: '/settings/company', required: true },
       { id: 'business', title: 'Account Creation', description: 'Create user account', path: '/onboarding', required: true },
       { id: 'company', title: 'Company Information', description: 'Set business identity', path: '/onboarding', required: true },
       { id: 'region', title: 'Region Selection', description: 'Set country/timezone/currency', path: '/onboarding', required: true },
       { id: 'fiscal', title: 'Currency & Fiscal Year', description: 'Set fiscal settings', path: '/onboarding', required: true },
       { id: 'coa', title: 'Chart of Accounts', description: 'Choose COA template or import', path: '/accounting/core-accounting/chart-of-accounts', required: true },
+      { id: 'coa_seed', title: 'Seed Default Accounts', description: 'Initialize standard chart of accounts', path: '/home/setup-center', required: true },
       { id: 'bank', title: 'First Bank Account', description: 'Configure first bank account', path: '/banking/accounts', required: true },
       { id: 'tax', title: 'Tax Registration', description: 'Capture tax IDs', path: '/settings/tax', required: true },
       { id: 'review', title: 'Review & Confirm', description: 'Finalize quick setup', path: '/onboarding/review', required: true },
@@ -39,6 +43,7 @@ const SETUP_PHASES: SetupPhase[] = [
       { id: 'profile_security', title: 'Profile & Security', description: 'Configure base profiles and security', path: '/settings/profile' },
       { id: 'company_profile', title: 'Company Profile', description: 'Edit company address and legal details', path: '/settings/company' },
       { id: 'branding', title: 'Logo & Branding', description: 'Customize brand settings', path: '/settings/branding' },
+      { id: 'notifications', title: 'Notifications & Alerts', description: 'Configure alert and notification preferences', path: '/settings/notifications' },
       { id: 'business_hours', title: 'Business Hours', description: 'Set operating hours and holidays', path: '/settings/business-hours' },
     ],
   },
@@ -136,9 +141,16 @@ const SETUP_PHASES: SetupPhase[] = [
 ]
 
 export default function SetupCenter() {
+  const router = useRouter()
+  const { companyId } = useCompanyId()
   const [completed, setCompleted] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [seedLoading, setSeedLoading] = useState<boolean>(false)
+  const [companyLoading, setCompanyLoading] = useState<boolean>(true)
+  const [companyName, setCompanyName] = useState<string>('')
+  const [companyAddress, setCompanyAddress] = useState<string>('')
+  const [companySaved, setCompanySaved] = useState<boolean>(false)
   const [isCompleting, setIsCompleting] = useState<boolean>(false)
   const [done, setDone] = useState<boolean>(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -163,13 +175,69 @@ export default function SetupCenter() {
     loadProgress()
   }, [])
 
+  useEffect(() => {
+    async function loadCompanyProfile() {
+      if (!companyId) {
+        setCompanyLoading(false)
+        return
+      }
+      setCompanyLoading(true)
+      try {
+        const res = await fetch(`/api/companies/${companyId}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error('Company data not found')
+        const data = await res.json()
+        setCompanyName(data.name || '')
+        setCompanyAddress(data.address || '')
+      } catch {
+        setMessage('Unable to load company profile. Please use settings.')
+      } finally {
+        setCompanyLoading(false)
+      }
+    }
+
+    loadCompanyProfile()
+  }, [companyId])
+
   const progress = useMemo(() => {
     const allTasks = SETUP_PHASES.flatMap(phase => phase.tasks)
     const required = allTasks.filter(task => task.required)
     if (!required.length) return 0
-    const done = required.filter(task => completed.includes(task.id)).length
-    return Math.round((done / required.length) * 100)
+    const doneTasks = required.filter(task => completed.includes(task.id)).length
+    return Math.round((doneTasks / required.length) * 100)
   }, [completed])
+
+  const progressWidthClass = useMemo(() => {
+    if (progress >= 100) return 'w-full'
+    if (progress >= 80) return 'w-4/5'
+    if (progress >= 60) return 'w-3/5'
+    if (progress >= 40) return 'w-2/5'
+    if (progress >= 20) return 'w-1/5'
+    if (progress > 0) return 'w-1/12'
+    return 'w-0'
+  }, [progress])
+
+  useEffect(() => {
+    if (progress >= 100 && !done && !isCompleting) {
+      ;(async () => {
+        setIsCompleting(true)
+        try {
+          await onboardingService.complete()
+          setDone(true)
+          setMessage('Quick Setup complete! You are now ready to use Haypbooks.')
+        } catch {
+          setMessage('Failed to complete onboarding. Please try again.')
+        } finally {
+          setIsCompleting(false)
+        }
+      })()
+    }
+  }, [progress, done, isCompleting])
+
+  useEffect(() => {
+    if (done) {
+      router.replace('/home/dashboard')
+    }
+  }, [done, router])
 
   const toggleStep = async (id: string) => {
     const shouldComplete = !completed.includes(id)
@@ -203,6 +271,64 @@ export default function SetupCenter() {
     }
   }
 
+  const saveBusinessProfile = async () => {
+    if (!companyId) {
+      setMessage('Missing company context. Please select a company.')
+      return
+    }
+
+    setIsSaving(true)
+    setMessage(null)
+    try {
+      const response = await fetch(`/api/companies/${companyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: companyName, address: companyAddress }),
+      })
+      if (!response.ok) throw new Error('Failed to save business profile')
+      setCompanySaved(true)
+
+      if (!completed.includes('business_profile')) {
+        await onboardingService.saveStep('business_profile', { completed: true, updatedAt: new Date().toISOString() })
+        setCompleted(prev => [...new Set([...prev, 'business_profile'])])
+      }
+      setMessage('Business profile saved and marked complete.')
+    } catch (error: any) {
+      setMessage(error?.message || 'Unable to save business profile. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSeedAccounts = async () => {
+    setSeedLoading(true)
+    setMessage(null)
+
+    try {
+      if (!companyId) {
+        throw new Error('Missing companyId')
+      }
+
+      const response = await fetch(`/api/companies/${companyId}/accounting/accounts/seed-default`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => 'Failed to seed COA')
+        throw new Error(text || 'Failed to seed COA')
+      }
+
+      await onboardingService.saveStep('coa_seed', { completed: true, updatedAt: new Date().toISOString() })
+      setCompleted((prev) => [...new Set([...prev, 'coa_seed'])])
+      setMessage('Chart of Accounts has been initialized successfully.')
+    } catch (error: any) {
+      setMessage(error?.message || 'Unable to initialize Chart of Accounts.')
+    } finally {
+      setSeedLoading(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 text-center">
@@ -216,6 +342,44 @@ export default function SetupCenter() {
       <h1 className="text-3xl font-black text-slate-900 mb-2">Setup Center</h1>
       <p className="text-sm text-slate-500 mb-6">Follow these steps to complete your owner onboarding setup and unlock features.</p>
 
+      <section className="rounded-xl border p-4 mb-6 bg-slate-50">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Business Profile</h2>
+          <span className="text-xs text-slate-500">{companySaved ? 'Saved' : 'Draft'}</span>
+        </div>
+        {companyLoading ? (
+          <p className="text-sm text-slate-500">Loading company profile...</p>
+        ) : (
+          <div className="grid gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600">Company Name</label>
+              <input
+                className="mt-1 w-full rounded border-gray-300 p-2 text-sm"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600">Company Address</label>
+              <textarea
+                className="mt-1 w-full rounded border-gray-300 p-2 text-sm"
+                value={companyAddress}
+                onChange={(e) => setCompanyAddress(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <button
+              onClick={saveBusinessProfile}
+              disabled={companyLoading || isSaving}
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              data-testid="save-business-profile"
+            >
+              {isSaving ? 'Saving…' : 'Save Business Profile'}
+            </button>
+          </div>
+        )}
+      </section>
+
       {message && (
         <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">{message}</div>
       )}
@@ -226,7 +390,7 @@ export default function SetupCenter() {
           <span className="text-xs font-medium text-slate-600">{progress}% complete</span>
         </div>
         <div className="mt-2 h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-          <div className="h-2 rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
+          <div className={`h-2 rounded-full bg-emerald-500 transition-all ${progressWidthClass}`} />
         </div>
       </div>
 
@@ -251,6 +415,16 @@ export default function SetupCenter() {
                     >
                       {doneTask ? 'Done' : 'Pending'}
                     </button>
+                    {task.id === 'coa_seed' && (
+                      <button
+                        onClick={handleSeedAccounts}
+                        disabled={seedLoading || doneTask}
+                        className="ml-2 px-3 py-1 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                        data-testid="seed-accounts-btn"
+                      >
+                        {seedLoading ? 'Seeding…' : 'Seed Default Accounts'}
+                      </button>
+                    )}
                   </div>
                 )
               })}

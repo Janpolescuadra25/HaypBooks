@@ -1,7 +1,8 @@
-import DashboardClient from './DashboardClient'
+import { redirect } from 'next/navigation'
 
 export const metadata = { title: 'Dashboard — Haypbooks' }
 
 export default function DashboardPage() {
-  return <DashboardClient />
+  redirect('/home/dashboard')
+  return null
 }

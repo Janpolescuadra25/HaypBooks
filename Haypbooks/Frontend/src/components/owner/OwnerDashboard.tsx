@@ -14,12 +14,13 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 
 interface KpiData {
+  period: { start: string; end: string }
   revenue: number
   expenses: number
   netIncome: number
   overdueReceivables: { amount: number; count: number }
-  overdueBills: { amount: number; count: number }
-  generatedAt: string
+  overduePayables: { amount: number; count: number }
+  bankBalance: number
 }
 
 interface CashData {
@@ -35,8 +36,10 @@ export default function OwnerDashboard() {
 
   const [kpis, setKpis] = useState<KpiData | null>(null)
   const [cash, setCash] = useState<CashData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [firstLoad, setFirstLoad] = useState(true)
   const [error, setError] = useState('')
+  const [docOpen, setDocOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -44,8 +47,8 @@ export default function OwnerDashboard() {
     setError('')
     try {
       const [kpiRes, cashRes] = await Promise.all([
-        apiClient.get(`/companies/${companyId}/reports/kpis`),
-        apiClient.get(`/companies/${companyId}/banking/cash-position`),
+        apiClient.get('/api/owner/financial-summary'),
+        apiClient.get('/api/owner/cash-position'),
       ])
       setKpis(kpiRes.data)
       setCash(cashRes.data)
@@ -53,12 +56,14 @@ export default function OwnerDashboard() {
       setError(e?.response?.data?.message ?? 'Failed to load dashboard data')
     } finally {
       setLoading(false)
+      setFirstLoad(false)
     }
   }, [companyId])
 
   useEffect(() => { load() }, [load])
 
   const margin = kpis && kpis.revenue > 0 ? ((kpis.netIncome / kpis.revenue) * 100).toFixed(1) : '0.0'
+  const isInitialLoad = firstLoad && loading
 
   return (
     <div className="p-4 space-y-6">
@@ -74,7 +79,34 @@ export default function OwnerDashboard() {
           <RefreshCw size={13} className={loading ? 'animate-spin text-emerald-500' : 'text-emerald-500'} />
           Refresh
         </button>
+        <button
+          onClick={() => setDocOpen(true)}
+          className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold"
+          aria-label="Open dashboard documentation"
+        >
+          ?
+        </button>
       </header>
+
+      {docOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h2 className="text-lg font-bold">Dashboard Documentation</h2>
+              <button onClick={() => setDocOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
+            </div>
+            <div className="p-4 text-sm text-slate-700 space-y-3">
+              <p>This modal describes key dashboard sections and interactions.</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Refresh: reload all current KPI and cash data.</li>
+                <li>Overdue alerts show customers/payables requiring attention.</li>
+                <li>Quick actions are shortcuts to key operations (invoices, payments, bills).</li>
+              </ul>
+              <p>Close the modal to return to the functional dashboard.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
@@ -83,7 +115,7 @@ export default function OwnerDashboard() {
       )}
 
       {/* KPI Cards */}
-      {loading ? (
+      {isInitialLoad ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white p-4 rounded-[20px] border border-emerald-50 shadow-sm animate-pulse h-28" />
@@ -113,9 +145,16 @@ export default function OwnerDashboard() {
             subtitle={`${kpis?.overdueReceivables?.count ?? 0} invoices`}
           />
           <StatCard
+            title="Overdue A/P"
+            value={fmt(kpis?.overduePayables?.amount ?? 0)}
+            isPositive={false}
+            icon={ShoppingCart}
+            subtitle={`${kpis?.overduePayables?.count ?? 0} bills`}
+          />
+          <StatCard
             title="Cash Balance"
-            value={fmt(cash?.totalBalance ?? 0)}
-            isPositive={(cash?.totalBalance ?? 0) >= 0}
+            value={fmt(cash?.totalBalance ?? kpis?.bankBalance ?? 0)}
+            isPositive={(cash?.totalBalance ?? kpis?.bankBalance ?? 0) >= 0}
             icon={Wallet}
             subtitle={`${cash?.accounts?.length ?? 0} bank accounts`}
           />
@@ -192,19 +231,19 @@ export default function OwnerDashboard() {
                   <span className="text-sm font-black text-amber-700">{fmt(kpis?.overdueReceivables?.amount ?? 0)}</span>
                 </div>
               )}
-              {(kpis?.overdueBills?.count ?? 0) > 0 && (
+              {(kpis?.overduePayables?.count ?? 0) > 0 && (
                 <div className="flex items-center justify-between p-3 bg-rose-50 border border-rose-200 rounded-xl">
                   <div className="flex items-center gap-3">
                     <ShoppingCart size={16} className="text-rose-600" />
                     <div>
                       <p className="text-sm font-bold text-rose-900">Overdue Bills</p>
-                      <p className="text-xs text-rose-600">{kpis?.overdueBills?.count} bill(s) past due</p>
+                      <p className="text-xs text-rose-600">{kpis?.overduePayables?.count} bill(s) past due</p>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-rose-700">{fmt(kpis?.overdueBills?.amount ?? 0)}</span>
+                  <span className="text-sm font-black text-rose-700">{fmt(kpis?.overduePayables?.amount ?? 0)}</span>
                 </div>
               )}
-              {(kpis?.overdueReceivables?.count ?? 0) === 0 && (kpis?.overdueBills?.count ?? 0) === 0 && (
+              {(kpis?.overdueReceivables?.count ?? 0) === 0 && (kpis?.overduePayables?.count ?? 0) === 0 && (
                 <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
                   <TrendingUp size={16} className="text-emerald-600" />
                   <p className="text-sm font-bold text-emerald-900">No overdue items — you&rsquo;re on track!</p>

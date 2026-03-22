@@ -35,7 +35,7 @@ export default function PaymentsPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/payments`)
+      const { data } = await apiClient.get(`/companies/${companyId}/payments`)
       setPayments(Array.isArray(data) ? data : data.payments ?? [])
       setError('')
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load payments') }
@@ -56,7 +56,7 @@ export default function PaymentsPage() {
 
   const handleVoid = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ar/payments/${id}/void`); fetchPayments() }
+    try { await apiClient.post(`/companies/${companyId}/payments/${id}/void`); fetchPayments() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void payment') }
   }
 
@@ -156,7 +156,7 @@ function PaymentFormModal({ companyId, onClose, onSaved }: { companyId: string; 
   const [error, setError] = useState('')
 
   useEffect(() => {
-    apiClient.get(`/companies/${companyId}/ar/invoices`).then(({ data }) => {
+    apiClient.get(`/companies/${companyId}/invoices`).then(({ data }) => {
       const list = Array.isArray(data) ? data : data.invoices ?? []
       setInvoices(list.filter((i: any) => i.status === 'SENT' || i.status === 'PARTIALLY_PAID' || i.status === 'OVERDUE'))
     }).catch(() => {})
@@ -166,7 +166,7 @@ function PaymentFormModal({ companyId, onClose, onSaved }: { companyId: string; 
     if (!invoiceId || !amount) { setError('Invoice and amount required.'); return }
     setSaving(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/payments`, { invoiceId, amount: Number(amount), date, method, reference })
+      await apiClient.post(`/companies/${companyId}/payments`, { invoiceId, amount: Number(amount), date, method, reference })
       onSaved()
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to record payment') }
     finally { setSaving(false) }
