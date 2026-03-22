@@ -198,6 +198,7 @@ export class AccountingRepository {
         date: Date
         description?: string
         currency?: string
+        postingStatus?: 'DRAFT' | 'POSTED' | 'VOIDED'
         createdById: string
         lines: Array<{ accountId: string; debit: number; credit: number; description?: string }>
     }) {
@@ -215,7 +216,7 @@ export class AccountingRepository {
                 date: data.date,
                 description: data.description,
                 currency: data.currency ?? 'PHP',
-                postingStatus: 'DRAFT',
+                postingStatus: data.postingStatus ?? 'DRAFT',
                 createdById: data.createdById,
                 lines: {
                     create: data.lines.map(l => ({
