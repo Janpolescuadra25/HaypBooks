@@ -1,46 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function TaxProfilesPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Main', description: 'Default', status: 'Paid' },
+    { id: 'r2', name: 'Metro Manila', category: 'Basic', value: 'Default', description: 'Standard', status: 'Approved' },
+    { id: 'r3', name: 'Q1 2026', category: 'Basic', value: 'General', description: 'Primary', status: 'Closed' },
+    { id: 'r4', name: 'Main', category: 'Variable', value: 'Default', description: 'Acme Corp', status: 'Processing' },
+    { id: 'r5', name: 'Sample Entry', category: 'Basic', value: 'Primary', description: 'Standard', status: 'Processing' },
+    { id: 'r6', name: 'Default', category: 'Fixed', value: 'Default', description: 'Q1 2026', status: 'Closed' },
+    { id: 'r7', name: 'Acme Corp', category: 'Direct', value: 'Metro Manila', description: 'Main', status: 'Approved' },
+    { id: 'r8', name: 'Metro Manila', category: 'Direct', value: 'General', description: 'Q1 2026', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Profiles"
-      module="TAXES"
-      badge="ENT"
-      breadcrumb="Taxes / Tax Studio / Tax Profiles"
-      purpose="Tax Profiles are named bundles of tax settings — combining rules, codes, rates, and exemptions — that can be assigned to customers, vendors, or product lines to simplify tax determination at transaction time. Instead of evaluating complex rules for every transaction, assigning a tax profile to a customer ensures that the correct pre-configured tax treatment is automatically applied. This is especially useful for managing different tax obligations across customer segments or international accounts."
-      components={[
-        { name: 'Profile Directory', description: 'List of all defined tax profiles with name, description, country, and assigned entity count.' },
-        { name: 'Profile Builder', description: 'Form to create a profile by selecting applicable tax codes, rates, exemptions, and special rules.' },
-        { name: 'Entity Assignment Panel', description: 'Interface to assign a profile to one or many customers, vendors, or product categories.' },
-        { name: 'Profile Preview', description: 'Summary of all tax rules and codes that will be applied when this profile is active on a transaction.' },
-        { name: 'Override Rules', description: "Configuration for when a transaction-level override should supersede the profile's default settings." },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Profile Directory', 'Profile Builder', 'Entity Assignments', 'Override Settings']}
-      features={[
-        'Create named tax profiles bundling applicable codes, rates, and rules',
-        'Assign profiles to customers, vendors, or products',
-        'Preview all tax treatments active within a profile',
-        'Configure transaction-level override policies',
-        'Simplify complex tax determination with reusable profile assignment',
-        'Track which entities use each profile for impact analysis before changes',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Profile name and description',
-        'Included tax codes and rates',
-        'Applied exemptions and special rules',
-        'Number of customers/vendors using the profile',
-        'Last modified date',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new tax profile',
-        'Add tax codes, rates, and rules to profile',
-        'Assign profile to customers or vendors',
-        'Preview profile tax treatment',
-        'Edit or clone an existing profile',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

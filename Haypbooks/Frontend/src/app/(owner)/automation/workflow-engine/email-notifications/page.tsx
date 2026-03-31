@@ -1,54 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', category: 'Variable', value: 'Default', description: 'Monthly', status: 'In Stock' },
+    { id: 'r2', name: 'Sample Entry', category: 'Basic', value: 'BPI Account', description: 'Metro Manila', status: 'Medium' },
+    { id: 'r3', name: 'General', category: 'Revenue', value: 'BPI Account', description: 'Monthly', status: 'Paid' },
+    { id: 'r4', name: 'Standard', category: 'Basic', value: 'Q1 2026', description: 'Metro Manila', status: 'Processing' },
+    { id: 'r5', name: 'Sample Entry', category: 'Fixed', value: 'General', description: 'Metro Manila', status: 'Draft' },
+    { id: 'r6', name: 'Default', category: 'Direct', value: 'Primary', description: 'Main', status: 'Medium' },
+    { id: 'r7', name: 'Q1 2026', category: 'Variable', value: 'Default', description: 'Acme Corp', status: 'Completed' },
+    { id: 'r8', name: 'Acme Corp', category: 'Annual', value: 'General', description: 'BPI Account', status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Email Notifications"
-      module="AUTOMATION"
-      breadcrumb="Automation / Workflow Engine / Email Notifications"
-      purpose="Email Notifications manages all automated email templates and delivery rules used across the platform. It covers both internal notifications (to staff) and external-facing emails (to customers and vendors). Users can customize subject lines, body content, branding, and delivery triggers for each notification type — from invoice delivery emails to payment reminders to approval request emails."
-      components={[
-        { name: 'Notification Template Library', description: 'All email notification types organized by category: Customer Emails, Vendor Emails, Internal Alerts, System Events.' },
-        { name: 'Template Editor', description: 'Rich text email template editor with variable placeholders ({{customer_name}}, {{invoice_amount}}) and preview functionality.' },
-        { name: 'Delivery Rules', description: 'Configure trigger conditions for each notification: when to send, to whom, and optional delay (e.g., send invoice 3 days after due date).' },
-        { name: 'Send History', description: 'Log of all emails sent with recipient, template, delivery status (sent/failed/bounced), and timestamp.' },
-        { name: 'Branding Settings', description: 'Configure email header logo, footer, color scheme, and reply-to address.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Templates', 'Delivery Rules', 'Send History', 'Branding']}
-      features={[
-        'Customizable HTML email templates with variable placeholders',
-        'Per-template delivery rule configuration',
-        'Conditional sending logic (e.g., only if amount > threshold)',
-        'Email branding with company logo and colors',
-        'Test email sending before activating',
-        'Delivery status tracking (sent/bounced/failed)',
-        'Batch send event history log',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All email notification template names and types',
-        'Delivery trigger event and conditions',
-        'Last modified date and modified by',
-        'Send history: recipient, date, status',
-        'Open rate and bounce rate per template',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Edit an email template subject and body',
-        'Add or remove variable placeholders',
-        'Configure delivery trigger conditions',
-        'Send a test email to preview',
-        'Enable or disable a notification type',
-        'View delivery history for a template',
-        'Update email branding settings',
-      ]}
-      relatedPages={[
-        { label: 'Workflow Builder', href: '/automation/workflow-engine/workflow-builder' },
-        { label: 'Customer Invoice Emails', href: '/sales/settings/invoice-email-templates' },
-        { label: 'Payment Reminders', href: '/sales/settings/payment-reminder-rules' },
-        { label: 'System Alerts', href: '/settings/notifications/system-alerts' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

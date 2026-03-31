@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', assignee: 'BPI Account', dueDate: '2026-02-09', priority: 'High', status: 'Medium' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'Main', dueDate: '2026-01-12', priority: 'Medium', status: 'Draft' },
+    { id: 'r3', name: 'General', assignee: 'Active Item', dueDate: '2026-01-04', priority: 'In Stock', status: 'Pending' },
+    { id: 'r4', name: 'Main', assignee: 'Main', dueDate: '2026-01-27', priority: 'Filed', status: 'Medium' },
+    { id: 'r5', name: 'Default', assignee: 'Metro Manila', dueDate: '2026-02-10', priority: 'In Stock', status: 'High' },
+    { id: 'r6', name: 'Default', assignee: 'Active Item', dueDate: '2026-03-21', priority: 'Medium', status: 'Filed' },
+    { id: 'r7', name: 'Acme Corp', assignee: 'Main', dueDate: '2026-03-04', priority: 'Enabled', status: 'Connected' },
+    { id: 'r8', name: 'Acme Corp', assignee: 'Standard', dueDate: '2026-01-05', priority: 'Processing', status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Recurring Transactions"
-      module="AUTOMATION"
-      breadcrumb="Automation / Scheduled Jobs / Recurring Transactions"
-      purpose="Recurring Transactions manages templates for transactions that repeat on a defined schedule — monthly subscription invoices, recurring rent bills, weekly payroll journals, quarterly prepayment amortizations. The system automatically creates these transactions on schedule without manual intervention, reducing accounting repetition and ensuring consistent coding."
-      components={[
-        { name: 'Recurring Template List', description: 'All recurring templates with name, type (invoice/bill/journal), frequency, next due date, and status.' },
-        { name: 'Template Builder', description: 'Create a recurring template: specify all transaction details (accounts, amounts, lines) and the recurrence schedule.' },
-        { name: 'Schedule Configuration', description: 'Configure recurrence: daily/weekly/monthly/quarterly/annually, start date, end date or number of occurrences.' },
-        { name: 'Auto-created Records Log', description: 'History of all transactions auto-generated from recurring templates with links to each record.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Templates', 'Invoices', 'Bills', 'Journal Entries', 'Upcoming']}
-      features={[
-        'Auto-create invoices, bills, and journals on schedule',
-        'Full transaction line-item templates with account codes',
-        'Flexible recurrence: daily/weekly/monthly/quarterly/annual',
-        'End date or fixed-count termination',
-        'Email notification when recurring transaction is created',
-        'Pause individual templates without deleting',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Template name and transaction type',
-        'Recurrence frequency and next run date',
-        'Transaction amount and line items',
-        'Number of occurrences so far',
-        'Last auto-created record link',
-        'Active / paused / ended status',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new recurring transaction template',
-        'Edit template line items or schedule',
-        'Pause or resume a template',
-        'Manually trigger creation ahead of schedule',
-        'Delete (disable) a template no longer needed',
-        'View all transactions created from a template',
-      ]}
-      relatedPages={[
-        { label: 'Report Scheduler', href: '/automation/scheduled-jobs/report-scheduler' },
-        { label: 'Journal Entries', href: '/accounting/core-accounting/journal-entries' },
-        { label: 'Recurring Invoices', href: '/sales/billing/recurring-invoices' },
-        { label: 'Recurring Bills', href: '/expenses/bills/recurring-bills' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

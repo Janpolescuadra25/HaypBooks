@@ -1,46 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function ImpairmentPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-17', description: 'Sample Entry', amount: 30800, account: 'Monthly', status: 'Current' },
+    { id: 'r2', date: '2026-01-02', description: 'Default', amount: 15100, account: 'Main', status: 'Enabled' },
+    { id: 'r3', date: '2026-01-19', description: 'Main', amount: 3500, account: 'Acme Corp', status: 'In Stock' },
+    { id: 'r4', date: '2026-02-10', description: 'Monthly', amount: 13300, account: 'BPI Account', status: 'Closed' },
+    { id: 'r5', date: '2026-02-23', description: 'Default', amount: 44700, account: 'Acme Corp', status: 'Open' },
+    { id: 'r6', date: '2026-03-22', description: 'Standard', amount: 29100, account: 'BPI Account', status: 'Active' },
+    { id: 'r7', date: '2026-02-17', description: 'Q1 2026', amount: 8300, account: 'Main', status: 'Paid' },
+    { id: 'r8', date: '2026-02-13', description: 'Metro Manila', amount: 4400, account: 'Sample Entry', status: 'Connected' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Impairments"
-      module="ACCOUNTING — FIXED ASSETS"
-      breadcrumb="Accounting / Fixed Assets / Lifecycle / Impairments"
-      purpose="Record asset impairment losses when an asset's recoverable amount falls below its carrying value, per accounting standards (IFRS/GAAP)."
-      components={[
-        { name: "Impairment List", description: "Historical impairment records per asset" },
-        { name: "Impairment Form", description: "Record impairment: asset, impairment date, reason, and write-down amount" },
-        { name: "Impairment Reversal", description: "Reverse a previous impairment if conditions have improved" },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={[
-        "All Impairments",
-        "Pending Review",
-        "Posted",
-        "Reversals",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      features={[
-        "Impairment loss journal auto-generation",
-        "Reversal of impairment (IFRS)",
-        "Asset revaluation model support",
-        "Period-end impairment review checklist",
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      dataDisplayed={[
-        "Asset name and carrying value",
-        "Recoverable amount",
-        "Impairment loss amount",
-        "Reason and supporting notes",
-        "Journal entry reference",
-      ]}
-      userActions={[
-        "Record an impairment",
-        "Review recoverable amount",
-        "Post impairment loss",
-        "Reverse a prior impairment",
-        "Export impairment schedule",
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

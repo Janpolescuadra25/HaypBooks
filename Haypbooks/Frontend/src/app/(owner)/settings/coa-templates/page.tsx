@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function CoaTemplatesPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Monthly', category: 'Basic', value: 'Default', description: 'Sample Entry', status: 'In Stock' },
+    { id: 'r2', name: 'Default', category: 'Direct', value: 'Primary', description: 'Metro Manila', status: 'Paid' },
+    { id: 'r3', name: 'BPI Account', category: 'Variable', value: 'Active Item', description: 'Main', status: 'Closed' },
+    { id: 'r4', name: 'Q1 2026', category: 'Standard', value: 'Acme Corp', description: 'Q1 2026', status: 'Draft' },
+    { id: 'r5', name: 'Monthly', category: 'Fixed', value: 'General', description: 'Primary', status: 'High' },
+    { id: 'r6', name: 'Main', category: 'Direct', value: 'Acme Corp', description: 'Active Item', status: 'Processing' },
+    { id: 'r7', name: 'Monthly', category: 'Quarterly', value: 'Default', description: 'BPI Account', status: 'Connected' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Q1 2026', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Chart of Accounts Templates"
-      module="SETTINGS"
-      breadcrumb="Settings / Chart of Accounts Templates"
-      purpose="Chart of Accounts Templates provides a library of pre-built account structures tailored for different industries (retail, services, manufacturing, non-profit) and regions. New companies can import a template to instantly populate their chart of accounts instead of building from scratch. Templates are fully customizable after import so they can be adjusted to match specific business needs."
-      components={[
-        { name: 'Template Library Grid', description: 'Card grid of available CoA templates with industry tag, region, account count, and preview option.' },
-        { name: 'Template Preview Modal', description: 'Full-screen modal showing all accounts in the template organized by category before import.' },
-        { name: 'Industry/Region Filter', description: 'Filter templates by industry vertical and country/region to find the most relevant match.' },
-        { name: 'Import Wizard', description: 'Step-by-step wizard to merge or replace the current chart of accounts with the selected template.' },
-        { name: 'Custom Template Upload', description: 'Form to upload your own CoA template in CSV format for reuse across multiple entities.' },
+    <OwnerPageTemplate
+      title="Coa Templates"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Template Library', 'My Templates', 'Import History']}
-      features={[
-        'Browse pre-built CoA templates by industry and region',
-        'Preview all accounts in a template before committing to import',
-        'Import a template to automatically populate chart of accounts',
-        'Choose between merging new accounts or fully replacing current CoA',
-        'Upload and share custom templates across company entities',
-        'View import history to track which template was applied and when',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Template name, industry, and region',
-        'Number of accounts in each template',
-        'Account categories included (Assets, Liabilities, Equity, Revenue, Expense)',
-        'Last updated date of template',
-        'Import history: date, user, and outcome',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Browse and preview available CoA templates',
-        'Import a template to populate chart of accounts',
-        'Upload a custom CoA template',
-        'Filter templates by industry or region',
-        'Review past template imports',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

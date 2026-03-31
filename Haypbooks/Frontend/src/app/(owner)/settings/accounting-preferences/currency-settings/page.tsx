@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function CurrencySettingsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Currency Settings"
-      module="SETTINGS"
-      breadcrumb="Settings / Accounting Preferences / Currency Settings"
-      purpose="Currency Settings configures the functional currency and any additional transaction currencies your business supports, along with exchange rate sources and rounding rules. Multi-currency businesses use this page to define how currency conversions are applied to invoices, payments, and financial reports. Exchange rate updates can be manual or automatically fetched from live market data sources."
-      components={[
-        { name: 'Functional Currency Selector', description: 'Dropdown to set the base reporting currency for all financial statements.' },
-        { name: 'Active Currencies List', description: 'Table of all enabled transaction currencies with ISO code, symbol, and current exchange rate.' },
-        { name: 'Exchange Rate Source', description: 'Options to use manual rates, auto-fetch from a live provider, or import via CSV on a schedule.' },
-        { name: 'Rounding Rules', description: 'Configuration for rounding precision (2 or 4 decimal places) and rounding direction applied to conversions.' },
-        { name: 'Rate History Chart', description: 'Historical exchange rate trend chart for any selected currency pair over a configurable period.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Active Currencies', 'Exchange Rates', 'Rate History', 'Rounding Rules']}
-      features={[
-        'Set or change the functional (base) currency for all financial reporting',
-        'Enable multiple transaction currencies for invoices, bills, and payments',
-        'Connect to live exchange rate providers for real-time rate updates',
-        'Upload exchange rates manually via CSV for controlled-rate environments',
-        'Configure rounding rules to minimize currency conversion variances',
-        'View historical rate trends to audit past conversion accuracy',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Functional currency and ISO code',
-        'List of active currencies with current exchange rates',
-        'Rate source (manual, provider, imported)',
-        'Last rate update timestamp per currency',
-        'Rounding precision and direction setting',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add or remove active transaction currencies',
-        'Set the functional currency for reporting',
-        'Update exchange rates manually or configure auto-refresh',
-        'Import exchange rates from CSV',
-        'View rate history for any currency pair',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

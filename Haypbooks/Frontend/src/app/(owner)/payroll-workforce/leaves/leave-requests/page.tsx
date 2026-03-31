@@ -1,53 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-01', description: 'Primary', amount: 42900, account: 'Standard', status: 'Connected' },
+    { id: 'r2', date: '2026-03-20', description: 'Acme Corp', amount: 5700, account: 'Acme Corp', status: 'Open' },
+    { id: 'r3', date: '2026-01-16', description: 'Main', amount: 31600, account: 'Sample Entry', status: 'Approved' },
+    { id: 'r4', date: '2026-03-11', description: 'Metro Manila', amount: 47300, account: 'Metro Manila', status: 'Connected' },
+    { id: 'r5', date: '2026-03-19', description: 'Metro Manila', amount: 27100, account: 'Main', status: 'Closed' },
+    { id: 'r6', date: '2026-03-14', description: 'Q1 2026', amount: 18000, account: 'Monthly', status: 'Medium' },
+    { id: 'r7', date: '2026-02-11', description: 'Acme Corp', amount: 30400, account: 'Metro Manila', status: 'Completed' },
+    { id: 'r8', date: '2026-03-16', description: 'Default', amount: 26800, account: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Leave Requests"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Leaves / Leave Requests"
-      purpose="Leave Requests is the employee self-service leave filing page and the manager leave approval interface. Employees submit leave applications (Vacation Leave, Sick Leave, Emergency Leave, Maternity/Paternity Leave) with the date range, leave type, reason, and optional supporting documents. Managers receive notification and approve or deny the request. Approved leaves automatically deduct from the employee's leave balance and are reflected in attendance records for payroll computation."
-      components={[
-        { name: 'Leave Application Form', description: 'File a leave: select leave type, enter date range, reason, and upload medical certificate (for sick leave).' },
-        { name: 'My Leave Status', description: 'Employee\'s submitted leave requests with approval status: pending, approved, rejected.' },
-        { name: 'Manager Approval Queue', description: 'All pending leave requests for the manager\'s direct reports.' },
-        { name: 'Leave Calendar', description: 'Team calendar showing approved leaves — helps identify conflicts when planning resources.' },
-        { name: 'Leave Balance Checker', description: 'Available balance per leave type before submitting the request.' },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['My Requests', 'Apply for Leave', 'My Team (Manager)', 'Leave Calendar', 'Approval History']}
-      features={[
-        'Employee leave filing via self-service',
-        'Multiple leave types (VL, SL, ML, PL, etc.)',
-        'Manager approval workflow with email notification',
-        'Leave balance deduction on approval',
-        'Team leave calendar for resource planning',
-        'Medical certificate upload for sick leave',
-        'Leave integration with payroll (unpaid leave deduction)',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Employee leave request history',
-        'Leave balance per type',
-        'Pending team leave requests (manager view)',
-        'Approved leaves calendar',
-        'Employees currently on leave',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'File a leave request',
-        'Attach supporting document',
-        'Check leave balance before filing',
-        'Cancel a pending or approved leave',
-        'Approve or deny a team member\'s leave',
-        'View team leave calendar',
-      ]}
-      relatedPages={[
-        { label: 'Leave Balances', href: '/payroll-workforce/leaves/leave-balances' },
-        { label: 'Leave Policy', href: '/payroll-workforce/leaves/leave-policy' },
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Employee List', href: '/payroll-workforce/employees/employee-list' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

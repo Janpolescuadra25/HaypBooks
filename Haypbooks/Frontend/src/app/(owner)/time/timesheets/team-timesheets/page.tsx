@@ -1,51 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Clock, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-21', description: 'General', amount: 15800, account: 'Sample Entry', status: 'Open' },
+    { id: 'r2', date: '2026-01-25', description: 'Monthly', amount: 14800, account: 'Metro Manila', status: 'Filed' },
+    { id: 'r3', date: '2026-03-28', description: 'Monthly', amount: 41000, account: 'Q1 2026', status: 'High' },
+    { id: 'r4', date: '2026-02-22', description: 'Metro Manila', amount: 43700, account: 'BPI Account', status: 'Pending' },
+    { id: 'r5', date: '2026-01-04', description: 'Q1 2026', amount: 40400, account: 'Main', status: 'Completed' },
+    { id: 'r6', date: '2026-01-14', description: 'Primary', amount: 8100, account: 'General', status: 'High' },
+    { id: 'r7', date: '2026-02-24', description: 'Acme Corp', amount: 31000, account: 'Q1 2026', status: 'Enabled' },
+    { id: 'r8', date: '2026-02-23', description: 'Sample Entry', amount: 43300, account: 'Main', status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Team Timesheets"
-      module="TIME"
-      breadcrumb="Time / Timesheets / Team Timesheets"
-      purpose="Team Timesheets provides the manager's view of timesheet submissions across their team. Managers see all team members' timesheets for the week — who has submitted, who hasn't, who has entries pending approval, and the breakdown of hours by project and billable status. Managers approve or reject timesheets with comments. This page drives accountability for time recording compliancy, especially in consulting and professional services firms."
-      components={[
-        { name: 'Team Timesheet Overview', description: 'Grid: team members as rows, days as columns. Shows total hours per person per day. Color-coded: green (submitted), amber (draft/late), red (missing/not started).' },
-        { name: 'Individual Timesheet Review', description: 'Click any team member to see their full timesheet detail for the week.' },
-        { name: 'Approval Queue', description: 'All submitted timesheets pending approval by the manager.' },
-        { name: 'Utilization Summary', description: 'Team utilization: billable hours as % of total recorded hours by each team member.' },
+      section="Time Tracking"
+      icon={<Clock size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['My Team', 'Pending Approval', 'Approved', 'Utilization Summary', 'Missing Timesheets']}
-      features={[
-        'Team-wide timesheet submission status overview',
-        'Individual timesheet review and approval',
-        'Late/missing timesheet identification',
-        'Team utilization analysis',
-        'Batch approval for multiple timesheets',
-        'Rejection with feedback to employee',
-        'Notification of outstanding timesheet approvals',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All team members with timesheet status per week',
-        'Hours per team member (billable vs. non-billable)',
-        'Timesheets pending approval',
-        'Missing or late timesheet submissions',
-        'Team utilization rate',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        "Review a team member's timesheet",
-        'Approve or reject a timesheet',
-        'Request correction with comments',
-        'Remind team member to submit outstanding timesheet',
-        'View team utilization metrics',
-        'Export team timesheet summary',
-      ]}
-      relatedPages={[
-        { label: 'My Timesheet', href: '/time/timesheets/my-timesheet' },
-        { label: 'Project Timesheets', href: '/projects/time-billing/timesheets' },
-        { label: 'Billable Hours', href: '/projects/time-billing/billable-hours' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

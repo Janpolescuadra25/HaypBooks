@@ -1,55 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', type: 'Variable', contact: 'Default', balance: 24900, status: 'In Stock' },
+    { id: 'r2', name: 'Sample Entry', type: 'Basic', contact: 'BPI Account', balance: 9400, status: 'Medium' },
+    { id: 'r3', name: 'General', type: 'Revenue', contact: 'BPI Account', balance: 24200, status: 'Paid' },
+    { id: 'r4', name: 'Standard', type: 'Basic', contact: 'Q1 2026', balance: 11600, status: 'Processing' },
+    { id: 'r5', name: 'Sample Entry', type: 'Fixed', contact: 'General', balance: 8800, status: 'Draft' },
+    { id: 'r6', name: 'Default', type: 'Direct', contact: 'Primary', balance: 38500, status: 'Medium' },
+    { id: 'r7', name: 'Q1 2026', type: 'Variable', contact: 'Default', balance: 4600, status: 'Completed' },
+    { id: 'r8', name: 'Acme Corp', type: 'Annual', contact: 'General', balance: 15700, status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Credit Cards"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Accounts / Credit Cards"
-      purpose="Credit Cards manages all business credit card accounts — corporate cards, company credit cards, and charge cards used for business expenses. Each card account is tracked for current balance, credit limit, available credit, statement date, and payment due date. Card transactions are imported via bank feeds or CSV uploads and require coding (GL account assignment) before reconciliation. Credit card statements are reconciled monthly."
-      components={[
-        { name: 'Card Account List', description: 'All credit card accounts with card type, bank issuer, last 4 digits, credit limit, current balance, available credit, and payment due date.' },
-        { name: 'Card Transaction Log', description: 'All transactions imported from card statements with merchant, date, amount, and coding status.' },
-        { name: 'Statement Reconciliation', description: 'Match imported transactions against the card statement and code each transaction to the GL.' },
-        { name: 'Payment Recording', description: 'Record credit card payment (bank transfer to card) to clear the card balance.' },
-        { name: 'Cardholder Summary', description: 'For multi-card accounts, show spending by individual cardholder.' },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Card Accounts', 'Transactions', 'Pending Coding', 'Statements', 'Payments']}
-      features={[
-        'Multi-card account tracking for all business credit cards',
-        'Bank feed or CSV import for card transactions',
-        'Transaction coding to GL accounts and categories',
-        'Monthly statement reconciliation workflow',
-        'Credit utilization monitoring per card',
-        'Payment due date alerts',
-        'Receipt attachment per card transaction',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Card accounts with current balances and limits',
-        'Available credit per card',
-        'Unreconciled/uncoded transactions',
-        'Payment due dates',
-        'Monthly spending by card and category',
-        'Credit utilization percentage',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new credit card account',
-        'Import card transactions from statement CSV',
-        'Code a card transaction to GL',
-        'Attach receipt to a card transaction',
-        'Record credit card payment',
-        'Reconcile monthly statement',
-        'View cardholder spending breakdown',
-      ]}
-      relatedPages={[
-        { label: 'Bank Accounts', href: '/banking-cash/accounts/bank-accounts' },
-        { label: 'Expense Reports', href: '/expenses/expense-reports/my-expenses' },
-        { label: 'Corporate Cards', href: '/expenses/expense-reports/corporate-cards' },
-        { label: 'Reconcile', href: '/banking-cash/reconciliation/reconcile' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

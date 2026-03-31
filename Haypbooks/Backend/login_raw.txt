@@ -1,0 +1,26 @@
+HTTP/1.1 401 Unauthorized
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+X-Request-Id: e93015e5-31de-4047-8449-ee7822d12b8a
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 1
+X-RateLimit-Reset: 30
+Content-Type: application/json; charset=utf-8
+Content-Length: 73
+ETag: W/"49-Fx+yDPXfDSYD3nxIxyU6P47CVX0"
+Date: Thu, 19 Mar 2026 21:21:48 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"message":"Invalid credentials","error":"Unauthorized","statusCode":401}

@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Document Numbering"
-      module="SETTINGS"
-      breadcrumb="Settings / Accounting Settings / Document Numbering"
-      purpose="Document Numbering configures the automatic numbering sequences for all Haypbooks documents — invoices, purchase orders, bills, credit notes, payments, journal entries, and other transaction types. Each document type can have its own prefix, starting number, and padding format (e.g., INV-2025-0001). Proper document numbering ensures sequential, audit-friendly document references and enables easy document retrieval. The numbering resets annually if configured, or continues forever (no annual reset) depending on the business preference."
-      components={[
-        { name: 'Document Type List', description: 'All document types with current prefix, last number used, next number, and format example.' },
-        { name: 'Numbering Format Editor', description: 'Configure: prefix (e.g., "INV"), year inclusion optional, zero-padding digits, and start number.' },
-        { name: 'Annual Reset Option', description: 'Configure whether the counter resets to 0001 at the start of each year or continues incrementing perpetually.' },
-        { name: 'Manual Override', description: 'For special cases: manually set a specific starting number for a document type.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Sales Documents', 'Purchase Documents', 'Accounting Documents', 'Settings']}
-      features={[
-        'Document numbering format configuration per document type',
-        'Prefix and zero-padding customization',
-        'Annual counter reset option',
-        'Manual number override capability',
-        'Preview next number before saving changes',
-        'Number gap detection audit',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All document types with current numbering configuration',
-        'Next number to be assigned per type',
-        'Format example per type',
-        'Annual reset setting',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Update prefix for a document type',
-        'Configure zero-padding format',
-        'Enable or disable annual reset',
-        'Set starting number for a new document type',
-        'Preview numbering format',
-        'Manually set next number for a specific type',
-      ]}
-      relatedPages={[
-        { label: 'Account Defaults', href: '/settings/accounting-settings/account-defaults' },
-        { label: 'Company Profile', href: '/settings/company/company-profile' },
-        { label: 'Fiscal Year', href: '/settings/company/fiscal-year' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

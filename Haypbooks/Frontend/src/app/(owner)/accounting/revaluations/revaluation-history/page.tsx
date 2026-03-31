@@ -1,47 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-11', description: 'Default', amount: 32400, account: 'Primary', status: 'Enabled' },
+    { id: 'r2', date: '2026-01-18', description: 'Active Item', amount: 31600, account: 'Monthly', status: 'Filed' },
+    { id: 'r3', date: '2026-02-03', description: 'Active Item', amount: 21100, account: 'Default', status: 'Enabled' },
+    { id: 'r4', date: '2026-03-16', description: 'Primary', amount: 39800, account: 'BPI Account', status: 'Current' },
+    { id: 'r5', date: '2026-01-02', description: 'BPI Account', amount: 900, account: 'Sample Entry', status: 'Active' },
+    { id: 'r6', date: '2026-01-04', description: 'Monthly', amount: 38000, account: 'Active Item', status: 'Pending' },
+    { id: 'r7', date: '2026-02-18', description: 'Q1 2026', amount: 42600, account: 'Default', status: 'High' },
+    { id: 'r8', date: '2026-02-22', description: 'Sample Entry', amount: 23900, account: 'Sample Entry', status: 'Closed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Revaluation History"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Revaluations / Revaluation History"
-      purpose="Revaluation History provides an archive of all FX revaluation runs performed — showing the period, rates used, accounts impacted, exchange gains/losses posted, and journal entry references. This is an essential audit trail showing the history of how foreign currency balances were restated at each period-end. It also tracks reversals of revaluations with reasons."
-      components={[
-        { name: 'Revaluation Run Table', description: 'All past FX revaluation runs with period, run date, currencies revalued, total gain, total loss, and journal reference.' },
-        { name: 'Run Detail Drill-Down', description: 'Per-run breakdown showing accounts impacted, book rate vs. closing rate, and gain/loss per account.' },
-        { name: 'Exchange Rate Log', description: 'Rates entered for each period by currency, with source/basis noted.' },
-        { name: 'Reversal Log', description: 'Any reversed revaluation runs with reversal date, reason, and reversal journal reference.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Run History', 'Exchange Rates Log', 'Reversals']}
-      features={[
-        'Complete archive of all FX revaluation runs',
-        'Drill-through to journal entries',
-        'Exchange rate history for all currencies',
-        'Reversal tracking with reason documentation',
-        'Export revaluation history for audit',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All FX revaluation runs by period',
-        'Exchange rates used per currency per period',
-        'Exchange gain/loss posted per run and per account',
-        'Reversal records with reasons',
-        'Cumulative FX gain/loss by currency',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View details of a prior revaluation run',
-        'Check exchange rates used in a prior period',
-        'Export revaluation history for audit package',
-        'Link to journal entries from a revaluation run',
-      ]}
-      relatedPages={[
-        { label: 'FX Revaluation', href: '/accounting/revaluations/fx-revaluation' },
-        { label: 'Journal Entries', href: '/accounting/core-accounting/journal-entries' },
-        { label: 'Trial Balance', href: '/accounting/core-accounting/trial-balance' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

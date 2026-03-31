@@ -1,50 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Standard', description: 'Primary', status: 'In Stock' },
+    { id: 'r2', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Sample Entry', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', category: 'Premium', value: 'Sample Entry', description: 'General', status: 'Low' },
+    { id: 'r4', name: 'Main', category: 'Premium', value: 'BPI Account', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r5', name: 'Standard', category: 'Direct', value: 'Metro Manila', description: 'Monthly', status: 'Medium' },
+    { id: 'r6', name: 'Active Item', category: 'Premium', value: 'Q1 2026', description: 'BPI Account', status: 'Connected' },
+    { id: 'r7', name: 'Default', category: 'Fixed', value: 'Q1 2026', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', category: 'Basic', value: 'Primary', description: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Roles & Permissions"
-      module="SETTINGS"
-      breadcrumb="Settings / Users / Roles & Permissions"
-      purpose="Roles & Permissions is the access control configuration tool for Haypbooks. Roles define what a user can see and do — from read-only reporting access to full system administration. Each role is a collection of permissions (view, create, edit, delete, approve) across all modules. The principle of least privilege should be applied: each role should have only the access needed for the job function. Custom roles can be created beyond the default roles (Admin, Accountant, Manager, Employee, Auditor, Read-Only)."
-      components={[
-        { name: 'Role Library', description: 'All configured roles with description, user count, and permission summary.' },
-        { name: 'Permission Matrix Editor', description: 'For each role: module-by-module, function-by-function permission toggle (None/View/Create/Edit/Delete/Approve).' },
-        { name: 'Role User Assignment', description: 'View which users are assigned each role and reassign from this screen.' },
-        { name: 'Default Role Templates', description: 'System-default roles: Owner, Admin, Accountant, Accounts Payable, Accounts Receivable, Manager, Employee, Read-Only Auditor.' },
-        { name: 'Role Change Audit', description: 'Log of permission changes: who changed what permission for which role and when.' },
+    <OwnerPageTemplate
+      title="Roles Permissions"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Roles', 'Permission Matrix', 'User Assignment', 'Audit Log']}
-      features={[
-        'Role-based access control (RBAC)',
-        'Module and function-level permission control',
-        'Custom role creation',
-        'Default role templates for common job functions',
-        'Permission change audit log',
-        'Role user count and affected user notifications',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All roles with description and permission summary',
-        'Per-role: permission matrix by module',
-        'Users assigned to each role',
-        'Permission change history',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new custom role',
-        'Edit permissions for an existing role',
-        'Clone a role as a basis for a new one',
-        'Assign users to a role',
-        'View permission changes audit log',
-        'Export permissions matrix for review',
-      ]}
-      relatedPages={[
-        { label: 'User Management', href: '/settings/users/user-management' },
-        { label: 'Security Settings', href: '/settings/security/security-settings' },
-        { label: 'Audit Trails', href: '/automation/monitoring/audit-trails' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,46 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function ZeroRatedExemptPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-27', description: 'Acme Corp', amount: 14200, account: 'Main', status: 'Completed' },
+    { id: 'r2', date: '2026-01-09', description: 'Active Item', amount: 48200, account: 'Standard', status: 'Paid' },
+    { id: 'r3', date: '2026-02-15', description: 'Standard', amount: 23400, account: 'Primary', status: 'Current' },
+    { id: 'r4', date: '2026-01-16', description: 'General', amount: 17200, account: 'Q1 2026', status: 'Current' },
+    { id: 'r5', date: '2026-02-26', description: 'General', amount: 34400, account: 'Default', status: 'Draft' },
+    { id: 'r6', date: '2026-03-03', description: 'Active Item', amount: 49100, account: 'Standard', status: 'High' },
+    { id: 'r7', date: '2026-02-23', description: 'Sample Entry', amount: 46600, account: 'BPI Account', status: 'Current' },
+    { id: 'r8', date: '2026-02-14', description: 'Metro Manila', amount: 23800, account: 'Main', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Zero-Rated & Exempt Sales"
-      module="TAXES"
-      badge="PH ONLY"
-      breadcrumb="Taxes / Sales & Output Tax / Zero-Rated & Exempt"
-      purpose="Zero-Rated & Exempt Sales manages the separate recording and reporting of sales transactions that are subject to 0% VAT (zero-rated) or entirely outside the VAT system (exempt), which must be reported separately on the VAT return. Zero-rated sales still allow the seller to claim input VAT credits, while VAT-exempt sales do not. This distinction is critical for accurate VAT return filing and avoiding disallowance of input VAT claims."
-      components={[
-        { name: 'Zero-Rated Sales Register', description: 'List of all zero-rated sales transactions with customer, invoice, amount, and qualifying basis (export, PEZA, etc.).' },
-        { name: 'Exempt Sales Register', description: 'Separate list of VAT-exempt transactions with exemption category and supporting documentation status.' },
-        { name: 'Supporting Document Tracker', description: 'Grid showing which zero-rated sales have required supporting export documents (e.g., BOC export declarations).' },
-        { name: 'Input VAT Attribution', description: 'Tool to correctly attribute input VAT between zero-rated, exempt, and taxable sales using the direct attribution or pro-rata method.' },
-        { name: 'Filing Schedule Rows', description: 'Pre-formatted data rows for Schedule 1 and Schedule 2 of the quarterly VAT return (BIR Form 2550-Q).' },
+    <OwnerPageTemplate
+      title="Zero Rated Exempt"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Zero-Rated Sales', 'Exempt Sales', 'Supporting Documents', 'Input VAT Attribution', 'VAT Return Schedules']}
-      features={[
-        'Separate zero-rated and exempt sales into distinct registers',
-        'Track required export documentation for zero-rated sales',
-        'Attribute input VAT between zero-rated and exempt activities',
-        'Prevent incorrect input VAT claims on exempt sales',
-        'Export data for VAT return schedules 1 and 2',
-        'Flag zero-rated entries missing supporting documentation',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Customer name and invoice number',
-        'Zero-rated or exempt sales amount',
-        'Qualifying basis or exemption category',
-        'Supporting document reference number',
-        'Input VAT attribution percentage',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Classify sales as zero-rated or exempt',
-        'Upload supporting export documentation',
-        'Review input VAT attribution calculation',
-        'Export zero-rated/exempt schedule for VAT return',
-        'Flag entries with missing documentation',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

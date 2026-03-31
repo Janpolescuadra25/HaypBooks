@@ -1,53 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Building, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-14', description: 'Active Item', amount: 15300, account: 'General', status: 'Processing' },
+    { id: 'r2', date: '2026-01-09', description: 'Default', amount: 17300, account: 'Standard', status: 'Approved' },
+    { id: 'r3', date: '2026-02-10', description: 'Default', amount: 48800, account: 'Standard', status: 'Filed' },
+    { id: 'r4', date: '2026-03-22', description: 'Primary', amount: 20200, account: 'Default', status: 'Connected' },
+    { id: 'r5', date: '2026-03-05', description: 'Q1 2026', amount: 28900, account: 'Metro Manila', status: 'Active' },
+    { id: 'r6', date: '2026-03-03', description: 'Active Item', amount: 46900, account: 'Monthly', status: 'Current' },
+    { id: 'r7', date: '2026-03-09', description: 'Default', amount: 19000, account: 'Standard', status: 'In Stock' },
+    { id: 'r8', date: '2026-03-20', description: 'Sample Entry', amount: 900, account: 'Metro Manila', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="BIR Form 1601EQ"
-      module="PHILIPPINE TAX"
-      breadcrumb="Philippine Tax / BIR Forms / Form 1601EQ"
-      badge="PH ONLY"
-      purpose="BIR Form 1601EQ (Quarterly Remittance Return of Creditable Income Taxes Withheld – Expanded) is filed quarterly to remit all Expanded Withholding Tax (EWT/Creditable Withholding Tax) withheld from vendor payments during the quarter. The form summarizes total withheld by ATC (Alphanumeric Tax Code) and income type. Haypbooks auto-computes the 1601EQ from all EWT transactions (AP bills, payments, creditable withholding) and generates the EFPS submission file."
-      components={[
-        { name: '1601EQ Computation', description: 'Quarter totals of EWT withheld grouped by ATC code: total payments subject to EWT and total tax withheld per ATC.' },
-        { name: 'ATC Breakdown', description: 'Line-by-line ATC schedule: WC000, WC010, WC020, WC158, WC160, etc. — mapped from transactions.' },
-        { name: 'Form Preview', description: 'Preview completed 1601EQ form in BIR format.' },
-        { name: 'EFPS File Generator', description: 'Generate BIR EFPS XML or text file for electronic filing.' },
-        { name: 'Filing History', description: 'Archive of all quarters filed with confirmation and payment references.' },
+    <OwnerPageTemplate
+      title="Form 1601eq"
+      section="Philippine Tax"
+      icon={<Building size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Compute Quarter', 'ATC Breakdown', 'Form Preview', 'EFPS File', 'Filing History']}
-      features={[
-        'Auto-computation from EWT transactions',
-        'ATC-level breakdown of withheld amounts',
-        'EFPS electronic filing export',
-        'Link to BIR 2307 certificates',
-        'Quarterly filing deadline reminder',
-        'Amended return support',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Total EWT withheld per ATC code',
-        'Total payments subject to EWT',
-        'Prior payments and credits in the quarter',
-        'Amount due for remittance',
-        'Filing history',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Compute 1601EQ for the quarter',
-        'Review ATC breakdown',
-        'Generate EFPS file',
-        'Mark as filed',
-        'Generate 2307s for the quarter from this screen',
-        'View filing history',
-      ]}
-      relatedPages={[
-        { label: 'Form 2307', href: '/philippine-tax/bir-forms/form-2307' },
-        { label: 'Tax Mapping', href: '/philippine-tax/compliance/tax-mapping' },
-        { label: 'Alphalist', href: '/philippine-tax/reports/alphalist' },
-        { label: 'Tax Calendar', href: '/philippine-tax/compliance/tax-compliance-calendar' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

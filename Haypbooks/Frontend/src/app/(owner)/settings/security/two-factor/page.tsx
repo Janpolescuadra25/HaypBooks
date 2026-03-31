@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Standard', description: 'Primary', status: 'In Stock' },
+    { id: 'r2', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Sample Entry', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', category: 'Premium', value: 'Sample Entry', description: 'General', status: 'Low' },
+    { id: 'r4', name: 'Main', category: 'Premium', value: 'BPI Account', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r5', name: 'Standard', category: 'Direct', value: 'Metro Manila', description: 'Monthly', status: 'Medium' },
+    { id: 'r6', name: 'Active Item', category: 'Premium', value: 'Q1 2026', description: 'BPI Account', status: 'Connected' },
+    { id: 'r7', name: 'Default', category: 'Fixed', value: 'Q1 2026', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', category: 'Basic', value: 'Primary', description: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Two-Factor Authentication"
-      module="SETTINGS"
-      breadcrumb="Settings / Security / Two-Factor Authentication"
-      purpose="Two-Factor Authentication (2FA) management provides the administrator's view of 2FA enrollment across all users. Administrators can see which users have enabled 2FA, reset 2FA for users who have lost their authenticator device, enforce mandatory 2FA enrollment for specific roles, and view 2FA enrollment rate as a security metric. Individual users manage their own 2FA setup in their personal account settings; this admin page provides oversight and enforcement capability."
-      components={[
-        { name: '2FA Enrollment Status', description: 'All users with 2FA enabled/disabled status and enrollment date.' },
-        { name: 'Enforcement Settings', description: 'Set mandatory 2FA for specific roles (e.g., Admin, Accountant) or company-wide.' },
-        { name: 'Reset 2FA', description: "Reset a specific user's 2FA when they lose their authenticator app — sends re-enrollment email." },
-        { name: 'Enrollment Methods', description: 'Configure which 2FA methods are available: TOTP (Google Authenticator), SMS OTP, Email OTP.' },
+    <OwnerPageTemplate
+      title="Two Factor"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Enrollment Status', 'Enforcement Rules', 'Allowed Methods', 'Reset 2FA']}
-      features={[
-        '2FA enrollment status dashboard for all users',
-        'Role-level 2FA enforcement',
-        'TOTP authenticator app support',
-        'SMS and email OTP options',
-        '2FA reset for lost authenticator situations',
-        'Enrollment rate security metric',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Users with and without 2FA enrolled',
-        '2FA method per user',
-        'Enforcement rules active',
-        'Enrollment % (security KPI)',
-        'Users with 2FA enforcement pending enrollment',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enforce 2FA for specific roles',
-        'Reset 2FA for a specific user',
-        'Configure allowed 2FA methods',
-        'View 2FA enrollment rate',
-        'Export 2FA status for compliance audit',
-      ]}
-      relatedPages={[
-        { label: 'Security Settings', href: '/settings/security/security-settings' },
-        { label: 'Security Log', href: '/settings/security/security-log' },
-        { label: 'User Management', href: '/settings/users/user-management' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

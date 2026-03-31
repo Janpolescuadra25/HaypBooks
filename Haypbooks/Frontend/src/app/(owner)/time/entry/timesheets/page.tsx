@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Clock, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TimesheetsPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-21', description: 'General', amount: 15800, account: 'Sample Entry', status: 'Open' },
+    { id: 'r2', date: '2026-01-25', description: 'Monthly', amount: 14800, account: 'Metro Manila', status: 'Filed' },
+    { id: 'r3', date: '2026-03-28', description: 'Monthly', amount: 41000, account: 'Q1 2026', status: 'High' },
+    { id: 'r4', date: '2026-02-22', description: 'Metro Manila', amount: 43700, account: 'BPI Account', status: 'Pending' },
+    { id: 'r5', date: '2026-01-04', description: 'Q1 2026', amount: 40400, account: 'Main', status: 'Completed' },
+    { id: 'r6', date: '2026-01-14', description: 'Primary', amount: 8100, account: 'General', status: 'High' },
+    { id: 'r7', date: '2026-02-24', description: 'Acme Corp', amount: 31000, account: 'Q1 2026', status: 'Enabled' },
+    { id: 'r8', date: '2026-02-23', description: 'Sample Entry', amount: 43300, account: 'Main', status: 'Enabled' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Timesheets"
-      module="TIME"
-      breadcrumb="Time / Entry / Timesheets"
-      purpose="Timesheets presents a weekly grid interface for employees to log their time entries day-by-day across multiple projects, mirroring the familiar spreadsheet-style timesheet format used in professional services. The weekly view allows bulk entry and submission, making it more efficient for employees who prefer to log time at the end of each day or week rather than using the live timer. Submitted timesheets go to a manager review workflow."
-      components={[
-        { name: 'Weekly Grid', description: 'Matrix with project/task rows and weekday columns where hours can be entered for each combination.' },
-        { name: 'Period Navigator', description: 'Previous/next week arrows with a date picker to navigate to any timesheet week.' },
-        { name: 'Add Row', description: 'Button to add a new project-task row to the timesheet for a new category of work.' },
-        { name: 'Totals Summary Bar', description: 'Footer row showing daily and weekly totals with color indicator for under/over expected hours.' },
-        { name: 'Submit Timesheet Button', description: 'Submit the completed week for manager approval, locking entries from further editing.' },
+      section="Time Tracking"
+      icon={<Clock size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Current Week', 'Past Weeks', 'All Timesheets']}
-      features={[
-        'Enter time in a weekly grid format by project and task',
-        'Navigate between weeks with period navigator',
-        'See daily and weekly hour totals automatically calculated',
-        'Submit completed week for manager approval',
-        "Copy last week's project rows to speed up repetitive entry",
-        'View approval status and comments from manager',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Project and task rows with daily hour cells',
-        'Daily and weekly totals',
-        'Submission and approval status',
-        'Manager comments on rejected timesheets',
-        'Completion rate vs. expected working hours',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Log hours per project/task per day',
-        'Add new project-task rows',
-        'Submit week for manager approval',
-        'Copy previous week rows for quick entry',
-        'Navigate to any past timesheet week',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

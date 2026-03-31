@@ -1,46 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function UsFederalReturnsPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-02', description: 'Main', amount: 45000, account: 'Main', status: 'Open' },
+    { id: 'r2', date: '2026-03-24', description: 'Standard', amount: 19800, account: 'Q1 2026', status: 'Low' },
+    { id: 'r3', date: '2026-03-19', description: 'BPI Account', amount: 41400, account: 'Primary', status: 'Medium' },
+    { id: 'r4', date: '2026-01-16', description: 'Sample Entry', amount: 47400, account: 'Primary', status: 'Connected' },
+    { id: 'r5', date: '2026-02-24', description: 'Primary', amount: 44700, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r6', date: '2026-01-08', description: 'Metro Manila', amount: 38000, account: 'Q1 2026', status: 'Open' },
+    { id: 'r7', date: '2026-01-26', description: 'Q1 2026', amount: 26700, account: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', date: '2026-01-01', description: 'Standard', amount: 38800, account: 'BPI Account', status: 'Connected' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="US Federal Returns"
-      module="TAXES"
-      badge="US ONLY"
-      breadcrumb="Taxes / US Federal Returns"
-      purpose="US Federal Returns manages the preparation and filing of federal income tax returns with the IRS for US-based business entities — including Form 1120 (C-Corp), Form 1120-S (S-Corp), Form 1065 (Partnership), and Form 1040-Schedule C (Sole Proprietor). This module aggregates financial data from across Haypbooks to populate return schedules, supports e-filing via the IRS Modernized e-File (MeF) system, and tracks estimated quarterly payments (Form 941, 1120-W). Proper federal return management reduces underpayment penalties and ensures IRS compliance."
-      components={[
-        { name: 'Return Type Selector', description: 'Dropdown to select the applicable federal return form based on entity structure.' },
-        { name: 'Schedule Population Wizard', description: 'Step-by-step data pull from GL accounts and financial statements into federal return schedules.' },
-        { name: 'Estimated Payment Tracker', description: 'Tracks IRS quarterly estimated tax payments (1120-W or 1040-ES) with amounts and due dates.' },
-        { name: 'E-File Submission Panel', description: 'Direct IRS MeF e-filing action with validation, submission, and acknowledgment tracking.' },
-        { name: 'Extension Tracker', description: 'Manages filing extensions (Form 7004) with original and extended due dates per entity.' },
+    <OwnerPageTemplate
+      title="Us Federal Returns"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Return Preparation', 'Estimated Payments', 'E-Filing', 'Extensions', 'Prior Year Returns']}
-      features={[
-        'Prepare federal income tax returns for all US business entity types',
-        'Auto-populate return schedules from Haypbooks financial data',
-        'Track and record IRS quarterly estimated tax payments',
-        'E-file directly to the IRS via MeF integration',
-        'Manage automatic filing extensions with Form 7004',
-        'Review prior year returns for comparison and carryforward items',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Entity type and applicable return form',
-        'Taxable income and computed federal tax',
-        'Estimated payments made and remaining liability',
-        'Filing status and e-file confirmation number',
-        'Extension status and extended due date',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Select federal return type for the entity',
-        'Pull financial data into return schedules',
-        'Record estimated tax payments',
-        'E-file return via IRS MeF',
-        'File extension with Form 7004',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

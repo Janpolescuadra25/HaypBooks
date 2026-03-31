@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Shield, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-24', description: 'Acme Corp', amount: 18000, account: 'BPI Account', status: 'Pending' },
+    { id: 'r2', date: '2026-01-26', description: 'General', amount: 2900, account: 'Acme Corp', status: 'Current' },
+    { id: 'r3', date: '2026-02-17', description: 'Acme Corp', amount: 41900, account: 'Acme Corp', status: 'Approved' },
+    { id: 'r4', date: '2026-02-05', description: 'Standard', amount: 49700, account: 'Q1 2026', status: 'Paid' },
+    { id: 'r5', date: '2026-01-19', description: 'Metro Manila', amount: 29500, account: 'Primary', status: 'Processing' },
+    { id: 'r6', date: '2026-02-13', description: 'Primary', amount: 3600, account: 'Active Item', status: 'Connected' },
+    { id: 'r7', date: '2026-03-24', description: 'Default', amount: 25700, account: 'General', status: 'In Stock' },
+    { id: 'r8', date: '2026-03-07', description: 'Active Item', amount: 47300, account: 'Standard', status: 'Low' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Internal Controls"
-      module="COMPLIANCE"
-      breadcrumb="Compliance / Controls / Internal Controls"
-      purpose="Internal Controls is the framework management page for documenting and monitoring the company's internal control activities. It lists all control activities (preventive and detective), their objectives, testing procedures, frequency, owner, and last test result. This documentation supports audits, regulatory examinations, and ongoing control self-assessments."
-      components={[
-        { name: 'Control Catalog', description: 'Complete list of all documented internal controls with type (preventive/detective/corrective), process area, frequency, and last tested date.' },
-        { name: 'Control Detail', description: 'Full control documentation: control objective, procedure description, evidence required, frequency, owner, and test history.' },
-        { name: 'Testing Schedule', description: 'Calendar of upcoming control tests with owner assignments and due dates.' },
-        { name: 'Test Results Log', description: 'History of control test outcomes: passed, has exceptions, or failed — with exception details and remediation.' },
+      section="Compliance"
+      icon={<Shield size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Controls', 'Preventive', 'Detective', 'Testing Schedule', 'Test Results']}
-      features={[
-        'Formal internal control documentation catalog',
-        'Control testing schedule and tracking',
-        'Exception and finding documentation',
-        'Control-to-risk mapping',
-        'Remediation tracking for control failures',
-        'Export control documentation for external audit',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Control ID, name, and type',
-        'Business process area covered',
-        'Control objective and procedure description',
-        'Testing frequency and last test date',
-        'Test result (Pass / Exception / Fail)',
-        'Owner and responsible department',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new internal control documentation entry',
-        'Record control test result',
-        'Document control exceptions and remediation',
-        'Schedule next control test',
-        'Export control catalog for audit package',
-        'Link control to risk in the risk register',
-      ]}
-      relatedPages={[
-        { label: 'Risk Register', href: '/compliance/controls/risk-register' },
-        { label: 'Policy Management', href: '/compliance/controls/policy-management' },
-        { label: 'Compliance Reports', href: '/compliance/reporting/compliance-reports' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-
-

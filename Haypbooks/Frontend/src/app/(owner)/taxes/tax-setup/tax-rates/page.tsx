@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TaxRatesPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-18', description: 'BPI Account', amount: 34900, account: 'Sample Entry', status: 'Pending' },
+    { id: 'r2', date: '2026-01-09', description: 'Primary', amount: 43200, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r3', date: '2026-02-24', description: 'Main', amount: 23000, account: 'Q1 2026', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-22', description: 'Sample Entry', amount: 13500, account: 'Acme Corp', status: 'Closed' },
+    { id: 'r5', date: '2026-01-06', description: 'Active Item', amount: 30000, account: 'BPI Account', status: 'Open' },
+    { id: 'r6', date: '2026-02-09', description: 'Acme Corp', amount: 19200, account: 'Acme Corp', status: 'Processing' },
+    { id: 'r7', date: '2026-03-20', description: 'Main', amount: 900, account: 'Standard', status: 'Completed' },
+    { id: 'r8', date: '2026-03-09', description: 'Active Item', amount: 28400, account: 'Metro Manila', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Rates"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Setup / Tax Rates"
-      purpose="Tax Rates defines the percentage rates applied to taxable transactions for each type of tax — VAT, withholding, sales tax, and others — organized by effective date to support rate changes without rewriting history. When a government enacts rate changes, new rates are entered here with future effective dates, and the system automatically applies the correct rate to transactions based on the transaction date. This ensures historical accuracy while supporting forward-looking compliance."
-      components={[
-        { name: 'Rate Registry Table', description: 'Table of all configured tax rates with tax type, rate %, country, and effective date range.' },
-        { name: 'Add Rate Form', description: 'Form to define a new rate with tax type, percentage, applicable jurisdiction, and effective start date.' },
-        { name: 'Rate History Timeline', description: 'Version history per tax type showing all past rates and the effective date each was active.' },
-        { name: 'Future Rate Entry', description: 'Ability to enter a new rate with a future start date so it activates automatically on the correct date.' },
-        { name: 'Compound Rate Config', description: 'Optional setup for stacked or compound rates where multiple taxes apply to the same base.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Rates', 'By Tax Type', 'Future Rates', 'Rate History']}
-      features={[
-        'Configure rates for all tax types with effective date ranges',
-        'Enter future rate changes in advance for automatic activation',
-        'Retain rate history to correctly calculate taxes on past transactions',
-        'Configure compound or stacked rates for multi-layer tax scenarios',
-        'Filter rates by jurisdiction, type, or effective date',
-        'Export rate schedule for external review or documentation',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tax type and rate percentage',
-        'Jurisdiction applicable',
-        'Effective start and end dates',
-        'Status (active, expired, upcoming)',
-        'Last modified date and user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new tax rate with effective date',
-        'Enter a future rate change',
-        'View rate history timeline',
-        'Deactivate or expire an obsolete rate',
-        'Export tax rate schedule',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,50 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', assignee: 'Standard', dueDate: '2026-01-25', priority: 'Current', status: 'Medium' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'Active Item', dueDate: '2026-02-14', priority: 'Pending', status: 'Paid' },
+    { id: 'r3', name: 'General', assignee: 'Q1 2026', dueDate: '2026-01-04', priority: 'Medium', status: 'Open' },
+    { id: 'r4', name: 'Q1 2026', assignee: 'Standard', dueDate: '2026-03-01', priority: 'Enabled', status: 'Draft' },
+    { id: 'r5', name: 'BPI Account', assignee: 'General', dueDate: '2026-02-13', priority: 'Open', status: 'Low' },
+    { id: 'r6', name: 'General', assignee: 'Monthly', dueDate: '2026-02-09', priority: 'Draft', status: 'Enabled' },
+    { id: 'r7', name: 'Default', assignee: 'Default', dueDate: '2026-01-02', priority: 'Connected', status: 'Active' },
+    { id: 'r8', name: 'General', assignee: 'Main', dueDate: '2026-03-03', priority: 'Completed', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Approval Matrices"
-      module="AUTOMATION"
-      breadcrumb="Automation / Approvals & Governance / Approval Matrices"
-      purpose="Approval Matrices define the rules governing which transactions require approval and from whom, based on configurable criteria such as transaction value, type, department, and location. A matrix maps transaction attributes to required approvers and approval thresholds, ensuring that no transaction above a defined limit can be processed without proper authorization. This is the configuration backbone of the entire approval workflow system."
-      components={[
-        { name: 'Matrix Table', description: 'Grid-based matrix showing transaction types along one axis and approval tiers along the other, with amount thresholds in cells.' },
-        { name: 'Matrix Editor', description: 'Edit approval thresholds per transaction type and tier — set amount limits and assign approver roles.' },
-        { name: 'Matrix Templates', description: 'Pre-built approval matrix templates: SME Standard, Mid-Market, Enterprise.' },
-        { name: 'Effective Date Control', description: 'Set an effective date when a new matrix version takes effect, without disrupting in-flight approvals.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Matrices', 'Purchase Orders', 'Bills & Payments', 'Expense Reports', 'Payroll', 'Custom']}
-      features={[
-        'Role-based, amount-threshold approval rules',
-        'Multiple approval matrices for different transaction types',
-        'Tiered approval for escalating amounts',
-        'Department-specific override matrices',
-        'Matrix versioning with effective date control',
-        'Test a transaction against the current matrix',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Transaction types and their approval thresholds',
-        'Approver roles assigned per tier per type',
-        'Current matrix version and effective date',
-        'Pending matrix changes (not yet effective)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Define approval thresholds per transaction type',
-        'Assign approver roles per tier',
-        'Set effective date for matrix changes',
-        'Test a transaction amount to see what approval it requires',
-        'Import matrix from Excel template',
-        'Export current matrix as PDF',
-      ]}
-      relatedPages={[
-        { label: 'Approval Chains', href: '/automation/approvals-governance/approval-chains' },
-        { label: 'Delegation Rules', href: '/automation/approvals-governance/delegation-rules' },
-        { label: 'Approval Queue', href: '/tasks-approvals/management/approval-queue' },
-        { label: 'Approval History', href: '/tasks-approvals/management/approval-history' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

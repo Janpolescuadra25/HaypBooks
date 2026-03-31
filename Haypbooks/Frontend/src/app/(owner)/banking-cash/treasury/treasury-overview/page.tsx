@@ -1,57 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', type: 'Premium', contact: 'Acme Corp', balance: 18000, status: 'Draft' },
+    { id: 'r2', name: 'Sample Entry', type: 'Monthly', contact: 'General', balance: 48000, status: 'Active' },
+    { id: 'r3', name: 'Acme Corp', type: 'Variable', contact: 'Primary', balance: 29200, status: 'Pending' },
+    { id: 'r4', name: 'Default', type: 'Operating', contact: 'Q1 2026', balance: 18500, status: 'Completed' },
+    { id: 'r5', name: 'Standard', type: 'Basic', contact: 'Q1 2026', balance: 38700, status: 'Active' },
+    { id: 'r6', name: 'Active Item', type: 'Operating', contact: 'Primary', balance: 29600, status: 'Processing' },
+    { id: 'r7', name: 'Standard', type: 'Quarterly', contact: 'Primary', balance: 3600, status: 'Enabled' },
+    { id: 'r8', name: 'Standard', type: 'Basic', contact: 'Main', balance: 42100, status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Treasury Overview"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Treasury / Treasury Overview"
-      purpose="Treasury Overview is the executive dashboard for the company's cash and liquidity position. It aggregates balances across all bank accounts, investments, credit facilities, and outstanding payment obligations to give a real-time view of the company's total liquidity. It shows the cash conversion cycle, liquidity ratios, 30-day cash flow forecast, and any treasury alerts (e.g., low balance, covenant breach, upcoming maturities). This is the primary tool for the CFO and treasurer."
-      components={[
-        { name: 'Total Liquidity Panel', description: 'Net liquidity position: total cash + available credit facilities + liquid investments − upcoming payments due in 30 days.' },
-        { name: 'Bank Account Balances', description: 'Real-time balance for each bank account with currency, equivalent in base currency, and balance trend.' },
-        { name: 'Cash Flow Forecast Panel', description: '30-day rolling cash inflow and outflow forecast with projected net cash position per week.' },
-        { name: 'Credit Facilities Summary', description: 'Available credit across all lines and facilities with utilization rate.' },
-        { name: 'Treasury Alerts', description: 'Alerts for: low account balance, upcoming loan maturities, covenant near breach, and FX exposure.' },
-        { name: 'Currency Exposure', description: 'Net exposure per foreign currency across all monetary items for hedging assessment.' },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Overview', 'Cash Balances', 'Cash Flow Forecast', 'Credit Facilities', 'FX Exposure', 'Alerts']}
-      features={[
-        'Real-time total liquidity position',
-        '30-day cash flow forecast driven by open AR, AP, and scheduled payments',
-        'Multi-currency cash balance with FX conversion',
-        'Credit facility utilization monitoring',
-        'Treasury alert system for critical indicators',
-        'Cash conversion cycle calculation',
-        'FX exposure summary for hedging decisions',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Total cash across all accounts',
-        'Net liquidity (cash + credit available)',
-        'Cash flow forecast: 4-week inflows and outflows',
-        'Credit facility availability',
-        'FX exposure by currency',
-        'Active treasury alerts',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View current liquidity position',
-        'Drill into any bank account balance',
-        'View detailed cash flow forecast',
-        'Check credit facility availability',
-        'Review FX exposure and consider hedging',
-        'Configure treasury alert thresholds',
-        'Export treasury report for CFO review',
-      ]}
-      relatedPages={[
-        { label: 'Bank Accounts', href: '/banking-cash/accounts/bank-accounts' },
-        { label: 'Credit Lines', href: '/financial-services/credit-facilities/credit-lines' },
-        { label: 'FX Management', href: '/banking-cash/treasury/fx-management' },
-        { label: 'Cash Position', href: '/home/cash-position' },
-        { label: 'Cash Flow Report', href: '/reporting/reports-center/financial-statements/cash-flow-statement' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

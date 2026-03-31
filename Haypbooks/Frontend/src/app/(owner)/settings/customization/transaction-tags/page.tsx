@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function TransactionTagsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Transaction Tags"
-      module="SETTINGS"
-      breadcrumb="Settings / Customization / Transaction Tags"
-      purpose="Transaction Tags are free-form or predefined labels that can be attached to any transaction to enable flexible cross-dimensional reporting beyond the standard chart of accounts. Tags are commonly used for project tracking, department coding, campaign attribution, or grant tracking where the full GL structure would be over-engineered. Tagged transactions can be filtered and grouped in reports independently of account codes."
-      components={[
-        { name: 'Tag Catalog', description: 'Master list of all defined tags with color, category group, active status, and usage count.' },
-        { name: 'Tag Creator Form', description: 'Form to define a new tag: name, color code, optional category group, and description.' },
-        { name: 'Tag Groups', description: 'Organizer to cluster related tags into groups (e.g., Departments, Campaigns, Projects) for structured filtering.' },
-        { name: 'Tag Usage Report', description: 'Summary showing transaction volume and amounts tagged with each label over a selected period.' },
-        { name: 'Bulk Tag Assignment', description: 'Tool to apply or remove tags from multiple transactions at once via filtered selection.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Tags', 'Tag Groups', 'Usage Report']}
-      features={[
-        'Create color-coded tags for cross-dimensional transaction categorization',
-        'Organize tags into groups for structured multi-level filtering',
-        'Apply tags to any transaction type (invoices, expenses, journals)',
-        'Bulk assign or remove tags across multiple transactions',
-        'Generate reports filtered or grouped by tag for custom analysis',
-        'Inactivate tags without losing historical data',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tag name, color, and group assignment',
-        'Number of transactions tagged with each label',
-        'Total transaction value per tag',
-        'Active vs. inactive tag status',
-        'Last used date per tag',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create new transaction tag with color and description',
-        'Organize tags into named groups',
-        'Apply tags to transactions from this management page',
-        'View tag usage report with totals',
-        'Deactivate or delete unused tags',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -271,7 +271,12 @@ export default function BusinessOnboardingPage() {
 
       if (currentStep === 'review') {
         // Complete the onboarding flow and create company
-        await apiClient.post('/api/onboarding/complete', { hub: 'OWNER', type: 'full' })
+        await apiClient.post('/api/onboarding/complete', {
+          hub: 'OWNER',
+          type: 'full',
+          mode: 'append',
+          companyName: formData.businessName || formData.legalName || ''
+        })
         setCurrentStep('success')
       } else {
         if (stepIndex < STEPS.length - 1) {

@@ -1,56 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-04', description: 'General', amount: 47200, account: 'Acme Corp', status: 'Pending' },
+    { id: 'r2', date: '2026-01-26', description: 'General', amount: 7900, account: 'Q1 2026', status: 'Open' },
+    { id: 'r3', date: '2026-02-08', description: 'Default', amount: 42300, account: 'Monthly', status: 'Filed' },
+    { id: 'r4', date: '2026-03-27', description: 'Q1 2026', amount: 3500, account: 'Primary', status: 'Open' },
+    { id: 'r5', date: '2026-02-11', description: 'Q1 2026', amount: 33800, account: 'Metro Manila', status: 'Current' },
+    { id: 'r6', date: '2026-02-07', description: 'Metro Manila', amount: 33500, account: 'Acme Corp', status: 'High' },
+    { id: 'r7', date: '2026-03-26', description: 'Acme Corp', amount: 21500, account: 'Primary', status: 'Completed' },
+    { id: 'r8', date: '2026-03-12', description: 'BPI Account', amount: 42800, account: 'Acme Corp', status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Payment Runs"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Payments / Payment Runs"
-      purpose="Payment Runs manages the company's regular scheduled payment cycles — weekly vendor payment runs, bi-monthly supplier settlements, and ad-hoc urgent payment runs. A payment run collects all bills meeting the configured criteria (due by date, vendor group, amount range), proposes the payment list, gets approval, executes the payments, and updates the AP ledger. Payment run settings can be templated for repeated use on a schedule."
-      components={[
-        { name: 'Payment Run Settings', description: 'Configure run criteria: due date cutoff, vendor group, minimum/maximum payment amount, pay-from bank account.' },
-        { name: 'Proposed Payments List', description: 'Auto-generated list of all bills meeting the run criteria with vendor, invoice reference, due date, and amount.' },
-        { name: 'Exclusion Manager', description: 'Remove specific bills from the proposed run (e.g., disputed invoices) before proceeding.' },
-        { name: 'Run Approval', description: 'Submit run for approval with total amount, vendor count, and funding bank account details.' },
-        { name: 'Run Execution', description: 'Post all payments in the run to the GL and generate bank transfer files or print checks.' },
-        { name: 'Run History', description: 'Archive of all payment runs with date, criteria summary, total amount, and GL posting status.' },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Configure Run', 'Proposed Payments', 'Approve Run', 'Execute', 'History']}
-      features={[
-        'Criteria-based automatic bill selection for payment run',
-        'Exclusion management before execution',
-        'Multi-step approval for payment runs',
-        'Batch GL posting upon execution',
-        'Bank file or check generation',
-        'Payment run templates for recurring cycles',
-        'Remittance advice generation per vendor',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Bills selected for the run meeting criteria',
-        'Total run amount and vendor count',
-        'Approval status',
-        'Excluded bills and exclusion reasons',
-        'Bank account used and available balance',
-        'Payment run history',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Configure payment run criteria',
-        'Review and adjust proposed payments',
-        'Exclude specific bills from run',
-        'Approve the payment run',
-        'Execute the payment run',
-        'Generate bank files or print checks',
-        'View payment run history',
-      ]}
-      relatedPages={[
-        { label: 'Vendor Payments', href: '/banking-cash/payments/vendor-payments' },
-        { label: 'Batch Payments', href: '/banking-cash/payments/batch-payments' },
-        { label: 'Bills', href: '/expenses/bills/bill-list' },
-        { label: 'AP Aging', href: '/reporting/reports-center/ap-aging' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

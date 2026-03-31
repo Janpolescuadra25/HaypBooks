@@ -1,25 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-04', description: 'General', amount: 47200, account: 'Acme Corp', status: 'Pending' },
+    { id: 'r2', date: '2026-01-26', description: 'General', amount: 7900, account: 'Q1 2026', status: 'Open' },
+    { id: 'r3', date: '2026-02-08', description: 'Default', amount: 42300, account: 'Monthly', status: 'Filed' },
+    { id: 'r4', date: '2026-03-27', description: 'Q1 2026', amount: 3500, account: 'Primary', status: 'Open' },
+    { id: 'r5', date: '2026-02-11', description: 'Q1 2026', amount: 33800, account: 'Metro Manila', status: 'Current' },
+    { id: 'r6', date: '2026-02-07', description: 'Metro Manila', amount: 33500, account: 'Acme Corp', status: 'High' },
+    { id: 'r7', date: '2026-03-26', description: 'Acme Corp', amount: 21500, account: 'Primary', status: 'Completed' },
+    { id: 'r8', date: '2026-03-12', description: 'BPI Account', amount: 42800, account: 'Acme Corp', status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Statement Archive"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Reconciliation / Statement Archive"
-      purpose="Secure storage of all bank statement files attached to completed reconciliations. Download originals for audit support, search by account and period, and add supplementary documents."
-      components={[
-        { name: "Statement File List", description: "All stored statements by account and period with file metadata" },
-        { name: "Document Viewer", description: "In-app PDF viewer for reviewing statements without downloading" },
-        { name: "Upload Additional Documents", description: "Attach additional audit-support files to any reconciliation period" },
-        { name: "Download Controls", description: "Download individual files or bulk download a period's documents" },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["By Account","By Period","All Documents"]}
-      features={["Long-term statement storage","In-app PDF viewer","Searchable archive","Additional document upload","Bulk download"]}
-      dataDisplayed={["Bank account and period","File name and type","Upload date and uploader","File size","Associated reconciliation date"]}
-      userActions={["Search for statement","View statement in browser","Download statement file","Upload supplementary document","Delete document"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

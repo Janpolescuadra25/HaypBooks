@@ -1,53 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Network, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', assignee: 'Standard', dueDate: '2026-02-02', priority: 'Enabled', status: 'Draft' },
+    { id: 'r2', name: 'BPI Account', assignee: 'Primary', dueDate: '2026-02-05', priority: 'Closed', status: 'Closed' },
+    { id: 'r3', name: 'Standard', assignee: 'Primary', dueDate: '2026-02-26', priority: 'Current', status: 'Medium' },
+    { id: 'r4', name: 'Main', assignee: 'Standard', dueDate: '2026-01-19', priority: 'Filed', status: 'Filed' },
+    { id: 'r5', name: 'BPI Account', assignee: 'Sample Entry', dueDate: '2026-02-02', priority: 'Completed', status: 'Open' },
+    { id: 'r6', name: 'Active Item', assignee: 'Q1 2026', dueDate: '2026-03-06', priority: 'Approved', status: 'Low' },
+    { id: 'r7', name: 'Monthly', assignee: 'Sample Entry', dueDate: '2026-01-14', priority: 'Medium', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', assignee: 'Q1 2026', dueDate: '2026-02-01', priority: 'Pending', status: 'Medium' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Filing Calendar"
-      module="ORGANIZATION"
-      breadcrumb="Organization / Governance / Filing Calendar"
-      purpose="The Filing Calendar tracks all statutory and regulatory filing deadlines across all legal entities and jurisdictions. It includes BIR tax filings, SEC annual reports, business permit renewals, LGU filings, labor compliance deadlines, and other regulatory submission dates. Each deadline is color-coded by urgency and links to the relevant filing page or document."
-      components={[
-        { name: 'Calendar View', description: 'Month calendar showing all filing deadlines color-coded by: Tax (red), Corporate (blue), Labor (green), Permits (amber).' },
-        { name: 'Deadline List', description: 'Table of upcoming deadlines sorted by date with entity, filing type, jurisdiction, and status.' },
-        { name: 'Entity Filter', description: 'Filter deadlines by legal entity, jurisdiction, filing category, or time horizon (next 30/60/90 days).' },
-        { name: 'Add Custom Deadline', description: 'Add custom filing deadlines not in the system for entity-specific regulatory requirements.' },
-        { name: 'Reminder Settings', description: 'Configure how many days in advance to send email/system alerts for each deadline category.' },
+      section="Organization"
+      icon={<Network size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Calendar View', 'List View', 'Overdue', 'Upcoming', 'Completed']}
-      features={[
-        'Pre-loaded BIR, SEC, LGU, and labor deadlines for PH',
-        'Multi-entity deadline tracking',
-        'Color-coded urgency (overdue, <7 days, <30 days, future)',
-        'Configurable advance reminders',
-        'Custom deadline support for entity-specific requirements',
-        'Link deadlines to filing pages or document uploads',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Filing deadline dates by entity and type',
-        'Days remaining or overdue per deadline',
-        'Filing type (Tax / Corporate / Labor / Permit)',
-        'Responsible party assignment',
-        'Filing status (pending / filed / late)',
-        'Link to relevant module page',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View upcoming deadlines on calendar',
-        'Mark a deadline as filed/completed',
-        'Add a custom deadline',
-        'Assign responsible party to a deadline',
-        'Configure advance reminder timing',
-        'Export deadline list to PDF or CSV',
-      ]}
-      relatedPages={[
-        { label: 'Tax Calendar', href: '/taxes/tax-center/tax-calendar' },
-        { label: 'PH Tax Filing Deadlines', href: '/philippine-tax/tax-calendar/filing-deadlines' },
-        { label: 'Document Storage', href: '/organization/governance/document-storage' },
-        { label: 'Compliance Reports', href: '/compliance/reporting/compliance-reports' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

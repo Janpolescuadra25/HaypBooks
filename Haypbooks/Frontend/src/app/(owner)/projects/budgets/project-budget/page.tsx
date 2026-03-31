@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-11', description: 'Metro Manila', amount: 47700, account: 'Metro Manila', status: 'Enabled' },
+    { id: 'r2', date: '2026-01-13', description: 'Standard', amount: 5400, account: 'Sample Entry', status: 'Closed' },
+    { id: 'r3', date: '2026-01-26', description: 'Monthly', amount: 34500, account: 'BPI Account', status: 'High' },
+    { id: 'r4', date: '2026-03-27', description: 'General', amount: 27000, account: 'Sample Entry', status: 'Paid' },
+    { id: 'r5', date: '2026-02-10', description: 'Q1 2026', amount: 45300, account: 'Main', status: 'High' },
+    { id: 'r6', date: '2026-03-18', description: 'Acme Corp', amount: 44700, account: 'Active Item', status: 'Active' },
+    { id: 'r7', date: '2026-02-13', description: 'BPI Account', amount: 33400, account: 'Monthly', status: 'Closed' },
+    { id: 'r8', date: '2026-02-15', description: 'Metro Manila', amount: 35300, account: 'Active Item', status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Project Budget"
-      module="PROJECTS"
-      breadcrumb="Projects / Budgets / Project Budget"
-      purpose="Project Budget manages the cost budget and revenue target for each project. The budget is defined by cost category (labor hours × rate, subcontractors, materials, overheads) and is compared against actual costs as the project progresses. The project budget drives the profitability forecast and is the basis for variance analysis. Budget entries can be phase-specific for multi-phase projects, enabling phase-level cost control and billing milestone alignment."
-      components={[
-        { name: 'Budget Entry Grid', description: 'Per project: budget line items by cost category with budgeted amount, actual to date, and variance.' },
-        { name: 'Revenue Budget', description: 'Target billings: contract value, phased billing targets, and actual billed-to-date vs. target.' },
-        { name: 'Phase Budget Breakdown', description: 'For multi-phase projects: budget allocated per phase and actual costs per phase.' },
-        { name: 'Budget vs. Actual Chart', description: 'Visual bar chart of budget vs. actual cost by category for quick management review.' },
-        { name: 'Budget Revision Log', description: 'History of budget revisions with reason, date, and approval.' },
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Budget vs. Actual', 'Phase Budget', 'Revenue Budget', 'Revision History']}
-      features={[
-        'Project cost budget by category',
-        'Revenue target and contract value tracking',
-        'Phase-level budget allocation',
-        'Real-time budget vs. actual comparison',
-        'Budget revision management with approval',
-        'Profitability forecast based on budget',
-        'Budget utilization alerts',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Budget vs. actual per cost category',
-        'Remaining budget per category',
-        'Revenue target vs. billed-to-date',
-        'Estimated final cost vs. budget',
-        'Budget utilization %',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create project budget',
-        'Enter budget by phase and cost category',
-        'Update revenue target',
-        'Submit budget revision with reason',
-        'Approve budget revision',
-        'View profitability forecast',
-        'Export budget report',
-      ]}
-      relatedPages={[
-        { label: 'Project List', href: '/projects/projects/project-list' },
-        { label: 'Cost Tracking', href: '/projects/budgets/cost-tracking' },
-        { label: 'Profitability Report', href: '/projects/reports/profitability-report' },
-        { label: 'Project Invoicing', href: '/projects/time-billing/project-invoicing' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,55 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Main', assignee: 'General', dueDate: '2026-02-23', priority: 'Open', status: 'Paid' },
+    { id: 'r2', name: 'Default', assignee: 'Standard', dueDate: '2026-03-24', priority: 'High', status: 'Filed' },
+    { id: 'r3', name: 'Q1 2026', assignee: 'Monthly', dueDate: '2026-01-13', priority: 'Approved', status: 'Medium' },
+    { id: 'r4', name: 'Default', assignee: 'Acme Corp', dueDate: '2026-02-27', priority: 'High', status: 'Connected' },
+    { id: 'r5', name: 'Sample Entry', assignee: 'Monthly', dueDate: '2026-03-06', priority: 'Closed', status: 'Closed' },
+    { id: 'r6', name: 'Metro Manila', assignee: 'Active Item', dueDate: '2026-02-27', priority: 'Connected', status: 'Current' },
+    { id: 'r7', name: 'General', assignee: 'Main', dueDate: '2026-03-20', priority: 'Draft', status: 'Medium' },
+    { id: 'r8', name: 'Metro Manila', assignee: 'Acme Corp', dueDate: '2026-01-09', priority: 'Completed', status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Close Checklist"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Period Close / Close Checklist"
-      purpose="The Close Checklist is the master workflow management tool for the month-end and year-end close process. It organizes all closing tasks into a sequential checklist with deadlines, owners, status tracking, and dependencies. The checklist ensures completeness: all transactions recorded, adjustments posted, sub-ledgers reconciled, financial statements generated, and period locked. It significantly reduces close time by providing a transparent, trackable, team-coordinated close workflow."
-      components={[
-        { name: 'Close Progress Summary', description: 'Progress bar showing: tasks completed / total tasks, current close status, and estimated close date based on remaining tasks.' },
-        { name: 'Task Checklist', description: 'Step-by-step checklist with task name, category, assigned owner, due date/time, and status (Not Started, In Progress, Completed, Blocked).' },
-        { name: 'Dependency Map', description: 'Visual dependency tree showing which tasks must be completed before others can begin.' },
-        { name: 'Issues Log', description: 'Track blocked items and open questions preventing close task completion with responsible party and resolution updates.' },
-        { name: 'Close History', description: 'Archive of prior month closes with actual close date, time taken, and issues encountered.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Checklist', 'Dependencies', 'Issues Log', 'History', 'Settings']}
-      features={[
-        'Configurable close workflow with task templates',
-        'Multi-user task assignment with deadlines',
-        'Dependency-aware task ordering',
-        'Issue/blocker tracking with resolution workflow',
-        'Close progress tracking and broadcast',
-        'Prior period comparison for efficiency',
-        'Automated task triggers (e.g., auto-start depreciation task)',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Complete close task list with status',
-        'Task owner and due deadline',
-        'Overall close completion percentage',
-        'Open issues blocking close',
-        'Close timeline vs. target date',
-        'Prior month close performance metrics',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Mark a close task as complete',
-        'Assign task to a team member',
-        'Log a close issue or blocker',
-        'Resolve an issue and unblock dependent tasks',
-        'Reopen a task for correction',
-        'View dependency map before starting',
-        'Initiate the lock-period action when all tasks complete',
-      ]}
-      relatedPages={[
-        { label: 'Journal Post', href: '/accounting/period-close/journal-post' },
-        { label: 'Lock Periods', href: '/accounting/period-close/lock-periods' },
-        { label: 'Period Reports', href: '/accounting/period-close/period-reports' },
-        { label: 'My Tasks', href: '/tasks-approvals/my-work/my-tasks' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

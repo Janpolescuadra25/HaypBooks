@@ -18,33 +18,47 @@ export class UsersService {
     }
     const { password, ...result } = user as any
 
-    // Fetch companies and practices directly via the user's workspace
+    // Fetch companies and practices via the user's owned and member workspaces.
     let uniqueCompanies: any[] = []
     let uniquePractices: any[] = []
     let ownedWorkspaceId: string | null = null
+
     try {
-      // Find the workspace owned by this user
-      const workspace = await this.prisma.workspace.findUnique({
+      const workspaceIds = new Set<string>()
+
+      // Owned workspaces by user (owner may have multiple practice workspaces in a multi-tenant model)
+      const ownedWorkspaces = await this.prisma.workspace.findMany({
         where: { ownerUserId: id },
-        include: { companies: true, practices: true }
       })
-      if (workspace) {
-        ownedWorkspaceId = workspace.id
-        uniqueCompanies = workspace.companies || []
-        uniquePractices = workspace.practices || []
+      if (ownedWorkspaces?.length) {
+        ownedWorkspaceId = ownedWorkspaces[0]?.id ?? null
+        for (const ws of ownedWorkspaces) {
+          if (ws?.id) workspaceIds.add(ws.id)
+        }
       }
-      // Also check workspaces where user is a member
-      const memberWorkspaces = await this.prisma.workspaceUser.findMany({
+
+      // Also gather member workspace IDs
+      const memberWorkspaceUsers = await this.prisma.workspaceUser.findMany({
         where: { userId: id },
-        include: { workspace: { include: { companies: true, practices: true } } }
       })
-      for (const wu of memberWorkspaces) {
-        const wc = wu.workspace?.companies || []
-        const wp = wu.workspace?.practices || []
-        uniqueCompanies.push(...wc)
-        uniquePractices.push(...wp)
+      for (const wu of memberWorkspaceUsers) {
+        if (wu.workspaceId) {
+          workspaceIds.add(wu.workspaceId)
+        }
       }
-      // Deduplicate
+
+      const workspaceIdArray = Array.from(workspaceIds)
+
+      if (workspaceIdArray.length > 0) {
+        uniqueCompanies = await this.prisma.company.findMany({
+          where: { workspaceId: { in: workspaceIdArray }, isActive: true },
+        })
+        uniquePractices = await this.prisma.practice.findMany({
+          where: { workspaceId: { in: workspaceIdArray }, isActive: true },
+        })
+      }
+
+      // Deduplicate just in case
       uniqueCompanies = Array.from(new Map(uniqueCompanies.map((c: any) => [c.id, c])).values())
       uniquePractices = Array.from(new Map(uniquePractices.map((p: any) => [p.id, p])).values())
     } catch (e) {

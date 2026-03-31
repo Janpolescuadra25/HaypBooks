@@ -1,51 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Monthly', type: 'Quarterly', contact: 'Default', balance: 32400, status: 'Current' },
+    { id: 'r2', name: 'Main', type: 'Direct', contact: 'Primary', balance: 34000, status: 'In Stock' },
+    { id: 'r3', name: 'Monthly', type: 'Quarterly', contact: 'Q1 2026', balance: 5100, status: 'Current' },
+    { id: 'r4', name: 'Monthly', type: 'Premium', contact: 'Active Item', balance: 35600, status: 'Processing' },
+    { id: 'r5', name: 'Primary', type: 'Standard', contact: 'BPI Account', balance: 34300, status: 'Open' },
+    { id: 'r6', name: 'Sample Entry', type: 'Monthly', contact: 'Sample Entry', balance: 4200, status: 'Active' },
+    { id: 'r7', name: 'Sample Entry', type: 'Operating', contact: 'Monthly', balance: 38000, status: 'Current' },
+    { id: 'r8', name: 'Sample Entry', type: 'Annual', contact: 'Primary', balance: 19400, status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="FX Revaluation"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Revaluations / FX Revaluation"
-      purpose="FX Revaluation performs the period-end revaluation of foreign currency monetary balances — accounts receivable, accounts payable, bank accounts, intercompany loans, and other monetary items denominated in foreign currencies. It restates these balances at the closing rate as at period-end and posts exchange gain/loss journal entries to the GL per PAS 21. This is a required closing procedure for companies with foreign currency transactions."
-      components={[
-        { name: 'FX Rate Input', description: 'Enter period-end closing exchange rates for each foreign currency (USD, EUR, SGD, etc.) used in the company.' },
-        { name: 'Revaluation Preview', description: 'Shows all foreign currency balances, their book rate, new closing rate, and resulting exchange gain/(loss) per account.' },
-        { name: 'Post FX Journals Button', description: 'Post all revaluation journal entries to recognize exchange gains/losses for the period.' },
-        { name: 'Exchange Gain/Loss Summary', description: 'Total exchange gain and total exchange loss for the period posted to the FX account.' },
-        { name: 'FX Rate History', description: 'Archive of all period-end exchange rates used historically for each currency.' },
+    <OwnerPageTemplate
+      title="Fx Revaluation"
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Run Revaluation', 'FX Rate History', 'Posted Journals']}
-      features={[
-        'Multi-currency balance revaluation per PAS 21',
-        'Closing rate entry for all active currencies',
-        'Preview exchange gains/losses before posting',
-        'Automatic journal entry generation for all impacted accounts',
-        'Net FX gain/loss summary per currency',
-        'Prior period FX rates archive for reference',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All foreign currency monetary balances',
-        'Book rate (transaction rate) vs. closing rate',
-        'Exchange gain or (loss) per account',
-        'Total FX gain and total FX loss for the period',
-        'FX rate history for auditors',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enter closing exchange rates for each currency',
-        'Preview FX revaluation impact',
-        'Post FX revaluation journal entries',
-        'View historical exchange rates by period',
-        'Reverse FX revaluation and re-run if rates change',
-      ]}
-      relatedPages={[
-        { label: 'Revaluation History', href: '/accounting/revaluations/revaluation-history' },
-        { label: 'Journal Entries', href: '/accounting/core-accounting/journal-entries' },
-        { label: 'Period Close', href: '/accounting/period-close/close-checklist' },
-        { label: 'FX Management', href: '/banking-cash/treasury/fx-management' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

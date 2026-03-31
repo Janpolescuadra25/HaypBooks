@@ -1,46 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function IncomeTaxPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-16', description: 'Primary', amount: 4100, account: 'Sample Entry', status: 'Active' },
+    { id: 'r2', date: '2026-02-22', description: 'Main', amount: 21700, account: 'Standard', status: 'Pending' },
+    { id: 'r3', date: '2026-01-20', description: 'Sample Entry', amount: 5000, account: 'BPI Account', status: 'Approved' },
+    { id: 'r4', date: '2026-03-21', description: 'General', amount: 33200, account: 'Default', status: 'Filed' },
+    { id: 'r5', date: '2026-01-08', description: 'Sample Entry', amount: 19700, account: 'Active Item', status: 'Open' },
+    { id: 'r6', date: '2026-01-05', description: 'Active Item', amount: 30400, account: 'BPI Account', status: 'Open' },
+    { id: 'r7', date: '2026-01-17', description: 'Monthly', amount: 20800, account: 'Main', status: 'Connected' },
+    { id: 'r8', date: '2026-03-23', description: 'BPI Account', amount: 13400, account: 'Active Item', status: 'Paid' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Income Tax"
-      module="TAXES"
-      badge="ENT"
-      breadcrumb="Taxes / Corporate Tax / Income Tax"
-      purpose="Income Tax tracks the company's current income tax expense, tax payable, and effective tax rate across reporting periods. This module bridges the accounting profit with taxable income by applying permanent and temporary adjustments, enabling accurate current tax provision calculations. It generates the income tax provision schedule needed for financial statement disclosures and supports quarterly estimated tax payment planning."
-      components={[
-        { name: 'Tax Provision Summary', description: 'Summary table showing accounting profit, taxable income adjustments, taxable income, and current tax expense.' },
-        { name: 'Permanent Difference Entries', description: 'Input table for non-deductible expenses and exempt income that cause permanent book-tax differences.' },
-        { name: 'Effective Tax Rate Calculator', description: 'Computed metric showing effective tax rate vs. statutory rate with ETR bridge chart.' },
-        { name: 'Estimated Tax Payment Schedule', description: 'Calendar of quarterly estimated tax payment due dates with amounts and payment status.' },
-        { name: 'Jurisdiction Allocation', description: 'Apportion income and tax across multiple jurisdictions for multi-state or multi-country entities.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Tax Provision', 'Book-Tax Differences', 'Effective Tax Rate', 'Estimated Payments', 'Jurisdiction Allocation']}
-      features={[
-        'Calculate current income tax provision from accounting profit',
-        'Record and track permanent book-tax difference adjustments',
-        'Compute effective tax rate and generate ETR bridge analysis',
-        'Schedule and track quarterly estimated tax payments',
-        'Allocate income across jurisdictions for multi-entity filing',
-        'Generate tax provision note for financial statement disclosure',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Pre-tax accounting profit per period',
-        'Tax adjustment items (permanent and temporary)',
-        'Taxable income and current tax expense',
-        'Effective tax rate vs. statutory rate',
-        'Estimated payment amounts and due dates',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enter or import accounting profit figures',
-        'Add permanent difference line items',
-        'Review and adjust effective tax rate',
-        'Record estimated tax payment',
-        'Generate tax provision schedule report',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

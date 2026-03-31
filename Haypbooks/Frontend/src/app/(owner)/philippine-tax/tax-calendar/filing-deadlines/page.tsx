@@ -1,27 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Building, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Main', assignee: 'Primary', dueDate: '2026-02-26', priority: 'Low', status: 'In Stock' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'Default', dueDate: '2026-03-22', priority: 'Approved', status: 'In Stock' },
+    { id: 'r3', name: 'Main', assignee: 'Monthly', dueDate: '2026-02-10', priority: 'Processing', status: 'Current' },
+    { id: 'r4', name: 'Standard', assignee: 'Main', dueDate: '2026-03-01', priority: 'Completed', status: 'Draft' },
+    { id: 'r5', name: 'Sample Entry', assignee: 'Acme Corp', dueDate: '2026-01-22', priority: 'Paid', status: 'Low' },
+    { id: 'r6', name: 'Q1 2026', assignee: 'BPI Account', dueDate: '2026-01-21', priority: 'Closed', status: 'Active' },
+    { id: 'r7', name: 'Monthly', assignee: 'Monthly', dueDate: '2026-01-28', priority: 'Approved', status: 'Open' },
+    { id: 'r8', name: 'Standard', assignee: 'Metro Manila', dueDate: '2026-02-09', priority: 'Enabled', status: 'Pending' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Filing Deadlines"
-      module="PHILIPPINE TAX"
-      breadcrumb="Philippine Tax / Tax Calendar / Filing Deadlines"
-      badge="PH ONLY"
-      purpose="Comprehensive calendar of all BIR, SSS, PhilHealth, Pag-IBIG, and LGU filing and payment deadlines. View by month, quarter, or year to plan your compliance activities."
-      components={[
-        { name: "Deadline Calendar", description: "Month-view calendar with all tax and compliance deadlines marked" },
-        { name: "Deadline List View", description: "Table view of all deadlines sortable by date or agency" },
-        { name: "Custom Obligation Manager", description: "Add company-specific obligations not in the standard calendar" },
-        { name: "Status Tracking", description: "Mark each deadline as pending, completed, or N/A" },
-        { name: "Export Calendar", description: "Download deadline calendar as Excel or sync to Google Calendar / Outlook" },
+      section="Philippine Tax"
+      icon={<Building size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={["Calendar","List View","Custom Obligations","Completed"]}
-      features={["Full PH compliance calendar","BIR, SSS, PhilHealth, Pag-IBIG, LGU coverage","Status tracking per obligation","Custom obligation support","Calendar export/sync"]}
-      dataDisplayed={["Obligation name and type","Filing agency","Deadline date","Filing period covered","Completion status"]}
-      userActions={["View calendar","Add custom obligation","Mark as completed","Export calendar","View by period"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

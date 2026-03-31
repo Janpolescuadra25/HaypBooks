@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Standard', description: 'Primary', status: 'In Stock' },
+    { id: 'r2', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Sample Entry', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', category: 'Premium', value: 'Sample Entry', description: 'General', status: 'Low' },
+    { id: 'r4', name: 'Main', category: 'Premium', value: 'BPI Account', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r5', name: 'Standard', category: 'Direct', value: 'Metro Manila', description: 'Monthly', status: 'Medium' },
+    { id: 'r6', name: 'Active Item', category: 'Premium', value: 'Q1 2026', description: 'BPI Account', status: 'Connected' },
+    { id: 'r7', name: 'Default', category: 'Fixed', value: 'Q1 2026', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', category: 'Basic', value: 'Primary', description: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Security Log"
-      module="SETTINGS"
-      breadcrumb="Settings / Security / Security Log"
-      purpose="The Security Log (also called the Audit Security Log) is the complete record of all security-relevant events in the Haypbooks system — logins (success and failure), password changes, 2FA enrollments and resets, security setting changes, user account changes, role and permission modifications, and data export events. The security log is immutable (cannot be deleted or modified) and serves as the forensic record for incident investigation, compliance audits, and internal controls review."
-      components={[
-        { name: 'Security Event Log', description: 'Chronological log of all security events with timestamp, event type, user, IP address, device, and outcome.' },
-        { name: 'Event Type Filter', description: 'Filter by: Login Success, Login Failed, Logout, Password Change, Role Changed, User Created/Deactivated, Permission Changed, 2FA Event, Data Export.' },
-        { name: 'Suspicious Activity Alerts', description: 'Auto-flag unusual events: multiple failed logins, login from new country/IP, unusual hour access.' },
-        { name: 'Export for Audit', description: 'Export the security log for compliance review or external audit.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Events', 'Login Events', 'User Changes', 'Permission Changes', 'Suspicious Activity']}
-      features={[
-        'Immutable security event audit log',
-        'All login and authentication events',
-        'User management change tracking',
-        'Permission and role change history',
-        'Suspicious activity detection and alerting',
-        'Export for external audit',
-        'Search by user, IP, or event type',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All security events with timestamp and user',
-        'Failed login attempts with IP',
-        'User account changes with administrator',
-        'Permission changes with before/after',
-        'Suspicious activity flags',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Browse security event log',
-        'Filter by event type or date range',
-        'Search by user or IP address',
-        'Investigate a security incident',
-        'Export security log to CSV/PDF',
-        'Configure suspicious activity alert thresholds',
-      ]}
-      relatedPages={[
-        { label: 'Security Settings', href: '/settings/security/security-settings' },
-        { label: 'User Management', href: '/settings/users/user-management' },
-        { label: 'Audit Trails', href: '/automation/monitoring/audit-trails' },
-        { label: 'Internal Controls', href: '/compliance/controls/internal-controls' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

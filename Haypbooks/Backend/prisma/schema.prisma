@@ -809,15 +809,15 @@ model User {
 }
 
 model Session {
-  id              String    @id @default(uuid())
-  userId          String
-  refreshToken    String    @unique
-  ipAddress       String?   @map("ipaddress")
-  userAgent       String?   @map("useragent")
-  revoked         Boolean   @default(false)
-  lastUsedAt      DateTime? @map("lastusedat")
-  expiresAt       DateTime
-  createdAt       DateTime  @default(now())
+  id           String    @id @default(uuid())
+  userId       String
+  refreshToken String    @unique
+  ipAddress    String?   @map("ipaddress")
+  userAgent    String?   @map("useragent")
+  revoked      Boolean   @default(false)
+  lastUsedAt   DateTime? @map("lastusedat")
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
 
   /// Human-readable device label, e.g. "Chrome on Windows"
   deviceName      String?
@@ -1060,7 +1060,7 @@ model TaxProvision {
 model Workspace {
   id                       String          @id @default(uuid())
   // Owner of the workspace (system-level user)
-  ownerUserId              String          @unique
+  ownerUserId              String
   type                     WorkspaceType   @default(OWNER)
   status                   WorkspaceStatus @default(ACTIVE)
   // Workspace-level per-firm trial info
@@ -1089,6 +1089,8 @@ model Workspace {
   deletedAt DateTime?
 
   owner                       User                         @relation("WorkspaceOwner", fields: [ownerUserId], references: [id])
+
+  @@index([ownerUserId])
   users                       WorkspaceUser[]
   auditLogs                   AuditLog[]
   events                      EventLog[]
@@ -1311,6 +1313,7 @@ model Practice {
   workspaceId String
 
   name            String
+  displayName     String?
   servicesOffered String?
 
   isActive Boolean @default(true)
@@ -1661,7 +1664,7 @@ model Company {
   assetMaintenances              AssetMaintenance[]
   assetInsurances                AssetInsurance[]
   // Session context tracking — which company was active when the session was created
-  activeSessions                 Session[]          @relation("Session_ActiveCompany")
+  activeSessions                 Session[]                       @relation("Session_ActiveCompany")
   employeeLoans                  EmployeeLoan[]
   employeeLoanPayments           EmployeeLoanPayment[]
   timeOffBalances                TimeOffBalance[]
@@ -1819,8 +1822,8 @@ model Company {
   birRegistrationStatus String? // REGISTERED | PENDING | EXEMPT
   birRegistrationDate   DateTime?
   birRdoCode            String? // Revenue District Office code
-  birTin                String?   @db.VarChar(15) // BIR TIN with dashes
-  taxIncentiveGranted   Boolean   @default(false)
+  birTin                String?    @db.VarChar(15) // BIR TIN with dashes
+  taxIncentiveGranted   Boolean    @default(false)
   taxIncentiveType      String? // PEZA | BOI | SBMA | etc.
   taxIncentiveExpiry    DateTime?
   taxIncentiveDetails   Json? // Additional incentive programme details
@@ -2334,18 +2337,18 @@ model WorkspaceUser {
 }
 
 model WorkspaceInvite {
-  id            String    @id @default(uuid())
-  workspaceId   String
-  email         String?   @db.VarChar(320)
-  roleId        String?
-  invitedBy     String
-  invitedAt     DateTime  @default(now())
-  expiresAt     DateTime?
-  acceptedAt    DateTime?
-  status        String    @default("PENDING")
-  isLinkInvite  Boolean   @default(false)
-  contactName   String?
-  message       String?
+  id           String    @id @default(uuid())
+  workspaceId  String
+  email        String?   @db.VarChar(320)
+  roleId       String?
+  invitedBy    String
+  invitedAt    DateTime  @default(now())
+  expiresAt    DateTime?
+  acceptedAt   DateTime?
+  status       String    @default("PENDING")
+  isLinkInvite Boolean   @default(false)
+  contactName  String?
+  message      String?
 
   workspace     Workspace @relation(fields: [workspaceId], references: [id])
   role          Role?     @relation(fields: [roleId], references: [id])
@@ -4018,9 +4021,9 @@ model ProjectTask {
   projectId    String
   name         String
   description  String?           @db.Text
-  assignedToId String?           // user id — plain reference, no FK constraint
+  assignedToId String? // user id — plain reference, no FK constraint
   status       ProjectTaskStatus @default(TODO)
-  priority     String?           // LOW, MEDIUM, HIGH
+  priority     String? // LOW, MEDIUM, HIGH
   dueDate      DateTime?
   completedAt  DateTime?
   createdAt    DateTime          @default(now())
@@ -4459,8 +4462,8 @@ model DonorManagement {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  company      Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  donor        Customer            @relation(fields: [donorId], references: [contactId])
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  donor        Customer           @relation(fields: [donorId], references: [contactId])
   interactions DonorInteraction[]
 
   @@unique([companyId, donorId])
@@ -4471,15 +4474,15 @@ model DonorManagement {
 // ─── Donor Interaction Log ─────────────────────────────────────────────
 
 model DonorInteraction {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   donorManagementId String
-  userId            String   // who logged this interaction (plain reference, no FK)
-  type              String   // EMAIL, CALL, MEETING, EVENT, NOTE
+  userId            String // who logged this interaction (plain reference, no FK)
+  type              String // EMAIL, CALL, MEETING, EVENT, NOTE
   subject           String
-  notes             String?  @db.Text
-  occurredAt        DateTime @default(now())
+  notes             String?   @db.Text
+  occurredAt        DateTime  @default(now())
   followUpDate      DateTime?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
   donorManagement DonorManagement @relation(fields: [donorManagementId], references: [id], onDelete: Cascade)
 
@@ -8594,15 +8597,15 @@ model BankAccount {
 }
 
 model BankTransaction {
-  id            String                   @id @default(uuid())
+  id            String                @id @default(uuid())
   bankAccountId String
-  amount        Decimal                  @db.Decimal(19, 4)
+  amount        Decimal               @db.Decimal(19, 4)
   date          DateTime
   description   String
   workspaceId   String
   category      String?
   memo          String?
-  status        BankTransactionStatus    @default(PENDING)
+  status        BankTransactionStatus @default(PENDING)
 
   bankAccount            BankAccount              @relation(fields: [bankAccountId], references: [id])
   workspace              Workspace                @relation(fields: [workspaceId], references: [id])
@@ -8627,11 +8630,11 @@ enum BankTransactionStatus {
 }
 
 model BankTransactionSplit {
-  id                String          @id @default(uuid())
+  id                String  @id @default(uuid())
   bankTransactionId String
   accountCode       String
   description       String
-  amount            Decimal         @db.Decimal(19, 4)
+  amount            Decimal @db.Decimal(19, 4)
   workspaceId       String
 
   bankTransaction BankTransaction @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
@@ -8642,20 +8645,20 @@ model BankTransactionSplit {
 }
 
 model BankTransfer {
-  id                   String   @id @default(uuid())
-  workspaceId          String
-  fromBankAccountId    String
-  toBankAccountId      String
-  amount               Decimal  @db.Decimal(19, 4)
-  date                 DateTime
-  memo                 String?
-  fromTransactionId    String?  @unique
-  toTransactionId      String?  @unique
-  createdAt            DateTime @default(now())
+  id                String   @id @default(uuid())
+  workspaceId       String
+  fromBankAccountId String
+  toBankAccountId   String
+  amount            Decimal  @db.Decimal(19, 4)
+  date              DateTime
+  memo              String?
+  fromTransactionId String?  @unique
+  toTransactionId   String?  @unique
+  createdAt         DateTime @default(now())
 
-  workspace          Workspace   @relation(fields: [workspaceId], references: [id])
-  fromBankAccount    BankAccount @relation("TransferFrom", fields: [fromBankAccountId], references: [id])
-  toBankAccount      BankAccount @relation("TransferTo", fields: [toBankAccountId], references: [id])
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id])
+  fromBankAccount BankAccount @relation("TransferFrom", fields: [fromBankAccountId], references: [id])
+  toBankAccount   BankAccount @relation("TransferTo", fields: [toBankAccountId], references: [id])
 
   @@index([workspaceId])
   @@index([fromBankAccountId])
@@ -11661,9 +11664,9 @@ model EngagementTemplate {
   id          String   @id @default(uuid())
   practiceId  String
   name        String
-  type        String   // AUDIT, TAX, ADVISORY, BOOKKEEPING
+  type        String // AUDIT, TAX, ADVISORY, BOOKKEEPING
   description String?  @db.Text
-  steps       Json     // Array of default step objects [{ name, description, order }]
+  steps       Json // Array of default step objects [{ name, description, order }]
   isDefault   Boolean  @default(false)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -11679,8 +11682,8 @@ model EngagementTemplate {
 model EngagementWorkflow {
   id           String   @id @default(uuid())
   engagementId String
-  templateId   String?  // optional reference to a template used to seed this workflow
-  steps        Json     // [{ name, status, completedAt, assignedToId }]
+  templateId   String? // optional reference to a template used to seed this workflow
+  steps        Json // [{ name, status, completedAt, assignedToId }]
   currentStep  Int      @default(0)
   status       String   @default("ACTIVE") // ACTIVE, COMPLETED, PAUSED
   createdAt    DateTime @default(now())
@@ -12756,10 +12759,10 @@ model PracticeCertification {
 model PracticeDashboard {
   id         String   @id @default(uuid())
   practiceId String
-  userId     String   // plain reference — which user owns this config (no FK constraint)
+  userId     String // plain reference — which user owns this config (no FK constraint)
   name       String   @default("My Dashboard")
-  layout     Json?    // widget grid positions [{ i, x, y, w, h }]
-  widgets    Json?    // [{ type, settings, isVisible }]
+  layout     Json? // widget grid positions [{ i, x, y, w, h }]
+  widgets    Json? // [{ type, settings, isVisible }]
   isDefault  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -12775,8 +12778,8 @@ model ClientPortalSettings {
   id              String   @id @default(uuid())
   practiceId      String   @unique
   isEnabled       Boolean  @default(false)
-  allowedFeatures Json?    // e.g. ["view_invoices", "upload_documents", "send_messages"]
-  branding        Json?    // { logoUrl, primaryColor, companyName, customDomain }
+  allowedFeatures Json? // e.g. ["view_invoices", "upload_documents", "send_messages"]
+  branding        Json? // { logoUrl, primaryColor, companyName, customDomain }
   welcomeMessage  String?  @db.Text
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

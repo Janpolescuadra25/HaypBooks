@@ -1,51 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', assignee: 'Primary', dueDate: '2026-03-14', priority: 'In Stock', status: 'Active' },
+    { id: 'r2', name: 'General', assignee: 'BPI Account', dueDate: '2026-01-26', priority: 'Low', status: 'Active' },
+    { id: 'r3', name: 'BPI Account', assignee: 'Monthly', dueDate: '2026-03-15', priority: 'Medium', status: 'Approved' },
+    { id: 'r4', name: 'Metro Manila', assignee: 'Standard', dueDate: '2026-01-18', priority: 'Low', status: 'Completed' },
+    { id: 'r5', name: 'BPI Account', assignee: 'Default', dueDate: '2026-01-18', priority: 'Paid', status: 'Medium' },
+    { id: 'r6', name: 'Q1 2026', assignee: 'Primary', dueDate: '2026-03-03', priority: 'Completed', status: 'Pending' },
+    { id: 'r7', name: 'Standard', assignee: 'General', dueDate: '2026-01-19', priority: 'Closed', status: 'Current' },
+    { id: 'r8', name: 'Active Item', assignee: 'BPI Account', dueDate: '2026-01-11', priority: 'Current', status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Smart Rules"
-      module="AUTOMATION"
-      breadcrumb="Automation / Workflow Engine / Smart Rules"
-      purpose="Smart Rules are simpler, predefined automation rules that apply conditional logic to specific transaction types without requiring the full Workflow Builder. They handle common scenarios like auto-categorizing transactions based on counterparty, auto-applying tax codes when specific keywords appear, auto-assigning expenses to departments based on supplier, and flagging transactions that exceed thresholds. Smart Rules run silently in the background on every qualifying transaction."
-      components={[
-        { name: 'Smart Rules List', description: 'Table of all configured smart rules with name, trigger module, condition summary, action, and enabled status toggle.' },
-        { name: 'Rule Builder Form', description: 'Create a rule: select module (Banking, Expenses, Sales), define condition (field + operator + value), and select action.' },
-        { name: 'Rule Priority Control', description: 'Drag to reorder rules; higher rules apply first when multiple rules match.' },
-        { name: 'Rule Hit Statistics', description: 'How many times each rule has fired in the past 30 days.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Rules', 'Banking Rules', 'Expense Rules', 'Sales Rules', 'Payroll Rules']}
-      features={[
-        'Lightweight condition-action rules per module',
-        'Auto-categorization and account coding',
-        'Auto-tax code assignment',
-        'Threshold-based flagging and alerts',
-        'Rule priority ordering',
-        'Rule hit rate tracking',
-        'Enable/disable without deleting',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Rule name, module, condition, and action',
-        'Enabled/disabled status',
-        'Hit count (last 30 days)',
-        'Last triggered date and time',
-        'Created by and creation date',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new smart rule',
-        'Enable or disable a rule',
-        'Edit rule conditions or actions',
-        'Reorder rule priority',
-        'Test a rule against sample data',
-        'Delete an obsolete rule',
-      ]}
-      relatedPages={[
-        { label: 'Workflow Builder', href: '/automation/workflow-engine/workflow-builder' },
-        { label: 'Bank Feed Matching', href: '/banking-cash/bank-feeds/matching-rules' },
-        { label: 'Expense Rules', href: '/expenses/settings/expense-rules' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Building, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-14', description: 'Active Item', amount: 15300, account: 'General', status: 'Processing' },
+    { id: 'r2', date: '2026-01-09', description: 'Default', amount: 17300, account: 'Standard', status: 'Approved' },
+    { id: 'r3', date: '2026-02-10', description: 'Default', amount: 48800, account: 'Standard', status: 'Filed' },
+    { id: 'r4', date: '2026-03-22', description: 'Primary', amount: 20200, account: 'Default', status: 'Connected' },
+    { id: 'r5', date: '2026-03-05', description: 'Q1 2026', amount: 28900, account: 'Metro Manila', status: 'Active' },
+    { id: 'r6', date: '2026-03-03', description: 'Active Item', amount: 46900, account: 'Monthly', status: 'Current' },
+    { id: 'r7', date: '2026-03-09', description: 'Default', amount: 19000, account: 'Standard', status: 'In Stock' },
+    { id: 'r8', date: '2026-03-20', description: 'Sample Entry', amount: 900, account: 'Metro Manila', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="BIR Form 2550M"
-      module="PHILIPPINE TAX"
-      breadcrumb="Philippine Tax / BIR Forms / Form 2550M"
-      badge="PH ONLY"
-      purpose="BIR Form 2550M (Monthly Value-Added Tax Declaration) is filed monthly by VAT-registered businesses for the first two months of each quarter to remit monthly VAT. It reports total sales (output VAT), total purchases (input VAT), and the net VAT payable or excess input VAT for the month. Haypbooks auto-computes 2550M from the VAT GL transaction data. This form is due on the 20th of the following month for non-eFPS filers, and 25th for eFPS filers (Group E)."
-      components={[
-        { name: '2550M Computation', description: 'Monthly computation: total output VAT from sales invoices, total input VAT from purchases, and net VAT due.' },
-        { name: 'VAT Schedule', description: 'Supporting schedule of VATable, VAT-exempt, and zero-rated transactions for the month.' },
-        { name: 'Form Preview', description: 'Preview the 2550M form in BIR layout.' },
-        { name: 'EFPS File Generator', description: 'Generate EFPS-compatible file for electronic submission.' },
-        { name: 'Filing History', description: 'Archive of all monthly 2550M filings.' },
+    <OwnerPageTemplate
+      title="Form 2550m"
+      section="Philippine Tax"
+      icon={<Building size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Compute Month', 'VAT Schedule', 'Form Preview', 'EFPS File', 'Filing History']}
-      features={[
-        'Monthly VAT computation from GL data',
-        'Output and input VAT breakdown',
-        'Zero-rated and exempt transaction tracking',
-        'EFPS electronic filing format',
-        'Monthly filing calendar integration',
-        'Link to quarterly 2550Q',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Output VAT from sales for the month',
-        'Input VAT from purchases for the month',
-        'Net VAT payable or excess input',
-        'VAT-able transactions schedule',
-        'Filing history',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Compute monthly VAT',
-        'Review output and input VAT detail',
-        'Generate EFPS file',
-        'Mark filing as submitted',
-        'View filing history',
-      ]}
-      relatedPages={[
-        { label: 'Form 2550Q', href: '/philippine-tax/bir-forms/form-2550q' },
-        { label: 'VAT Returns', href: '/taxes/vat/vat-returns' },
-        { label: 'EFPS Setup', href: '/philippine-tax/compliance/efps-setup' },
-        { label: 'Tax Calendar', href: '/philippine-tax/compliance/tax-compliance-calendar' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

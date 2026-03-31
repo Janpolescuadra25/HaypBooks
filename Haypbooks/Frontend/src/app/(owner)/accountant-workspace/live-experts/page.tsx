@@ -1,48 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { UserCheck, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function LiveExpertsPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-20', description: 'Standard', amount: 48400, account: 'Metro Manila', status: 'Connected' },
+    { id: 'r2', date: '2026-01-26', description: 'Metro Manila', amount: 26900, account: 'Q1 2026', status: 'High' },
+    { id: 'r3', date: '2026-02-02', description: 'Metro Manila', amount: 17900, account: 'BPI Account', status: 'Closed' },
+    { id: 'r4', date: '2026-01-05', description: 'Sample Entry', amount: 6600, account: 'Acme Corp', status: 'Active' },
+    { id: 'r5', date: '2026-03-19', description: 'Main', amount: 28300, account: 'Standard', status: 'Approved' },
+    { id: 'r6', date: '2026-03-07', description: 'Metro Manila', amount: 31300, account: 'Sample Entry', status: 'Current' },
+    { id: 'r7', date: '2026-03-12', description: 'General', amount: 43800, account: 'Default', status: 'Pending' },
+    { id: 'r8', date: '2026-03-17', description: 'Acme Corp', amount: 19900, account: 'Standard', status: 'Draft' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Live Experts"
-      module="ACCOUNTANT WORKSPACE"
-      breadcrumb="Accountant Workspace / Live Experts"
-      purpose="Connect business owners with verified accounting professionals for live chat, video consultation, and on-demand bookkeeping assistance."
-      components={[
-        { name: "Expert Directory", description: "Searchable list of available CPAs and bookkeepers with ratings and specialties" },
-        { name: "Session Scheduler", description: "Calendar-based booking interface for video or phone consultations" },
-        { name: "Live Chat Widget", description: "Real-time messaging with an assigned expert" },
-        { name: "Session History", description: "Past consultations with transcripts and follow-up notes" },
+      section="Accountant Workspace"
+      icon={<UserCheck size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={[
-        "Find Expert",
-        "My Sessions",
-        "Messages",
-        "Session History",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      features={[
-        "Expert specialty filtering (tax, payroll, advisory)",
-        "Real-time availability indicator",
-        "Session recording and transcript",
-        "File sharing in chat",
-        "Ratings and reviews",
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      dataDisplayed={[
-        "Expert profiles with credentials",
-        "Available time slots",
-        "Session duration and topic",
-        "Past session summaries",
-        "Follow-up action items",
-      ]}
-      userActions={[
-        "Search for available experts",
-        "Book a session",
-        "Start live chat",
-        "Share documents with expert",
-        "Rate an expert after session",
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

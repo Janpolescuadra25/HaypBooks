@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TaxLiabilitiesPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-27', description: 'Acme Corp', amount: 14200, account: 'Main', status: 'Completed' },
+    { id: 'r2', date: '2026-01-09', description: 'Active Item', amount: 48200, account: 'Standard', status: 'Paid' },
+    { id: 'r3', date: '2026-02-15', description: 'Standard', amount: 23400, account: 'Primary', status: 'Current' },
+    { id: 'r4', date: '2026-01-16', description: 'General', amount: 17200, account: 'Q1 2026', status: 'Current' },
+    { id: 'r5', date: '2026-02-26', description: 'General', amount: 34400, account: 'Default', status: 'Draft' },
+    { id: 'r6', date: '2026-03-03', description: 'Active Item', amount: 49100, account: 'Standard', status: 'High' },
+    { id: 'r7', date: '2026-02-23', description: 'Sample Entry', amount: 46600, account: 'BPI Account', status: 'Current' },
+    { id: 'r8', date: '2026-02-14', description: 'Metro Manila', amount: 23800, account: 'Main', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Liabilities"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Center / Tax Liabilities"
-      purpose="Tax Liabilities tracks all amounts owed to tax authorities across every tax type — VAT, withholding, income tax, and local business taxes — giving the business a clear view of its total current tax obligations. Each liability is aged by due date to prioritize payment, and accruals for taxes not yet due are tracked separately. This page feeds directly into the balance sheet's current liabilities section for financial reporting."
-      components={[
-        { name: 'Liability Summary by Tax Type', description: 'Table grouping total liabilities by VAT, CWT, income tax, and other categories with subtotals.' },
-        { name: 'Aging Analysis', description: 'Age buckets showing liabilities current, due within 30 days, 31-60 days, and overdue >60 days.' },
-        { name: 'Accrual vs. Payable Split', description: 'Separation showing accrued taxes not yet due vs. taxes assessed and currently payable.' },
-        { name: 'Payment Link', description: 'Action button per liability to navigate directly to the Tax Payments log to record settlement.' },
-        { name: 'GL Account Reconciliation', description: 'Side-by-side comparison of tax liability per this module vs. corresponding GL account balance.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Liabilities', 'By Tax Type', 'Aging Analysis', 'Accruals']}
-      features={[
-        'View total tax liabilities consolidated across all tax types',
-        'Age liabilities by due date for payment prioritization',
-        'Distinguish accrued taxes from currently payable taxes',
-        'Link each liability to the corresponding payment entry',
-        'Reconcile displayed liabilities against GL account balances',
-        'Export liability schedule for cash flow planning',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tax type and authority',
-        'Liability amount and due date',
-        'Age category (current, due soon, overdue)',
-        'Accrual vs. payable classification',
-        'GL account balance vs. module balance',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View all current tax liabilities',
-        'Filter by tax type or age bucket',
-        'Navigate to payment entry from liability row',
-        'Reconcile against GL account',
-        'Export liabilities schedule',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-15', description: 'Monthly', amount: 2100, account: 'Active Item', status: 'Draft' },
+    { id: 'r2', date: '2026-01-18', description: 'Monthly', amount: 7600, account: 'Metro Manila', status: 'Closed' },
+    { id: 'r3', date: '2026-02-18', description: 'Primary', amount: 45200, account: 'Active Item', status: 'Medium' },
+    { id: 'r4', date: '2026-03-16', description: 'Acme Corp', amount: 33100, account: 'Monthly', status: 'Filed' },
+    { id: 'r5', date: '2026-01-02', description: 'Primary', amount: 2100, account: 'Acme Corp', status: 'Open' },
+    { id: 'r6', date: '2026-03-11', description: 'Default', amount: 10300, account: 'Q1 2026', status: 'Low' },
+    { id: 'r7', date: '2026-02-01', description: 'Metro Manila', amount: 24500, account: 'Default', status: 'Draft' },
+    { id: 'r8', date: '2026-02-11', description: 'Primary', amount: 1400, account: 'Acme Corp', status: 'Medium' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="COGS Analysis"
-      module="INVENTORY"
-      breadcrumb="Inventory / Valuation / COGS Analysis"
-      purpose="Analyze cost of goods sold by item, category, and period. Understand gross margin drivers, compare COGS to revenue, and identify products with shrinking margins."
-      components={[
-        { name: "COGS Dashboard", description: "Total COGS for period with comparison to prior period and budget" },
-        { name: "COGS by Item", description: "Per-item COGS with gross margin % and trending" },
-        { name: "COGS by Category", description: "Category-level COGS rollup with margin comparison" },
-        { name: "COGS Breakdown", description: "Split COGS into material, labor, and overhead components" },
-        { name: "Margin Trend", description: "Gross margin percentage trend over rolling 12 months" },
+    <OwnerPageTemplate
+      title="Cogs Analysis"
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Overview","By Item","By Category","Trends","Margin Analysis"]}
-      features={["Period and item-level COGS","Gross margin % calculation","COGS component breakdown","Budget comparison","Trend analysis"]}
-      dataDisplayed={["Total COGS for period","Revenue and gross margin","COGS by item and category","Trend vs. prior period","Top COGS items"]}
-      userActions={["View COGS dashboard","Drill into item-level cost","Analyze margin trend","Compare to budget","Export COGS report"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

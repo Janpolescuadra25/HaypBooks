@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', type: 'Standard', contact: 'Monthly', balance: 44500, status: 'Enabled' },
+    { id: 'r2', name: 'Standard', type: 'Basic', contact: 'BPI Account', balance: 46500, status: 'Filed' },
+    { id: 'r3', name: 'Main', type: 'Premium', contact: 'Monthly', balance: 100, status: 'Current' },
+    { id: 'r4', name: 'General', type: 'Standard', contact: 'Standard', balance: 13500, status: 'Processing' },
+    { id: 'r5', name: 'Monthly', type: 'Annual', contact: 'Metro Manila', balance: 46500, status: 'Filed' },
+    { id: 'r6', name: 'Default', type: 'Fixed', contact: 'Primary', balance: 40300, status: 'Completed' },
+    { id: 'r7', name: 'Sample Entry', type: 'Premium', contact: 'BPI Account', balance: 26900, status: 'High' },
+    { id: 'r8', name: 'General', type: 'Annual', contact: 'Q1 2026', balance: 8800, status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Employees"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Workforce / Employees"
-      purpose="Complete employee directory and profile management. View and manage personal information, job details, compensation, direct reports, and employment history for all staff."
-      components={[
-        { name: "Employee Directory", description: "Searchable list of all employees with photo, name, title, and department" },
-        { name: "Employee Profile", description: "Detailed record: personal info, job info, compensation, and emergency contacts" },
-        { name: "Employment History", description: "Timeline of all position changes, promotions, and compensation adjustments" },
-        { name: "Org Chart Integration", description: "Visual org chart position for the selected employee" },
-        { name: "Quick Actions", description: "Shortcuts for common HR tasks: add leave, create payroll adjustment, attach document" },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Directory","Active","Inactive","New Hires"]}
-      features={["Complete employee profiles","Employment history timeline","Org chart integration","Quick HR task access","Custom fields"]}
-      dataDisplayed={["Employee name and ID","Job title and department","Hire date","Compensation","Manager and direct reports"]}
-      userActions={["Add new employee","Edit employee details","Record promotion or change","View employment history","Terminate employee"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

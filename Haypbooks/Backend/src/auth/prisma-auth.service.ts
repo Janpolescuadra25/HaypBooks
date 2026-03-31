@@ -7,6 +7,7 @@ import { IUserRepository } from '../repositories/interfaces/user.repository.inte
 import { ISessionRepository } from '../repositories/interfaces/session.repository.interface'
 import { IOtpRepository } from '../repositories/interfaces/otp.repository.interface'
 import { ISecurityEventRepository } from '../repositories/interfaces/security-event.repository.interface'
+import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
 export class PrismaAuthService {
@@ -16,6 +17,7 @@ export class PrismaAuthService {
     @Inject(OTP_REPOSITORY) private readonly otpRepo: IOtpRepository,
     @Inject(SECURITY_EVENT_REPOSITORY) private readonly securityEventRepo: ISecurityEventRepository,
     private readonly jwtService: JwtService,
+    private readonly prisma?: PrismaService,
   ) { }
 
   async signup(email: string, password: string, name?: string, role?: string, phone?: string) {
@@ -174,10 +176,22 @@ export class PrismaAuthService {
     const devMfa = (process.env.NODE_ENV || 'development') !== 'production' && !user.isEmailVerified
 
     if (devMfa) {
+      await this.activateInvitedWorkspaceUser(user.id).catch(() => {})
       return { token, refreshToken, user: userResponse, mfaRequired: true }
     }
 
+    await this.activateInvitedWorkspaceUser(user.id).catch(() => {})
+
     return { token, refreshToken, user: userResponse }
+  }
+
+  async activateInvitedWorkspaceUser(userId: string) {
+    if (!userId || !this.prisma) return 0
+    const updated = await this.prisma.workspaceUser.updateMany({
+      where: { userId, status: 'INVITED' },
+      data: { status: 'ACTIVE', joinedAt: new Date() },
+    })
+    return updated.count
   }
 
   async createSessionForUser(userId: string, ipAddress?: string, userAgent?: string) {

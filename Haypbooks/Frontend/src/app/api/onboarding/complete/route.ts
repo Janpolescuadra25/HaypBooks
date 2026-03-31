@@ -11,8 +11,14 @@ export async function POST(req: Request) {
       headers: { 'cookie': cookieHeader, 'content-type': 'application/json' },
       body,
     })
-    const json = await backendRes.json().catch(() => null)
-    const res = NextResponse.json(json || { success: backendRes.ok }, { status: backendRes.status })
+
+    const responseText = await backendRes.text().catch(() => '')
+    console.error('[ONBOARDING PROXY] Backend status:', backendRes.status)
+    console.error('[ONBOARDING PROXY] Backend response body:', responseText)
+
+    let json: any = null
+    try { json = JSON.parse(responseText) } catch (_e) { json = null }
+    const res = NextResponse.json(json || { success: backendRes.ok, body: responseText }, { status: backendRes.status })
     if (backendRes.ok) {
       // Only set the onboarding complete cookie when the backend confirms success
       try { res.cookies.set('onboardingComplete', 'true', { path: '/' }) } catch (e) { /* ignore */ }

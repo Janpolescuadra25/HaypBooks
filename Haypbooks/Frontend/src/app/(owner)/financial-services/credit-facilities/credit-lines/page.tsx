@@ -1,54 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Wallet, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', sku: 'Active Item', category: 'Variable', price: 500, qty: 53, status: 'Open' },
+    { id: 'r2', name: 'BPI Account', sku: 'Sample Entry', category: 'Fixed', price: 41000, qty: 61, status: 'In Stock' },
+    { id: 'r3', name: 'Metro Manila', sku: 'Acme Corp', category: 'Variable', price: 27600, qty: 93, status: 'Enabled' },
+    { id: 'r4', name: 'Monthly', sku: 'Q1 2026', category: 'Premium', price: 6600, qty: 52, status: 'Active' },
+    { id: 'r5', name: 'Active Item', sku: 'Default', category: 'Direct', price: 45900, qty: 14, status: 'Approved' },
+    { id: 'r6', name: 'Q1 2026', sku: 'General', category: 'Basic', price: 1400, qty: 97, status: 'Medium' },
+    { id: 'r7', name: 'Standard', sku: 'General', category: 'Direct', price: 40100, qty: 80, status: 'Closed' },
+    { id: 'r8', name: 'Standard', sku: 'Sample Entry', category: 'Premium', price: 31900, qty: 11, status: 'Completed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Credit Lines"
-      module="FINANCIAL SERVICES"
-      breadcrumb="Financial Services / Credit Facilities / Credit Lines"
-      purpose="Credit Lines manages all revolving credit facilities available to the business — lines of credit from banks, overdraft facilities, and credit card limits. It tracks the total limit, utilized amount, available balance, interest rate, maturity date, and covenants for each facility. Users can record drawdowns, repayments, and interest charges, and monitor credit utilization across all facilities."
-      components={[
-        { name: 'Credit Facilities Summary', description: 'Total credit available vs. total utilized across all facilities, displayed as a utilization gauge.' },
-        { name: 'Facility List', description: 'Each credit facility with institution, type, total limit, drawn amount, available balance, interest rate, and maturity date.' },
-        { name: 'Transaction Log', description: 'Drawdowns and repayments per facility with date, amount, reference, and running balance.' },
-        { name: 'Covenant Tracker', description: 'Financial covenants per facility with current status (in compliance / at risk / breached) and covenant value.' },
-        { name: 'Interest Calculation', description: 'Calculates accrued interest per facility based on drawn balance and applicable interest rate.' },
+      section="Financial Services"
+      icon={<Wallet size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Facilities', 'Revolving Lines', 'Overdraft', 'Draw History', 'Covenants']}
-      features={[
-        'Multi-facility credit portfolio management',
-        'Drawdown and repayment recording',
-        'Automatic interest accrual calculation',
-        'Covenant monitoring with breach alerts',
-        'Maturity and renewal date alerts',
-        'Credit utilization ratio tracking',
-        'Integration with GL for drawdown journal entries',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Total credit limit and available balance per facility',
-        'Utilization percentage per facility',
-        'Interest rate, accrued interest, and next interest payment',
-        'Maturity date and days to maturity',
-        'Covenant requirements and current values',
-        'Drawdown and repayment history',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Record a drawdown on a credit line',
-        'Record a repayment',
-        'Update credit facility terms (after renewal)',
-        'Check covenant compliance status',
-        'Export facility summary for bank presentations',
-        'Add a new credit facility',
-      ]}
-      relatedPages={[
-        { label: 'Loan Management', href: '/financial-services/credit-facilities/loan-management' },
-        { label: 'Treasury Overview', href: '/banking-cash/treasury/treasury-overview' },
-        { label: 'Bank Accounts', href: '/banking-cash/accounts/bank-accounts' },
-        { label: 'Cash Flow Report', href: '/reporting/reports-center/financial-statements/cash-flow-statement' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,54 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Active Item', assignee: 'Sample Entry', dueDate: '2026-02-11', priority: 'Approved', status: 'Current' },
+    { id: 'r2', name: 'BPI Account', assignee: 'Monthly', dueDate: '2026-02-01', priority: 'Paid', status: 'Paid' },
+    { id: 'r3', name: 'Acme Corp', assignee: 'Metro Manila', dueDate: '2026-03-20', priority: 'Active', status: 'Enabled' },
+    { id: 'r4', name: 'Metro Manila', assignee: 'Acme Corp', dueDate: '2026-01-14', priority: 'Paid', status: 'Approved' },
+    { id: 'r5', name: 'Metro Manila', assignee: 'Primary', dueDate: '2026-01-23', priority: 'Open', status: 'Enabled' },
+    { id: 'r6', name: 'Primary', assignee: 'Default', dueDate: '2026-02-09', priority: 'Closed', status: 'Enabled' },
+    { id: 'r7', name: 'Primary', assignee: 'Q1 2026', dueDate: '2026-01-22', priority: 'Enabled', status: 'Enabled' },
+    { id: 'r8', name: 'Standard', assignee: 'BPI Account', dueDate: '2026-02-23', priority: 'Completed', status: 'Pending' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Task Board"
-      module="PROJECTS"
-      breadcrumb="Projects / Tasks / Task Board"
-      purpose="The Task Board is the project team's visual collaboration tool — a Kanban board displaying tasks by status (To Do, In Progress, Review, Done). Each card shows the task assignee, due date, priority, and project. Team members can drag and drop cards between columns to update status, open a task to log time or update details, and see at a glance which tasks are overdue or blocked. The Task Board bridges project management with the time-recording and billing workflow."
-      components={[
-        { name: 'Kanban Board', description: 'Tasks organized in columns by status: To Do → In Progress → Review → Done. Drag-and-drop status update.' },
-        { name: 'Task Card', description: 'Each task shows: title, assignee avatar, due date, priority (High/Medium/Low), and a time logged indicator.' },
-        { name: 'Task Detail Drawer', description: 'Open a task: full description, comments, attachments, time log, checklist, and history.' },
-        { name: 'Filter and Grouping Controls', description: 'Filter by project, assignee, due date, priority, or tag. Group by project or phase.' },
-        { name: 'Sprint/Phase View', description: 'Group tasks by project phase or sprint for structured project delivery teams.' },
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Board', 'List', 'Timeline', 'My Tasks', 'Backlog']}
-      features={[
-        'Visual kanban task status management',
-        'Drag-and-drop status transitions',
-        'Time logging directly from task card',
-        'Task filtering and grouping',
-        'Priority and due date tracking',
-        'Phase/sprint grouping',
-        'Task comments and file attachments',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tasks by status column',
-        'Overdue tasks highlighted',
-        'Time logged vs. estimated per task',
-        'Assignee workload indicator',
-        'Task priority and deadline',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new task',
-        'Assign task to team member',
-        'Move task between status columns',
-        'Log time spent on a task',
-        'Add comments or attachments',
-        'Update priority and due date',
-        'Mark task as completed',
-      ]}
-      relatedPages={[
-        { label: 'Project List', href: '/projects/projects/project-list' },
-        { label: 'Task List', href: '/projects/tasks/task-list' },
-        { label: 'Timesheets', href: '/time/timesheets/my-timesheet' },
-        { label: 'Billable Hours', href: '/projects/time-billing/billable-hours' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

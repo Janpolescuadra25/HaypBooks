@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Clock, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TimeApprovalsPage() {
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'General', assignee: 'Active Item', dueDate: '2026-03-09', priority: 'Active', status: 'Open' },
+    { id: 'r2', name: 'Acme Corp', assignee: 'Default', dueDate: '2026-02-09', priority: 'Open', status: 'Filed' },
+    { id: 'r3', name: 'General', assignee: 'General', dueDate: '2026-02-23', priority: 'Approved', status: 'High' },
+    { id: 'r4', name: 'Standard', assignee: 'Main', dueDate: '2026-01-25', priority: 'Draft', status: 'Pending' },
+    { id: 'r5', name: 'Acme Corp', assignee: 'Acme Corp', dueDate: '2026-02-23', priority: 'Paid', status: 'Completed' },
+    { id: 'r6', name: 'Sample Entry', assignee: 'Monthly', dueDate: '2026-02-05', priority: 'Low', status: 'High' },
+    { id: 'r7', name: 'Monthly', assignee: 'Main', dueDate: '2026-01-18', priority: 'Approved', status: 'Enabled' },
+    { id: 'r8', name: 'Monthly', assignee: 'Main', dueDate: '2026-01-25', priority: 'Paid', status: 'Enabled' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Time Approvals"
-      module="TIME"
-      breadcrumb="Time / Review / Time Approvals"
-      purpose="Time Approvals is the manager's queue for reviewing and actioning submitted timesheets and individual time entries pending approval. Managers can approve or reject entries with comments, ensuring all logged time is accurate before it flows into billing and payroll calculations. The queue is filtered to show only entries assigned to the logged-in manager's team or direct reports."
-      components={[
-        { name: 'Approval Queue Table', description: 'List of all pending submissions with employee, period, total hours, submission date, and action buttons.' },
-        { name: 'Timesheet Detail Viewer', description: 'Side panel showing the full weekly timesheet or individual entry submitted for review.' },
-        { name: 'Approve / Reject Controls', description: 'Per-row approve and reject buttons with mandatory comment field for rejections.' },
-        { name: 'Comment Thread', description: 'Discussion thread per submission for manager-employee back-and-forth on corrections needed.' },
-        { name: 'Bulk Approve', description: 'Checkbox selection and bulk approve action for managers handling large teams.' },
+      section="Time Tracking"
+      icon={<Clock size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Pending Approval', 'Recently Approved', 'Rejected']}
-      features={[
-        'Review submitted timesheets and individual entries in one queue',
-        'Approve or reject with mandatory rejection comment',
-        'Communicate corrections via comment thread on each submission',
-        'Bulk approve multiple submissions at once',
-        'Filter queue by employee, period, or submission date',
-        'Track approval history and response time metrics',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Employee name and submission date',
-        'Period covered and total hours submitted',
-        'Project/task breakdown within submission',
-        'Approval status history',
-        'Manager comments and response timestamps',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Approve a submitted timesheet or entry',
-        'Reject with a required comment',
-        'Reply to employee via comment thread',
-        'Bulk approve multiple submissions',
-        'Filter queue by employee or period',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

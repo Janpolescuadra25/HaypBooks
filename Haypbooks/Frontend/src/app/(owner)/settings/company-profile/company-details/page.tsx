@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function CompanyDetailsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Monthly', category: 'Basic', value: 'Default', description: 'Sample Entry', status: 'In Stock' },
+    { id: 'r2', name: 'Default', category: 'Direct', value: 'Primary', description: 'Metro Manila', status: 'Paid' },
+    { id: 'r3', name: 'BPI Account', category: 'Variable', value: 'Active Item', description: 'Main', status: 'Closed' },
+    { id: 'r4', name: 'Q1 2026', category: 'Standard', value: 'Acme Corp', description: 'Q1 2026', status: 'Draft' },
+    { id: 'r5', name: 'Monthly', category: 'Fixed', value: 'General', description: 'Primary', status: 'High' },
+    { id: 'r6', name: 'Main', category: 'Direct', value: 'Acme Corp', description: 'Active Item', status: 'Processing' },
+    { id: 'r7', name: 'Monthly', category: 'Quarterly', value: 'Default', description: 'BPI Account', status: 'Connected' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Q1 2026', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Company Details"
-      module="SETTINGS"
-      breadcrumb="Settings / Company Profile / Company Details"
-      purpose="Company Details stores the core identity information for your business — legal name, trade name, registration numbers, address, logo, and contact details. This information is used across invoices, purchase orders, tax filings, and other printed documents. Keeping company details accurate ensures all customer-facing documents and regulatory submissions reflect the correct legal entity."
-      components={[
-        { name: 'Company Identity Form', description: 'Fields for legal name, trade name, business type, and registration or EIN number.' },
-        { name: 'Address Block', description: 'Form section for registered address, mailing address, and optional branch address entries.' },
-        { name: 'Logo Uploader', description: 'Image upload control supporting PNG/JPG up to 2 MB; preview shows how logo appears on invoices.' },
-        { name: 'Contact Info Section', description: 'Primary phone, email, website, and social media fields for business contact display.' },
-        { name: 'Regulatory IDs Panel', description: 'Fields for tax IDs, VAT registration numbers, and industry-specific identifiers by region.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Basic Info', 'Address', 'Branding', 'Regulatory IDs', 'Social & Contact']}
-      features={[
-        'Store and update core legal identity and trade name information',
-        'Upload company logo for use on invoices, reports, and PDF documents',
-        'Manage multiple addresses (registered, mailing, branch locations)',
-        'Record tax identification numbers and VAT registration IDs',
-        'Control which details appear on customer-facing documents vs. internal views',
-        'Track change history to see who updated company details and when',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Legal company name, trade name, and business type',
-        'Registered and mailing addresses',
-        'Tax ID, VAT number, and other regulatory identifiers',
-        'Primary phone, email, and website',
-        'Logo image with current invoice preview',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Update company legal name or trade name',
-        'Upload or replace company logo',
-        'Edit registered or mailing address',
-        'Add or update tax identification numbers',
-        'Save changes and preview on sample invoice',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

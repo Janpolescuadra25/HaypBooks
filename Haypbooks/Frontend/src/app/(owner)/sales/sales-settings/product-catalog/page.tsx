@@ -1,53 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { TrendingUp, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Product Catalog"
-      module="SALES"
-      breadcrumb="Sales / Sales Settings / Product Catalog"
-      purpose="The Product Catalog (also called Items or Products & Services) is the master list of all sellable products and services — the items that appear in invoice and estimate line items. Each item has a name, description, unit price, unit of measure, income account mapping, and tax code. Service items are mapped to service revenue accounts; physical product items can optionally track inventory. Having a catalog eliminates re-typing descriptions and prices on every invoice."
-      components={[
-        { name: 'Item List', description: 'All catalog items with name, type (product/service), default price, unit, income account, tax code, and status.' },
-        { name: 'Item Detail Editor', description: 'Full item record: name, description, unit, default price, income account, tax treatment, cost of goods account, and inventory tracking toggle.' },
-        { name: 'Category Manager', description: 'Organize items by category (e.g., Consulting, Software, Hardware, Subscription) for invoicing filters and reports.' },
-        { name: 'Bulk Price Update', description: 'Apply a percentage price increase or fixed-amount change to a group of items.' },
-        { name: 'Import Items', description: 'Bulk import product catalog from CSV/Excel template.' },
+      section="Sales & Revenue"
+      icon={<TrendingUp size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Items', 'Products', 'Services', 'By Category', 'Archived']}
-      features={[
-        'Central item/product master for invoicing',
-        'Auto-fill price and tax when item selected on invoice',
-        'Income account mapping per item',
-        'Inventory tracking option for physical items',
-        'Bulk price update capability',
-        'Category organization for reporting',
-        'CSV/Excel bulk import',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All catalog items with standard prices',
-        'Category and type distribution',
-        'Items with no income account configured',
-        'Last price update date',
-        'Most frequently used items (by invoice frequency)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new product or service item',
-        'Update a standard price',
-        'Assign income account and tax code',
-        'Bulk update prices by percentage',
-        'Archive an obsolete item',
-        'Import items from CSV',
-        'Export item list for review',
-      ]}
-      relatedPages={[
-        { label: 'Invoices', href: '/sales/billing/invoices' },
-        { label: 'Estimate List', href: '/sales/estimates/estimate-list' },
-        { label: 'Inventory Items', href: '/inventory/items/item-list' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

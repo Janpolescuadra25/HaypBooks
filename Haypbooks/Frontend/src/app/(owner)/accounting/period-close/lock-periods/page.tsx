@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-28', description: 'Standard', amount: 40900, account: 'Metro Manila', status: 'Paid' },
+    { id: 'r2', date: '2026-03-17', description: 'Active Item', amount: 41600, account: 'Default', status: 'Filed' },
+    { id: 'r3', date: '2026-02-13', description: 'BPI Account', amount: 21900, account: 'Q1 2026', status: 'Medium' },
+    { id: 'r4', date: '2026-03-05', description: 'Q1 2026', amount: 47300, account: 'Default', status: 'Connected' },
+    { id: 'r5', date: '2026-01-13', description: 'Main', amount: 9500, account: 'Metro Manila', status: 'Closed' },
+    { id: 'r6', date: '2026-01-20', description: 'Primary', amount: 47800, account: 'Standard', status: 'Current' },
+    { id: 'r7', date: '2026-03-23', description: 'Default', amount: 34100, account: 'BPI Account', status: 'Medium' },
+    { id: 'r8', date: '2026-01-04', description: 'Acme Corp', amount: 14900, account: 'Acme Corp', status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Lock Periods"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Period Close / Lock Periods"
-      purpose="Lock Periods controls which accounting periods are open for transaction entry and which are locked (closed). Once a period is locked, no new transactions can be posted to that period — preserving the integrity of closed financial statements. Administrators can soft-lock a period (warning but allows override) or hard-lock it (no entry allowed). Unlocking a prior period requires administrator rights and an audit trail entry explaining the reason."
-      components={[
-        { name: 'Period Status Grid', description: 'All fiscal periods listed with status: Open, Soft Lock (warning), Hard Lock (closed), or Future. Colored indicators per status.' },
-        { name: 'Lock/Unlock Controls', description: 'Buttons to soft lock, hard lock, or unlock a period with confirmation dialog and reason entry.' },
-        { name: 'Lock History Log', description: 'Immutable audit trail of all lock/unlock events: period, action, performed by, and timestamp.' },
-        { name: 'Current Period Indicator', description: 'Prominent display of the currently active (open) fiscal period.' },
-        { name: 'Year-End Close Banner', description: 'Guided year-end close section with steps to roll over retained earnings and open new fiscal year.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Period Status', 'Lock History', 'Year-End Close']}
-      features={[
-        'Granular period open/soft-lock/hard-lock controls',
-        'Immutable lock history for audit compliance',
-        'Bulk lock prior periods (lock all before a date)',
-        'Unlock with mandatory reason documentation',
-        'Year-end retained earnings rollover workflow',
-        'New fiscal year opening automation',
-        'Period status visible to all users during entry',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All fiscal periods with current status',
-        'Lock/unlock history with user and reason',
-        'Currently open period(s)',
-        'Year-end close progress indicators',
-        'Retained earnings account balance for rollover',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Soft lock a completed period',
-        'Hard lock a period after all reviews complete',
-        'Unlock a period with documented reason',
-        'Bulk lock all prior year periods',
-        'Initiate year-end retained earnings rollover',
-        'Open a new fiscal year',
-        'View lock history for audit',
-      ]}
-      relatedPages={[
-        { label: 'Close Checklist', href: '/accounting/period-close/close-checklist' },
-        { label: 'Journal Post', href: '/accounting/period-close/journal-post' },
-        { label: 'Period Reports', href: '/accounting/period-close/period-reports' },
-        { label: 'Filing Calendar', href: '/organization/governance/filing-calendar' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

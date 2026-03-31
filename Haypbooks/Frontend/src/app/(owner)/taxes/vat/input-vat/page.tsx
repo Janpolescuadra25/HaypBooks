@@ -1,49 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-02', description: 'Main', amount: 45000, account: 'Main', status: 'Open' },
+    { id: 'r2', date: '2026-03-24', description: 'Standard', amount: 19800, account: 'Q1 2026', status: 'Low' },
+    { id: 'r3', date: '2026-03-19', description: 'BPI Account', amount: 41400, account: 'Primary', status: 'Medium' },
+    { id: 'r4', date: '2026-01-16', description: 'Sample Entry', amount: 47400, account: 'Primary', status: 'Connected' },
+    { id: 'r5', date: '2026-02-24', description: 'Primary', amount: 44700, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r6', date: '2026-01-08', description: 'Metro Manila', amount: 38000, account: 'Q1 2026', status: 'Open' },
+    { id: 'r7', date: '2026-01-26', description: 'Q1 2026', amount: 26700, account: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', date: '2026-01-01', description: 'Standard', amount: 38800, account: 'BPI Account', status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Input VAT"
-      module="TAXES"
-      breadcrumb="Taxes / VAT / Input VAT"
-      purpose="Input VAT tracks all VAT paid on purchases that is creditable against output VAT. Not all input VAT is creditable — only input VAT from transactions directly related to the company's VATable activities. Input VAT from purchases related to VAT-exempt activities cannot be credited. This page shows all creditable input VAT transactions, their source (vendor invoice, import entry), whether they meet the substantiation requirements (valid VAT OR/invoice from a BIR-registered supplier), and their inclusion in VAT returns."
-      components={[
-        { name: 'Input VAT Register', description: 'All purchase transactions with input VAT: date, vendor, invoice reference, amount, VAT rate, VAT amount, and creditable status.' },
-        { name: 'Creditable vs. Non-Creditable', description: 'Classification of input VAT per transaction: creditable (reduces VAT payable) or non-creditable (expensed or capitalized).' },
-        { name: 'Deferred Input VAT', description: 'Input VAT on capital goods (amortized over 60 months per BIR rules) — tracking balance and monthly claim.' },
-        { name: 'Input VAT Substantiation', description: 'Flag input VAT without valid supporting documentation (BIR OR/invoice).' },
+    <OwnerPageTemplate
+      title="Input Vat"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Input VAT Register', 'Creditable vs. Non-Creditable', 'Deferred (Capital Goods)', 'Excess Input Carry-Forward']}
-      features={[
-        'Complete input VAT transaction register',
-        'Creditable vs. non-creditable classification',
-        'Capital goods deferred input VAT (60-month amortization)',
-        'Excess input VAT carry-forward tracking',
-        'Substantiation requirement flagging',
-        'Input VAT aging by vendor',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All input VAT transactions',
-        'Creditable input VAT available for offset',
-        'Deferred capital goods VAT with monthly claim schedule',
-        'Excess input VAT carried forward',
-        'Input VAT not substantiated',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View all input VAT transactions',
-        'Reclassify a transaction (creditable/non-creditable)',
-        'View deferred capital goods VAT schedule',
-        'Mark input VAT as included in a return',
-        'Export input VAT register',
-      ]}
-      relatedPages={[
-        { label: 'VAT Returns', href: '/taxes/vat/vat-returns' },
-        { label: 'Output VAT', href: '/taxes/vat/output-vat' },
-        { label: 'Form 2550M', href: '/philippine-tax/bir-forms/form-2550m' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

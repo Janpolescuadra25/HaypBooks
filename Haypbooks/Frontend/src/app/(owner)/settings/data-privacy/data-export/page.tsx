@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function DataExportPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Data Export"
-      module="SETTINGS"
-      breadcrumb="Settings / Data & Privacy / Data Export"
-      purpose="Data Export enables account owners to extract a structured copy of all company data from Haypbooks — including transactions, contacts, reports, and configuration — for migration, archiving, or regulatory disclosure purposes. Exports can be scoped to specific modules or date ranges and are delivered as downloadable packages in standard formats. This supports data portability rights and business continuity planning."
-      components={[
-        { name: 'Export Scope Selector', description: 'Checkboxes to select which data categories to include: Transactions, Contacts, Configuration, Reports.' },
-        { name: 'Date Range Filter', description: 'Optional date range to restrict transaction data to a specific period within the export.' },
-        { name: 'Export Format Options', description: 'Choose between CSV, Excel XLSX, or JSON output format for the exported data package.' },
-        { name: 'Export Job Queue', description: 'Status table of all requested exports with progress bar, completion status, and download link.' },
-        { name: 'Export Notification', description: 'Email notification toggle to alert the requester when the export package is ready for download.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['New Export Request', 'Export History']}
-      features={[
-        'Export all or selected categories of business data in one request',
-        'Filter export by date range for period-specific data portability',
-        'Choose from CSV, XLSX, or JSON output formats',
-        'Queue multiple export jobs and track progress',
-        'Receive email notification when export is ready',
-        'Retain export packages for 7 days before auto-deletion',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Available data categories and estimated record counts',
-        'Export job status (queued, processing, ready, expired)',
-        'Export file size and format',
-        'Requested by user and request timestamp',
-        'Download link expiry countdown',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Request a new data export with scope and format',
-        'Set date range filter for transaction data',
-        'Choose export file format',
-        'Download completed export package',
-        'View export history and re-request expired exports',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

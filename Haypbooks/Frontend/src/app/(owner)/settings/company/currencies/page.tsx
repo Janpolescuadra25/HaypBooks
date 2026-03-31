@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Monthly', category: 'Basic', value: 'Default', description: 'Sample Entry', status: 'In Stock' },
+    { id: 'r2', name: 'Default', category: 'Direct', value: 'Primary', description: 'Metro Manila', status: 'Paid' },
+    { id: 'r3', name: 'BPI Account', category: 'Variable', value: 'Active Item', description: 'Main', status: 'Closed' },
+    { id: 'r4', name: 'Q1 2026', category: 'Standard', value: 'Acme Corp', description: 'Q1 2026', status: 'Draft' },
+    { id: 'r5', name: 'Monthly', category: 'Fixed', value: 'General', description: 'Primary', status: 'High' },
+    { id: 'r6', name: 'Main', category: 'Direct', value: 'Acme Corp', description: 'Active Item', status: 'Processing' },
+    { id: 'r7', name: 'Monthly', category: 'Quarterly', value: 'Default', description: 'BPI Account', status: 'Connected' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Q1 2026', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Currencies"
-      module="SETTINGS"
-      breadcrumb="Settings / Company / Currencies"
-      purpose="Currencies manages the multi-currency configuration of the system — the functional (base) currency used for all financial reporting, and all foreign currencies that can be used in transactions. For each enabled foreign currency, exchange rates can be manually entered or auto-fetched from a live rate provider. Exchange rates are dated, so the system uses the rate in effect on each transaction date. At period-end, FX revaluation converts outstanding foreign-currency balances to the functional currency at the current rate."
-      components={[
-        { name: 'Functional Currency Display', description: 'The reporting currency (e.g., Philippine Peso PHP) — cannot be changed after initial setup without a full system reset.' },
-        { name: 'Active Currency List', description: 'All enabled foreign currencies with current exchange rate, last updated date, and usage count.' },
-        { name: 'Exchange Rate Table', description: 'Manual entry or historical record of exchange rates per currency per date.' },
-        { name: 'Auto-Rate Feed Settings', description: 'Configure live exchange rate data source (BSP rates, Open Exchange Rates, or manual).' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Active Currencies', 'Exchange Rates', 'Rate Feed Settings', 'Rate History']}
-      features={[
-        'Multi-currency transaction support',
-        'Functional currency setting',
-        'Manual or auto exchange rate management',
-        'Dated exchange rates for historical accuracy',
-        'FX revaluation integration',
-        'BSP and open market rate feeds',
-        'Currency gain/loss auto-computation',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All active currencies with current rate',
-        'Exchange rate history per currency',
-        'Last rate update timestamp',
-        'Currencies used in current open transactions',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enable a new foreign currency',
-        'Enter manual exchange rate',
-        'Set up auto-rate feed',
-        'View exchange rate history',
-        'Disable an unused currency',
-      ]}
-      relatedPages={[
-        { label: 'FX Revaluation', href: '/accounting/revaluations/fx-revaluation' },
-        { label: 'FX Management', href: '/banking-cash/treasury/fx-management' },
-        { label: 'Company Profile', href: '/settings/company/company-profile' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

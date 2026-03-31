@@ -1,49 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', sku: 'Main', category: 'Monthly', price: 31300, qty: 52, status: 'Draft' },
+    { id: 'r2', name: 'Acme Corp', sku: 'Primary', category: 'Quarterly', price: 12600, qty: 45, status: 'Paid' },
+    { id: 'r3', name: 'Standard', sku: 'BPI Account', category: 'Quarterly', price: 45600, qty: 96, status: 'Low' },
+    { id: 'r4', name: 'BPI Account', sku: 'Q1 2026', category: 'Basic', price: 36800, qty: 76, status: 'High' },
+    { id: 'r5', name: 'Active Item', sku: 'Main', category: 'Premium', price: 6400, qty: 70, status: 'Draft' },
+    { id: 'r6', name: 'Main', sku: 'Acme Corp', category: 'Annual', price: 40200, qty: 79, status: 'Closed' },
+    { id: 'r7', name: 'Metro Manila', sku: 'Acme Corp', category: 'Annual', price: 20200, qty: 60, status: 'Medium' },
+    { id: 'r8', name: 'BPI Account', sku: 'Standard', category: 'Operating', price: 46800, qty: 65, status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Stock Movements"
-      module="INVENTORY"
-      breadcrumb="Inventory / Stock / Stock Movements"
-      purpose="Stock Movements is the complete ledger of every inventory movement — receipts from vendors, issues to customers/jobs, stock adjustments, transfers between locations, returns, and inter-company movements. Every transaction that increases or decreases inventory quantity is recorded as a movement with a timestamp, reference document, user, and quantity. The movement ledger provides a full audit trail for stock reconciliation and stock count variance investigation."
-      components={[
-        { name: 'Movement Ledger', description: 'Chronological list of all stock movements with date, item, qty moved (in/out), movement type, reference document, location, and posted by.' },
-        { name: 'Movement Types Filter', description: 'Filter by: Goods Receipt, Invoice Issue, Manual Adjustment, Transfer In/Out, Return, Write-Off, Opening Balance, Production Issue/Receipt.' },
-        { name: 'Reference Document Links', description: 'Each movement links to the source document (PO receipt, invoice, adjustment form) for full traceability.' },
-        { name: 'Balance Column', description: 'Running balance column showing stock on hand after each movement for the selected item.' },
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Movements', 'Receipts', 'Issues', 'Adjustments', 'Transfers']}
-      features={[
-        'Complete stock movement history per item',
-        'Running balance with each movement',
-        'Source document traceability',
-        'Filter by movement type, date range, item, or location',
-        'Export to Excel for reconciliation',
-        'FIFO/WACC cost per movement shown',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All movements with quantity and type',
-        'Reference document per movement',
-        'Cost value of each movement',
-        'Running stock balance after each movement',
-        'User who recorded the movement',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Browse full movement history for an item',
-        'Filter by movement type or date range',
-        'Drill into the source reference document',
-        'Export movement ledger to Excel',
-        'Reconcile physical count against movement balance',
-      ]}
-      relatedPages={[
-        { label: 'Stock Levels', href: '/inventory/stock/stock-levels' },
-        { label: 'Item List', href: '/inventory/items/item-list' },
-        { label: 'Inventory Valuation', href: '/inventory/reports/inventory-valuation' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

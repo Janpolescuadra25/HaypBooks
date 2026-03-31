@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TaxCalendarPage() {
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', assignee: 'General', dueDate: '2026-01-08', priority: 'High', status: 'Completed' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'BPI Account', dueDate: '2026-03-28', priority: 'Processing', status: 'Paid' },
+    { id: 'r3', name: 'Primary', assignee: 'Standard', dueDate: '2026-02-14', priority: 'In Stock', status: 'Current' },
+    { id: 'r4', name: 'BPI Account', assignee: 'Standard', dueDate: '2026-03-10', priority: 'Approved', status: 'Current' },
+    { id: 'r5', name: 'Standard', assignee: 'Default', dueDate: '2026-03-20', priority: 'High', status: 'Draft' },
+    { id: 'r6', name: 'Active Item', assignee: 'Acme Corp', dueDate: '2026-03-28', priority: 'Processing', status: 'High' },
+    { id: 'r7', name: 'Standard', assignee: 'Main', dueDate: '2026-01-27', priority: 'Closed', status: 'Current' },
+    { id: 'r8', name: 'Standard', assignee: 'Monthly', dueDate: '2026-01-14', priority: 'Paid', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Calendar"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Center / Tax Calendar"
-      purpose="Tax Calendar provides a full-year visual calendar displaying every tax filing, payment, and remittance deadline applicable to the business based on its registered tax types and jurisdictions. The calendar synchronizes with the filing schedule and updates automatically as new obligations are registered or completed. Teams can export the calendar to external scheduling tools or print it for physical compliance tracking."
-      components={[
-        { name: 'Annual Calendar Grid', description: '12-month grid calendar with color-coded markers on each deadline date per tax type.' },
-        { name: 'Tax Type Legend', description: 'Color-coded legend mapping each tax type (VAT, CWT, Income Tax, etc.) to its calendar marker color.' },
-        { name: 'Event Detail Tooltip', description: 'Hover tooltip on each deadline showing obligation name, amount estimate, and preparation status.' },
-        { name: 'List View Toggle', description: 'Switch between calendar grid and chronological list view for day-by-day obligation tracking.' },
-        { name: 'Export/Sync Controls', description: 'Options to export calendar to PDF, iCal (.ics) file, or sync to Google Calendar or Outlook.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Annual Calendar', 'List View', 'By Tax Type']}
-      features={[
-        'Full-year tax calendar with all filing and payment deadlines',
-        'Color-code deadlines by tax type for quick visual identification',
-        'Hover to preview obligation details on any calendar date',
-        'Switch between grid and list views',
-        'Export calendar to PDF, iCal, or external calendar apps',
-        'Auto-populate calendar from registered tax types and jurisdictions',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Deadline date per tax obligation',
-        'Tax type and authority for each deadline',
-        'Preparation/filing completion status',
-        'Estimated amount due per deadline',
-        'Upcoming deadlines in next 30/60/90 days',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View full-year tax calendar',
-        'Click deadline for obligation details',
-        'Export calendar to PDF or iCal',
-        'Sync calendar to Google Calendar or Outlook',
-        'Toggle between grid and list view',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-22', description: 'Metro Manila', amount: 29200, account: 'Metro Manila', status: 'In Stock' },
+    { id: 'r2', date: '2026-01-14', description: 'Sample Entry', amount: 48400, account: 'Metro Manila', status: 'Active' },
+    { id: 'r3', date: '2026-03-06', description: 'Default', amount: 35800, account: 'BPI Account', status: 'Filed' },
+    { id: 'r4', date: '2026-01-05', description: 'Metro Manila', amount: 36800, account: 'Q1 2026', status: 'High' },
+    { id: 'r5', date: '2026-03-17', description: 'Monthly', amount: 38700, account: 'Acme Corp', status: 'Draft' },
+    { id: 'r6', date: '2026-02-11', description: 'Active Item', amount: 20200, account: 'Default', status: 'Low' },
+    { id: 'r7', date: '2026-02-16', description: 'BPI Account', amount: 23900, account: 'Active Item', status: 'Enabled' },
+    { id: 'r8', date: '2026-03-04', description: 'Monthly', amount: 34800, account: 'Sample Entry', status: 'Paid' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Asset Disposal"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Fixed Assets / Asset Disposal"
-      purpose="Asset Disposal manages the retirement, sale, or write-off of fixed assets. When an asset is disposed of, the system calculates the gain or loss on disposal (difference between net book value and proceeds received), removes the asset cost and accumulated depreciation from the GL, and posts the resulting gain/loss to the appropriate P&L account. This page handles the full disposal accounting workflow including partial disposals and insurance write-offs."
-      components={[
-        { name: 'Disposal Form', description: 'Select asset, disposal type (sale, write-off, trade-in), disposal date, and sale proceeds. System calculates gain/loss automatically.' },
-        { name: 'Gain/Loss Calculation', description: 'Clear breakdown: NBV at disposal date, less proceeds, equals gain or (loss) on disposal.' },
-        { name: 'Journal Entry Preview', description: 'Preview of the disposal journal entry: debit accumulated depreciation + debit cash/bank proceeds, credit asset cost, credit/debit gain or loss.' },
-        { name: 'Disposal History', description: 'Archive of all disposed assets with disposal date, type, NBV, proceeds, and gain/loss.' },
-        { name: 'Disposed Asset Status', description: 'Once disposed, asset shows as "Disposed" in the register with disposal date and reason.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Dispose Asset', 'Disposal History', 'Gain/Loss Summary']}
-      features={[
-        'Full disposal accounting with gain/loss calculation',
-        'Multiple disposal types: sale, scrapping, trade-in, write-off, insurance claim',
-        'Automatic journal entry generation for disposal',
-        'Partial disposal support for partially disposed assets',
-        'Disposal authorization workflow for high-value assets',
-        'Integration with asset register to update status',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Asset NBV at disposal date',
-        'Disposal proceeds received',
-        'Gain or (loss) on disposal',
-        'Disposal journal entry details',
-        'All historical disposals with amounts',
-        'YTD gain/loss on disposal total',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Record sale/write-off/trade-in of an asset',
-        'Enter disposal proceeds',
-        'Review and post disposal journal entry',
-        'View disposal history',
-        'Export disposal schedule for audit',
-        'Approve high-value disposal (if approval required)',
-      ]}
-      relatedPages={[
-        { label: 'Asset Register', href: '/accounting/fixed-assets/asset-register' },
-        { label: 'Depreciation', href: '/accounting/fixed-assets/depreciation' },
-        { label: 'Journal Entries', href: '/accounting/core-accounting/journal-entries' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

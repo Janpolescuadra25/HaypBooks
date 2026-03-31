@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function BillingHistoryPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Billing History"
-      module="SETTINGS"
-      breadcrumb="Settings / Account & Billing / Billing History"
-      purpose="Billing History provides a complete chronological record of all invoices, charges, and payment receipts tied to your Haypbooks subscription. Finance administrators use this page to download invoices for accounting records, monitor payment status, and resolve any billing discrepancies. Every transaction is timestamped and includes a downloadable PDF receipt for audit compliance."
-      components={[
-        { name: 'Invoice Table', description: 'Sortable list of all past invoices with date, amount, status, and PDF download action.' },
-        { name: 'Payment Status Badges', description: 'Color-coded badges showing Paid, Pending, Failed, or Refunded status per transaction.' },
-        { name: 'Date Range Filter', description: 'Filter billing records by custom date range or preset periods such as last 30 days or current year.' },
-        { name: 'Invoice Detail Drawer', description: 'Slide-out panel showing full invoice breakdown including line items, taxes, and payment method used.' },
-        { name: 'Export Controls', description: 'Bulk export all billing records to CSV or PDF for upload to external accounting systems.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Invoices', 'Payments', 'Credits & Refunds', 'Failed Transactions']}
-      features={[
-        'View complete invoice history with amounts, due dates, and payment confirmations',
-        'Download individual or bulk invoices as PDF for expense reporting',
-        'Filter history by date range, invoice status, or billing cycle',
-        'View payment method used for each transaction',
-        'Identify and dispute failed or declined payments with support link',
-        'Track subscription credits and promo codes applied to invoices',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Invoice number and issue date',
-        'Billed amount with currency and tax breakdown',
-        'Payment status and settlement date',
-        'Subscription plan and term covered',
-        'Payment method (card last 4 digits or bank name)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Download PDF invoice for any transaction',
-        'Filter records by date range or payment status',
-        'Export full billing history to CSV',
-        'View itemized invoice detail in drawer',
-        'Contact support for billing discrepancies',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

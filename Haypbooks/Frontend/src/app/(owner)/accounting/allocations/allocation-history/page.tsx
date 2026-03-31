@@ -1,48 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', type: 'Variable', contact: 'Standard', balance: 48400, status: 'Open' },
+    { id: 'r2', name: 'Standard', type: 'Direct', contact: 'General', balance: 10800, status: 'Processing' },
+    { id: 'r3', name: 'Q1 2026', type: 'Premium', contact: 'Monthly', balance: 3500, status: 'Open' },
+    { id: 'r4', name: 'Q1 2026', type: 'Monthly', contact: 'Metro Manila', balance: 16500, status: 'Completed' },
+    { id: 'r5', name: 'Sample Entry', type: 'Operating', contact: 'Acme Corp', balance: 1000, status: 'Low' },
+    { id: 'r6', name: 'Primary', type: 'Premium', contact: 'Standard', balance: 27800, status: 'Approved' },
+    { id: 'r7', name: 'Default', type: 'Direct', contact: 'Metro Manila', balance: 31300, status: 'Active' },
+    { id: 'r8', name: 'Primary', type: 'Basic', contact: 'Monthly', balance: 49000, status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Allocation History"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Allocations / Allocation History"
-      purpose="Allocation History provides a searchable archive of all allocation runs — showing which rules ran, when, what amounts were allocated, and the resulting journal entry references. It supports audit inquiries about how overhead was distributed and allows users to drill through to the underlying journal entries. Reverse allocation entries are also tracked here with the reason for reversal."
-      components={[
-        { name: 'Run History Table', description: 'All past allocation runs with period, run date, rules executed, total amounts posted, and journal entry batch reference.' },
-        { name: 'Drill-Down View', description: 'Per-run detail showing each allocation rule, source amount, and breakdown by target cost center.' },
-        { name: 'Journal Entry Link', description: 'Direct link from each run to the corresponding journal entry in the GL.' },
-        { name: 'Reversal Log', description: 'List of all reversed allocation runs with reversal reason and reversal journal entry.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Run History', 'Reversals', 'By Rule', 'By Period']}
-      features={[
-        'Full historical archive of all allocation runs',
-        'Drill-through to journal entry from allocation run',
-        'Reversal tracking with reason documentation',
-        'Filter by period, rule, or cost center',
-        'Export allocation history for audit',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All allocation runs with period and amounts',
-        'Rules executed per run and amounts per rule',
-        'Target cost center distribution per run',
-        'Journal entry reference per run',
-        'Reversed runs with reason and reversal entry',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View details of a prior allocation run',
-        'Drill through to GL journal entry',
-        'Filter history by period or rule',
-        'Export allocation history to Excel',
-        'Initiate reversal of a prior run',
-      ]}
-      relatedPages={[
-        { label: 'Allocation Rules', href: '/accounting/allocations/allocation-rules' },
-        { label: 'Run Allocations', href: '/accounting/allocations/run-allocations' },
-        { label: 'Journal Entries', href: '/accounting/core-accounting/journal-entries' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -80,14 +80,27 @@ function RecursiveNavItem({
               className="overflow-hidden"
             >
               <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-emerald-100 ml-2">
-                {item.items!.map((child, idx) => (
-                  <RecursiveNavItem
-                    key={idx}
-                    item={child}
-                    activePath={activePath}
-                    depth={depth + 1}
-                  />
-                ))}
+                {item.items!.map((child, idx) => {
+                  if (child.isSectionLabel) {
+                    return (
+                      <div key={idx} className="flex items-center gap-2 px-3 pt-5 pb-1.5">
+                        <div className="h-px bg-slate-200 flex-1" />
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                          {child.title}
+                        </span>
+                        <div className="h-px bg-slate-200 flex-1" />
+                      </div>
+                    )
+                  }
+                  return (
+                    <RecursiveNavItem
+                      key={idx}
+                      item={child}
+                      activePath={activePath}
+                      depth={depth + 1}
+                    />
+                  )
+                })}
               </div>
             </motion.div>
           )}
@@ -126,7 +139,17 @@ function matchesCountry(item: { countries?: string[] }, country?: string) {
   return item.countries.some((c) => c.toUpperCase() === upper)
 }
 
-function filterNavItems(items: NavItem[], country?: string): NavItem[] {
+function hasActiveNavItem(items: NavItem[] | undefined, pathname: string): boolean {
+  if (!items || !pathname) return false
+  for (const item of items) {
+    if (item.path && item.path === pathname) return true
+    if (item.items && hasActiveNavItem(item.items, pathname)) return true
+  }
+  return false
+}
+
+function filterNavItems(items: NavItem[] | undefined, country?: string): NavItem[] {
+  if (!items) return []
   return items
     .map((item) => {
       if (!matchesCountry(item, country)) return null
@@ -142,9 +165,11 @@ function filterNavigationData(data: NavSection[], country?: string): NavSection[
   return data
     .map((section) => {
       if (!matchesCountry(section, country)) return null
-      const filteredItems = filterNavItems(section.items, country)
-      if (filteredItems.length === 0) return null
-      return { ...section, items: filteredItems }
+      const fromItems = filterNavItems(section.items, country)
+      const fromGroups = section.groups?.flatMap((g) => filterNavItems(g.items, country)) || []
+      const combined = [...fromItems, ...fromGroups]
+      if (combined.length === 0) return null
+      return { ...section, items: combined }
     })
     .filter(Boolean) as NavSection[]
 }
@@ -171,6 +196,8 @@ export default function OwnerSidebar() {
     height: 0,
   })
 
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+
   const activeIndex = filteredNavigation.findIndex(
     (s) => s.title === activeSection.title
   )
@@ -181,6 +208,17 @@ export default function OwnerSidebar() {
       setActiveSection(filteredNavigation[0])
     }
   }, [filteredNavigation, activeSection])
+
+  useEffect(() => {
+    if (!activeSection.groups || !pathname) return
+    const initialOpen = new Set<string>()
+    activeSection.groups.forEach((group) => {
+      if (group.title && hasActiveNavItem(group.items, pathname)) {
+        initialOpen.add(group.title)
+      }
+    })
+    setOpenGroups(initialOpen)
+  }, [activeSection, pathname])
 
   // Measure the active button and position the indicator to match exactly
   useEffect(() => {
@@ -293,13 +331,86 @@ export default function OwnerSidebar() {
 
               {/* Nav items */}
               <div className="space-y-4">
-                {activeSection.items.map((item, idx) => (
-                  <RecursiveNavItem
-                    key={idx}
-                    item={item}
-                    activePath={pathname ?? ''}
-                  />
-                ))}
+                {activeSection.groups ? (
+                  activeSection.groups.map((group, gi) => {
+                    const title = group.title ?? `group-${gi}`
+                    const isOpen = openGroups.has(title)
+                    return (
+                      <div key={title}>
+                        <button
+                          onClick={() => {
+                            setOpenGroups((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(title)) next.delete(title)
+                              else next.add(title)
+                              return next
+                            })
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all text-left ${
+                            isOpen
+                              ? 'bg-emerald-50 text-emerald-800 shadow-sm shadow-emerald-100'
+                              : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isOpen && <div className="w-1 h-4 bg-emerald-500 rounded-full shrink-0" />}
+                            <span className="text-[11px] font-bold uppercase tracking-wider">
+                              {title}
+                            </span>
+                          </div>
+                          {isOpen ? (
+                            <ChevronDown size={12} className="text-emerald-600" />
+                          ) : (
+                            <ChevronRight size={12} className="text-slate-400" />
+                          )}
+                        </button>
+                        <AnimatePresence initial={false}>
+                          {isOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2, ease: 'easeInOut' }}
+                              style={{ overflow: 'hidden' }}
+                            >
+                              <div className="space-y-1 pl-2 mt-1">
+                                {group.items.map((item, idx) => {
+                                  if (item.isSectionLabel) {
+                                    return (
+                                      <div key={idx} className="px-4 pt-5 pb-1">
+                                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                                          {item.title}
+                                        </span>
+                                      </div>
+                                    )
+                                  }
+                                  return (
+                                    <RecursiveNavItem key={idx} item={item} activePath={pathname ?? ''} />
+                                  )
+                                })}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )
+                  })
+                ) : (
+                  (activeSection.items ?? []).map((item, idx) => {
+                    if (item.isSectionLabel) {
+                      return (
+                        <div key={idx} className="px-4 pt-5 pb-1">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                            {item.title}
+                          </span>
+                        </div>
+                      )
+                    }
+                    return (
+                      <RecursiveNavItem key={idx} item={item} activePath={pathname ?? ''} />
+                    )
+                  })
+                )}
               </div>
             </div>
           </motion.aside>

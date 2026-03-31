@@ -1,53 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Building, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'General', assignee: 'Metro Manila', dueDate: '2026-03-21', priority: 'Open', status: 'Processing' },
+    { id: 'r2', name: 'BPI Account', assignee: 'Q1 2026', dueDate: '2026-03-07', priority: 'Draft', status: 'High' },
+    { id: 'r3', name: 'Monthly', assignee: 'Primary', dueDate: '2026-01-28', priority: 'Closed', status: 'Approved' },
+    { id: 'r4', name: 'Acme Corp', assignee: 'General', dueDate: '2026-03-10', priority: 'In Stock', status: 'Pending' },
+    { id: 'r5', name: 'Standard', assignee: 'Monthly', dueDate: '2026-01-14', priority: 'In Stock', status: 'Medium' },
+    { id: 'r6', name: 'Default', assignee: 'BPI Account', dueDate: '2026-01-10', priority: 'Active', status: 'Approved' },
+    { id: 'r7', name: 'Sample Entry', assignee: 'Metro Manila', dueDate: '2026-02-14', priority: 'High', status: 'Pending' },
+    { id: 'r8', name: 'General', assignee: 'Standard', dueDate: '2026-02-04', priority: 'In Stock', status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Compliance Calendar"
-      module="PHILIPPINE TAX"
-      breadcrumb="Philippine Tax / Compliance / Tax Compliance Calendar"
-      badge="PH ONLY"
-      purpose="The Tax Compliance Calendar is the master calendar of all BIR and government agency filing deadlines for the organization. It covers monthly, quarterly, and annual BIR forms (2550M, 2550Q, 1601C, 1601EQ, 1702Q, 1702RT, 1604C), SSS, PhilHealth, and HDMF remittance deadlines, local government license renewals, annual SEC report submissions, and other regulatory filing requirements. The calendar shows upcoming deadlines, filing status for past periods, and allows the tax team to record filings as completed."
-      components={[
-        { name: 'Calendar View', description: 'Month-by-month visual calendar with all filing deadlines color-coded by agency and urgency.' },
-        { name: 'Deadline List', description: 'Table of upcoming deadlines: form, agency, period covered, deadline date, days remaining, and status.' },
-        { name: 'Filing Status Tracker', description: 'For each deadline: mark as filed, enter confirmation number, attach proof of filing, and note date filed.' },
-        { name: 'Past Due Alerts', description: 'Overdue filings highlighted in red with days overdue and estimated penalty.' },
-        { name: 'Email Reminder Settings', description: 'Configure automated email reminders to tax team at 30/15/7/2 days before each deadline.' },
+      section="Philippine Tax"
+      icon={<Building size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Calendar', 'Upcoming Deadlines', 'Filing Status', 'Overdue', 'Reminder Settings']}
-      features={[
-        'Comprehensive BIR, SSS, PhilHealth, HDMF deadline calendar',
-        'Filing status tracking with confirmation number recording',
-        'Proof of filing attachment per deadline',
-        'Email reminders before deadlines',
-        'Overdue compliance alert with penalty estimate',
-        'Annual calendar generation with eFPS filing group offsets',
-        'Local government license renewal tracking',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All upcoming filing deadlines with days remaining',
-        'Filing status: pending, filed, overdue',
-        'Confirmation numbers for filed returns',
-        'Overdue items with days overdue',
-        'Annual overview of all compliance deadlines',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View all upcoming deadlines',
-        'Mark a filing as completed',
-        'Enter confirmation number and payment reference',
-        'Attach proof of filing document',
-        'Set reminders for specific filings',
-        'Export compliance calendar to PDF',
-      ]}
-      relatedPages={[
-        { label: 'BIR Forms', href: '/philippine-tax/bir-forms/form-2550m' },
-        { label: 'EFPS Setup', href: '/philippine-tax/compliance/efps-setup' },
-        { label: 'Government Reports', href: '/payroll-workforce/compliance/government-reports' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

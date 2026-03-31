@@ -1,49 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', sku: 'Standard', category: 'Annual', price: 2100, qty: 75, status: 'Draft' },
+    { id: 'r2', name: 'BPI Account', sku: 'Primary', category: 'Quarterly', price: 7600, qty: 24, status: 'Closed' },
+    { id: 'r3', name: 'Standard', sku: 'Primary', category: 'Fixed', price: 45200, qty: 69, status: 'Medium' },
+    { id: 'r4', name: 'Main', sku: 'Standard', category: 'Operating', price: 33100, qty: 47, status: 'Filed' },
+    { id: 'r5', name: 'BPI Account', sku: 'Sample Entry', category: 'Variable', price: 2100, qty: 12, status: 'Open' },
+    { id: 'r6', name: 'Active Item', sku: 'Q1 2026', category: 'Premium', price: 10300, qty: 38, status: 'Low' },
+    { id: 'r7', name: 'Monthly', sku: 'Sample Entry', category: 'Direct', price: 24500, qty: 88, status: 'Draft' },
+    { id: 'r8', name: 'Monthly', sku: 'Q1 2026', category: 'Fixed', price: 1400, qty: 10, status: 'Medium' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Bin Locations"
-      module="INVENTORY"
-      breadcrumb="Inventory / Warehouses / Bin Locations"
-      purpose="Bin Locations provides sub-warehouse location management — racking zones, aisle numbers, shelf designations (A1-B3, Shelf 4, Zone C), or freezer/ambient/dry area segregation within a warehouse. Assigning items to specific bin locations enables bin-picking in order fulfillment and precise physical stock count by bin. This is especially valuable for medium-to-large warehouses where knowing which bay/rack holds a product saves significant picking time."
-      components={[
-        { name: 'Bin Configuration Grid', description: 'All defined bin locations within each warehouse with bin code, zone, type, and current items stored there.' },
-        { name: 'Bin Editor', description: 'Create or manage a bin: warehouse, zone, aisle, bin code, type (standard/refrigerated/hazmat), and capacity.' },
-        { name: 'Item-to-Bin Assignment', description: 'Assign items to their primary and alternate bin locations.' },
-        { name: 'Bin Stock Inquiry', description: 'View all items and quantities currently in a specific bin.' },
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Bins', 'By Zone', 'Item-Bin Assignment', 'Bin Inquiry']}
-      features={[
-        'Sub-warehouse bin location management',
-        'Zone and aisle-level organization',
-        'Item primary bin assignment',
-        'Bin-level stock count support',
-        'Storage type classification (ambient, cold, hazmat)',
-        'Bin capacity tracking',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All bin locations per warehouse',
-        'Items and quantities currently in each bin',
-        'Bin utilization and capacity',
-        'Items with no bin assignment',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create new bin location',
-        'Assign items to bins',
-        'View stock in a specific bin',
-        'Move items between bins',
-        'Print bin labels',
-        'Deactivate unused bins',
-      ]}
-      relatedPages={[
-        { label: 'Warehouse List', href: '/inventory/warehouses/warehouse-list' },
-        { label: 'Stock Levels', href: '/inventory/stock/stock-levels' },
-        { label: 'Transfers', href: '/inventory/warehouses/transfers' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

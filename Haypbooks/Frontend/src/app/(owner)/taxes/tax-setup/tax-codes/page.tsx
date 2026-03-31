@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TaxCodesPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-18', description: 'BPI Account', amount: 34900, account: 'Sample Entry', status: 'Pending' },
+    { id: 'r2', date: '2026-01-09', description: 'Primary', amount: 43200, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r3', date: '2026-02-24', description: 'Main', amount: 23000, account: 'Q1 2026', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-22', description: 'Sample Entry', amount: 13500, account: 'Acme Corp', status: 'Closed' },
+    { id: 'r5', date: '2026-01-06', description: 'Active Item', amount: 30000, account: 'BPI Account', status: 'Open' },
+    { id: 'r6', date: '2026-02-09', description: 'Acme Corp', amount: 19200, account: 'Acme Corp', status: 'Processing' },
+    { id: 'r7', date: '2026-03-20', description: 'Main', amount: 900, account: 'Standard', status: 'Completed' },
+    { id: 'r8', date: '2026-03-09', description: 'Active Item', amount: 28400, account: 'Metro Manila', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Codes"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Setup / Tax Codes"
-      purpose="Tax Codes are the system identifiers that classify how each transaction is treated for tax purposes — combining the tax type, applicable rate, and nature of the transaction into a single referenceable code. Every transaction line item in Haypbooks references a tax code, which drives automatic tax calculation and groups transactions correctly in tax reports. A well-structured tax code hierarchy simplifies compliance and reduces the risk of misclassification."
-      components={[
-        { name: 'Tax Codes List', description: 'Master list of all tax codes with code, description, tax type, rate, and active status.' },
-        { name: 'Code Detail Form', description: 'Form to define a new tax code: code identifier, description, linked tax type, rate, and account mapping.' },
-        { name: 'Rate Association', description: 'Dropdown to link the tax code to a configured tax rate that determines the calculation basis.' },
-        { name: 'GL Account Mapping', description: 'Assign debit and credit GL accounts for the tax entry generated when this code is used.' },
-        { name: 'Default Code per Transaction', description: 'Configuration to set which tax code auto-populates for specific transaction and item types.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Codes', 'Active Codes', 'System Codes', 'Custom Codes']}
-      features={[
-        'Create and manage tax codes combining type, rate, and purpose',
-        'Link each tax code to a configured tax rate',
-        'Map tax codes to their GL debit and credit accounts',
-        'Set default tax codes for product/service categories',
-        'Deprecate old codes without deleting historical usage',
-        'Search and filter codes by type, rate, or usage',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tax code identifier and description',
-        'Associated tax type and rate',
-        'GL account assignment (debit/credit)',
-        'Active/inactive status',
-        'Number of transactions using this code',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new tax code',
-        'Link code to tax rate and GL accounts',
-        'Set default code per transaction/item type',
-        'Deprecate an obsolete tax code',
-        'Export tax codes for documentation',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

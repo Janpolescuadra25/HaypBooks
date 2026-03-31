@@ -1,48 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { CheckSquare, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', assignee: 'Acme Corp', dueDate: '2026-01-08', priority: 'In Stock', status: 'Active' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'Active Item', dueDate: '2026-03-18', priority: 'Medium', status: 'Pending' },
+    { id: 'r3', name: 'BPI Account', assignee: 'Sample Entry', dueDate: '2026-03-04', priority: 'High', status: 'Processing' },
+    { id: 'r4', name: 'Sample Entry', assignee: 'Q1 2026', dueDate: '2026-03-23', priority: 'Filed', status: 'Closed' },
+    { id: 'r5', name: 'General', assignee: 'Active Item', dueDate: '2026-02-16', priority: 'High', status: 'Filed' },
+    { id: 'r6', name: 'BPI Account', assignee: 'Active Item', dueDate: '2026-03-23', priority: 'Completed', status: 'Paid' },
+    { id: 'r7', name: 'Primary', assignee: 'Main', dueDate: '2026-03-07', priority: 'Open', status: 'In Stock' },
+    { id: 'r8', name: 'Active Item', assignee: 'Metro Manila', dueDate: '2026-02-03', priority: 'Paid', status: 'Closed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Approval History"
-      module="TASKS"
-      breadcrumb="Tasks & Approvals / Management / Approval History"
-      purpose="Approval History is the complete immutable audit log of all approval decisions made across the organization. Every approval — whether approved, rejected, or overridden — is recorded with the approver identity, timestamp, comments, and the final outcome. This record is critical for audit, compliance, and dispute resolution purposes."
-      components={[
-        { name: 'History Timeline', description: 'Chronological list of all approval decisions with type, outcome, approver, amount, and date.' },
-        { name: 'Decision Detail Panel', description: 'Full detail including approval chain sequence, each approver comment, and timestamps per step.' },
-        { name: 'Search & Filter', description: 'Search by transaction reference, filter by approver, date range, type, outcome, or module.' },
-        { name: 'Export Button', description: 'Export filtered approval history to CSV or PDF for audit purposes.' },
+      section="Tasks & Approvals"
+      icon={<CheckSquare size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Decisions', 'Approved', 'Rejected', 'Overridden', 'By Module']}
-      features={[
-        'Immutable audit trail of every approval decision',
-        'Full comment and timestamp per approval step',
-        'Multi-step chain visualization',
-        'Export for audit and compliance reporting',
-        'Search by transaction reference number',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Decision outcome (Approved / Rejected / Overridden)',
-        'Approver name and role',
-        'Transaction type, amount, and reference',
-        'Submission date and decision date',
-        'Approver comment and rejection reason',
-        'Number of steps in approval chain',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Search for specific transaction approval history',
-        'Filter by date range, approver, or outcome',
-        'View full multi-step approval chain detail',
-        'Export filtered results for audit',
-      ]}
-      relatedPages={[
-        { label: 'Approval Queue', href: '/tasks-approvals/management/approval-queue' },
-        { label: 'My Approvals', href: '/tasks-approvals/my-work/my-approvals' },
-        { label: 'Completed Tasks', href: '/tasks-approvals/history/completed-tasks' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

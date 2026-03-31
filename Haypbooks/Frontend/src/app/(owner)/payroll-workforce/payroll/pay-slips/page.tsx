@@ -1,51 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-01', description: 'Primary', amount: 42900, account: 'Standard', status: 'Connected' },
+    { id: 'r2', date: '2026-03-20', description: 'Acme Corp', amount: 5700, account: 'Acme Corp', status: 'Open' },
+    { id: 'r3', date: '2026-01-16', description: 'Main', amount: 31600, account: 'Sample Entry', status: 'Approved' },
+    { id: 'r4', date: '2026-03-11', description: 'Metro Manila', amount: 47300, account: 'Metro Manila', status: 'Connected' },
+    { id: 'r5', date: '2026-03-19', description: 'Metro Manila', amount: 27100, account: 'Main', status: 'Closed' },
+    { id: 'r6', date: '2026-03-14', description: 'Q1 2026', amount: 18000, account: 'Monthly', status: 'Medium' },
+    { id: 'r7', date: '2026-02-11', description: 'Acme Corp', amount: 30400, account: 'Metro Manila', status: 'Completed' },
+    { id: 'r8', date: '2026-03-16', description: 'Default', amount: 26800, account: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Pay Slips"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Payroll / Pay Slips"
-      purpose="Pay Slips provides access to all generated payslips — both the employer's filing copy and the employee self-service view. Each payslip shows: employee name, period covered, basic salary, all allowances and earnings, all deductions (SSS, PhilHealth, HDMF, withholding tax, other deductions), and net take-home pay. Employees can access their own payslips digitally. HR can generate, reprint, and email payslips to employees. Pay slip archives are maintained for audit and BIR compliance."
-      components={[
-        { name: 'Pay Slip Search', description: 'Search payslips by employee name or ID and payroll period.' },
-        { name: 'Pay Slip Viewer', description: 'Full digital payslip: header (company, employee, period), earnings breakdown, deductions breakdown, and net pay. Display matches official payslip format.' },
-        { name: 'Bulk Actions', description: 'Generate and email payslips to all employees for a payroll run. Generate PDF batch for printing.' },
-        { name: 'Employee Self-Service', description: 'Employees access their own payslips in their self-service portal — no need to email or print for routine requests.' },
-        { name: 'Annual Pay Summary', description: 'Year-to-date earnings and deductions per employee — used for BIR Form 2316 preparation.' },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['By Payroll Run', 'By Employee', 'Email Pay Slips', 'Annual Summary']}
-      features={[
-        'Digital payslip generation and distribution',
-        'Employee self-service payslip access',
-        'BIR-compliant payslip format',
-        'Batch email distribution for pay runs',
-        'PDF batch download and print',
-        'Annual earnings summary per employee (for 2316)',
-        'Payslip archive for audit and compliance',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All payslips by run or employee',
-        'Earnings and deductions per period',
-        'YTD cumulative earnings and deductions',
-        'Withheld tax per period and YTD',
-        'Government contributions per period',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View payslip for any employee and period',
-        'Email payslips to all employees for a run',
-        'Download payslip PDF',
-        'Generate annual earnings summary',
-        'Reprint a specific payslip',
-      ]}
-      relatedPages={[
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Government Reports', href: '/payroll-workforce/compliance/government-reports' },
-        { label: 'Alphalist', href: '/philippine-tax/reports/alphalist' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

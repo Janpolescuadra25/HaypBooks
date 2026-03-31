@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Standard', description: 'Primary', status: 'In Stock' },
+    { id: 'r2', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Sample Entry', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', category: 'Premium', value: 'Sample Entry', description: 'General', status: 'Low' },
+    { id: 'r4', name: 'Main', category: 'Premium', value: 'BPI Account', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r5', name: 'Standard', category: 'Direct', value: 'Metro Manila', description: 'Monthly', status: 'Medium' },
+    { id: 'r6', name: 'Active Item', category: 'Premium', value: 'Q1 2026', description: 'BPI Account', status: 'Connected' },
+    { id: 'r7', name: 'Default', category: 'Fixed', value: 'Q1 2026', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', category: 'Basic', value: 'Primary', description: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Security Settings"
-      module="SETTINGS"
-      breadcrumb="Settings / Security / Security Settings"
-      purpose="Security Settings configures the organization-wide security policies for Haypbooks — password policies (minimum length, complexity, expiry), session timeout, login attempt lockout, IP allowlisting, two-factor authentication enforcement, and data access logging. These settings are critical for protecting financial data from unauthorized access and ensuring the company meets data governance requirements. Security settings changes are themselves logged in the security audit log."
-      components={[
-        { name: 'Password Policy', description: 'Minimum password length, required character types (uppercase, number, symbol), maximum age in days, and no-reuse history.' },
-        { name: 'Session Settings', description: 'Session timeout (idle time before auto-logout), maximum session duration.' },
-        { name: 'Login Security', description: 'Maximum failed login attempts before lockout, lockout duration, and CAPTCHA settings.' },
-        { name: 'Two-Factor Authentication (2FA)', description: 'Enforce 2FA for all users, specific roles, or make optional. Support for TOTP authenticator apps.' },
-        { name: 'IP Allowlisting', description: 'Restrict access to the application to specific IP addresses or IP ranges.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Password Policy', 'Session Settings', 'Login Security', '2FA Policy', 'IP Allowlist']}
-      features={[
-        'Configurable password policy enforcement',
-        'Idle session timeout',
-        'Login attempt lockout',
-        'Organization-wide 2FA enforcement',
-        'IP allowlist-based access restriction',
-        'Security setting changes logged',
-        'SSO integration settings',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Current security policy settings',
-        'Users without 2FA enabled (risk report)',
-        'Recent failed login attempts',
-        'IP allowlist entries',
-        'Security setting change history',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Update password policy',
-        'Configure session timeout',
-        'Set login lockout parameters',
-        'Enforce 2FA for all or specific roles',
-        'Add IP addresses to allowlist',
-        'View security change history',
-      ]}
-      relatedPages={[
-        { label: 'Two-Factor Auth', href: '/settings/security/two-factor' },
-        { label: 'Security Log', href: '/settings/security/security-log' },
-        { label: 'User Management', href: '/settings/users/user-management' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

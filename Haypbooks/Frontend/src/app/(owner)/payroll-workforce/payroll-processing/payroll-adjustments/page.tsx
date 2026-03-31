@@ -1,26 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', sku: 'Active Item', category: 'Premium', price: 13700, qty: 74, status: 'Connected' },
+    { id: 'r2', name: 'Acme Corp', sku: 'Active Item', category: 'Operating', price: 700, qty: 91, status: 'Current' },
+    { id: 'r3', name: 'Acme Corp', sku: 'Default', category: 'Basic', price: 31200, qty: 75, status: 'Draft' },
+    { id: 'r4', name: 'Monthly', sku: 'Standard', category: 'Monthly', price: 43600, qty: 94, status: 'Pending' },
+    { id: 'r5', name: 'Q1 2026', sku: 'General', category: 'Basic', price: 22800, qty: 25, status: 'Completed' },
+    { id: 'r6', name: 'Primary', sku: 'Active Item', category: 'Premium', price: 38000, qty: 4, status: 'In Stock' },
+    { id: 'r7', name: 'Default', sku: 'BPI Account', category: 'Premium', price: 34600, qty: 48, status: 'Processing' },
+    { id: 'r8', name: 'Default', sku: 'Q1 2026', category: 'Monthly', price: 31300, qty: 19, status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Payroll Adjustments"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Payroll Processing / Payroll Adjustments"
-      purpose="Correct errors in processed payroll runs. Create adjustments for overpayments, underpayments, tax corrections, and benefit deduction fixes that are applied in the next payroll run."
-      components={[
-        { name: "Adjustment List", description: "All pending and posted payroll adjustments with employee and amount" },
-        { name: "Create Adjustment Form", description: "Identify the payroll error and enter the correcting amount" },
-        { name: "Impact Calculator", description: "Show net impact on employee pay and employer costs" },
-        { name: "Carry-Forward to Next Run", description: "Adjustments automatically carried into the next payroll run" },
-        { name: "Audit Trail", description: "Original error, correction applied, and approvals recorded" },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Pending","Approved","Applied","History"]}
-      features={["Error correction capability","Carry-forward to next run","Tax impact calculation","Approval workflow","GL correction entry"]}
-      dataDisplayed={["Employee name and affected period","Adjustment type and amount","Reason for adjustment","Current status","Next run inclusion"]}
-      userActions={["Create payroll adjustment","Calculate net impact","Submit for approval","View carried adjustments","Post to GL"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

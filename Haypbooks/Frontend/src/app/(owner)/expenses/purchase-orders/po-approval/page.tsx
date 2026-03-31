@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', assignee: 'BPI Account', dueDate: '2026-01-06', priority: 'Pending', status: 'Closed' },
+    { id: 'r2', name: 'General', assignee: 'Sample Entry', dueDate: '2026-02-01', priority: 'Active', status: 'In Stock' },
+    { id: 'r3', name: 'Metro Manila', assignee: 'Standard', dueDate: '2026-01-16', priority: 'Connected', status: 'Medium' },
+    { id: 'r4', name: 'Primary', assignee: 'General', dueDate: '2026-02-08', priority: 'Pending', status: 'High' },
+    { id: 'r5', name: 'Standard', assignee: 'BPI Account', dueDate: '2026-03-03', priority: 'Draft', status: 'In Stock' },
+    { id: 'r6', name: 'Standard', assignee: 'Standard', dueDate: '2026-01-07', priority: 'Paid', status: 'Connected' },
+    { id: 'r7', name: 'Sample Entry', assignee: 'Metro Manila', dueDate: '2026-03-18', priority: 'Closed', status: 'Approved' },
+    { id: 'r8', name: 'Metro Manila', assignee: 'Monthly', dueDate: '2026-03-13', priority: 'Open', status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="PO Approval"
-      module="EXPENSES"
-      breadcrumb="Expenses / Purchase Orders / PO Approval"
-      purpose="PO Approval is the dedicated queue for reviewers and approvers to review, approve, or reject submitted purchase orders. The page shows all POs pending the current user's approval, organized by urgency. Each PO shows the full context: requestor, vendor, items, amounts, GL accounts, and budget availability. Approvers can approve, reject, or request clarification with comments — all tracked in the approval audit trail."
-      components={[
-        { name: 'Approval Queue', description: "All POs pending the current user's approval, sorted by submission date and urgency flag." },
-        { name: 'PO Detail Review Panel', description: 'Full PO details for reviewing: line items, GL accounts, budget availability per account, vendor details.' },
-        { name: 'Budget Availability Indicator', description: "For each PO line's GL account: shows budget remaining vs. PO amount to flag if approval would exceed budget." },
-        { name: 'Approval Action Panel', description: 'Approve, Reject, or Request Changes buttons with mandatory comment for rejection.' },
-        { name: 'Approval History', description: 'All approved and rejected POs with the approver, decision timestamp, and comments.' },
+    <OwnerPageTemplate
+      title="Po Approval"
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Pending My Approval', 'All Open POs', 'Approved', 'Rejected']}
-      features={[
-        'Dedicated PO approval review interface',
-        'Budget availability at point of approval decision',
-        'Mandatory comments on rejection or change requests',
-        'Multi-level hierarchy support',
-        'Email notification on new PO approval request',
-        'Mobile-friendly approval for on-the-go approvals',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'POs pending the current approver',
-        'Full line item details per PO',
-        'Budget available for each GL account',
-        'Requestor and requested urgency level',
-        'Prior approval history per PO',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Review PO details before deciding',
-        'Check budget availability per line',
-        'Approve or reject a PO with comments',
-        'Request changes from the requestor',
-        'Delegate approval to another approver',
-        'View all POs in the approval pipeline',
-      ]}
-      relatedPages={[
-        { label: 'Purchase Orders', href: '/expenses/purchase-orders/po-list' },
-        { label: 'Bills', href: '/expenses/bills/bill-list' },
-        { label: 'Budgets', href: '/accounting/planning/budgets' },
-        { label: 'My Approvals', href: '/tasks-approvals/my-work/my-approvals' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

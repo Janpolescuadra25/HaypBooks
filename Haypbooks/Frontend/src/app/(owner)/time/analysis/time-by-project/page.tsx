@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Clock, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TimeByProjectPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-02', description: 'Main', amount: 45000, account: 'Main', status: 'Open' },
+    { id: 'r2', date: '2026-03-24', description: 'Standard', amount: 19800, account: 'Q1 2026', status: 'Low' },
+    { id: 'r3', date: '2026-03-19', description: 'BPI Account', amount: 41400, account: 'Primary', status: 'Medium' },
+    { id: 'r4', date: '2026-01-16', description: 'Sample Entry', amount: 47400, account: 'Primary', status: 'Connected' },
+    { id: 'r5', date: '2026-02-24', description: 'Primary', amount: 44700, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r6', date: '2026-01-08', description: 'Metro Manila', amount: 38000, account: 'Q1 2026', status: 'Open' },
+    { id: 'r7', date: '2026-01-26', description: 'Q1 2026', amount: 26700, account: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', date: '2026-01-01', description: 'Standard', amount: 38800, account: 'BPI Account', status: 'Connected' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Time by Project"
-      module="TIME"
-      breadcrumb="Time / Analysis / Time by Project"
-      purpose="Time by Project aggregates all time entries at the project level, giving project managers visibility into actual hours consumed versus budgeted hours to detect scope creep early. This report helps teams assess project profitability — comparing labor costs incurred against revenue billed — and supports performance reviews. Drill-down capability exposes which tasks or team members are consuming the most time."
-      components={[
-        { name: 'Project Time Summary Table', description: 'Table of all projects with budgeted hours, actual hours, variance, completion %, and billed value.' },
-        { name: 'Budget vs. Actual Chart', description: 'Horizontal bar chart comparing budgeted and actual hours per project with color-coded variance.' },
-        { name: 'Task-Level Drill-Down', description: 'Click-through from project row to see time breakdown by individual task or deliverable.' },
-        { name: 'Team Member Contribution', description: "Stacked chart per project showing each team member's hours contribution." },
-        { name: 'Profitability Column', description: 'Calculated column showing billed revenue minus labor cost for each project.' },
+    <OwnerPageTemplate
+      title="Time By Project"
+      section="Time Tracking"
+      icon={<Clock size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Budget vs. Actual', 'Task Breakdown', 'Team Contribution', 'Profitability']}
-      features={[
-        'Compare budgeted vs. actual hours per project with variance alerting',
-        'Drill down from project to task-level time breakdown',
-        'See profitability as billed revenue minus loaded labor cost',
-        'Filter by active, completed, or on-hold projects',
-        'Track team member contribution to each project',
-        'Export project time analysis for stakeholder reporting',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Project name, status, and budgeted hours',
-        'Actual hours logged and budget variance',
-        'Completion percentage and projected finish',
-        'Billed amount and unbilled value',
-        'Labor cost incurred vs. project revenue',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Filter by project status or date range',
-        'Drill down to task-level time detail',
-        'View team contribution breakdown',
-        'Export project time report',
-        'Navigate to project record from table row',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

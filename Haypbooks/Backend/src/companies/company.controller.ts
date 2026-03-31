@@ -129,6 +129,18 @@ export class CompaniesController {
     return this.svc.listCompanyUsers(req.user?.userId, id)
   }
 
+  @Get(':id/workspace-users')
+  @UseGuards(JwtAuthGuard)
+  async listWorkspaceUsers(@Req() req: any, @Param('id') id: string) {
+    return this.svc.listCompanyUsers(req.user?.userId, id)
+  }
+
+  @Post(':id/workspace-users')
+  @UseGuards(JwtAuthGuard)
+  async inviteWorkspaceUser(@Req() req: any, @Param('id') id: string, @Body() body: { email: string; roleId?: string }) {
+    return this.svc.inviteCompanyUser(req.user?.userId, id, body.email, body.roleId)
+  }
+
   @Post(':id/users')
   @UseGuards(JwtAuthGuard)
   async grantAccess(

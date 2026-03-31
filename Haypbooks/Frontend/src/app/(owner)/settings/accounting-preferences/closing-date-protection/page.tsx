@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function ClosingDateProtectionPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Closing Date Protection"
-      module="SETTINGS"
-      breadcrumb="Settings / Accounting Preferences / Closing Date Protection"
-      purpose="Closing Date Protection prevents backdated edits to accounting records after a period has been formally closed, protecting the integrity of finalized financial statements. Administrators set a closing date and optional password so that any transaction entered before that date requires elevated authorization. This control is essential for audit readiness and compliance with accounting standards."
-      components={[
-        { name: 'Closing Date Picker', description: 'Date selector to set the books-closed boundary; all transactions on or before this date are locked.' },
-        { name: 'Protection Password Field', description: 'Optional password field so that authorized users can unlock the period with a supervisor-level override.' },
-        { name: 'Override Audit Log', description: 'Table showing every instance where the closing date was bypassed, including user, timestamp, and reason.' },
-        { name: 'Warning Configuration', description: 'Toggles to set whether users see a warning, are blocked entirely, or must enter a password to post past the close.' },
-        { name: 'Period Status Indicators', description: 'Visual calendar showing which months are open, locked, or partially restricted.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Protection Settings', 'Override History', 'Period Calendar']}
-      features={[
-        'Set a company-wide closing date to lock all prior-period transactions',
-        'Require a password for any override attempt, creating an approval checkpoint',
-        'Full audit trail of every closing date bypass with user and reason captured',
-        'Configure warning level: informational warning, password gate, or hard block',
-        'View period-by-period lock status on a rolling calendar',
-        'Adjust closing date forward as each new period is finalized',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Current closing date and last modified timestamp',
-        'Override attempts: user, date/time, and reason provided',
-        'Period status calendar (open, locked, reviewing)',
-        'Password protection status (enabled/disabled)',
-        'Number of transactions locked vs. open',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Set or update the accounting closing date',
-        'Enable or disable password protection for overrides',
-        'Change or reset the closing date override password',
-        'Review override audit log',
-        'Unlock a specific period with administrator password',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,55 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Shield, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-07', description: 'Primary', amount: 28100, account: 'Acme Corp', status: 'Completed' },
+    { id: 'r2', date: '2026-01-13', description: 'Main', amount: 29400, account: 'Metro Manila', status: 'Filed' },
+    { id: 'r3', date: '2026-03-11', description: 'Primary', amount: 10400, account: 'Monthly', status: 'Current' },
+    { id: 'r4', date: '2026-03-27', description: 'Standard', amount: 33700, account: 'Default', status: 'Active' },
+    { id: 'r5', date: '2026-02-09', description: 'Sample Entry', amount: 44100, account: 'Active Item', status: 'In Stock' },
+    { id: 'r6', date: '2026-01-12', description: 'Primary', amount: 22400, account: 'General', status: 'Completed' },
+    { id: 'r7', date: '2026-02-02', description: 'Q1 2026', amount: 1600, account: 'Monthly', status: 'Paid' },
+    { id: 'r8', date: '2026-02-26', description: 'Primary', amount: 7900, account: 'Active Item', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Risk Register"
-      module="COMPLIANCE"
-      breadcrumb="Compliance / Controls / Risk Register"
-      purpose="The Risk Register maintains a formal inventory of identified business and financial risks, their likelihood and impact assessments, mitigation strategies, and ownership. It is updated regularly as part of the enterprise risk management process. Each risk has an owner, a current risk score, mitigation actions, control effectiveness rating, and residual risk level."
-      components={[
-        { name: 'Risk Matrix Heat Map', description: '5x5 likelihood-impact heat map. Each risk is plotted as a bubble; color indicates inherent risk (red/amber/green).' },
-        { name: 'Risk Register Table', description: 'Full list of all risks with ID, description, category, likelihood, impact, inherent score, control activities, residual score, and owner.' },
-        { name: 'Risk Detail Card', description: 'Full risk profile: description, category, related processes, mitigation actions, control effectiveness, target residual score, and review date.' },
-        { name: 'Add Risk Form', description: 'Create a new risk entry with all assessment fields.' },
-        { name: 'Review Schedule', description: 'Scheduled periodic review dates per risk with reminder alerts for risk owners.' },
+      section="Compliance"
+      icon={<Shield size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Heat Map', 'Risk Register', 'By Category', 'By Owner', 'Review Schedule']}
-      features={[
-        'Formal enterprise risk register with likelihood-impact scoring',
-        'Heat map visualization of risk portfolio',
-        'Mitigation plan tracking per risk',
-        'Control effectiveness assessment',
-        'Risk owner assignment and review scheduling',
-        'Risk trend tracking over time',
-        'Export risk register to PDF for board reporting',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Risk ID, title, and category',
-        'Likelihood score (1–5) and impact score (1–5)',
-        'Inherent risk score and residual risk score',
-        'Risk owner and review due date',
-        'Mitigation actions with completion status',
-        'Control activities and effectiveness rating',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new risk to the register',
-        'Update likelihood and impact scores',
-        'Record mitigation actions completed',
-        'Assign risk owner',
-        'Schedule periodic risk review',
-        'Export risk register for audit or board presentation',
-        'Mark a risk as closed/resolved',
-      ]}
-      relatedPages={[
-        { label: 'Internal Controls', href: '/compliance/controls/internal-controls' },
-        { label: 'Policy Management', href: '/compliance/controls/policy-management' },
-        { label: 'Compliance Reports', href: '/compliance/reporting/compliance-reports' },
-        { label: 'Audit Trails', href: '/automation/approvals-governance/audit-trails' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

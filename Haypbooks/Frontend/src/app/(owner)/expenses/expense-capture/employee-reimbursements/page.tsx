@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Standard', type: 'Basic', contact: 'Main', balance: 48800, status: 'Draft' },
+    { id: 'r2', name: 'Acme Corp', type: 'Direct', contact: 'Monthly', balance: 39700, status: 'Connected' },
+    { id: 'r3', name: 'General', type: 'Premium', contact: 'General', balance: 35600, status: 'Paid' },
+    { id: 'r4', name: 'Metro Manila', type: 'Operating', contact: 'Primary', balance: 10400, status: 'Completed' },
+    { id: 'r5', name: 'Primary', type: 'Fixed', contact: 'Standard', balance: 30200, status: 'Pending' },
+    { id: 'r6', name: 'Primary', type: 'Premium', contact: 'Main', balance: 7700, status: 'Connected' },
+    { id: 'r7', name: 'General', type: 'Fixed', contact: 'Acme Corp', balance: 42400, status: 'Processing' },
+    { id: 'r8', name: 'Default', type: 'Fixed', contact: 'General', balance: 7600, status: 'Pending' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Employee Reimbursements"
-      module="EXPENSES"
-      breadcrumb="Expenses / Expense Capture / Employee Reimbursements"
-      purpose="Manage the full employee expense reimbursement lifecycle from approval through payment. Batch approved reimbursements, pay via payroll or bank transfer, and track reimbursement history."
-      components={[
-        { name: "Reimbursement Queue", description: "Approved expense reports ready for reimbursement payment" },
-        { name: "Batch Payment Tool", description: "Select multiple reimbursements to pay in one batch" },
-        { name: "Payment Method Selector", description: "Choose payroll inclusion, ACH direct deposit, or check" },
-        { name: "Payment History", description: "Record of all past reimbursements with amounts and dates" },
-        { name: "Employee Summary", description: "Per-employee total pending and paid reimbursements" },
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Ready to Pay","Batched","Paid","History"]}
-      features={["Batch reimbursement processing","Multiple payment methods","Payroll integration","Payment history tracking","Employee self-service status"]}
-      dataDisplayed={["Employee name and bank details","Total amount to reimburse","Expense report references","Payment method","Reimbursement date"]}
-      userActions={["Approve for reimbursement","Batch reimbursements","Select payment method","Process payment","View reimbursement history"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

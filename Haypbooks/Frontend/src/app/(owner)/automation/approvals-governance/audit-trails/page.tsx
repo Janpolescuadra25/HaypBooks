@@ -1,51 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', assignee: 'Standard', dueDate: '2026-01-25', priority: 'Current', status: 'Medium' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'Active Item', dueDate: '2026-02-14', priority: 'Pending', status: 'Paid' },
+    { id: 'r3', name: 'General', assignee: 'Q1 2026', dueDate: '2026-01-04', priority: 'Medium', status: 'Open' },
+    { id: 'r4', name: 'Q1 2026', assignee: 'Standard', dueDate: '2026-03-01', priority: 'Enabled', status: 'Draft' },
+    { id: 'r5', name: 'BPI Account', assignee: 'General', dueDate: '2026-02-13', priority: 'Open', status: 'Low' },
+    { id: 'r6', name: 'General', assignee: 'Monthly', dueDate: '2026-02-09', priority: 'Draft', status: 'Enabled' },
+    { id: 'r7', name: 'Default', assignee: 'Default', dueDate: '2026-01-02', priority: 'Connected', status: 'Active' },
+    { id: 'r8', name: 'General', assignee: 'Main', dueDate: '2026-03-03', priority: 'Completed', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Audit Trails"
-      module="AUTOMATION"
-      breadcrumb="Automation / Approvals & Governance / Audit Trails"
-      purpose="Audit Trails is the comprehensive immutable system log recording every meaningful action taken by any user or automated process within Haypbooks. Every record creation, modification, deletion, login, approval, setting change, and export is logged with the actor, timestamp, IP address, and before/after values. This page provides search and export access to the full audit log for compliance verification, dispute resolution, and security investigation."
-      components={[
-        { name: 'Audit Log Table', description: 'Chronological list of all audit events with actor, action type, module, affected record, timestamp, and IP.' },
-        { name: 'Advanced Search', description: 'Search by user, date range, action type, module, record ID, or IP address.' },
-        { name: 'Change Detail Panel', description: 'For data changes: shows field name, before value, and after value side-by-side.' },
-        { name: 'Export', description: 'Export filtered audit log to CSV or PDF for compliance submission.' },
-        { name: 'Retention Settings', description: 'Configure how long audit logs are retained (minimum: 7 years for financial compliance).' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Events', 'User Actions', 'System Events', 'Data Changes', 'Security Events']}
-      features={[
-        'Tamper-proof immutable audit log',
-        'Full before/after change tracking for all data mutations',
-        'User login/logout and session tracking',
-        'Export and filter for compliance submission',
-        'IP address and browser agent logging',
-        'Long-term retention (7+ years) for financial records',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Event timestamp and type',
-        'Actor (user name, user ID, or system process)',
-        'Action performed (create/update/delete/approve/export/login)',
-        'Affected module and record reference',
-        'IP address and session ID',
-        'Before and after field values for data changes',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Search audit log by user or date range',
-        'Filter by action type or module',
-        'View change detail for a specific event',
-        'Export filtered audit log to CSV',
-        'Configure log retention policy',
-      ]}
-      relatedPages={[
-        { label: 'Automation Logs', href: '/automation/monitoring/automation-logs' },
-        { label: 'Security Log', href: '/settings/security/security-log' },
-        { label: 'Compliance Reports', href: '/compliance/reporting/compliance-reports' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

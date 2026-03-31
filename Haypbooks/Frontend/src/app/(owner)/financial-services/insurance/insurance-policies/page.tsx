@@ -1,53 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Wallet, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', sku: 'Active Item', category: 'Variable', price: 500, qty: 53, status: 'Open' },
+    { id: 'r2', name: 'BPI Account', sku: 'Sample Entry', category: 'Fixed', price: 41000, qty: 61, status: 'In Stock' },
+    { id: 'r3', name: 'Metro Manila', sku: 'Acme Corp', category: 'Variable', price: 27600, qty: 93, status: 'Enabled' },
+    { id: 'r4', name: 'Monthly', sku: 'Q1 2026', category: 'Premium', price: 6600, qty: 52, status: 'Active' },
+    { id: 'r5', name: 'Active Item', sku: 'Default', category: 'Direct', price: 45900, qty: 14, status: 'Approved' },
+    { id: 'r6', name: 'Q1 2026', sku: 'General', category: 'Basic', price: 1400, qty: 97, status: 'Medium' },
+    { id: 'r7', name: 'Standard', sku: 'General', category: 'Direct', price: 40100, qty: 80, status: 'Closed' },
+    { id: 'r8', name: 'Standard', sku: 'Sample Entry', category: 'Premium', price: 31900, qty: 11, status: 'Completed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Insurance Policies"
-      module="FINANCIAL SERVICES"
-      breadcrumb="Financial Services / Insurance / Insurance Policies"
-      purpose="Insurance Policies manages the inventory of all business insurance policies — property, liability, business interruption, health/life, vehicle, D&O (directors and officers), and professional indemnity. It tracks policy coverage details, premiums, renewal dates, insurer contacts, and claims history. Prepaid premium amortization is handled automatically with journal entries to allocate the cost over the policy period."
-      components={[
-        { name: 'Policy Registry', description: 'All active insurance policies with type, insurer, policy number, sum insured, annual premium, and renewal date.' },
-        { name: 'Premium Amortization Schedule', description: 'Monthly amortization of prepaid premiums with automatic journal entry generation over the policy period.' },
-        { name: 'Claims Log', description: 'Record and track insurance claims: date of loss, claim type, claim amount, status, and payout received.' },
-        { name: 'Renewal Alerts', description: 'Policies expiring within 30/60/90 days highlighted with renewal notification and broker contact.' },
-        { name: 'Coverage Summary', description: 'Total coverage value by insurance category for risk management reporting.' },
+      section="Financial Services"
+      icon={<Wallet size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Policies', 'By Type', 'Expiring Soon', 'Claims', 'Amortization']}
-      features={[
-        'Comprehensive insurance policy register',
-        'Automated prepaid premium amortization',
-        'Insurance claim lifecycle tracking',
-        'Renewal calendar with advance alerts',
-        'Coverage gap analysis',
-        'Integration with GL for prepaid and expense accounts',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Policy name, type, insurer, and policy number',
-        'Sum insured and annual premium amount',
-        'Policy start date, end date, and renewal date',
-        'Prepaid premium balance and monthly expense',
-        'Claims filed with amounts and status',
-        'Total coverage by category',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new insurance policy',
-        'Record premium payment',
-        'Generate amortization schedule',
-        'File a new insurance claim',
-        'Update claim status and payout received',
-        'Renew or update policy at renewal',
-        'Export insurance register for risk review',
-      ]}
-      relatedPages={[
-        { label: 'Fixed Assets', href: '/accounting/fixed-assets/asset-register' },
-        { label: 'Prepaid Expenses', href: '/expenses/bills/prepaid-expenses' },
-          { label: 'Balance Sheet', href: '/reporting/reports-center/financial-statements/balance-sheet' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

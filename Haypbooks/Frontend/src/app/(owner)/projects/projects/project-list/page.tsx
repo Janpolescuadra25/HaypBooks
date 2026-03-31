@@ -1,53 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-03', description: 'Q1 2026', amount: 18500, account: 'Q1 2026', status: 'Current' },
+    { id: 'r2', date: '2026-01-14', description: 'Standard', amount: 400, account: 'Main', status: 'Paid' },
+    { id: 'r3', date: '2026-01-07', description: 'Active Item', amount: 34100, account: 'Sample Entry', status: 'Enabled' },
+    { id: 'r4', date: '2026-01-05', description: 'Acme Corp', amount: 23300, account: 'Main', status: 'Approved' },
+    { id: 'r5', date: '2026-01-18', description: 'Metro Manila', amount: 41000, account: 'Metro Manila', status: 'Enabled' },
+    { id: 'r6', date: '2026-02-24', description: 'Standard', amount: 14800, account: 'BPI Account', status: 'Enabled' },
+    { id: 'r7', date: '2026-02-11', description: 'Sample Entry', amount: 37700, account: 'Active Item', status: 'Enabled' },
+    { id: 'r8', date: '2026-02-10', description: 'Primary', amount: 39800, account: 'Acme Corp', status: 'Pending' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Project List"
-      module="PROJECTS"
-      breadcrumb="Projects / Projects / Project List"
-      purpose="Project List is the master directory of all active and completed projects. Each project record tracks the project name, client, project manager, start date, target end date, budget, actual costs-to-date, billing status, and overall project health. Projects serve as cost centers for time, expenses, and purchase tracking. Project profitability is calculated by comparing total billing against total costs. This is the starting point for project-based accounting and management."
-      components={[
-        { name: 'Project Table', description: 'All projects with name, client, manager, status, budget, actual cost, billed amount, and health indicator.' },
-        { name: 'Project Dashboard Card', description: 'For each project: key metrics at a glance — budget remaining, % completion, days to deadline, unbilled time, open tasks.' },
-        { name: 'Project Status Pipeline', description: 'Kanban-style view: Planning → Active → On Hold → Completing → Completed.' },
-        { name: 'Profitability Summary', description: 'For each project: total revenue billed vs. total costs incurred = gross profit and margin %.' },
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Projects', 'Active', 'Planning', 'On Hold', 'Completed']}
-      features={[
-        'Comprehensive project registry and status tracking',
-        'Budget vs. actual cost monitoring',
-        'Profitability calculation per project',
-        'Project health indicator (on-track/at-risk/over-budget)',
-        'Client and project manager assignment',
-        'Project filtering by client, manager, or status',
-        'Export project list for reporting',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All projects with status and health',
-        'Budget vs. actual costs',
-        'Revenue billed vs. target',
-        'Project timeline and deadline',
-        'Unbilled hours summary per project',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new project',
-        'Update project status',
-        'Assign project manager and team members',
-        'Set project budget',
-        'View project dashboard',
-        'Archive a completed project',
-        'Export project list',
-      ]}
-      relatedPages={[
-        { label: 'Project Budgets', href: '/projects/budgets/project-budget' },
-        { label: 'Project Invoicing', href: '/projects/time-billing/project-invoicing' },
-        { label: 'Task Board', href: '/projects/tasks/task-board' },
-        { label: 'Profitability Report', href: '/projects/reports/profitability-report' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

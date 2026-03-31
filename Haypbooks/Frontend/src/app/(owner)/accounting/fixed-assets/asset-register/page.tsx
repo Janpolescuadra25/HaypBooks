@@ -1,55 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-22', description: 'Metro Manila', amount: 29200, account: 'Metro Manila', status: 'In Stock' },
+    { id: 'r2', date: '2026-01-14', description: 'Sample Entry', amount: 48400, account: 'Metro Manila', status: 'Active' },
+    { id: 'r3', date: '2026-03-06', description: 'Default', amount: 35800, account: 'BPI Account', status: 'Filed' },
+    { id: 'r4', date: '2026-01-05', description: 'Metro Manila', amount: 36800, account: 'Q1 2026', status: 'High' },
+    { id: 'r5', date: '2026-03-17', description: 'Monthly', amount: 38700, account: 'Acme Corp', status: 'Draft' },
+    { id: 'r6', date: '2026-02-11', description: 'Active Item', amount: 20200, account: 'Default', status: 'Low' },
+    { id: 'r7', date: '2026-02-16', description: 'BPI Account', amount: 23900, account: 'Active Item', status: 'Enabled' },
+    { id: 'r8', date: '2026-03-04', description: 'Monthly', amount: 34800, account: 'Sample Entry', status: 'Paid' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Asset Register"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Fixed Assets / Asset Register"
-      purpose="The Asset Register is the complete inventory of all tangible and intangible assets owned by the company. Each asset record captures the acquisition date, cost, accumulated depreciation, net book value, useful life, depreciation method, location, and current status. The asset register integrates with the GL to post depreciation entries and serves as the primary tool for fixed asset accounting, audit support, insurance valuation, and capital expenditure tracking."
-      components={[
-        { name: 'Asset List', description: 'Grid of all assets with: asset number, name, category, acquisition date, cost, accumulated depreciation, NBV, and status.' },
-        { name: 'Asset Detail Card', description: 'Full profile for each asset: description, serial number, location, custodian, depreciation method, useful life, residual value, and GL accounts.' },
-        { name: 'Depreciation Summary', description: 'Monthly depreciation schedule showing opening NBV, depreciation amount, and closing NBV for each asset.' },
-        { name: 'Category Summary', description: 'Asset portfolio summary by category (Land, Buildings, Vehicles, Equipment, Furniture, Software, Intangibles).' },
-        { name: 'Capital Expenditure Tracker', description: 'Track approved CapEx budget vs. actual spending on new asset acquisitions.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Assets', 'By Category', 'Depreciation Schedule', 'Disposals', 'CapEx Tracker']}
-      features={[
-        'Complete fixed asset register with all accounting data',
-        'Multiple depreciation methods: straight-line, declining balance, sum-of-years',
-        'Automatic depreciation journal entry posting to GL',
-        'Asset location and custodian tracking',
-        'Asset disposal workflow with gain/loss calculation',
-        'Capital expenditure tracking vs. budget',
-        'Export asset register for audit and insurance',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Asset number, name, category, and location',
-        'Acquisition cost and date',
-        'Accumulated depreciation and net book value',
-        'Monthly depreciation amount',
-        'Useful life remaining (years/months)',
-        'Depreciation method and rate',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new asset to the register',
-        'Run monthly depreciation for all assets',
-        'Dispose or transfer an asset',
-        'Update asset details or reclassify',
-        'Revalue an asset (PFRS 16 revaluation model)',
-        'Export asset register to Excel for audit',
-        'Generate depreciation journal entries',
-      ]}
-      relatedPages={[
-        { label: 'Depreciation', href: '/accounting/fixed-assets/depreciation' },
-        { label: 'Asset Disposal', href: '/accounting/fixed-assets/asset-disposal' },
-        { label: 'Asset Revaluation', href: '/accounting/fixed-assets/asset-revaluation' },
-          { label: 'Balance Sheet', href: '/reporting/reports-center/financial-statements/balance-sheet' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

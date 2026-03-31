@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Shield, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-07', description: 'Primary', amount: 28100, account: 'Acme Corp', status: 'Completed' },
+    { id: 'r2', date: '2026-01-13', description: 'Main', amount: 29400, account: 'Metro Manila', status: 'Filed' },
+    { id: 'r3', date: '2026-03-11', description: 'Primary', amount: 10400, account: 'Monthly', status: 'Current' },
+    { id: 'r4', date: '2026-03-27', description: 'Standard', amount: 33700, account: 'Default', status: 'Active' },
+    { id: 'r5', date: '2026-02-09', description: 'Sample Entry', amount: 44100, account: 'Active Item', status: 'In Stock' },
+    { id: 'r6', date: '2026-01-12', description: 'Primary', amount: 22400, account: 'General', status: 'Completed' },
+    { id: 'r7', date: '2026-02-02', description: 'Q1 2026', amount: 1600, account: 'Monthly', status: 'Paid' },
+    { id: 'r8', date: '2026-02-26', description: 'Primary', amount: 7900, account: 'Active Item', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Privacy Tools"
-      module="COMPLIANCE"
-      breadcrumb="Compliance / Data Privacy / Privacy Tools"
-      purpose="Privacy Tools provides operational workflows for data subject rights management — including the right to access, right to erasure (right to be forgotten), right to portability, and consent management. It also provides a privacy impact assessment (PIA) tool for evaluating new data processing activities. Aligned with Philippine RA 10173 (Data Privacy Act) and GDPR requirements."
-      components={[
-        { name: 'Data Subject Request Inbox', description: 'Incoming data subject access requests (DSARs) with type (access/erasure/portability), date, requestor, and status.' },
-        { name: 'DSAR Processing Workflow', description: 'Step-by-step workflow for processing each request type: locate data, verify identity, extract/anonymize/delete, respond.' },
-        { name: 'Privacy Impact Assessment (PIA) Form', description: 'Structured form for evaluating new data processing activities: data types, purpose, risks, and mitigations.' },
-        { name: 'Consent Dashboard', description: 'Overview of all collected consents with withdrawal rate and expiry alerts.' },
+    <OwnerPageTemplate
+      title="Gdpr Tools"
+      section="Compliance"
+      icon={<Shield size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Data Subject Requests', 'PIA Assessments', 'Consent Management', 'Breach Register']}
-      features={[
-        'End-to-end DSAR processing workflow',
-        'Identity verification step before data access',
-        'Automated data location across all modules for access requests',
-        'Data erasure and anonymization workflow',
-        'Privacy impact assessment documentation',
-        'Data breach incident register',
-        'Consent lifecycle management',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All pending and completed DSARs with status',
-        'DSAR age and statutory response deadline',
-        'PIA assessments with risk rating',
-        'Consent counts, withdrawal rate, and expiry',
-        'Data breach incidents with notification status',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Open and process a data subject request',
-        'Record identity verification outcome',
-        'Generate data access package for subject',
-        'Initiate data erasure workflow',
-        'Create a new PIA assessment',
-        'Record a data breach incident',
-        'Manage consent withdrawal',
-      ]}
-      relatedPages={[
-        { label: 'Data Classification', href: '/compliance/data-privacy/data-classification' },
-        { label: 'Data Retention', href: '/compliance/data-privacy/data-retention' },
-        { label: 'Regulatory Compliance', href: '/compliance/reporting/regulatory-compliance' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

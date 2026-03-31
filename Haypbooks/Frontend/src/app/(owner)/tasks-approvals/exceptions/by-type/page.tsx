@@ -1,47 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { CheckSquare, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', assignee: 'Main', dueDate: '2026-03-02', priority: 'High', status: 'Medium' },
+    { id: 'r2', name: 'BPI Account', assignee: 'Metro Manila', dueDate: '2026-01-03', priority: 'Medium', status: 'Approved' },
+    { id: 'r3', name: 'Sample Entry', assignee: 'BPI Account', dueDate: '2026-01-21', priority: 'Processing', status: 'Closed' },
+    { id: 'r4', name: 'Primary', assignee: 'Standard', dueDate: '2026-03-04', priority: 'Medium', status: 'Active' },
+    { id: 'r5', name: 'Monthly', assignee: 'Sample Entry', dueDate: '2026-02-08', priority: 'Enabled', status: 'Approved' },
+    { id: 'r6', name: 'Main', assignee: 'Main', dueDate: '2026-03-13', priority: 'Medium', status: 'Completed' },
+    { id: 'r7', name: 'Metro Manila', assignee: 'Standard', dueDate: '2026-02-21', priority: 'Current', status: 'Filed' },
+    { id: 'r8', name: 'Acme Corp', assignee: 'Monthly', dueDate: '2026-02-25', priority: 'Current', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Exceptions By Type"
-      module="TASKS"
-      breadcrumb="Tasks & Approvals / Exceptions / By Type"
-      purpose="Exceptions By Type groups all exceptions by their exception category (e.g., Bank Feed Errors, Duplicate Transactions, Validation Failures, Matching Failures, Tax Calculation Errors) to help teams identify systemic issues. If a particular exception type is occurring frequently, it indicates a configuration problem or integration issue requiring root-cause investigation."
-      components={[
-        { name: 'Exception Type Summary', description: 'Grid of exception type cards each showing count, trend (up/down), and last occurred date.' },
-        { name: 'Type Detail Drilldown', description: 'Click an exception type to see all instances of that type with full details.' },
-        { name: 'Frequency Chart', description: 'Bar or line chart showing exception frequency by type over the past 30/60/90 days.' },
-        { name: 'Resolution Rate', description: 'Per-type resolution rate (% resolved within SLA) and average resolution time.' },
+    <OwnerPageTemplate
+      title="By Type"
+      section="Tasks & Approvals"
+      icon={<CheckSquare size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['By Count', 'By Module', 'Trend View', 'Resolution Rates']}
-      features={[
-        'Exception categorization by root cause type',
-        'Systemic issue identification via frequency analysis',
-        'Resolution rate metrics by exception type',
-        'Trend analysis to detect recurring patterns',
-        'Root cause recommendations per exception type',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Exception type names and descriptions',
-        'Count per type (open and resolved)',
-        'Frequency trend (last 30/60/90 days)',
-        'Average resolution time per type',
-        'Source modules generating each exception type',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Drill into an exception type to see all instances',
-        'Filter by date range or module',
-        'Export exception-by-type analysis report',
-        'Configure alerts for exception type threshold breaches',
-      ]}
-      relatedPages={[
-        { label: 'Exception Queue', href: '/tasks-approvals/exceptions/exception-queue' },
-        { label: 'Resolution Log', href: '/tasks-approvals/exceptions/resolution-log' },
-        { label: 'My Exceptions', href: '/tasks-approvals/my-work/my-exceptions' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

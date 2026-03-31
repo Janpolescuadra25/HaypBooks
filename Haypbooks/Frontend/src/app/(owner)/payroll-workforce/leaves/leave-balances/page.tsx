@@ -1,50 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-01', description: 'Primary', amount: 42900, account: 'Standard', status: 'Connected' },
+    { id: 'r2', date: '2026-03-20', description: 'Acme Corp', amount: 5700, account: 'Acme Corp', status: 'Open' },
+    { id: 'r3', date: '2026-01-16', description: 'Main', amount: 31600, account: 'Sample Entry', status: 'Approved' },
+    { id: 'r4', date: '2026-03-11', description: 'Metro Manila', amount: 47300, account: 'Metro Manila', status: 'Connected' },
+    { id: 'r5', date: '2026-03-19', description: 'Metro Manila', amount: 27100, account: 'Main', status: 'Closed' },
+    { id: 'r6', date: '2026-03-14', description: 'Q1 2026', amount: 18000, account: 'Monthly', status: 'Medium' },
+    { id: 'r7', date: '2026-02-11', description: 'Acme Corp', amount: 30400, account: 'Metro Manila', status: 'Completed' },
+    { id: 'r8', date: '2026-03-16', description: 'Default', amount: 26800, account: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Leave Balances"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Leaves / Leave Balances"
-      purpose="Leave Balances provides the current and historical leave credit balances for all employees across all leave types. HR administrators see the full organization view; employees see their own balances. The balance is computed from: annual entitlement + carried over from prior year + any special grants - approved leaves taken. Year-end leave balance determines how many days convert to cash (per monetization policy) and how many carry over to the next year."
-      components={[
-        { name: 'Balance Summary Grid', description: 'Per employee: opening balance, entitlement, taken, balance for each leave type.' },
-        { name: 'Leave Ledger per Employee', description: 'Chronological leave transaction history: entitlement credits, leave filings, adjustments.' },
-        { name: 'Year-End Computation', description: 'At year-end: compute monetizable days vs. carry-forward days per policy.' },
-        { name: 'Balance Adjustment Tool', description: 'HR manual balance adjustment for corrections with reason and authorization.' },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Balance Summary', 'Leave Ledger', 'Year-End', 'Adjustments', 'By Department']}
-      features={[
-        'Real-time leave balance per employee per type',
-        'Opening balance + entitlement - taken calculation',
-        'Manual balance adjustment with audit trail',
-        'Year-end leave monetization and carry-over',
-        'Leave balance trend per employee',
-        'Export balances for audit or payroll verification',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All employees with leave balances per type',
-        'Leave taken YTD per employee',
-        'Employees with zero balance (over-utilized leave)',
-        'Balances available for year-end conversion',
-        'Leave entitlement by employment classification',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View leave balance for any employee',
-        'Adjust a leave balance with reason',
-        'Run year-end leave computation',
-        'Export leave balance report',
-        'View individual leave ledger',
-      ]}
-      relatedPages={[
-        { label: 'Leave Requests', href: '/payroll-workforce/leaves/leave-requests' },
-        { label: 'Leave Policy', href: '/payroll-workforce/leaves/leave-policy' },
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Benefits', href: '/payroll-workforce/compensation/benefits' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

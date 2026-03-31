@@ -1,55 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { LayoutDashboard, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Metro Manila', status: 'Draft' },
+    { id: 'r2', name: 'Q1 2026', category: 'Basic', value: 'Standard', description: 'Monthly', status: 'Draft' },
+    { id: 'r3', name: 'Primary', category: 'Monthly', value: 'Standard', description: 'General', status: 'Open' },
+    { id: 'r4', name: 'General', category: 'Direct', value: 'Sample Entry', description: 'Default', status: 'Completed' },
+    { id: 'r5', name: 'Default', category: 'Standard', value: 'Sample Entry', description: 'BPI Account', status: 'Completed' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Metro Manila', description: 'BPI Account', status: 'Filed' },
+    { id: 'r7', name: 'Default', category: 'Basic', value: 'Sample Entry', description: 'Q1 2026', status: 'Open' },
+    { id: 'r8', name: 'Standard', category: 'Basic', value: 'Metro Manila', description: 'Main', status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Notifications"
-      module="HOME"
-      breadcrumb="Home / Notifications"
-      purpose="The Notifications page is the central notification inbox for the Haypbooks platform, surfacing all system-generated alerts, activity updates, action requests, approval notifications, payment events, and mentions for the logged-in user. It consolidates all cross-module activity into a single prioritized feed so users never miss time-sensitive actions that require their attention."
-      components={[
-        { name: 'Notification Feed', description: 'Chronological list of all notifications with unread indicator dot, event type icon, message, source module badge, and timestamp.' },
-        { name: 'Category Filter Tabs', description: 'Tabs to filter: All, Unread, Action Required, Approvals, Payments, Alerts, System, Mentions.' },
-        { name: 'Mark All Read', description: 'Bulk action button to mark all notifications as read or to archive all dismissed items.' },
-        { name: 'Notification Settings', description: 'Quick link to notification preferences for controlling delivery methods and event subscriptions.' },
-        { name: 'Empty State', description: 'Friendly empty state illustration when no unread notifications exist.' },
+      section="Home"
+      icon={<LayoutDashboard size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All', 'Unread', 'Action Required', 'Approvals', 'Payments', 'Alerts']}
-      features={[
-        'Real-time notification delivery',
-        'Priority sorting (action required first)',
-        'Deep link from notification to source record',
-        'Grouped notifications for related events',
-        'Configurable delivery: in-app, email, SMS',
-        'Notification retention history with search',
-        'Unread count badge in global navigation',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Notification message and event description',
-        'Source module and event type',
-        'Linked record reference (e.g., Invoice #1042)',
-        'Timestamp and relative time (e.g., "2 hours ago")',
-        'Triggering user or system process',
-        'Read / unread status',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Click notification to open source record',
-        'Mark individual notification as read',
-        'Mark all notifications as read',
-        'Archive or dismiss notifications',
-        'Filter by notification category',
-        'Configure notification preferences',
-        'Search past notification history',
-      ]}
-      relatedPages={[
-        { label: 'My Tasks', href: '/tasks-approvals/my-work/my-tasks' },
-        { label: 'My Approvals', href: '/tasks-approvals/my-work/my-approvals' },
-        { label: 'Notification Preferences', href: '/settings/notifications/system-alerts' },
-        { label: 'Email Digest', href: '/settings/notifications/email-digest-settings' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

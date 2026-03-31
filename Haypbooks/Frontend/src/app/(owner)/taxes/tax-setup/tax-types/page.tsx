@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TaxTypesPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-18', description: 'BPI Account', amount: 34900, account: 'Sample Entry', status: 'Pending' },
+    { id: 'r2', date: '2026-01-09', description: 'Primary', amount: 43200, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r3', date: '2026-02-24', description: 'Main', amount: 23000, account: 'Q1 2026', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-22', description: 'Sample Entry', amount: 13500, account: 'Acme Corp', status: 'Closed' },
+    { id: 'r5', date: '2026-01-06', description: 'Active Item', amount: 30000, account: 'BPI Account', status: 'Open' },
+    { id: 'r6', date: '2026-02-09', description: 'Acme Corp', amount: 19200, account: 'Acme Corp', status: 'Processing' },
+    { id: 'r7', date: '2026-03-20', description: 'Main', amount: 900, account: 'Standard', status: 'Completed' },
+    { id: 'r8', date: '2026-03-09', description: 'Active Item', amount: 28400, account: 'Metro Manila', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Types"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Setup / Tax Types"
-      purpose="Tax Types defines the categories of taxes the business is subject to — such as VAT, GST, Corporate Income Tax, Withholding Tax, Payroll Tax, and local business taxes — and configures the core properties of each type. Each tax type determines how it is calculated, when it applies, which authority it is paid to, and how it is reported. The tax type registry is the foundation from which rates, codes, and rules are built."
-      components={[
-        { name: 'Tax Type Registry', description: 'Table of all active tax types with name, calculation basis, authority, and frequency.' },
-        { name: 'Type Configuration Form', description: 'Form to define a new tax type: name, category, basis (percentage of sale, fixed, sliding), and agency link.' },
-        { name: 'Reporting Frequency', description: 'Configure how often this tax type must be reported and remitted (monthly, quarterly, annually).' },
-        { name: 'Account Assignments', description: 'Map the tax type to its liability and expense GL accounts.' },
-        { name: 'Enabled Jurisdictions', description: 'Checkboxes showing which registered jurisdictions have this tax type enabled.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Types', 'Sales Taxes', 'Income Taxes', 'Withholding Taxes', 'Payroll Taxes']}
-      features={[
-        'Register all applicable tax types for the business',
-        'Configure calculation method per tax type',
-        'Set reporting and remittance frequency per type',
-        'Map tax types to GL liability and expense accounts',
-        'Enable tax types per jurisdiction',
-        'Link tax types to their reporting agency',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tax type name and category',
-        'Calculation basis and rate structure',
-        'Reporting frequency',
-        'Linked tax authority',
-        'Enabled jurisdictions',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new tax type',
-        'Configure calculation and reporting settings',
-        'Assign GL account mappings',
-        'Enable tax type for specific jurisdictions',
-        'Link to tax agency',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

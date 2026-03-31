@@ -1,51 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', assignee: 'Standard', dueDate: '2026-01-25', priority: 'Current', status: 'Medium' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'Active Item', dueDate: '2026-02-14', priority: 'Pending', status: 'Paid' },
+    { id: 'r3', name: 'General', assignee: 'Q1 2026', dueDate: '2026-01-04', priority: 'Medium', status: 'Open' },
+    { id: 'r4', name: 'Q1 2026', assignee: 'Standard', dueDate: '2026-03-01', priority: 'Enabled', status: 'Draft' },
+    { id: 'r5', name: 'BPI Account', assignee: 'General', dueDate: '2026-02-13', priority: 'Open', status: 'Low' },
+    { id: 'r6', name: 'General', assignee: 'Monthly', dueDate: '2026-02-09', priority: 'Draft', status: 'Enabled' },
+    { id: 'r7', name: 'Default', assignee: 'Default', dueDate: '2026-01-02', priority: 'Connected', status: 'Active' },
+    { id: 'r8', name: 'General', assignee: 'Main', dueDate: '2026-03-03', priority: 'Completed', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Approval Chains"
-      module="AUTOMATION"
-      breadcrumb="Automation / Approvals & Governance / Approval Chains"
-      purpose="Approval Chains define the sequence of approvers that a transaction must pass through before it is fully approved. While Approval Matrices set the thresholds, Approval Chains define the ordered list of approvers (e.g., Step 1: Direct Manager, Step 2: Finance Director, Step 3: CEO for >500K). Chains support sequential, parallel, and hybrid approval flows with escalation paths for unresponsive approvers."
-      components={[
-        { name: 'Chain List', description: 'All configured approval chains with name, step count, transaction types linked, and active status.' },
-        { name: 'Chain Builder', description: 'Visual step builder: add approvers per step, set step type (sequential/parallel), configure escalation timeout per step.' },
-        { name: 'Approver Assignment', description: 'Select approvers by role, specific user, or dynamic (e.g., direct manager of requestor).' },
-        { name: 'Escalation Settings', description: 'Set auto-escalation rules: if step not approved within N hours, escalate to next approver in chain.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Chains', 'By Transaction Type', 'Active', 'Inactive']}
-      features={[
-        'Sequential and parallel approval step support',
-        "Dynamic approver resolution (e.g., \"submitter's manager\")",
-        'Configurable escalation timeouts per step',
-        'Skip conditions: bypass step if condition met',
-        'Approval chain simulation with test transaction',
-        'Visual chain diagram for each chain',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Chain name and description',
-        'Number of approval steps',
-        'Approvers per step (role or user)',
-        'Escalation timeout per step',
-        'Transaction types this chain applies to',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new approval chain',
-        'Add, remove, or reorder steps',
-        'Set approver as role or specific user',
-        'Configure escalation timeout and escalation path',
-        'Test chain with sample transaction',
-        'Link chain to transaction types in Approval Matrix',
-        'Activate or deactivate a chain',
-      ]}
-      relatedPages={[
-        { label: 'Approval Matrices', href: '/automation/approvals-governance/approval-matrices' },
-        { label: 'Delegation Rules', href: '/automation/approvals-governance/delegation-rules' },
-        { label: 'My Approvals', href: '/tasks-approvals/my-work/my-approvals' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

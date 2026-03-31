@@ -1,46 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function PdfTemplatesPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="PDF Templates"
-      module="SETTINGS"
-      breadcrumb="Settings / Customization / PDF Templates"
-      purpose="PDF Templates controls the visual layout and content of all customer-facing printed documents including invoices, quotes, purchase orders, receipts, and statements. Businesses customize these templates to match brand guidelines, include required legal language, and structure information for their industry. Multiple templates can be created and assigned to different document types or customer segments."
-      components={[
-        { name: 'Template Gallery', description: 'Grid of existing PDF templates with document type, preview thumbnail, and default indicator.' },
-        { name: 'Visual Template Editor', description: 'Drag-and-drop designer for arranging header, footer, body columns, logo, and custom text blocks.' },
-        { name: 'Field Token Picker', description: 'Panel of available data tokens (e.g., {{customer_name}}, {{invoice_total}}) to insert into template.' },
-        { name: 'Live PDF Preview', description: 'Real-time rendered PDF preview that updates as template changes are made in the editor.' },
-        { name: 'Template Assignment Rules', description: 'Configure which template is used per customer group, currency, or document type.' },
+    <OwnerPageTemplate
+      title="Pdf Templates"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Invoice Templates', 'Quote Templates', 'PO Templates', 'Statement Templates', 'Receipt Templates']}
-      features={[
-        'Design custom PDF layouts for invoices, quotes, POs, and statements',
-        'Drag-and-drop positioning for logo, address blocks, line items, and totals',
-        'Insert dynamic data tokens that auto-populate with transaction data',
-        'Preview rendered PDF before saving template changes',
-        'Assign different templates per document type or customer segment',
-        'Set a default template for each document category',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Template name, document type, and last modified date',
-        'Preview thumbnail of each template',
-        'Default template designation per document type',
-        'Number of documents generated using each template',
-        'Template token coverage (fields populated vs. available)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new PDF template from blank or existing template',
-        'Edit layout with drag-and-drop designer',
-        'Insert dynamic data tokens',
-        'Preview the rendered PDF',
-        'Set as default template for a document type',
-        'Assign template to specific customer groups',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

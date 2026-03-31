@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function CustomFieldsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Monthly', category: 'Basic', value: 'Default', description: 'Sample Entry', status: 'In Stock' },
+    { id: 'r2', name: 'Default', category: 'Direct', value: 'Primary', description: 'Metro Manila', status: 'Paid' },
+    { id: 'r3', name: 'BPI Account', category: 'Variable', value: 'Active Item', description: 'Main', status: 'Closed' },
+    { id: 'r4', name: 'Q1 2026', category: 'Standard', value: 'Acme Corp', description: 'Q1 2026', status: 'Draft' },
+    { id: 'r5', name: 'Monthly', category: 'Fixed', value: 'General', description: 'Primary', status: 'High' },
+    { id: 'r6', name: 'Main', category: 'Direct', value: 'Acme Corp', description: 'Active Item', status: 'Processing' },
+    { id: 'r7', name: 'Monthly', category: 'Quarterly', value: 'Default', description: 'BPI Account', status: 'Connected' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Q1 2026', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Custom Fields"
-      module="SETTINGS"
-      breadcrumb="Settings / Customization / Custom Fields"
-      purpose="Custom Fields extends the standard data model by adding your own fields to entities such as Customers, Vendors, Invoices, and Products. Businesses use custom fields to capture industry-specific data, internal categorization codes, or external system reference IDs that are not part of the default schema. Custom fields appear on forms, reports, and exports throughout the system."
-      components={[
-        { name: 'Custom Fields List', description: 'Table of all defined custom fields with entity, field type, label, and active status.' },
-        { name: 'Add Field Form', description: 'Form to define a new custom field: label, data type (text, number, date, dropdown), and target entity.' },
-        { name: 'Field Options Editor', description: 'Multi-value editor for dropdown-type fields to define the list of selectable options.' },
-        { name: 'Field Placement Controls', description: 'Configuration to show/hide the field on forms, exports, and reports per entity context.' },
-        { name: 'Required/Optional Toggle', description: 'Switch to mark a custom field as required on new record creation or optional.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Customer Fields', 'Vendor Fields', 'Transaction Fields', 'Product Fields', 'Employee Fields']}
-      features={[
-        'Add unlimited custom fields to any entity in the system',
-        'Support field types: text, number, date, yes/no toggle, single dropdown, multi-select',
-        'Mark fields required or optional per entity',
-        'Control field visibility on data entry forms vs. reports',
-        'Export custom field data alongside standard fields in all CSV/Excel exports',
-        'Reorder fields on forms via drag-and-drop',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Field label, type, and target entity',
-        'Required/optional status',
-        'Number of records containing a value for each field',
-        'Visibility settings (form, report, export)',
-        'Creation date and last modified user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new custom field for any entity',
-        'Set field type and dropdown options',
-        'Mark a field as required or optional',
-        'Hide or show a field on forms and reports',
-        'Delete or deactivate unused custom fields',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

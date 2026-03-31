@@ -1,10 +1,9 @@
 "use client"
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'motion/react'
 import { Plus, ChevronRight, Search, Calculator, FileText, Receipt, Landmark, PieChart, Coins, TrendingUp, Briefcase } from 'lucide-react'
 import CompanyModal from './CompanyModal'
-import FirmModal from './FirmModal'
 import { getProfileCached } from '@/lib/profile-cache'
 import { authService } from '@/services/auth.service'
 import { useToast } from '@/components/ToastProvider'
@@ -309,36 +308,36 @@ export default function WorkspacePage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [practices, setPractices] = useState<Practice[]>([])
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
-  const [selectedPractice, setSelectedPractice] = useState<Practice | null>(null)
   const [showCompanyModal, setShowCompanyModal] = useState(false)
-  const [showPracticeModal, setShowPracticeModal] = useState(false)
   const [expandedBook, setExpandedBook] = useState<'companies' | 'practice'>('companies')
+
+  const reloadProfile = useCallback(async () => {
+    try {
+      const apiClient = (await import('@/lib/api-client')).default
+      const res = await apiClient.get('/api/users/me')
+      const p = res.data
+      setProfile(p)
+      setCompanies((p?.companies || []).map((c: any) => ({ id: c.id || c, name: c.name || c })))
+      setPractices((p?.practices || p?.firmList || []).map((f: any) => ({ id: f.id || f, name: f.name || f })))
+      if (p?.preferredHub === 'ACCOUNTANT') {
+        setExpandedBook('practice')
+      } else {
+        setExpandedBook('companies')
+      }
+    } catch (err) {
+      console.error('[WORKSPACE] reloadProfile failed:', err)
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
 
-    // Directly call the backend and log any issues
-    import('@/lib/api-client').then(({ default: apiClient }) => {
-      apiClient.get('/api/users/me')
-        .then(res => {
-          const p = res.data
-          console.log('[WORKSPACE] Profile loaded:', JSON.stringify(p, null, 2))
-          if (!mounted) return
-          setProfile(p)
-          setCompanies((p?.companies || []).map((c: any) => ({ id: c.id || c, name: c.name || c })))
-          setPractices((p?.practices || p?.firmList || []).map((f: any) => ({ id: f.id || f, name: f.name || f })))
-          if (p?.preferredHub === 'ACCOUNTANT') {
-            setExpandedBook('practice')
-          } else {
-            setExpandedBook('companies')
-          }
-        })
-        .catch(err => {
-          console.error('[WORKSPACE] Error loading profile:', err?.response?.status, err?.response?.data, err?.message)
-        })
+    reloadProfile().catch(err => {
+      console.error('[WORKSPACE] Error loading profile:', err)
     })
+
     return () => { mounted = false }
-  }, [])
+  }, [reloadProfile])
 
   const openCompany = (idx: number) => { setSelectedCompany(companies[idx]); setShowCompanyModal(true) }
   const openPractice = (idx: number) => {
@@ -390,7 +389,7 @@ export default function WorkspacePage() {
           isExpanded={expandedBook === 'companies'}
           onExpand={() => setExpandedBook('companies')}
           onItemClick={openCompany}
-          onCtaClick={() => { router.push('/get-started/plans') }}
+          onCtaClick={() => { router.push('/onboarding/business') }}
         />
 
         <BookCard
@@ -398,7 +397,7 @@ export default function WorkspacePage() {
           subtitle="Your professional advisory library"
           items={practices.map(p => ({ id: p.id, name: p.name }))}
           emptyText="Your library is currently empty"
-          buttonText="+ New Practice"
+          buttonText="New Practice"
           ctaTestId="open-firm"
           color="bg-[#22c58b]"
           accentColor="bg-[#19a372]"
@@ -406,7 +405,7 @@ export default function WorkspacePage() {
           isExpanded={expandedBook === 'practice'}
           onExpand={() => setExpandedBook('practice')}
           onItemClick={openPractice}
-          onCtaClick={() => router.push('/onboarding/practice')}
+          onCtaClick={() => router.push('/onboarding/practice?newPractice=true')}
         />
       </div>
 
@@ -438,10 +437,11 @@ export default function WorkspacePage() {
 
       {/* Modals */}
       {showCompanyModal && selectedCompany && (
-        <CompanyModal company={selectedCompany} onClose={() => setShowCompanyModal(false)} />
-      )}
-      {showPracticeModal && (
-        <FirmModal practice={selectedPractice} onClose={() => setShowPracticeModal(false)} />
+        <CompanyModal
+          company={selectedCompany}
+          onClose={() => setShowCompanyModal(false)}
+          onSuccess={reloadProfile}
+        />
       )}
     </div>
   )

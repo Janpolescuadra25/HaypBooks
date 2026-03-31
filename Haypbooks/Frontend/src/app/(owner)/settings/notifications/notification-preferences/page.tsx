@@ -1,48 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Standard', description: 'Primary', status: 'In Stock' },
+    { id: 'r2', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Sample Entry', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', category: 'Premium', value: 'Sample Entry', description: 'General', status: 'Low' },
+    { id: 'r4', name: 'Main', category: 'Premium', value: 'BPI Account', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r5', name: 'Standard', category: 'Direct', value: 'Metro Manila', description: 'Monthly', status: 'Medium' },
+    { id: 'r6', name: 'Active Item', category: 'Premium', value: 'Q1 2026', description: 'BPI Account', status: 'Connected' },
+    { id: 'r7', name: 'Default', category: 'Fixed', value: 'Q1 2026', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', category: 'Basic', value: 'Primary', description: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Notification Preferences"
-      module="SETTINGS"
-      breadcrumb="Settings / Notifications / Notification Preferences"
-      purpose="Notification Preferences lets each user (and administrators at the organization level) configure which system events generate notifications and through which channel (email, in-app bell, SMS). Users can subscribe to notifications for: new tasks assigned, approvals needed, invoices overdue, payroll run completion, bank feed new transactions, system alerts, and period close reminders. Well-configured notifications ensure the right people are alerted at the right time without notification overload."
-      components={[
-        { name: 'Personal Notification Settings', description: "Each user's own notification preferences: which events to be notified about, and channel (in-app, email, SMS)." },
-        { name: 'Organization-Level Alerts', description: 'Admin can configure mandatory organization-wide alerts that all relevant users receive (e.g., data export, admin login).' },
-        { name: 'Module Notification Categories', description: 'Notifications organized by module: Banking, Invoicing, AP, Payroll, Compliance, Tasks, System, Security.' },
-        { name: 'Notification Digest', description: 'Option to receive a daily digest instead of individual notifications for non-urgent events.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['My Notifications', 'Org-Level Alerts', 'By Module', 'Digest Settings']}
-      features={[
-        'Per-user customizable notification preferences',
-        'Multi-channel: in-app, email, SMS',
-        'Module-by-module notification control',
-        'Organization-wide mandatory alerts',
-        'Daily digest option for non-urgent notifications',
-        'Notification history for missed notifications',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        "User's current notification subscriptions",
-        'Org-level mandatory alerts',
-        'Notification delivery history',
-        'Unread notification count in-app',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Subscribe or unsubscribe to specific notification types',
-        'Set preferred notification channel',
-        'Enable daily digest mode',
-        'Configure org-level mandatory alerts (admin)',
-        'View notification history',
-      ]}
-      relatedPages={[
-        { label: 'System Health', href: '/automation/monitoring/system-health' },
-        { label: 'User Management', href: '/settings/users/user-management' },
-        { label: 'Email Notifications', href: '/automation/smart-automation/email-notifications' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

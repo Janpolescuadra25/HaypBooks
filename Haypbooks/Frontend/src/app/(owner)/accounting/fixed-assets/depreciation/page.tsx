@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-14', description: 'Q1 2026', amount: 49900, account: 'Monthly', status: 'Processing' },
+    { id: 'r2', date: '2026-01-15', description: 'Sample Entry', amount: 43400, account: 'General', status: 'Connected' },
+    { id: 'r3', date: '2026-03-15', description: 'Acme Corp', amount: 35400, account: 'Sample Entry', status: 'Approved' },
+    { id: 'r4', date: '2026-02-10', description: 'BPI Account', amount: 33000, account: 'Acme Corp', status: 'Filed' },
+    { id: 'r5', date: '2026-02-25', description: 'Metro Manila', amount: 34300, account: 'Standard', status: 'Open' },
+    { id: 'r6', date: '2026-01-17', description: 'Acme Corp', amount: 40200, account: 'Monthly', status: 'Current' },
+    { id: 'r7', date: '2026-03-13', description: 'Sample Entry', amount: 28200, account: 'General', status: 'Completed' },
+    { id: 'r8', date: '2026-03-26', description: 'Default', amount: 39300, account: 'Standard', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Depreciation"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Fixed Assets / Depreciation"
-      purpose="The Depreciation page manages the calculation and posting of periodic depreciation charges for all depreciable assets. It supports straight-line, declining balance (double-declining and 150%), sum-of-years-digits, and units-of-production methods. Users can run a depreciation preview before finalizing, post depreciation journal entries to the GL, and view the full depreciation history for any asset or period. This page ensures accurate periodic expense recognition per PAS 16 and PFRS."
-      components={[
-        { name: 'Depreciation Run Panel', description: 'Select period and click Calculate to preview depreciation for all assets. Shows total depreciation amount, asset count, and any errors.' },
-        { name: 'Depreciation Preview Table', description: 'Pre-posting preview: asset, method, opening NBV, depreciation amount, and closing NBV for the period.' },
-        { name: 'Post to GL Button', description: 'After review, post all depreciation entries to the GL as a single batch journal entry.' },
-        { name: 'Depreciation History', description: 'Archive of all prior depreciation runs with period, total amount, posting date, and journal entry reference.' },
-        { name: 'Method Override', description: 'Temporarily override depreciation method for a specific asset for the period.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Run Depreciation', 'Preview', 'History', 'Schedule Comparison']}
-      features={[
-        'Multi-method depreciation calculation engine',
-        'Preview before posting to catch errors',
-        'Batch GL posting of all depreciation entries',
-        'Partial period proration for new assets',
-        'Depreciation catch-up for prior missed periods',
-        'Tax depreciation vs. book depreciation tracking',
-        'Depreciation audit trail per asset',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Depreciation amount per asset for the period',
-        'Opening and closing NBV per asset',
-        'Total depreciation amount for the run',
-        'Depreciation history by period',
-        'Assets with method overrides',
-        'Accumulated depreciation running balance',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Calculate depreciation for a period',
-        'Review the depreciation preview before posting',
-        'Post depreciation journal entries to GL',
-        'Override depreciation for a specific asset',
-        'View depreciation history for an asset',
-        'Reverse a depreciation posting if needed',
-      ]}
-      relatedPages={[
-        { label: 'Asset Register', href: '/accounting/fixed-assets/asset-register' },
-        { label: 'Asset Disposal', href: '/accounting/fixed-assets/asset-disposal' },
-        { label: 'Journal Entries', href: '/accounting/core-accounting/journal-entries' },
-        { label: 'Period Close', href: '/accounting/period-close/close-checklist' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

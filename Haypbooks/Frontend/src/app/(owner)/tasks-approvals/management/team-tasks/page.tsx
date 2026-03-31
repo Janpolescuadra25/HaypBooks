@@ -1,51 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { CheckSquare, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', assignee: 'Default', dueDate: '2026-02-19', priority: 'High', status: 'Active' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'Active Item', dueDate: '2026-03-15', priority: 'Enabled', status: 'Processing' },
+    { id: 'r3', name: 'BPI Account', assignee: 'Q1 2026', dueDate: '2026-03-04', priority: 'In Stock', status: 'Filed' },
+    { id: 'r4', name: 'Monthly', assignee: 'Standard', dueDate: '2026-03-21', priority: 'Completed', status: 'High' },
+    { id: 'r5', name: 'Monthly', assignee: 'General', dueDate: '2026-01-14', priority: 'Closed', status: 'Draft' },
+    { id: 'r6', name: 'Metro Manila', assignee: 'General', dueDate: '2026-01-06', priority: 'Enabled', status: 'Connected' },
+    { id: 'r7', name: 'Default', assignee: 'Active Item', dueDate: '2026-03-10', priority: 'Connected', status: 'Pending' },
+    { id: 'r8', name: 'Main', assignee: 'General', dueDate: '2026-03-05', priority: 'Open', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Team Tasks"
-      module="TASKS"
-      breadcrumb="Tasks & Approvals / Management / Team Tasks"
-      purpose="Team Tasks provides managers and team leads with a bird's-eye view of all tasks across their team members. It shows current workload distribution, overdue items by person, and overall team task health. Managers can reassign tasks, create new team-wide tasks, and monitor progress without needing to log in as individual users."
-      components={[
-        { name: 'Team Overview Bar', description: 'Summary of total open tasks, overdue tasks, and completed tasks for the team this week.' },
-        { name: 'Per-Member Task View', description: 'Collapsible list of team members each showing their open task count, overdue count, and tasks due today.' },
-        { name: 'Combined Task List', description: 'Flat list of all team tasks with assignee column, sortable and filterable.' },
-        { name: 'Workload Chart', description: 'Bar chart showing task count per team member to quickly identify overloaded or underutilized members.' },
-        { name: 'Assign Task Button', description: 'Create a task and assign to any team member with due date and priority.' },
+      section="Tasks & Approvals"
+      icon={<CheckSquare size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Team Tasks', 'By Member', 'Overdue', 'Completed This Week']}
-      features={[
-        'Full team task visibility for managers',
-        'Workload balance visualization',
-        'Reassign any task to balance workload',
-        'Create tasks and assign to any team member',
-        'Filter by member, priority, module, or due date',
-        'Export team task report',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All team members and their open task counts',
-        'Task titles, assignees, due dates, priorities',
-        'Overdue task count per member',
-        'Tasks completed this week per member',
-        'Source module for each task',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View all tasks for a specific team member',
-        'Reassign a task from one member to another',
-        'Create a new task for any team member',
-        'Mark a task complete on behalf of a team member',
-        'Export team task list as CSV',
-        'Filter team tasks by module or priority',
-      ]}
-      relatedPages={[
-        { label: 'My Tasks', href: '/tasks-approvals/my-work/my-tasks' },
-        { label: 'Approval Queue', href: '/tasks-approvals/management/approval-queue' },
-        { label: 'Delegated Tasks', href: '/tasks-approvals/management/delegated-tasks' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

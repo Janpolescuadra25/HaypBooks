@@ -1,47 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Active Item', category: 'Revenue', value: 'Q1 2026', description: 'Q1 2026', status: 'Approved' },
+    { id: 'r2', name: 'Active Item', category: 'Monthly', value: 'Monthly', description: 'Standard', status: 'Active' },
+    { id: 'r3', name: 'Main', category: 'Standard', value: 'Acme Corp', description: 'Metro Manila', status: 'Current' },
+    { id: 'r4', name: 'Active Item', category: 'Revenue', value: 'Active Item', description: 'Metro Manila', status: 'Completed' },
+    { id: 'r5', name: 'Acme Corp', category: 'Annual', value: 'Main', description: 'Q1 2026', status: 'Open' },
+    { id: 'r6', name: 'Primary', category: 'Operating', value: 'Main', description: 'Metro Manila', status: 'Enabled' },
+    { id: 'r7', name: 'Primary', category: 'Premium', value: 'Standard', description: 'BPI Account', status: 'Closed' },
+    { id: 'r8', name: 'Active Item', category: 'Variable', value: 'Q1 2026', description: 'Sample Entry', status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Project Templates"
-      module="PROJECTS"
-      breadcrumb="Projects / Projects / Project Templates"
-      purpose="Project Templates allows creation of reusable project structures — standard task lists, phases, default budgets, billing arrangements, and resource role requirements that are common to a certain type of project (e.g., Audit Engagement, Software Implementation, Construction Phase 1). When creating a new project from a template, all the standard tasks, phases, and budget lines are pre-created, significantly reducing project setup time and ensuring consistency across similar projects."
-      components={[
-        { name: 'Template Library', description: 'All available project templates with name, type, standard task count, and last used date.' },
-        { name: 'Template Builder', description: 'Create a template: name, project type, phases, task list with dependencies, default billing type, and standard resource roles.' },
-        { name: 'Create Project from Template', description: 'Select a template and create a new project: enter project-specific details (client, dates) while inheriting all template structure.' },
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Templates', 'Create Template', 'Template Details']}
-      features={[
-        'Reusable project structure templates',
-        'Phase and task list in templates',
-        'Standard billing type per template (T&M, fixed fee, milestone)',
-        'One-click new project from template',
-        'Template sharing across the organization',
-        'Template version management',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All templates with structure summary',
-        'Number of phases and tasks per template',
-        'Projects created from each template',
-        'Template last modified date',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new project template',
-        'Add phases and tasks to template',
-        'Set default billing type in template',
-        'Create a project from a template',
-        'Edit or archive a template',
-        'Copy and customize an existing template',
-      ]}
-      relatedPages={[
-        { label: 'Project List', href: '/projects/projects/project-list' },
-        { label: 'Task Board', href: '/projects/tasks/task-board' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

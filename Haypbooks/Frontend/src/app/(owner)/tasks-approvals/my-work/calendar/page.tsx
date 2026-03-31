@@ -1,53 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { CheckSquare, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', assignee: 'Default', dueDate: '2026-02-19', priority: 'High', status: 'Active' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'Active Item', dueDate: '2026-03-15', priority: 'Enabled', status: 'Processing' },
+    { id: 'r3', name: 'BPI Account', assignee: 'Q1 2026', dueDate: '2026-03-04', priority: 'In Stock', status: 'Filed' },
+    { id: 'r4', name: 'Monthly', assignee: 'Standard', dueDate: '2026-03-21', priority: 'Completed', status: 'High' },
+    { id: 'r5', name: 'Monthly', assignee: 'General', dueDate: '2026-01-14', priority: 'Closed', status: 'Draft' },
+    { id: 'r6', name: 'Metro Manila', assignee: 'General', dueDate: '2026-01-06', priority: 'Enabled', status: 'Connected' },
+    { id: 'r7', name: 'Default', assignee: 'Active Item', dueDate: '2026-03-10', priority: 'Connected', status: 'Pending' },
+    { id: 'r8', name: 'Main', assignee: 'General', dueDate: '2026-03-05', priority: 'Open', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Calendar"
-      module="TASKS"
-      breadcrumb="Tasks & Approvals / My Work / Calendar"
-      purpose="The Calendar page provides a unified calendar view aggregating all time-sensitive items for the logged-in user: task due dates, approval deadlines, scheduled follow-ups, tax filing deadlines, payroll run dates, and meeting reminders. It helps users visualize and manage their workload over time with week, month, and agenda views."
-      components={[
-        { name: 'Calendar Grid', description: 'Month/week/day calendar grid with color-coded event types. Click a day to see all items due on that date.' },
-        { name: 'Agenda List View', description: 'Rolling list of upcoming items by date for users who prefer a list over grid view.' },
-        { name: 'Event Type Legend', description: 'Color-coded legend: Tasks (emerald), Approvals (amber), Tax Deadlines (red), Payroll (blue), Follow-ups (purple).' },
-        { name: 'Add Event Button', description: 'Create reminders or tasks directly from the calendar with date pre-filled.' },
-        { name: 'Calendar Filters', description: 'Toggle which event types to show/hide on the calendar.' },
+      section="Tasks & Approvals"
+      icon={<CheckSquare size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Month', 'Week', 'Day', 'Agenda']}
-      features={[
-        'Aggregates due dates from all modules',
-        'Color coding by event type for quick scanning',
-        'Click events to navigate to source record',
-        'Create tasks and reminders directly from calendar',
-        'Export calendar as ICS for Google/Outlook sync',
-        'Tax deadline integration from Tax Calendar',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Task due dates with priority indicator',
-        'Approval request expiry dates',
-        'Tax filing deadlines from all jurisdictions',
-        'Scheduled payroll run dates',
-        'Follow-up reminder dates',
-        'Custom reminders created by user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Navigate between month/week/day views',
-        'Click an event to view linked record detail',
-        'Create a new task or reminder from calendar',
-        'Toggle event type visibility filters',
-        'Export calendar as ICS file',
-        'Share calendar view as a link',
-      ]}
-      relatedPages={[
-        { label: 'My Tasks', href: '/tasks-approvals/my-work/my-tasks' },
-        { label: 'Tax Calendar', href: '/taxes/tax-center/tax-calendar' },
-        { label: 'Filing Calendar', href: '/organization/governance/filing-calendar' },
-        { label: 'Holiday Calendar', href: '/payroll-workforce/time-leave/holiday-calendar' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

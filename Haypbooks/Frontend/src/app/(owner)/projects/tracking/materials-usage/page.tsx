@@ -1,31 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-14', description: 'Default', amount: 28600, account: 'Metro Manila', status: 'Paid' },
+    { id: 'r2', date: '2026-01-01', description: 'Q1 2026', amount: 27000, account: 'Default', status: 'Connected' },
+    { id: 'r3', date: '2026-02-01', description: 'Metro Manila', amount: 2600, account: 'BPI Account', status: 'Active' },
+    { id: 'r4', date: '2026-02-27', description: 'Acme Corp', amount: 7300, account: 'BPI Account', status: 'In Stock' },
+    { id: 'r5', date: '2026-03-08', description: 'Sample Entry', amount: 5800, account: 'BPI Account', status: 'Paid' },
+    { id: 'r6', date: '2026-01-23', description: 'Standard', amount: 33500, account: 'Standard', status: 'Approved' },
+    { id: 'r7', date: '2026-01-17', description: 'Standard', amount: 13600, account: 'Metro Manila', status: 'Medium' },
+    { id: 'r8', date: '2026-01-01', description: 'Standard', amount: 400, account: 'BPI Account', status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title='Materials Usage'
-      module='PROJECTS'
-      breadcrumb='Projects / Tracking / Materials Usage'
-      purpose='Records and tracks materials, parts, and supplies consumed on projects. Links to inventory management for stock deductions, supports billable markup on materials, and provides a complete audit trail of what was used, when, and at what cost.'
-      components={[
-        { name: 'Materials Usage Log', description: 'Chronological list of all materials issued to projects with quantity and cost' },
-        { name: 'Inventory Integration Panel', description: 'Real-time stock level display and deduction on material issuance' },
-        { name: 'Material Markup Configurator', description: 'Sets cost-plus markup by material category for billing purposes' },
-        { name: 'Bill of Materials (BOM) Comparison', description: 'Compares projected versus actual material consumption' },
-        { name: 'Excess and Waste Tracker', description: 'Records and reports on excess materials returned or wasted' },
+    <OwnerPageTemplate
+      title="Materials Usage"
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Usage Log', 'By Material', 'BOM Comparison', 'Billing Status']}
-      features={['Real-time inventory deduction on issue', 'Cost-plus markup for billable materials', 'BOM comparison for project materials', 'Batch and lot tracking', 'Excess material return recording', 'Integration with procurement for restocking', 'Export materials usage report']}
-      dataDisplayed={['Material name and SKU', 'Quantity issued and unit of measure', 'Unit cost and extended cost', 'Markup percentage and bill amount', 'Project and task assigned to', 'Issue date and issued by', 'Remaining stock level']}
-      userActions={['Record material issuance to project', 'Apply billing markup', 'Compare to BOM plan', 'Record excess material return', 'View inventory levels', 'Export materials usage report', 'Trigger restocking requisition']}
-      relatedPages={[
-        { label: 'Project Expenses', href: '/projects/tracking/project-expenses' },
-        { label: 'Billable Review', href: '/projects/tracking/billable-review' },
-        { label: 'Subcontractor Costs', href: '/projects/tracking/subcontractor-costs' },
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

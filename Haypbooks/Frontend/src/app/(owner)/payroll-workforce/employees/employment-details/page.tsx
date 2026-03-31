@@ -1,51 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Active Item', type: 'Revenue', contact: 'Primary', balance: 42900, status: 'Connected' },
+    { id: 'r2', name: 'Monthly', type: 'Basic', contact: 'Active Item', balance: 5800, status: 'Pending' },
+    { id: 'r3', name: 'Acme Corp', type: 'Direct', contact: 'Acme Corp', balance: 27400, status: 'Paid' },
+    { id: 'r4', name: 'Primary', type: 'Revenue', contact: 'Q1 2026', balance: 49900, status: 'Approved' },
+    { id: 'r5', name: 'Metro Manila', type: 'Basic', contact: 'Metro Manila', balance: 25600, status: 'Paid' },
+    { id: 'r6', name: 'Primary', type: 'Direct', contact: 'Standard', balance: 41200, status: 'Closed' },
+    { id: 'r7', name: 'Active Item', type: 'Annual', contact: 'Q1 2026', balance: 18000, status: 'Filed' },
+    { id: 'r8', name: 'General', type: 'Fixed', contact: 'Q1 2026', balance: 6400, status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Employment Details"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Employees / Employment Details"
-      purpose="Employment Details manages the formal employment record of each employee — employment classification, probationary period, regularization date, reporting structure, work schedule, employment contract reference, and separation details for resigned employees. This page is the source of truth for employment history and is referenced during regularization processing, separation pay calculation, and government compliance reporting (particularly for certificates of employment and clearances)."
-      components={[
-        { name: 'Employment Timeline', description: 'Key employment dates: hire date, probationary end, regularization date, any promotions/transfers, and separation date.' },
-        { name: 'Classification Detail', description: 'Employment type (Regular, Probationary, Contractual/Project-based), work arrangement (on-site, hybrid, remote), work schedule (5-day, shift).' },
-        { name: 'Reporting Structure', description: 'Immediate superior/direct manager and secondary reporting lines.' },
-        { name: 'Separation Details', description: 'For resigned/terminated: separation date, reason, last day of work, backpay computation status.' },
-        { name: 'Contract History', description: 'Archive of employment contracts and amendments with effective dates.' },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Current Employment', 'Employment History', 'Contract History', 'Separation Details']}
-      features={[
-        'Complete employment classification and status history',
-        'Probationary period tracking with regularization alert',
-        'Separation workflow: documentation and backpay trigger',
-        'Certificate of employment generation',
-        'Reporting line management',
-        'Work schedule assignment',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Current employment type and status',
-        'Hire date, regularization date, and tenure',
-        'Probationary employees nearing regularization',
-        'Separation details for separated employees',
-        'Contract history',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Update employment classification',
-        'Record regularization',
-        'Assign work schedule',
-        'Process separation and trigger backpay',
-        'Generate certificate of employment',
-        'View employee employment history',
-      ]}
-      relatedPages={[
-        { label: 'Employee List', href: '/payroll-workforce/employees/employee-list' },
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Leave Balances', href: '/payroll-workforce/leaves/leave-balances' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

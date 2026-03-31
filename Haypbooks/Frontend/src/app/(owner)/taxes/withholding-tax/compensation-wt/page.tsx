@@ -1,49 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-02', description: 'Main', amount: 45000, account: 'Main', status: 'Open' },
+    { id: 'r2', date: '2026-03-24', description: 'Standard', amount: 19800, account: 'Q1 2026', status: 'Low' },
+    { id: 'r3', date: '2026-03-19', description: 'BPI Account', amount: 41400, account: 'Primary', status: 'Medium' },
+    { id: 'r4', date: '2026-01-16', description: 'Sample Entry', amount: 47400, account: 'Primary', status: 'Connected' },
+    { id: 'r5', date: '2026-02-24', description: 'Primary', amount: 44700, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r6', date: '2026-01-08', description: 'Metro Manila', amount: 38000, account: 'Q1 2026', status: 'Open' },
+    { id: 'r7', date: '2026-01-26', description: 'Q1 2026', amount: 26700, account: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', date: '2026-01-01', description: 'Standard', amount: 38800, account: 'BPI Account', status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Compensation Withholding Tax"
-      module="TAXES"
-      breadcrumb="Taxes / Withholding Tax / Compensation WT"
-      purpose="Compensation Withholding Tax tracks the withholding tax deducted from employees' salaries in every payroll run. Unlike EWT which covers vendor payments, compensation withholding tax applies to employment income subject to the BIR graduated tax table. This page provides an overview of all withholding tax withheld from compensation in the current year, by employee and by month, and reconciles against the monthly 1601C filings already submitted. This is the GL-level view complementing the payroll module's 1601C reports."
-      components={[
-        { name: 'Monthly WT Summary', description: 'Month-by-month total compensation WT withheld and amount remitted via 1601C.' },
-        { name: 'Employee WT Register', description: 'Per employee: monthly tax withheld and YTD total — cross-reference with payslips.' },
-        { name: '1601C Reconciliation', description: 'Reconcile GL Withholding Tax Payable account balance against total 1601C filings and remittances.' },
-        { name: 'Annual WT Summary', description: 'Year total for 1604C preparation: all employees, total compensation, total WT withheld.' },
+    <OwnerPageTemplate
+      title="Compensation Wt"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Monthly Summary', 'By Employee', '1601C Reconciliation', 'Annual Summary']}
-      features={[
-        'Compensation WT overview by period',
-        'Per-employee withholding tax tracking',
-        'GL vs. 1601C remittance reconciliation',
-        'Annual summary for 1604C preparation',
-        'Integration with payroll module data',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Monthly total WT withheld from compensation',
-        'YTD WT per employee',
-        'GL Withholding Tax Payable account balance',
-        'Remitted amounts (1601C payments)',
-        'Variance between GL and remitted',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View monthly compensation WT summary',
-        'Review per-employee WT details',
-        'Reconcile GL WT Payable vs. 1601C',
-        'Navigate to annual 1604C preparation',
-        'Export compensation WT register',
-      ]}
-      relatedPages={[
-        { label: 'Form 1601C', href: '/philippine-tax/bir-forms/form-1601c' },
-        { label: 'Form 1604C', href: '/philippine-tax/bir-forms/form-1604c' },
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Alphalist', href: '/philippine-tax/reports/alphalist' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

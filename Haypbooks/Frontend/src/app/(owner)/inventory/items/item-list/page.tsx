@@ -1,54 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'General', sku: 'Acme Corp', category: 'Operating', price: 10600, qty: 30, status: 'Draft' },
+    { id: 'r2', name: 'General', sku: 'Standard', category: 'Annual', price: 17600, qty: 66, status: 'Draft' },
+    { id: 'r3', name: 'Standard', sku: 'General', category: 'Direct', price: 46000, qty: 24, status: 'Active' },
+    { id: 'r4', name: 'Default', sku: 'Acme Corp', category: 'Premium', price: 40500, qty: 6, status: 'Closed' },
+    { id: 'r5', name: 'Metro Manila', sku: 'Monthly', category: 'Operating', price: 10700, qty: 28, status: 'Filed' },
+    { id: 'r6', name: 'Default', sku: 'General', category: 'Revenue', price: 20200, qty: 21, status: 'Processing' },
+    { id: 'r7', name: 'General', sku: 'Metro Manila', category: 'Standard', price: 16000, qty: 32, status: 'Filed' },
+    { id: 'r8', name: 'Acme Corp', sku: 'Active Item', category: 'Standard', price: 42300, qty: 21, status: 'Approved' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Item List"
-      module="INVENTORY"
-      breadcrumb="Inventory / Items / Item List"
-      purpose="Item List is the master catalog of all inventory items — physical goods that the company buys, holds, and sells. Each inventory item contains a SKU, description, unit of measure, cost price, selling price, GL accounts (asset, COGS, revenue), tax codes, and reorder parameters. Inventory items are linked to stock levels, purchase orders, sales invoices, and cost of goods sold (COGS) automatically. Non-inventory service items are managed in the Sales Product Catalog."
-      components={[
-        { name: 'Item Catalog Table', description: 'All inventory items with SKU, name, category, unit, cost price, selling price, current stock level, and status.' },
-        { name: 'Item Detail Editor', description: 'Full item record: SKU, name, description, category, UOM, standard cost, selling price, inventory GL account, COGS account, income account, tax code, reorder point, and preferred vendor.' },
-        { name: 'Stock Status Indicator', description: 'Shows current level, in-stock/low-stock/out-of-stock status, and reorder point for quick scan.' },
-        { name: 'Price History', description: 'Historical cost and selling price changes per item with effective dates.' },
-        { name: 'Item Import', description: 'Bulk insert items from CSV/Excel template.' },
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Items', 'Active', 'Low Stock', 'Out of Stock', 'Discontinued']}
-      features={[
-        'Full product master data management',
-        'Cost and selling price management per item',
-        'GL account mapping per item (asset, COGS, revenue)',
-        'Reorder point and preferred vendor configuration',
-        'Price history tracking',
-        'Bulk CSV/Excel import',
-        'Item categorization for reporting',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All inventory items with SKU, cost, and stock level',
-        'Low stock and out-of-stock alerts',
-        'Average cost per item (weighted or FIFO)',
-        'Item count by category',
-        'Total inventory value at cost',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new inventory item',
-        'Update standard cost or selling price',
-        'Set reorder point and reorder quantity',
-        'Assign preferred vendor',
-        'Archive or discontinue an item',
-        'Bulk import items from CSV',
-        'Export item list',
-      ]}
-      relatedPages={[
-        { label: 'Stock Levels', href: '/inventory/stock/stock-levels' },
-        { label: 'Purchase Orders', href: '/inventory/purchasing/inventory-pos' },
-        { label: 'Inventory Valuation', href: '/inventory/reports/inventory-valuation' },
-        { label: 'Product Catalog (Sales)', href: '/sales/sales-settings/product-catalog' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

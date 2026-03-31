@@ -1,51 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', assignee: 'Standard', dueDate: '2026-01-25', priority: 'Current', status: 'Medium' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'Active Item', dueDate: '2026-02-14', priority: 'Pending', status: 'Paid' },
+    { id: 'r3', name: 'General', assignee: 'Q1 2026', dueDate: '2026-01-04', priority: 'Medium', status: 'Open' },
+    { id: 'r4', name: 'Q1 2026', assignee: 'Standard', dueDate: '2026-03-01', priority: 'Enabled', status: 'Draft' },
+    { id: 'r5', name: 'BPI Account', assignee: 'General', dueDate: '2026-02-13', priority: 'Open', status: 'Low' },
+    { id: 'r6', name: 'General', assignee: 'Monthly', dueDate: '2026-02-09', priority: 'Draft', status: 'Enabled' },
+    { id: 'r7', name: 'Default', assignee: 'Default', dueDate: '2026-01-02', priority: 'Connected', status: 'Active' },
+    { id: 'r8', name: 'General', assignee: 'Main', dueDate: '2026-03-03', priority: 'Completed', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Delegation Rules"
-      module="AUTOMATION"
-      breadcrumb="Automation / Approvals & Governance / Delegation Rules"
-      purpose="Delegation Rules allows users to pre-configure or ad-hoc delegate their approval authority to other authorized users for defined periods (e.g., when on leave). Rules specify: who is delegating, to whom, which approval types are delegated, and for what date range. Delegations are tracked in the audit trail and delegated approvals are clearly marked in approval history."
-      components={[
-        { name: 'Active Delegations List', description: 'All currently active delegations with delegator, delegate, scope (which approval types), and expiry date.' },
-        { name: 'Create Delegation Form', description: 'Set up a new delegation: select delegate user, choose transaction types to delegate, and set date range.' },
-        { name: 'Delegation History', description: 'Past delegations with outcomes showing which approvals were actioned by delegates.' },
-        { name: 'Out-of-Office Integration', description: 'Link delegation creation to out-of-office/holiday calendar for automatic delegation activation.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Active Delegations', 'My Delegations', 'Delegated to Me', 'History']}
-      features={[
-        'Pre-scheduled delegation for planned absences',
-        'Ad-hoc delegation for immediate assignment',
-        'Scope control: delegate only specific approval types',
-        'Date range with automatic expiry',
-        'Delegates inherit only specified authority (principle of least privilege)',
-        'Delegation audit trail visible to admin',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Active delegation pairs (delegator → delegate)',
-        'Delegated approval types and scope',
-        'Start and end date of delegation',
-        'Number of approvals actioned by each delegate',
-        'Delegation history with outcomes',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new delegation rule',
-        'Set scope (which approval types are delegated)',
-        'Set delegation date range',
-        'Revoke an active delegation immediately',
-        'View what is delegated to me',
-        'Extend a delegation expiry date',
-      ]}
-      relatedPages={[
-        { label: 'Approval Chains', href: '/automation/approvals-governance/approval-chains' },
-        { label: 'Approval Matrices', href: '/automation/approvals-governance/approval-matrices' },
-        { label: 'My Approvals', href: '/tasks-approvals/my-work/my-approvals' },
-        { label: 'Delegated Tasks', href: '/tasks-approvals/management/delegated-tasks' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

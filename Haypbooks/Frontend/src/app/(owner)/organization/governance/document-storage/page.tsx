@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Network, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', type: 'Annual', contact: 'Monthly', balance: 2100, status: 'Enabled' },
+    { id: 'r2', name: 'BPI Account', type: 'Monthly', contact: 'Primary', balance: 21200, status: 'Completed' },
+    { id: 'r3', name: 'Metro Manila', type: 'Monthly', contact: 'Standard', balance: 30800, status: 'Processing' },
+    { id: 'r4', name: 'Default', type: 'Variable', contact: 'Default', balance: 37600, status: 'Processing' },
+    { id: 'r5', name: 'Acme Corp', type: 'Variable', contact: 'Monthly', balance: 22100, status: 'Draft' },
+    { id: 'r6', name: 'Sample Entry', type: 'Variable', contact: 'Sample Entry', balance: 5900, status: 'Open' },
+    { id: 'r7', name: 'Active Item', type: 'Quarterly', contact: 'Default', balance: 10300, status: 'Approved' },
+    { id: 'r8', name: 'General', type: 'Annual', contact: 'Sample Entry', balance: 12500, status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Document Storage"
-      module="ORGANIZATION"
-      breadcrumb="Organization / Governance / Document Storage"
-      purpose="Document Storage is the central corporate governance document repository for storing, organizing, and retrieving company formation and compliance documents. It holds articles of incorporation, board resolutions, SEC filings, business permits, franchise agreements, shareholder agreements, and other legal/governance documents. Documents are organized by entity, category, and effective date with version control and access restrictions."
-      components={[
-        { name: 'Document Library', description: 'Searchable document list with thumbnail preview, entity, category, upload date, expiry, and version.' },
-        { name: 'Folder Structure', description: 'Organized folders: Company Formation, Tax Registrations, Business Permits, Board Resolutions, Contracts, Compliance.' },
-        { name: 'Upload Form', description: 'Upload document with metadata: entity, category, effective date, expiry date, description, and access rights.' },
-        { name: 'Version History', description: 'Each document maintains a full version history; previous versions are retained and accessible.' },
-        { name: 'Expiry Tracker', description: 'Highlights documents expiring within 30/60/90 days with renewal reminders.' },
+      section="Organization"
+      icon={<Network size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Documents', 'By Entity', 'By Category', 'Expiring Soon', 'Upload']}
-      features={[
-        'Organized corporate document repository',
-        'Document version control and history',
-        'Expiry date tracking with advance alerts',
-        'Access control per document category',
-        'Full-text search within document names and metadata',
-        'Bulk document upload with batch metadata entry',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Document name, type, and file format',
-        'Associated legal entity',
-        'Category and sub-category',
-        'Upload date, effective date, and expiry date',
-        'Version number and last modified by',
-        'Document access level (Public / Internal / Restricted)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Upload a new document',
-        'Update an existing document (creates new version)',
-        'Download any document',
-        'Set or update expiry date',
-        'Configure access restrictions',
-        'Move document to different folder/category',
-        'Share document link with specific users',
-      ]}
-      relatedPages={[
-        { label: 'Filing Calendar', href: '/organization/governance/filing-calendar' },
-        { label: 'Vendor Documents', href: '/expenses/vendors/vendor-documents' },
-        { label: 'Employee Documents', href: '/payroll-workforce/workforce/employee-documents' },
-        { label: 'Policy Management', href: '/compliance/controls/policy-management' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

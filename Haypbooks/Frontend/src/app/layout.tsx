@@ -15,6 +15,11 @@ export const metadata = {
   description: "Accounting, reimagined.",
 }
 
+// Prevent static generation — all pages depend on React context
+// provided by ClientRoot. Without this, next build tries to
+// pre-render pages at build time where the context is null.
+export const dynamic = 'force-dynamic'
+
 // NOTE: RootLayout is a Server Component; client interactivity handled in ClientRoot.
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
