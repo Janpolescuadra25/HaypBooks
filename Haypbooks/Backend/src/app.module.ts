@@ -15,7 +15,9 @@ import { AttachmentsModule } from './attachments/attachments.module'
 import { TenantsModule } from './tenants/tenants.module'
 import { CompanyContextMiddleware } from './shared/company-context.middleware'
 
-const RepositoriesModule = (process.env.USE_MOCK_REPOS === 'true') ? MockRepositoriesModule : PrismaRepositoriesModule
+// CUTOVER: use Prisma repositories in all environments by default for production readiness.
+// Remove this env-controlled toggle once the mock layer is fully deprecated.
+const RepositoriesModule = PrismaRepositoriesModule
 
 @Module({
   imports: [
