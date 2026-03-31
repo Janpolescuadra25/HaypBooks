@@ -1,6 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
+import apiClient from '@/lib/api-client'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 
 type AgingAlertRow = {
   id: string
@@ -13,6 +16,27 @@ type AgingAlertRow = {
 }
 
 export default function ARAgingAlertsPage() {
+  const { companyId, loading: companyLoading } = useCompanyId()
+  const { currency } = useCompanyCurrency()
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const fetchData = useCallback(async () => {
+    if (!companyId) return
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/aging`)
+      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { fetchData() }, [fetchData])
   const [helpOpen, setHelpOpen] = useState(false)
 
   const summary = useMemo(

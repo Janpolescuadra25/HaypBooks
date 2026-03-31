@@ -1,1 +1,0 @@
-DROP POLICY IF EXISTS tenant_isolation_Account ON "Account";

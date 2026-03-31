@@ -1,0 +1,10 @@
+const { Client } = require('pg')
+;(async()=>{
+  const c = new Client({ connectionString: process.env.DATABASE_URL })
+  await c.connect()
+  const res = await c.query('SELECT id FROM public."Tenant" LIMIT 20')
+  console.log('tenant rows sample:', res.rows)
+  const bad = await c.query("SELECT id FROM public.\"Tenant\" WHERE id !~ '^[0-9a-fA-F\\-]{36}$' LIMIT 20")
+  console.log('non-uuid-like ids (sample):', bad.rows)
+  await c.end()
+})().catch(e => { console.error(e); process.exit(1) })

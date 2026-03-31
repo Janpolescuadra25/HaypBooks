@@ -1,6 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
+import apiClient from '@/lib/api-client'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 
 type TxType = 'Credit' | 'Debit'
 type TxStatus = 'Cleared' | 'Pending' | 'Reconciled' | 'Voided'
@@ -46,6 +49,27 @@ const STATUS_META: Record<TxStatus, { cls: string; dot: string }> = {
 function fmt(n: number) { return '₱ ' + n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }
 
 export default function BankTransactionsPage() {
+  const { companyId, loading: companyLoading } = useCompanyId()
+  const { currency } = useCompanyCurrency()
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const fetchData = useCallback(async () => {
+    if (!companyId) return
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/banking`)
+      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { fetchData() }, [fetchData])
   const [search, setSearch] = useState('')
   const [account, setAccount] = useState('All')
   const [type, setType] = useState<TxType | 'All'>('All')
