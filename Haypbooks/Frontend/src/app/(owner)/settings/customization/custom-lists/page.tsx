@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function CustomListsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Custom Lists"
-      module="SETTINGS"
-      breadcrumb="Settings / Customization / Custom Lists"
-      purpose="Custom Lists are reusable dropdown value sets that can be referenced by custom fields throughout the application. Rather than hard-coding options inside each field, Custom Lists allow you to maintain a single source of truth for approved values — making updates effortless when choices change. Lists can be shared across multiple fields and entities."
-      components={[
-        { name: 'Lists Catalog', description: 'Left-panel list of all defined custom lists with item count and usage count across fields.' },
-        { name: 'List Item Editor', description: 'Inline editor for adding, renaming, reordering, or deactivating values within a list.' },
-        { name: 'Field Associations Panel', description: 'Shows which custom fields are currently using each list as their source.' },
-        { name: 'Inactive Values Toggle', description: 'Switch to show or hide deactivated list values; inactive values remain on existing records.' },
-        { name: 'Bulk Import Values', description: 'CSV import modal to bulk-load list items instead of adding them one-by-one.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Lists', 'Active Lists', 'Archived Lists']}
-      features={[
-        'Create and manage reusable value lists for dropdown custom fields',
-        'Add, rename, reorder, or deactivate individual list values',
-        'Bulk-import list values via CSV for large option sets',
-        'See which custom fields reference each list',
-        'Deactivate a list value without breaking existing records',
-        'Archive entire lists that are no longer needed',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'List name and item count',
-        'Number of custom fields using each list',
-        'Individual list values with active/inactive status',
-        'Last updated date per list',
-        'Create date and owner user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new custom list',
-        'Add or edit list values',
-        'Import list values from CSV',
-        'Deactivate a value from a list',
-        'Archive or delete an unused list',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

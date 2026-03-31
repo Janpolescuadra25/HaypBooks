@@ -1,46 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function MultiCurrencyRevaluationPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Main', category: 'Basic', value: 'Standard', description: 'Main', status: 'Open' },
+    { id: 'r2', name: 'Main', category: 'Basic', value: 'Standard', description: 'Active Item', status: 'High' },
+    { id: 'r3', name: 'Default', category: 'Quarterly', value: 'Q1 2026', description: 'Monthly', status: 'Closed' },
+    { id: 'r4', name: 'Monthly', category: 'Quarterly', value: 'Default', description: 'Default', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Basic', value: 'Default', description: 'Standard', status: 'Pending' },
+    { id: 'r6', name: 'Monthly', category: 'Standard', value: 'Metro Manila', description: 'Metro Manila', status: 'Closed' },
+    { id: 'r7', name: 'Metro Manila', category: 'Variable', value: 'Primary', description: 'General', status: 'Connected' },
+    { id: 'r8', name: 'Active Item', category: 'Basic', value: 'Main', description: 'Default', status: 'Current' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Multi-Currency Revaluation"
-      module="ACCOUNTING — PERIOD CLOSE"
-      breadcrumb="Accounting / Period Close / Multi-Currency Revaluation"
-      purpose="Revalue foreign currency monetary balances at period-end exchange rates, recognizing unrealized gains and losses in the income statement."
-      components={[
-        { name: "Revaluation Run Wizard", description: "Step through currency, accounts, and exchange rate selection for the run" },
-        { name: "Preview Table", description: "Asset/liability balances before and after revaluation with gain/loss" },
-        { name: "Run History", description: "Past revaluation runs with journal entry links" },
+    <OwnerPageTemplate
+      title="Multi Currency Revaluation"
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={[
-        "Revalue",
-        "Run History",
-        "Exchange Rates",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      features={[
-        "Live exchange rate feed or manual input",
-        "Selective account revaluation",
-        "Unrealized gain/loss posting",
-        "Auto-reversal option",
-        "Multi-entity support",
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      dataDisplayed={[
-        "Account balances in foreign currency",
-        "Current exchange rate",
-        "Revalued carrying amount",
-        "Unrealized gain or loss",
-        "Prior period exchange rate for comparison",
-      ]}
-      userActions={[
-        "Run period-end revaluation",
-        "Enter or pull exchange rate",
-        "Preview gain/loss before posting",
-        "Post revaluation journal",
-        "Reverse prior revaluation run",
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

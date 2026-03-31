@@ -5,6 +5,15 @@ const { Client } = require('pg')
   const client = new Client({ connectionString: cs })
   await client.connect()
   try {
+    const tenantUserExists = await client.query(`
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'TenantUser'
+    `);
+    if (tenantUserExists.rowCount === 0) {
+      console.log('TenantUser table does not exist; skipping trigger creation');
+      return;
+    }
+
     const funcSql = `
 CREATE OR REPLACE FUNCTION public.set_tenantid_old_if_null() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN

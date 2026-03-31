@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function DefaultAccountsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Default Accounts"
-      module="SETTINGS"
-      breadcrumb="Settings / Accounting Preferences / Default Accounts"
-      purpose="Default Accounts maps standard transaction types to the correct general ledger accounts, so every new transaction auto-populates with the right account coding without requiring manual selection. Setting up defaults reduces data entry errors and ensures consistency across all journal entries. Accounts can be configured globally or per transaction type, supporting complex chart of accounts structures."
-      components={[
-        { name: 'Default Account Mapping Table', description: 'Grid of transaction types (Sales, Purchases, Payroll, etc.) with GL account dropdowns for each.' },
-        { name: 'Account Search Picker', description: 'Searchable account picker inside each row to quickly find and assign the correct GL account.' },
-        { name: 'Module Filter', description: 'Filter the mapping table by module (AR, AP, Banking, Payroll) to focus on relevant defaults.' },
-        { name: 'Reset to Defaults Button', description: 'Option to restore factory-default account mappings if custom settings have caused issues.' },
-        { name: 'Import/Export Mappings', description: 'Export account mapping config to JSON/CSV or import from a template for quick multi-entity setup.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Revenue Accounts', 'Expense Accounts', 'Asset Accounts', 'Liability Accounts', 'Tax Accounts']}
-      features={[
-        'Map each transaction type to its default debit and credit GL accounts',
-        'Filter mappings by module to keep settings organized',
-        'Search and assign accounts using the chart of accounts picker',
-        'Export current mappings for cross-entity replication',
-        'Import mappings from another entity or template file',
-        'Reset individual or all mappings to system defaults',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Transaction type name and category',
-        'Assigned default debit account (code + name)',
-        'Assigned default credit account (code + name)',
-        'Module/source of transaction',
-        'Last modified date and user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Assign or change the default GL account for any transaction type',
-        'Filter mappings by accounting module',
-        'Export account mappings to CSV or JSON',
-        'Import mappings from a template',
-        'Reset mappings to system defaults',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

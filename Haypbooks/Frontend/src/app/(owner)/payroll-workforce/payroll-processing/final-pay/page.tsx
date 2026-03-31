@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-20', description: 'Main', amount: 13700, account: 'Active Item', status: 'Connected' },
+    { id: 'r2', date: '2026-01-21', description: 'Acme Corp', amount: 700, account: 'General', status: 'Current' },
+    { id: 'r3', date: '2026-01-25', description: 'General', amount: 31200, account: 'Main', status: 'Draft' },
+    { id: 'r4', date: '2026-02-16', description: 'Q1 2026', amount: 43600, account: 'General', status: 'Pending' },
+    { id: 'r5', date: '2026-02-27', description: 'General', amount: 22800, account: 'Metro Manila', status: 'Completed' },
+    { id: 'r6', date: '2026-02-20', description: 'Main', amount: 38000, account: 'Sample Entry', status: 'In Stock' },
+    { id: 'r7', date: '2026-03-08', description: 'Default', amount: 34600, account: 'Monthly', status: 'Processing' },
+    { id: 'r8', date: '2026-03-11', description: 'BPI Account', amount: 31300, account: 'Metro Manila', status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Final Pay"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Payroll Processing / Final Pay"
-      purpose="Calculate and process final pay for terminated employees. Includes prorated salary, unused leave encashment, separation benefits, clearance deductions, and final pay slips."
-      components={[
-        { name: "Final Pay Calculator", description: "Enter termination date and compute all final pay components" },
-        { name: "Leave Encashment", description: "Calculate unused leave balance converted to cash at current rate" },
-        { name: "Separation Benefits", description: "Compute separation pay based on tenure and reason for termination" },
-        { name: "Clearance Deductions", description: "Add deductions for unreturned equipment, loans, or cash advances" },
-        { name: "Final Pay Slip", description: "Generate and email the employee's official final pay slip" },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Calculate","Review Components","Deductions","Approve","History"]}
-      features={["Proration calculations","Leave balance encashment","Separation pay calculator","Clearance deduction management","Final payslip generation"]}
-      dataDisplayed={["Employee name and termination date","Pro-rated salary amount","Leave encashment value","Separation pay amount","Net final pay after deductions"]}
-      userActions={["Enter termination details","Calculate final pay components","Add clearance deductions","Approve final pay","Generate and send final payslip"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

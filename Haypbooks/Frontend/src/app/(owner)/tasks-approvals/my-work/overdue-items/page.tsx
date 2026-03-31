@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { CheckSquare, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', assignee: 'Default', dueDate: '2026-02-19', priority: 'High', status: 'Active' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'Active Item', dueDate: '2026-03-15', priority: 'Enabled', status: 'Processing' },
+    { id: 'r3', name: 'BPI Account', assignee: 'Q1 2026', dueDate: '2026-03-04', priority: 'In Stock', status: 'Filed' },
+    { id: 'r4', name: 'Monthly', assignee: 'Standard', dueDate: '2026-03-21', priority: 'Completed', status: 'High' },
+    { id: 'r5', name: 'Monthly', assignee: 'General', dueDate: '2026-01-14', priority: 'Closed', status: 'Draft' },
+    { id: 'r6', name: 'Metro Manila', assignee: 'General', dueDate: '2026-01-06', priority: 'Enabled', status: 'Connected' },
+    { id: 'r7', name: 'Default', assignee: 'Active Item', dueDate: '2026-03-10', priority: 'Connected', status: 'Pending' },
+    { id: 'r8', name: 'Main', assignee: 'General', dueDate: '2026-03-05', priority: 'Open', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Overdue Items"
-      module="TASKS"
-      breadcrumb="Tasks & Approvals / My Work / Overdue Items"
-      purpose="Overdue Items is a consolidated view showing every task, approval, follow-up, and deadline that has passed its due date for the logged-in user. It surfaces overdue items across all types in a single urgency-ranked list so nothing falls through the cracks. Items are grouped by type and severity to help users prioritize their immediate actions."
-      components={[
-        { name: 'Overdue Summary Tiles', description: 'Count tiles by category: Overdue Tasks, Pending Approvals, Missed Deadlines, Failed Automations.' },
-        { name: 'Urgency-Ranked List', description: 'All overdue items sorted by days overdue descending, with type badge and linked record.' },
-        { name: 'Quick Action Column', description: 'Per-item action buttons to complete, reassign, or reschedule directly from the list without opening detail.' },
-        { name: 'Grouping Toggle', description: 'Group list by type (Tasks / Approvals / Follow-ups / System) or by module.' },
+      section="Tasks & Approvals"
+      icon={<CheckSquare size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Overdue', 'Tasks', 'Approvals', 'Follow-ups', 'Deadlines']}
-      features={[
-        'Single urgency view across all overdue item types',
-        'Days overdue prominently displayed',
-        'Inline quick actions without navigation',
-        'Bulk reschedule for low-priority items',
-        'Daily email digest of overdue items (configurable)',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Total overdue items count by category',
-        'Item title, type, and linked record',
-        'Original due date and days overdue',
-        'Assigned to and requested by',
-        'Original source module',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Complete an overdue task inline',
-        'Reschedule due date from the list',
-        'Reassign to another team member',
-        'Approve an overdue approval request',
-        'Dismiss with reason for irrelevant items',
-        'Export overdue list to CSV or PDF',
-      ]}
-      relatedPages={[
-        { label: 'My Tasks', href: '/tasks-approvals/my-work/my-tasks' },
-        { label: 'My Approvals', href: '/tasks-approvals/my-work/my-approvals' },
-        { label: 'Team Tasks', href: '/tasks-approvals/management/team-tasks' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,26 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Standard', assignee: 'General', dueDate: '2026-03-28', priority: 'Draft', status: 'Completed' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'Monthly', dueDate: '2026-03-14', priority: 'Low', status: 'Medium' },
+    { id: 'r3', name: 'General', assignee: 'Active Item', dueDate: '2026-03-06', priority: 'Open', status: 'In Stock' },
+    { id: 'r4', name: 'Metro Manila', assignee: 'Acme Corp', dueDate: '2026-02-17', priority: 'Processing', status: 'In Stock' },
+    { id: 'r5', name: 'Acme Corp', assignee: 'Primary', dueDate: '2026-03-23', priority: 'Completed', status: 'Connected' },
+    { id: 'r6', name: 'General', assignee: 'Primary', dueDate: '2026-01-24', priority: 'Processing', status: 'High' },
+    { id: 'r7', name: 'Primary', assignee: 'General', dueDate: '2026-01-04', priority: 'Enabled', status: 'Open' },
+    { id: 'r8', name: 'Primary', assignee: 'Active Item', dueDate: '2026-01-07', priority: 'Pending', status: 'Filed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Recurring Bills"
-      module="EXPENSES"
-      breadcrumb="Expenses / Payables / Recurring Bills"
-      purpose="Manage vendor bills that repeat on a fixed schedule such as rent, utilities, and subscriptions. Set start/end dates, auto-post or hold for review, and view upcoming bill schedule."
-      components={[
-        { name: "Recurring Bill List", description: "All recurring bill templates with vendor, amount, frequency, and next run" },
-        { name: "Create Recurring Bill", description: "Define the vendor, amount, category, frequency, and start/end date" },
-        { name: "Upcoming Schedule", description: "Calendar showing next 3 months of scheduled bill creation dates" },
-        { name: "Pause and Resume", description: "Temporarily suspend a recurring bill template" },
-        { name: "Execution History", description: "Log of each bill created from the recurring template" },
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={["Active","Paused","Upcoming Schedule","History"]}
-      features={["Automatic bill generation","Amount and account default","Pause and resume","End-date management","Execution history"]}
-      dataDisplayed={["Vendor and recurring template name","Bill amount and GL account","Frequency and next run date","Auto-post or hold setting","Status (active/paused)"]}
-      userActions={["Create recurring bill","Edit schedule or amount","Pause recurring bill","View upcoming schedule","View bill history"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

@@ -1,46 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function MultiJurisdictionTaxPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-16', description: 'Primary', amount: 4100, account: 'Sample Entry', status: 'Active' },
+    { id: 'r2', date: '2026-02-22', description: 'Main', amount: 21700, account: 'Standard', status: 'Pending' },
+    { id: 'r3', date: '2026-01-20', description: 'Sample Entry', amount: 5000, account: 'BPI Account', status: 'Approved' },
+    { id: 'r4', date: '2026-03-21', description: 'General', amount: 33200, account: 'Default', status: 'Filed' },
+    { id: 'r5', date: '2026-01-08', description: 'Sample Entry', amount: 19700, account: 'Active Item', status: 'Open' },
+    { id: 'r6', date: '2026-01-05', description: 'Active Item', amount: 30400, account: 'BPI Account', status: 'Open' },
+    { id: 'r7', date: '2026-01-17', description: 'Monthly', amount: 20800, account: 'Main', status: 'Connected' },
+    { id: 'r8', date: '2026-03-23', description: 'BPI Account', amount: 13400, account: 'Active Item', status: 'Paid' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Multi-Jurisdiction Tax"
-      module="TAXES"
-      badge="ENT"
-      breadcrumb="Taxes / Corporate Tax / Multi-Jurisdiction Tax"
-      purpose="Multi-Jurisdiction Tax manages tax obligations when the business operates across multiple states, provinces, or countries, each with distinct tax rates, apportionment formulas, and filing requirements. This module allocates income using configured apportionment factors (sales, property, payroll) and tracks tax obligations separately per jurisdiction. It prevents double taxation and ensures compliance with nexus rules in each operating region."
-      components={[
-        { name: 'Jurisdiction Registry', description: 'Table of all jurisdictions where the business has nexus, with tax rates and apportionment methods.' },
-        { name: 'Apportionment Formula Config', description: 'Setup for the apportionment factor weights (equal-weighted or sales-weighted payroll-property-sales).' },
-        { name: 'Income Allocation Summary', description: 'Matrix showing income allocated to each jurisdiction after applying apportionment formulas.' },
-        { name: 'Nexus Determination Tool', description: 'Assessment wizard to determine whether activities in a location create taxable nexus.' },
-        { name: 'Filing Calendar by Jurisdiction', description: 'Calendar overlay showing filing deadlines per jurisdiction to prevent missed obligations.' },
+    <OwnerPageTemplate
+      title="Multi Jurisdiction Tax"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Jurisdictions', 'Apportionment', 'Income Allocation', 'Nexus Assessment', 'Filing Calendar']}
-      features={[
-        'Register all active tax jurisdictions with individual rates',
-        'Configure apportionment formula per jurisdiction type',
-        'Allocate income across jurisdictions automatically',
-        'Assess nexus exposure in new markets',
-        'Track tax filing deadlines per jurisdiction on a calendar',
-        'Generate combined vs. separate entity filing analysis',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Jurisdiction name, type, and statutory tax rate',
-        'Apportionment factors (sales %, property %, payroll %)',
-        'Income allocated per jurisdiction',
-        'Tax liability per jurisdiction',
-        'Filing due dates per jurisdiction',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add or update jurisdiction registrations',
-        'Configure apportionment formula weights',
-        'Run income allocation calculation',
-        'Assess nexus in a new location',
-        'View and export jurisdiction filing calendar',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

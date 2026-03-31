@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-03', description: 'Sample Entry', amount: 8500, account: 'General', status: 'In Stock' },
+    { id: 'r2', date: '2026-03-13', description: 'Sample Entry', amount: 3500, account: 'Q1 2026', status: 'Processing' },
+    { id: 'r3', date: '2026-03-25', description: 'Active Item', amount: 36200, account: 'Primary', status: 'Processing' },
+    { id: 'r4', date: '2026-03-27', description: 'Sample Entry', amount: 40500, account: 'Active Item', status: 'Closed' },
+    { id: 'r5', date: '2026-02-09', description: 'Active Item', amount: 43000, account: 'Active Item', status: 'Filed' },
+    { id: 'r6', date: '2026-02-05', description: 'Metro Manila', amount: 200, account: 'BPI Account', status: 'Draft' },
+    { id: 'r7', date: '2026-02-19', description: 'Standard', amount: 19700, account: 'Monthly', status: 'Closed' },
+    { id: 'r8', date: '2026-02-09', description: 'Sample Entry', amount: 30300, account: 'Primary', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Accounts Receivable Ledger"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Core Accounting / Accounts Receivable"
-      purpose="The Accounts Receivable Ledger is the sub-ledger that tracks all amounts owed by customers for goods and services delivered. It reconciles to the Accounts Receivable control account on the balance sheet. It provides an aging analysis of receivables by customer, highlights overdue accounts, tracks partial payments, and feeds the collections management process. It is the primary tool for monitoring receivable health and ensuring timely cash collection."
-      components={[
-        { name: 'AR Summary Tiles', description: 'Tiles for: total outstanding AR, overdue, due in 7 days, and credits available to apply.' },
-        { name: 'Customer Balance List', description: 'Per-customer AR balance with aging buckets: current, 1–30 days, 31–60 days 61–90 days, 90+ days.' },
-        { name: 'Invoice Detail View', description: 'All open invoices per customer with invoice date, due date, original amount, payments applied, and outstanding balance.' },
-        { name: 'AR Aging Report', description: 'Formal AR aging summary across all customers for month-end reporting.' },
-        { name: 'Collection Status', description: 'Flag overdue invoices with collection priority level and most recent contact note.' },
+    <OwnerPageTemplate
+      title="Accounts Receivable"
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Summary', 'Customer Balances', 'Open Invoices', 'Aging Report', 'Collections']}
-      features={[
-        'Sub-ledger AR balance tracking with aging buckets',
-        'Customer-level outstanding balance visibility',
-        'AR-to-GL control account reconciliation',
-        'Collection status flagging for overdue accounts',
-        'Days sales outstanding (DSO) metric',
-        'Drill-through to individual invoice transactions',
-        'Export AR aging for audit or investor presentations',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Total outstanding AR balance',
-        'Per-customer balances with aging buckets',
-        'Open invoices with due dates and outstanding amounts',
-        'DSO metric and trend',
-        'AR balance vs. GL control account',
-        'Customer collection risk flags',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View AR aging for a specific customer',
-        'Drill through to an individual invoice',
-        'Flag an overdue invoice for collections',
-        'Export AR aging report',
-        'Apply a payment or credit to an invoice',
-        'View collection history for a customer',
-      ]}
-      relatedPages={[
-        { label: 'Invoices', href: '/sales/billing/invoices' },
-        { label: 'Customer List', href: '/sales/customers/customer-list' },
-        { label: 'AR Aging Report', href: '/reporting/reports-center/ar-aging' },
-        { label: 'Collections Center', href: '/sales/collections/collections-center' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

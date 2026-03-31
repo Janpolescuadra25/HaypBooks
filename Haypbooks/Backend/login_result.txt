@@ -1,0 +1,35 @@
+HTTP/1.1 200 OK
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+X-Request-Id: 899669f2-569e-4007-a9ae-cc5767d51459
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 4
+X-RateLimit-Reset: 60
+Set-Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiOGY0Y2ZjMi02ODA4LTQ0MDgtOGNmYy1jZjZjZDQxZDMzMmUiLCJlbWFpbCI6ImF1dGhjaGVjay51c2VyQGhheXBib29rcy50ZXN0Iiwicm9sZSI6ImJ1c2luZXNzIiwiaWF0IjoxNzczOTU1NDM2LCJleHAiOjE3NzM5NjI2MzZ9.FffWEAVJXR-gexdaq6YuhASbXuzIAfn8MG0lqIEj8VI; Max-Age=7200; Path=/; Expires=Thu, 19 Mar 2026 23:23:56 GMT; HttpOnly; SameSite=Lax
+Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiOGY0Y2ZjMi02ODA4LTQ0MDgtOGNmYy1jZjZjZDQxZDMzMmUiLCJub25jZSI6IjM0NjY5NTI0LTc2MmMtNGJiNS1hYWZkLTQ1ODJmNzU4OTkxNSIsImZhbWlseSI6IjNlMmFmZjU4LTIxODQtNGU4ZS04OTdkLTg5YjA3NmE3ODUyMyIsImlhdCI6MTc3Mzk1NTQzNiwiZXhwIjoxNzc0NTYwMjM2fQ.GeD2poA8vW6lhl6D2Mnn7pA6-enpzSoW47Xh9ZUSt6Q; Max-Age=604800; Path=/; Expires=Thu, 26 Mar 2026 21:23:56 GMT; HttpOnly; SameSite=Lax
+Set-Cookie: email=authcheck.user%40haypbooks.test; Max-Age=604800; Path=/; Expires=Thu, 26 Mar 2026 21:23:56 GMT; HttpOnly; SameSite=Lax
+Set-Cookie: userId=b8f4cfc2-6808-4408-8cfc-cf6cd41d332e; Max-Age=604800; Path=/; Expires=Thu, 26 Mar 2026 21:23:56 GMT; HttpOnly; SameSite=Lax
+Set-Cookie: role=admin; Max-Age=604800; Path=/; Expires=Thu, 26 Mar 2026 21:23:56 GMT; HttpOnly; SameSite=Lax
+Set-Cookie: onboardingComplete=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+Set-Cookie: ownerOnboardingComplete=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+Set-Cookie: accountantOnboardingComplete=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+Set-Cookie: isAccountant=false; Max-Age=604800; Path=/; Expires=Thu, 26 Mar 2026 21:23:56 GMT; HttpOnly; SameSite=Lax
+Content-Type: application/json; charset=utf-8
+Content-Length: 1013
+ETag: W/"3f5-hswXd+HnKTCxFoTFw0LwLF4fy/E"
+Date: Thu, 19 Mar 2026 21:23:56 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiOGY0Y2ZjMi02ODA4LTQ0MDgtOGNmYy1jZjZjZDQxZDMzMmUiLCJlbWFpbCI6ImF1dGhjaGVjay51c2VyQGhheXBib29rcy50ZXN0Iiwicm9sZSI6ImJ1c2luZXNzIiwiaWF0IjoxNzczOTU1NDM2LCJleHAiOjE3NzM5NjI2MzZ9.FffWEAVJXR-gexdaq6YuhASbXuzIAfn8MG0lqIEj8VI","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiOGY0Y2ZjMi02ODA4LTQ0MDgtOGNmYy1jZjZjZDQxZDMzMmUiLCJub25jZSI6IjM0NjY5NTI0LTc2MmMtNGJiNS1hYWZkLTQ1ODJmNzU4OTkxNSIsImZhbWlseSI6IjNlMmFmZjU4LTIxODQtNGU4ZS04OTdkLTg5YjA3NmE3ODUyMyIsImlhdCI6MTc3Mzk1NTQzNiwiZXhwIjoxNzc0NTYwMjM2fQ.GeD2poA8vW6lhl6D2Mnn7pA6-enpzSoW47Xh9ZUSt6Q","user":{"id":"b8f4cfc2-6808-4408-8cfc-cf6cd41d332e","email":"authcheck.user@haypbooks.test","name":"Auth Check User","role":"business","isAccountant":false,"onboardingCompleted":false,"onboardingComplete":false,"onboardingMode":"full","isEmailVerified":true,"ownerOnboardingCompleted":false,"accountantOnboardingCompleted":false,"preferredHub":null,"requiresHubSelection":false},"redirect":"/workspace"}

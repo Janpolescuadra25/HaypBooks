@@ -1,9 +1,36 @@
 "use client"
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function PracticeCompletePage() {
   const router = useRouter()
+  const [targetPracticeId, setTargetPracticeId] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch('/api/users/me')
+        if (!res.ok) return
+        const json = await res.json()
+        const firstPractice = json?.practices?.[0]
+        if (firstPractice?.id) {
+          setTargetPracticeId(firstPractice.id)
+        }
+      } catch (e) {
+        console.warn('[PracticeCompletePage] Failed to fetch user profile', e)
+      }
+    }
+    fetchProfile()
+  }, [])
+
+  const goToPracticeHub = () => {
+    if (targetPracticeId) {
+      router.push(`/practice-hub?practiceId=${targetPracticeId}`)
+    } else {
+      router.push('/practice-hub')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50/30 to-white flex flex-col items-center justify-center p-6">
@@ -23,7 +50,7 @@ export default function PracticeCompletePage() {
           <p className="text-sm text-slate-600 mb-4">Your practice setup is complete. Let&apos;s manage your clients with clarity.</p>
           <button
             type="button"
-            onClick={() => router.push('/practice-hub')}
+            onClick={goToPracticeHub}
             className="w-full px-8 py-3 bg-teal-600 text-white rounded-full font-semibold hover:bg-teal-700 shadow-lg transition"
           >
             Go to Dashboard

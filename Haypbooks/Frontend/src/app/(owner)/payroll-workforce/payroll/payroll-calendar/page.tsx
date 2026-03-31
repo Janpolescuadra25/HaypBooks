@@ -1,48 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Active Item', assignee: 'Sample Entry', dueDate: '2026-02-25', priority: 'Connected', status: 'Connected' },
+    { id: 'r2', name: 'General', assignee: 'Active Item', dueDate: '2026-01-04', priority: 'Completed', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', assignee: 'Standard', dueDate: '2026-03-18', priority: 'Active', status: 'Approved' },
+    { id: 'r4', name: 'General', assignee: 'Q1 2026', dueDate: '2026-01-27', priority: 'Closed', status: 'Connected' },
+    { id: 'r5', name: 'Main', assignee: 'Primary', dueDate: '2026-01-16', priority: 'High', status: 'Closed' },
+    { id: 'r6', name: 'Active Item', assignee: 'Monthly', dueDate: '2026-02-11', priority: 'Filed', status: 'Medium' },
+    { id: 'r7', name: 'Primary', assignee: 'Q1 2026', dueDate: '2026-01-18', priority: 'Open', status: 'Completed' },
+    { id: 'r8', name: 'Active Item', assignee: 'Standard', dueDate: '2026-03-16', priority: 'Enabled', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Payroll Calendar"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Payroll / Payroll Calendar"
-      purpose="The Payroll Calendar defines the schedule of all payroll runs for the year — when each payroll period starts and ends, when payroll is processed, and when salaries are disbursed. It accounts for holidays affecting payroll processing and ensures payroll is always disbursed on the correct banking day. The calendar is the planning tool for the HR/Payroll team — they can see all upcoming payroll processing dates and adjust for bank holidays or year-end."
-      components={[
-        { name: 'Annual Payroll Calendar', description: 'All payroll cycles for the year displayed in calendar and table format: period, cut-off date, processing date, payout date.' },
-        { name: 'Holiday Manager', description: 'Regular and special non-working holidays that affect payroll calculation and processing dates.' },
-        { name: 'Pay Frequency Settings', description: 'Configure payroll frequency: monthly (1 run), semi-monthly (1st-15th / 16th-end), weekly, or bi-weekly.' },
-        { name: 'Processing Reminders', description: 'Automated email reminders to payroll team on upcoming payroll processing dates.' },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Calendar View', 'Processing Schedule', 'Holidays', 'Settings']}
-      features={[
-        'Annual payroll calendar generation',
-        'Holiday impact on payroll processing dates',
-        'Semi-monthly and monthly payroll support',
-        'Processing deadline reminders',
-        'Bank payout date management',
-        'Calendar adjustment for ad-hoc pay runs (13th month, bonuses)',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All payroll periods and payout dates for the year',
-        'Upcoming payroll processing deadlines',
-        'Holiday schedule affecting payroll',
-        'Pay frequency settings',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View full year payroll calendar',
-        'Adjust processing date for a specific run',
-        'Add company or public holidays',
-        'Configure payroll frequency',
-        'Set payroll processing reminders',
-      ]}
-      relatedPages={[
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Pay Slips', href: '/payroll-workforce/payroll/pay-slips' },
-        { label: 'Leave Policy', href: '/payroll-workforce/leaves/leave-policy' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

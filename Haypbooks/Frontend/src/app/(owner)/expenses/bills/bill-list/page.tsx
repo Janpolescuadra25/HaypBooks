@@ -1,56 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-27', description: 'Main', amount: 48800, account: 'BPI Account', status: 'Completed' },
+    { id: 'r2', date: '2026-01-14', description: 'Main', amount: 24400, account: 'General', status: 'Medium' },
+    { id: 'r3', date: '2026-03-20', description: 'Main', amount: 10000, account: 'Metro Manila', status: 'In Stock' },
+    { id: 'r4', date: '2026-01-05', description: 'Primary', amount: 30000, account: 'Standard', status: 'In Stock' },
+    { id: 'r5', date: '2026-01-18', description: 'Main', amount: 39800, account: 'Acme Corp', status: 'Connected' },
+    { id: 'r6', date: '2026-03-18', description: 'Acme Corp', amount: 42400, account: 'Standard', status: 'High' },
+    { id: 'r7', date: '2026-02-27', description: 'Acme Corp', amount: 5800, account: 'Active Item', status: 'Open' },
+    { id: 'r8', date: '2026-02-21', description: 'Sample Entry', amount: 12400, account: 'Acme Corp', status: 'Filed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Bills"
-      module="EXPENSES"
-      breadcrumb="Expenses / Bills / Bill List"
-      purpose="Bills is the vendor invoice management hub — where all incoming vendor invoices are entered, reviewed, approved, and tracked to payment. Each bill records the vendor, invoice date, due date, invoice number, line items, GL account coding, applicable taxes, department allocation, and approval status. Bills drive the AP balance and feed into the payment workflow. Three-way matching against POs and goods receipts is performed here before bills are approved for payment."
-      components={[
-        { name: 'Bills List', description: 'All bills with bill number, vendor, bill date, due date, total amount, amount paid, balance due, and status (Draft/Pending/Approved/Paid).' },
-        { name: 'Bill Entry Form', description: 'Enter or edit a bill: vendor, bill date, due date, reference number, line items (description, amount, GL account, department, tax code).' },
-        { name: '3-Way Match Panel', description: 'Link bill to PO and GRN for 3-way matching validation. Shows matched quantities and any discrepancies.' },
-        { name: 'Payment Panel', description: 'Schedule or request payment from the bill screen.' },
-        { name: 'Attachment', description: 'Attach scanned vendor invoice PDF to the bill record.' },
+    <OwnerPageTemplate
+      title="Bill List"
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Bills', 'Draft', 'Pending Approval', 'Approved', 'Overdue', 'Paid']}
-      features={[
-        'Complete vendor invoice entry and management',
-        '3-way matching with PO and GRN',
-        'Bill approval workflow',
-        'PDF invoice attachment',
-        'Direct payment scheduling from bill',
-        'Recurring bill support',
-        'Batch vendor payment selection from bill list',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All bills with status, vendor, and amounts',
-        'Bills due this week and overdue',
-        'Unmatched or disputed bills',
-        'Total AP balance across all open bills',
-        'Approval status per bill',
-        'Payment history per bill',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enter a new vendor bill',
-        'Upload and attach vendor invoice PDF',
-        'Match bill to PO and GRN',
-        'Submit bill for approval',
-        'Approve a bill for payment',
-        'Schedule or request payment of a bill',
-        'Search and filter bills by vendor or date',
-        'Export bill list to Excel',
-      ]}
-      relatedPages={[
-        { label: 'Vendor List', href: '/expenses/vendors/vendor-list' },
-        { label: 'Purchase Orders', href: '/expenses/purchase-orders/po-list' },
-        { label: 'Vendor Payments', href: '/banking-cash/payments/vendor-payments' },
-        { label: 'AP Aging', href: '/reporting/reports-center/ap-aging' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

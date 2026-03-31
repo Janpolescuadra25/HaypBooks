@@ -1,26 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'General', sku: 'Acme Corp', category: 'Operating', price: 10600, qty: 30, status: 'Draft' },
+    { id: 'r2', name: 'General', sku: 'Standard', category: 'Annual', price: 17600, qty: 66, status: 'Draft' },
+    { id: 'r3', name: 'Standard', sku: 'General', category: 'Direct', price: 46000, qty: 24, status: 'Active' },
+    { id: 'r4', name: 'Default', sku: 'Acme Corp', category: 'Premium', price: 40500, qty: 6, status: 'Closed' },
+    { id: 'r5', name: 'Metro Manila', sku: 'Monthly', category: 'Operating', price: 10700, qty: 28, status: 'Filed' },
+    { id: 'r6', name: 'Default', sku: 'General', category: 'Revenue', price: 20200, qty: 21, status: 'Processing' },
+    { id: 'r7', name: 'General', sku: 'Metro Manila', category: 'Standard', price: 16000, qty: 32, status: 'Filed' },
+    { id: 'r8', name: 'Acme Corp', sku: 'Active Item', category: 'Standard', price: 42300, qty: 21, status: 'Approved' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Item Receipts"
-      module="INVENTORY"
-      breadcrumb="Inventory / Receiving / Item Receipts"
-      purpose="Record and manage the receipt of inventory from purchase orders. Confirm quantities received, note discrepancies, assign lot/serial numbers, and trigger three-way match with vendor bill."
-      components={[
-        { name: "Receipt List", description: "All item receipts with vendor, PO reference, date, and status" },
-        { name: "Receive Items Form", description: "Enter actual quantities received per PO line with lot/serial assignment" },
-        { name: "Discrepancy Panel", description: "Flag over-receipts or under-receipts with vendor notification" },
-        { name: "Three-Way Match", description: "Compare PO, receipt, and vendor bill quantities and amounts" },
-        { name: "Cost Assignment", description: "Assign landed costs to received items" },
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["All Receipts","Pending Matching","Discrepancies","Matched"]}
-      features={["PO-linked receipt creation","Over/under-receipt handling","Lot and serial assignment on receipt","Three-way matching","Landed cost allocation"]}
-      dataDisplayed={["Vendor and PO reference","Items and quantities ordered vs. received","Discrepancy status","Lot/serial numbers assigned","Receipt date and receiving dock"]}
-      userActions={["Create item receipt","Enter received quantities","Assign lot/serial","Flag discrepancy","Match to vendor bill"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

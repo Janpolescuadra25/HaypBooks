@@ -1,53 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-14', description: 'Default', amount: 28600, account: 'Metro Manila', status: 'Paid' },
+    { id: 'r2', date: '2026-01-01', description: 'Q1 2026', amount: 27000, account: 'Default', status: 'Connected' },
+    { id: 'r3', date: '2026-02-01', description: 'Metro Manila', amount: 2600, account: 'BPI Account', status: 'Active' },
+    { id: 'r4', date: '2026-02-27', description: 'Acme Corp', amount: 7300, account: 'BPI Account', status: 'In Stock' },
+    { id: 'r5', date: '2026-03-08', description: 'Sample Entry', amount: 5800, account: 'BPI Account', status: 'Paid' },
+    { id: 'r6', date: '2026-01-23', description: 'Standard', amount: 33500, account: 'Standard', status: 'Approved' },
+    { id: 'r7', date: '2026-01-17', description: 'Standard', amount: 13600, account: 'Metro Manila', status: 'Medium' },
+    { id: 'r8', date: '2026-01-01', description: 'Standard', amount: 400, account: 'BPI Account', status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Billable Hours"
-      module="PROJECTS"
-      breadcrumb="Projects / Time & Billing / Billable Hours"
-      purpose="Billable Hours is the pre-invoicing staging area for time-based billing. All approved timesheet entries coded as billable appear here, organized by project and client. The billing team reviews billable hours, applies hourly billing rates (from rate cards), calculates the amount to bill, and selects which entries to include in the next invoice cycle. Hours can be marked as billed, excluded, discounted, or held. This workflow ensures no billable time is lost to invoicing."
-      components={[
-        { name: 'Unbilled Hours Queue', description: 'All approved billable timesheet entries not yet invoiced: project, team member, date, task, hours, rate, and amount.' },
-        { name: 'Rate Card Application', description: 'Apply billing rates: override the default rate per team member or task type if required by the contract.' },
-        { name: 'Bill Selection', description: 'Select hours to include in the next invoice: check/uncheck individual entries, or select all for a project.' },
-        { name: 'Invoice Draft Generator', description: 'Convert selected billable hours into an invoice draft for client review.' },
-        { name: 'Excluded/Held Hours', description: 'Hours excluded from billing or on hold pending client approval — tracked separately so nothing falls off radar.' },
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Unbilled Hours', 'Selected for Invoice', 'Billed History', 'Excluded/Held', 'Rate Cards']}
-      features={[
-        'Complete unbilled hours registry per project',
-        'Variable billing rates from rate card',
-        'Selection and exclusion of time entries',
-        'One-click convert to invoice draft',
-        'Prevention of double-billing (hours only appear once)',
-        'Held hours tracking for disputed time',
-        'Billing analysis: billed vs. unbilled vs. non-billable',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All unbilled approved hours by project',
-        'Calculated billing amount per entry',
-        'Total unbilled revenue value',
-        'Hours by billing status: unbilled, billed, excluded',
-        'Oldest unbilled entries (WIP aging)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Review unbilled hours for a project',
-        'Apply billing rate from rate card',
-        'Select hours for inclusion in invoice',
-        'Exclude or hold specific time entries',
-        'Generate invoice from selected hours',
-        'View billing history per project',
-        'Export unbilled hours for client review',
-      ]}
-      relatedPages={[
-        { label: 'Project Invoicing', href: '/projects/time-billing/project-invoicing' },
-        { label: 'Project Timesheets', href: '/projects/time-billing/timesheets' },
-        { label: 'Invoices', href: '/sales/billing/invoices' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { CheckSquare, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', assignee: 'Main', dueDate: '2026-03-02', priority: 'High', status: 'Medium' },
+    { id: 'r2', name: 'BPI Account', assignee: 'Metro Manila', dueDate: '2026-01-03', priority: 'Medium', status: 'Approved' },
+    { id: 'r3', name: 'Sample Entry', assignee: 'BPI Account', dueDate: '2026-01-21', priority: 'Processing', status: 'Closed' },
+    { id: 'r4', name: 'Primary', assignee: 'Standard', dueDate: '2026-03-04', priority: 'Medium', status: 'Active' },
+    { id: 'r5', name: 'Monthly', assignee: 'Sample Entry', dueDate: '2026-02-08', priority: 'Enabled', status: 'Approved' },
+    { id: 'r6', name: 'Main', assignee: 'Main', dueDate: '2026-03-13', priority: 'Medium', status: 'Completed' },
+    { id: 'r7', name: 'Metro Manila', assignee: 'Standard', dueDate: '2026-02-21', priority: 'Current', status: 'Filed' },
+    { id: 'r8', name: 'Acme Corp', assignee: 'Monthly', dueDate: '2026-02-25', priority: 'Current', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Exception Queue"
-      module="TASKS"
-      breadcrumb="Tasks & Approvals / Exceptions / Exception Queue"
-      purpose="The Exception Queue is the team-wide management view of all system exceptions requiring resolution. Unlike My Exceptions (personal view), this queue shows all exceptions across all users and modules, allowing managers and system administrators to monitor the overall exception health of the system and prioritize resolution efforts."
-      components={[
-        { name: 'Exception Summary Dashboard', description: 'Tile summary: total open exceptions by severity (Critical / Warning / Info) with trend vs. last week.' },
-        { name: 'Exception List', description: 'Full list of all team exceptions with assignee, severity, source module, description, and age.' },
-        { name: 'Assignment Panel', description: 'Assign unassigned exceptions to specific team members for resolution.' },
-        { name: 'Resolution Tracking', description: 'Track resolution progress with status (Open / In Progress / Resolved / Dismissed).' },
+      section="Tasks & Approvals"
+      icon={<CheckSquare size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Open', 'Critical', 'Unassigned', 'In Progress', 'Resolved']}
-      features={[
-        'Team-wide exception visibility',
-        'Assign exceptions to team members for resolution',
-        'Severity-based prioritization',
-        'Resolution status tracking',
-        'Exception volume trends over time',
-        'Export exception report for management review',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Exception type and description',
-        'Severity badge (Critical / Warning / Info)',
-        'Source module and affected record',
-        'Assignee and assignment date',
-        'Age and resolution status',
-        'Exception volume by module chart',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Assign an exception to a team member',
-        'Change severity of an exception',
-        'Bulk dismiss low-priority info exceptions',
-        'Export exception queue to CSV',
-        'Filter by module, severity, or assignee',
-        'View resolution history for closed exceptions',
-      ]}
-      relatedPages={[
-        { label: 'My Exceptions', href: '/tasks-approvals/my-work/my-exceptions' },
-        { label: 'By Type', href: '/tasks-approvals/exceptions/by-type' },
-        { label: 'Resolution Log', href: '/tasks-approvals/exceptions/resolution-log' },
-        { label: 'Automation Logs', href: '/automation/monitoring/automation-logs' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,53 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-16', description: 'Primary', amount: 4100, account: 'Sample Entry', status: 'Active' },
+    { id: 'r2', date: '2026-02-22', description: 'Main', amount: 21700, account: 'Standard', status: 'Pending' },
+    { id: 'r3', date: '2026-01-20', description: 'Sample Entry', amount: 5000, account: 'BPI Account', status: 'Approved' },
+    { id: 'r4', date: '2026-03-21', description: 'General', amount: 33200, account: 'Default', status: 'Filed' },
+    { id: 'r5', date: '2026-01-08', description: 'Sample Entry', amount: 19700, account: 'Active Item', status: 'Open' },
+    { id: 'r6', date: '2026-01-05', description: 'Active Item', amount: 30400, account: 'BPI Account', status: 'Open' },
+    { id: 'r7', date: '2026-01-17', description: 'Monthly', amount: 20800, account: 'Main', status: 'Connected' },
+    { id: 'r8', date: '2026-03-23', description: 'BPI Account', amount: 13400, account: 'Active Item', status: 'Paid' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Annual ITR"
-      module="TAXES"
-      breadcrumb="Taxes / Income Tax / Annual ITR"
-      purpose="Annual ITR manages the preparation of the yearly corporate income tax return (BIR Form 1702RT for Regular Corporations). This is the final and comprehensive income tax return for the full fiscal year, reconciling book income to taxable income, applying all allowable deductions, crediting all 2307s received during the year and all quarterly ITR payments (1702Q), and arriving at the final income tax payable or overpayment to be refunded or applied in the next year. It is due April 15 (or the 60th day after fiscal year end)."
-      components={[
-        { name: 'Annual Income Computation', description: 'Full-year gross revenues, cost of sales/services, gross profit, operating expenses, other income/expense, and net income before tax.' },
-        { name: 'Book-to-Tax Reconciliation', description: 'Adjustments for non-deductible items (entertainment over limit, penalties, fines) and non-taxable items (tax-exempt income).' },
-        { name: 'Tax Credit Summary', description: 'All 2307s received in the year + all quarterly 1702Q payments credited against the annual tax due.' },
-        { name: 'Final Tax Computation', description: 'Taxable income × rate = tax due, less credits = final tax payable or overpayment.' },
-        { name: 'MCIT Comparison', description: 'Compare RCIT with MCIT (minimum corporate income tax = 2% of gross income applicable in first 3 years and any year where RCIT < MCIT).' },
+    <OwnerPageTemplate
+      title="Annual Itr"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Income Computation', 'Book-to-Tax Reconciliation', 'Tax Credits', 'Final Tax', 'MCIT Comparison', 'Filing History']}
-      features={[
-        'Comprehensive annual corporate income tax computation',
-        'Book-to-tax income reconciliation',
-        'Full annual 2307 credit application',
-        'Quarterly 1702Q payment credit',
-        'MCIT vs. RCIT comparison',
-        'EFPS filing format generation',
-        'Optional income tax authority to apply overpayment',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Full year income and expense summary',
-        'Taxable income after reconciliation adjustments',
-        'Total tax credits applied',
-        'Final income tax payable or overpayment',
-        'MCIT amount for comparison',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Build annual income tax computation',
-        'Enter reconciliation adjustment items',
-        'Apply all 2307 credits',
-        'Apply quarterly payment credits',
-        'Generate EFPS filing file',
-        'Mark as filed',
-      ]}
-      relatedPages={[
-        { label: 'Quarterly ITR', href: '/taxes/income-tax/quarterly-itr' },
-        { label: 'Form 1702RT', href: '/philippine-tax/bir-forms/form-1702rt' },
-        { label: 'Form 2307', href: '/philippine-tax/bir-forms/form-2307' },
-        { label: 'P&L Report', href: '/reporting/reports-center/financial-statements/profit-and-loss' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

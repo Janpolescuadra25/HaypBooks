@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', type: 'Standard', contact: 'Monthly', balance: 44500, status: 'Enabled' },
+    { id: 'r2', name: 'Standard', type: 'Basic', contact: 'BPI Account', balance: 46500, status: 'Filed' },
+    { id: 'r3', name: 'Main', type: 'Premium', contact: 'Monthly', balance: 100, status: 'Current' },
+    { id: 'r4', name: 'General', type: 'Standard', contact: 'Standard', balance: 13500, status: 'Processing' },
+    { id: 'r5', name: 'Monthly', type: 'Annual', contact: 'Metro Manila', balance: 46500, status: 'Filed' },
+    { id: 'r6', name: 'Default', type: 'Fixed', contact: 'Primary', balance: 40300, status: 'Completed' },
+    { id: 'r7', name: 'Sample Entry', type: 'Premium', contact: 'BPI Account', balance: 26900, status: 'High' },
+    { id: 'r8', name: 'General', type: 'Annual', contact: 'Q1 2026', balance: 8800, status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Employee Documents"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Workforce / Employee Documents"
-      purpose="Centralized HR document repository for all employee files including offer letters, signed contracts, performance reviews, compliance certificates, and government IDs."
-      components={[
-        { name: "Document Library", description: "All stored documents organized by employee and document type" },
-        { name: "Upload Form", description: "Upload documents with type, effective date, and expiry date metadata" },
-        { name: "Expiry Alert Manager", description: "Alerts for documents approaching their expiry date" },
-        { name: "Employee Document Portal", description: "Employee self-service access to their own HR documents" },
-        { name: "Document Request", description: "Request missing required documents with automated reminder" },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["All Documents","By Type","Expiring Soon","Employee Portal"]}
-      features={["Document type categorization","Expiry date tracking with alerts","Employee self-service access","Access control by HR role","Bulk upload"]}
-      dataDisplayed={["Document type and name","Employee it belongs to","Upload date","Expiry date","Status (valid/expiring/expired)"]}
-      userActions={["Upload employee document","Set expiry date","Request missing document","View expiry alerts","Employee self-service download"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

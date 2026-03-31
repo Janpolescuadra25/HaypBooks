@@ -460,6 +460,51 @@ async function main() {
       }
     }
 
+  // 🧾 Practice Hub seed data: demo practice / practice user / accounting firm / client access
+  try {
+    const practiceId = `practice-${tenant.id}`
+
+    const practice = await prisma.practice.upsert({
+      where: { id: practiceId },
+      update: { name: 'Demo Accounting Firm', servicesOffered: 'Bookkeeping, Tax, Advisory', workspaceId: tenant.id },
+      create: { id: practiceId, workspaceId: tenant.id, name: 'Demo Accounting Firm', servicesOffered: 'Bookkeeping, Tax, Advisory' },
+    })
+
+    await prisma.practiceUser.upsert({
+      where: { practiceId_workspaceId_userId: { practiceId: practice.id, workspaceId: tenant.id, userId: user.id } },
+      update: {},
+      create: { practiceId: practice.id, workspaceId: tenant.id, userId: user.id },
+    })
+
+    let accountingFirm = await prisma.accountingFirm.findFirst({ where: { workspaceId: tenant.id } })
+    if (!accountingFirm) {
+      accountingFirm = await prisma.accountingFirm.create({ data: { workspaceId: tenant.id, name: 'Demo Accounting Firm' } })
+    } else {
+      // Keep it in sync with practice name if already exists
+      accountingFirm = await prisma.accountingFirm.update({ where: { id: accountingFirm.id }, data: { name: 'Demo Accounting Firm' } })
+    }
+
+    if (demoCompany && accountingFirm) {
+      await prisma.companyFirmAccess.upsert({
+        where: { companyId_accountingFirmId: { companyId: demoCompany.id, accountingFirmId: accountingFirm.id } },
+        update: { status: 'ACCEPTED', role: 'ADMIN', acceptedAt: new Date() },
+        create: {
+          workspaceId: tenant.id,
+          companyId: demoCompany.id,
+          accountingFirmId: accountingFirm.id,
+          role: 'ADMIN',
+          status: 'ACCEPTED',
+          invitedAt: new Date(),
+          acceptedAt: new Date(),
+        },
+      })
+    }
+
+    console.log('[seed] Practice Hub sample data seeded: practice+practiceUser+accountingFirm+companyFirmAccess')
+  } catch (e) {
+    console.warn('[seed] Practice Hub sample seeding failed (non-fatal):', errorMessage(e))
+  }
+
   // Ensure some AccountTypes exist
   const assetType = await prisma.accountType.upsert({ where: { id: 1 }, update: {}, create: { id: 1, name: 'ASSET' } })
   const expenseType = await prisma.accountType.upsert({ where: { id: 2 }, update: {}, create: { id: 2, name: 'EXPENSE' } })

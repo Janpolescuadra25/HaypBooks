@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Monthly', type: 'Monthly', contact: 'Sample Entry', balance: 45600, status: 'High' },
+    { id: 'r2', name: 'Sample Entry', type: 'Revenue', contact: 'BPI Account', balance: 8300, status: 'High' },
+    { id: 'r3', name: 'Active Item', type: 'Annual', contact: 'BPI Account', balance: 40400, status: 'Low' },
+    { id: 'r4', name: 'Monthly', type: 'Variable', contact: 'BPI Account', balance: 33200, status: 'Enabled' },
+    { id: 'r5', name: 'Acme Corp', type: 'Annual', contact: 'Active Item', balance: 38300, status: 'High' },
+    { id: 'r6', name: 'Acme Corp', type: 'Revenue', contact: 'Standard', balance: 9500, status: 'Paid' },
+    { id: 'r7', name: 'BPI Account', type: 'Premium', contact: 'BPI Account', balance: 24600, status: 'Enabled' },
+    { id: 'r8', name: 'Main', type: 'Standard', contact: 'Default', balance: 2700, status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Feed Connections"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Bank Feeds / Feed Connections"
-      purpose="Feed Connections manages the setup and maintenance of direct bank data connections — the automated import channels that bring bank transactions into the system daily without manual data entry. Supported connection methods include direct bank API integration (for partner banks), Open Banking API connections, and scheduled CSV file import templates. Each connected account shows its last sync time, transaction count, and connection health status."
-      components={[
-        { name: 'Connection List', description: 'All connected bank accounts with connection type (API/CSV), last sync timestamp, sync frequency, and status (Active/Error/Disconnected).' },
-        { name: 'New Connection Wizard', description: 'Step-by-step wizard to connect a new bank account: select bank, choose connection method, authorize, and map to GL account.' },
-        { name: 'Connection Health Monitor', description: 'Status indicators per connection with last successful sync, failed sync count, and error messages.' },
-        { name: 'CSV Template Manager', description: 'Download bank-specific CSV import templates and configure column mapping for manual upload.' },
-        { name: 'Sync Log', description: 'History of all sync events per connection with transactions imported per sync and any errors.' },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Active Connections', 'Setup New Connection', 'CSV Templates', 'Sync History']}
-      features={[
-        'Direct bank API integration for automated transaction import',
-        'Open Banking API connection support',
-        'CSV template-based import for non-integrated banks',
-        'Connection health monitoring with error alerts',
-        'Configurable sync frequency (daily, on-demand)',
-        'Duplicate transaction detection on import',
-        'Multi-entity connection management',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All bank connections with status',
-        'Last sync time and next scheduled sync',
-        'Transactions imported per sync',
-        'Error messages for failed connections',
-        'Available bank integration partners',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Connect a new bank account via API',
-        'Upload a CSV bank statement',
-        'Re-authorize an expired connection',
-        'Manually trigger a sync',
-        'Download CSV import template',
-        'Disconnect a bank feed',
-        'Troubleshoot a failed sync',
-      ]}
-      relatedPages={[
-        { label: 'Bank Accounts', href: '/banking-cash/accounts/bank-accounts' },
-        { label: 'Bank Transactions', href: '/banking-cash/transactions/bank-transactions' },
-        { label: 'Matching Rules', href: '/banking-cash/bank-feeds/matching-rules' },
-        { label: 'Reconcile', href: '/banking-cash/reconciliation/reconcile' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

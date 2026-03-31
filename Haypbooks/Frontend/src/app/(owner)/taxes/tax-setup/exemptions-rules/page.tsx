@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function ExemptionsRulesPage() {
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Main', assignee: 'Primary', dueDate: '2026-01-20', priority: 'Active', status: 'Pending' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'BPI Account', dueDate: '2026-02-25', priority: 'Draft', status: 'Closed' },
+    { id: 'r3', name: 'Primary', assignee: 'Default', dueDate: '2026-03-13', priority: 'Approved', status: 'In Stock' },
+    { id: 'r4', name: 'Active Item', assignee: 'Main', dueDate: '2026-01-08', priority: 'Pending', status: 'Closed' },
+    { id: 'r5', name: 'Acme Corp', assignee: 'Metro Manila', dueDate: '2026-03-17', priority: 'Closed', status: 'Open' },
+    { id: 'r6', name: 'Primary', assignee: 'BPI Account', dueDate: '2026-01-11', priority: 'Completed', status: 'Processing' },
+    { id: 'r7', name: 'Main', assignee: 'Active Item', dueDate: '2026-03-01', priority: 'Processing', status: 'Completed' },
+    { id: 'r8', name: 'Active Item', assignee: 'BPI Account', dueDate: '2026-03-16', priority: 'Open', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Exemptions & Rules"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Setup / Exemptions & Rules"
-      purpose="Exemptions & Rules defines the logic governing when transactions are exempt from tax or subject to special rates, based on transaction characteristics, customer types, product categories, or geographic rules. This module allows the tax team to encode complex tax exemption logic without developer involvement, ensuring that exemption conditions are automatically evaluated during transaction entry. Proper setup reduces manual tax overrides and supports consistent, defensible tax treatment."
-      components={[
-        { name: 'Exemption Rules List', description: 'Table of all defined exemption rules with name, trigger condition, tax impact, and active status.' },
-        { name: 'Rule Builder', description: 'Visual rule editor to define conditions (IF customer type = Non-Profit, THEN exempt VAT) without code.' },
-        { name: 'Product/Service Category Mapping', description: 'Map product or service categories to exemption rules for automatic application.' },
-        { name: 'Customer Exemption Certificates', description: 'Upload and link tax exemption certificates from customers to their account record.' },
-        { name: 'Rule Test Console', description: 'Test a rule against sample transaction data to confirm expected exemption outcome before activating.' },
+    <OwnerPageTemplate
+      title="Exemptions Rules"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Rule List', 'Rule Builder', 'Category Mapping', 'Customer Certificates', 'Test Console']}
-      features={[
-        'Define conditional tax exemption rules with a visual rule builder',
-        'Map product/service categories to exemption logic',
-        'Store and link customer exemption certificates',
-        'Test rules before activating to prevent unintended effects',
-        'Prioritize rules when multiple exemptions apply to one transaction',
-        'Audit which rule was applied to each exempt transaction',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Exemption rule name and description',
-        'Trigger conditions and resulting tax treatment',
-        'Product/category and customer type mappings',
-        'Certificate number and expiry date',
-        'Active/inactive rule status',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new exemption rule via rule builder',
-        'Map product categories to exemption rules',
-        'Upload customer exemption certificate',
-        'Test a rule against sample data',
-        'Activate or deactivate exemption rules',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

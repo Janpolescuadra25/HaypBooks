@@ -1,50 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-02', description: 'Main', amount: 45000, account: 'Main', status: 'Open' },
+    { id: 'r2', date: '2026-03-24', description: 'Standard', amount: 19800, account: 'Q1 2026', status: 'Low' },
+    { id: 'r3', date: '2026-03-19', description: 'BPI Account', amount: 41400, account: 'Primary', status: 'Medium' },
+    { id: 'r4', date: '2026-01-16', description: 'Sample Entry', amount: 47400, account: 'Primary', status: 'Connected' },
+    { id: 'r5', date: '2026-02-24', description: 'Primary', amount: 44700, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r6', date: '2026-01-08', description: 'Metro Manila', amount: 38000, account: 'Q1 2026', status: 'Open' },
+    { id: 'r7', date: '2026-01-26', description: 'Q1 2026', amount: 26700, account: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', date: '2026-01-01', description: 'Standard', amount: 38800, account: 'BPI Account', status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Expanded Withholding Tax"
-      module="TAXES"
-      breadcrumb="Taxes / Withholding Tax / EWT"
-      purpose="Expanded Withholding Tax (EWT, also called Creditable Withholding Tax) is the withholding tax deducted by the payor from certain income payments to vendors and payees: professional fees (15%/10%), rental (5%), goods (1%), services (2%), and other ATC-classified payment types. As the withholding agent, the company must deduct the correct EWT on bill payment, issue BIR Form 2307 to the payee, file BIR Form 1601EQ quarterly, and remit the withheld tax. This page manages EWT across all vendor transactions."
-      components={[
-        { name: 'EWT Transaction Register', description: 'All transactions where EWT was withheld: date, vendor, invoice, payment, ATC code, income payment amount, rate, and tax withheld.' },
-        { name: 'Vendor EWT Summary', description: 'Per vendor: total income payments made and total EWT withheld year-to-date.' },
-        { name: 'ATC Summary', description: 'Total withholding per ATC code — feeds into 1601EQ.' },
-        { name: 'Unremitted EWT Balance', description: 'EWT withheld but not yet remitted to BIR (outstanding payable to BIR).' },
+    <OwnerPageTemplate
+      title="Ewt"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['EWT Register', 'By Vendor', 'By ATC Code', 'Remittance Status']}
-      features={[
-        'Complete EWT transaction tracking',
-        'ATC code classification for 1601EQ',
-        'Vendor-level EWT summary for 2307 generation',
-        'Unremitted EWT payable tracking',
-        'Integration with Form 1601EQ and 2307',
-        'Annual EWT summary for Alphalist',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All EWT transactions with ATC code',
-        'EWT withheld per vendor year-to-date',
-        'EWT by ATC code (for 1601EQ)',
-        'Remitted vs. unremitted EWT balance',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View EWT transactions by vendor',
-        'View EWT by ATC code',
-        'Generate 2307 for a vendor',
-        'Navigate to 1601EQ generation',
-        'Mark EWT as remitted',
-        'Export EWT register',
-      ]}
-      relatedPages={[
-        { label: 'Form 2307', href: '/philippine-tax/bir-forms/form-2307' },
-        { label: 'Form 1601EQ', href: '/philippine-tax/bir-forms/form-1601eq' },
-        { label: 'Tax Mapping', href: '/philippine-tax/compliance/tax-mapping' },
-        { label: 'Vendor List', href: '/expenses/vendors/vendor-list' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

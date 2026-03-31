@@ -1,50 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Shield, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-07', description: 'Primary', amount: 28100, account: 'Acme Corp', status: 'Completed' },
+    { id: 'r2', date: '2026-01-13', description: 'Main', amount: 29400, account: 'Metro Manila', status: 'Filed' },
+    { id: 'r3', date: '2026-03-11', description: 'Primary', amount: 10400, account: 'Monthly', status: 'Current' },
+    { id: 'r4', date: '2026-03-27', description: 'Standard', amount: 33700, account: 'Default', status: 'Active' },
+    { id: 'r5', date: '2026-02-09', description: 'Sample Entry', amount: 44100, account: 'Active Item', status: 'In Stock' },
+    { id: 'r6', date: '2026-01-12', description: 'Primary', amount: 22400, account: 'General', status: 'Completed' },
+    { id: 'r7', date: '2026-02-02', description: 'Q1 2026', amount: 1600, account: 'Monthly', status: 'Paid' },
+    { id: 'r8', date: '2026-02-26', description: 'Primary', amount: 7900, account: 'Active Item', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Data Retention"
-      module="COMPLIANCE"
-      breadcrumb="Compliance / Data Privacy / Data Retention"
-      purpose="Data Retention manages the policies and schedules for how long different types of data are kept in the system before being archived or purged. Financial records (minimum 10 years under BIR rules), HR records, customer data, and transaction logs each have different statutory retention requirements. This page configures and tracks those requirements, schedules automated archiving, and logs all data disposal actions."
-      components={[
-        { name: 'Retention Policy Table', description: 'All data types with configured retention period, statutory basis, current record count, and next review date.' },
-        { name: 'Retention Schedule Builder', description: 'Configure retention rules per data category: years to retain, archiving method, and disposal action after period ends.' },
-        { name: 'Archive Queue', description: 'Data eligible for archiving this period with count, oldest record date, and archive action button.' },
-        { name: 'Disposal Log', description: 'Immutable log of all data archival and disposal events with actor, timestamp, and record counts.' },
+      section="Compliance"
+      icon={<Shield size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Retention Policies', 'Archive Queue', 'Disposal Log', 'Statutory References']}
-      features={[
-        'Configurable retention periods per data type',
-        'Statutory minimum retention enforcement (BIR, SEC, DOLE)',
-        'Automated archiving workflow',
-        'Immutable disposal audit trail',
-        'Legal hold flag to prevent disposal of contested data',
-        'Data retention compliance dashboard',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Data categories with retention period (years)',
-        'Statutory basis for each retention period',
-        'Record counts per category',
-        'Data eligible for archiving or disposal this period',
-        'Historical disposal events with record counts',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Set retention period for a data category',
-        'Initiate archiving run for eligible data',
-        'Place a legal hold on specific records',
-        'Approve data disposal after review',
-        'Export retention compliance summary report',
-        'View historical disposal log',
-      ]}
-      relatedPages={[
-        { label: 'Data Classification', href: '/compliance/data-privacy/data-classification' },
-        { label: 'Policy Management', href: '/compliance/controls/policy-management' },
-        { label: 'Audit Trails', href: '/automation/approvals-governance/audit-trails' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,46 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function CreditableWithholdingPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-27', description: 'Acme Corp', amount: 14200, account: 'Main', status: 'Completed' },
+    { id: 'r2', date: '2026-01-09', description: 'Active Item', amount: 48200, account: 'Standard', status: 'Paid' },
+    { id: 'r3', date: '2026-02-15', description: 'Standard', amount: 23400, account: 'Primary', status: 'Current' },
+    { id: 'r4', date: '2026-01-16', description: 'General', amount: 17200, account: 'Q1 2026', status: 'Current' },
+    { id: 'r5', date: '2026-02-26', description: 'General', amount: 34400, account: 'Default', status: 'Draft' },
+    { id: 'r6', date: '2026-03-03', description: 'Active Item', amount: 49100, account: 'Standard', status: 'High' },
+    { id: 'r7', date: '2026-02-23', description: 'Sample Entry', amount: 46600, account: 'BPI Account', status: 'Current' },
+    { id: 'r8', date: '2026-02-14', description: 'Metro Manila', amount: 23800, account: 'Main', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Creditable Withholding"
-      module="TAXES"
-      badge="PH ONLY"
-      breadcrumb="Taxes / Purchase & Input Tax / Creditable Withholding"
-      purpose="Creditable Withholding manages the taxes withheld by customers on payments to the business, which serve as advance income tax payments that can be credited against the company's annual income tax liability. This module tracks all creditable withholding tax (CWT) certificates received from customers, validates the amounts, and accumulates the credit balance for use in the annual ITR computation. Proper CWT management reduces year-end tax due amounts."
-      components={[
-        { name: 'CWT Certificate Register', description: 'Table of all 2307 certificates received from customers with payor, period, income, and tax withheld.' },
-        { name: 'Monthly CWT Summary', description: 'Aggregated view of CWT received per month showing total income payments and total tax certificates.' },
-        { name: 'Credit Utilization Tracker', description: 'Running tally of total CWT balance available for credit against income tax due.' },
-        { name: 'Certificate Validation Flags', description: 'Flags for certificates with missing TIN, incorrect rates, or amount mismatches against recorded income.' },
-        { name: 'Annual Credit Computation', description: 'Year-end summary computing total CWT credits to be applied against the annual income tax return.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Certificate Register', 'Monthly Summary', 'Credit Balance', 'Validation Issues', 'Annual Computation']}
-      features={[
-        'Register all BIR Form 2307 certificates received from customers',
-        'Validate certificate details against recorded income transactions',
-        'Track cumulative creditable withholding tax balance',
-        'Flag certificates with data quality issues for correction',
-        'Compute total CWT credit available for annual ITR',
-        'Export CWT summary for income tax return preparation',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Payor name and TIN',
-        'Income payment amount and applicable period',
-        'Tax withheld (CWT) per certificate',
-        'BIR Form 2307 reference number',
-        'Cumulative CWT credit balance',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Record a new 2307 certificate received',
-        'Validate certificate against transaction records',
-        'Review and resolve validation flags',
-        'View total available CWT credit balance',
-        'Export CWT register for ITR preparation',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

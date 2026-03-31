@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function TwoFactorAuthPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', category: 'Standard', value: 'Main', description: 'Sample Entry', status: 'High' },
+    { id: 'r2', name: 'General', category: 'Monthly', value: 'Metro Manila', description: 'Sample Entry', status: 'Pending' },
+    { id: 'r3', name: 'Default', category: 'Quarterly', value: 'Sample Entry', description: 'BPI Account', status: 'Completed' },
+    { id: 'r4', name: 'Active Item', category: 'Fixed', value: 'Metro Manila', description: 'Primary', status: 'Processing' },
+    { id: 'r5', name: 'Active Item', category: 'Operating', value: 'Default', description: 'Sample Entry', status: 'Filed' },
+    { id: 'r6', name: 'Sample Entry', category: 'Variable', value: 'BPI Account', description: 'Active Item', status: 'Approved' },
+    { id: 'r7', name: 'Main', category: 'Standard', value: 'Main', description: 'Monthly', status: 'Medium' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Monthly', status: 'Enabled' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Two-Factor Authentication"
-      module="SETTINGS"
-      breadcrumb="Settings / Users & Security / Two-Factor Authentication"
-      purpose="Two-Factor Authentication (2FA) settings allow administrators to enforce an additional verification step for all users or specific roles, significantly reducing the risk of unauthorized access even if a password is compromised. Supported 2FA methods include authenticator app TOTP, SMS OTP, and email OTP. Admins can mandate 2FA company-wide or review which users have enabled it voluntarily."
-      components={[
-        { name: 'Enforcement Policy Toggle', description: 'Company-wide toggle to require 2FA for all users, enforce for admins only, or leave optional.' },
-        { name: 'Allowed Methods Selector', description: 'Checkboxes to enable or restrict which 2FA methods users can choose: TOTP app, SMS, or email.' },
-        { name: 'User 2FA Status Table', description: 'Table of all users showing whether 2FA is enabled, which method is active, and last verified date.' },
-        { name: 'Grace Period Config', description: 'Setting for how many days new users have to enable 2FA before being locked out after mandate.' },
-        { name: 'Reset 2FA Button', description: "Admin action to remove a user's current 2FA device, requiring them to re-enroll on next login." },
+    <OwnerPageTemplate
+      title="Two Factor Auth"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Policy Settings', 'User Status', 'Method Config']}
-      features={[
-        'Enforce 2FA company-wide or for specific roles only',
-        'Support authenticator app (TOTP), SMS OTP, and email OTP methods',
-        'View 2FA enrollment status for every user',
-        'Set grace period before mandatory 2FA lock-out',
-        "Reset any user's 2FA device for re-enrollment",
-        "Receive alerts when a user's 2FA is bypassed or reset",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Company-wide 2FA enforcement status',
-        'Per-user 2FA enabled/disabled and active method',
-        'Last 2FA verification date per user',
-        'Number of users with and without 2FA active',
-        'Grace period expiry dates for pending users',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enable or disable company-wide 2FA requirement',
-        'Allow or restrict specific 2FA methods',
-        "View which users have or haven't enrolled",
-        "Reset a user's 2FA device",
-        'Set grace period for new mandate rollout',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

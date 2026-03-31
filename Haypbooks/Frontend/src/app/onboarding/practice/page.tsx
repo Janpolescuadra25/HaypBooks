@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import { Landmark, ArrowRight, ArrowLeft, CheckCircle2, Check } from 'lucide-react'
 import PracticeProfile from '@/components/PracticeOnboarding/PracticeProfile'
@@ -20,6 +20,8 @@ const STEPS = [
 
 export default function PracticeOnboardingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const createMode = searchParams.get('newPractice') === 'true' ? 'append' : 'replace'
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [practiceData, setPracticeData] = useState<any>({})
@@ -38,10 +40,25 @@ export default function PracticeOnboardingPage() {
     try {
       // Save the final step data
       await saveStepToBackend(1, servicesData)
-      // Call the main complete endpoint
-      await apiClient.post('/api/onboarding/complete', { hub: 'ACCOUNTANT', type: 'full' })
-    } catch { /* best-effort */ }
-    finally { setSaving(false) }
+
+      // Determine the practice name from the first step data
+      const practiceName = practiceData?.name || practiceData?.practiceName || practiceData?.firmName || ''
+      if (!practiceName || !practiceName.toString().trim()) {
+        throw new Error('Practice name is required')
+      }
+
+      // Call the main complete endpoint with mode support and practiceName
+      await apiClient.post('/api/onboarding/complete', {
+        hub: 'ACCOUNTANT',
+        type: 'full',
+        mode: createMode,
+        practiceName: practiceName.trim(),
+      })
+    } catch (error: any) {
+      console.error('[ONBOARDING FAIL]', error)
+      alert(error?.response?.data?.message || error?.message || JSON.stringify(error))
+      throw error
+    } finally { setSaving(false) }
   }
 
   async function handleStep1Next(data: any) {

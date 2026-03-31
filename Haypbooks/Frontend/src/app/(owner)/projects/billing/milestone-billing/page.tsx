@@ -1,31 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-20', description: 'Sample Entry', amount: 27000, account: 'General', status: 'Enabled' },
+    { id: 'r2', date: '2026-03-12', description: 'Standard', amount: 10400, account: 'Metro Manila', status: 'Paid' },
+    { id: 'r3', date: '2026-01-17', description: 'BPI Account', amount: 34900, account: 'Standard', status: 'Medium' },
+    { id: 'r4', date: '2026-02-22', description: 'Default', amount: 30700, account: 'Q1 2026', status: 'Open' },
+    { id: 'r5', date: '2026-01-02', description: 'Primary', amount: 49600, account: 'Q1 2026', status: 'Low' },
+    { id: 'r6', date: '2026-03-12', description: 'Primary', amount: 24600, account: 'Acme Corp', status: 'Approved' },
+    { id: 'r7', date: '2026-01-16', description: 'Standard', amount: 29200, account: 'Acme Corp', status: 'High' },
+    { id: 'r8', date: '2026-01-20', description: 'Main', amount: 30800, account: 'BPI Account', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title='Milestone Billing'
-      module='PROJECTS'
-      breadcrumb='Projects / Billing / Milestone Billing'
-      purpose='Handles billing events tied to project milestones rather than time or cost. Automatically triggers invoice generation when milestone completion criteria are met, ensuring revenue is recognized and billed at contractually defined project stages.'
-      components={[
-        { name: 'Milestone Billing Schedule', description: 'Timeline view of project milestones with billing amounts and trigger conditions' },
-        { name: 'Completion Trigger Panel', description: 'Configures completion criteria: manual sign-off, task completion %, or date-based' },
-        { name: 'Invoice Preview', description: 'Pre-bill preview showing amount, terms, and client details before sending' },
-        { name: 'Revenue Recognition Tie-In', description: 'Maps each milestone invoice to a deferred or recognized revenue entry' },
-        { name: 'Milestone Status Board', description: 'Kanban-style board showing pending, in-progress, and completed milestones' },
+    <OwnerPageTemplate
+      title="Milestone Billing"
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Milestone Schedule', 'Pending Triggers', 'Billed', 'Revenue Recognition']}
-      features={['Automatic invoice creation on milestone completion', 'Configurable completion trigger types', 'Retainage percentage per milestone', 'Partial billing on sub-milestones', 'Client notification on milestone readiness', 'Milestone-to-revenue recognition mapping', 'Schedule deviation alerts']}
-      dataDisplayed={['Milestone name and description', 'Target completion date', 'Billing amount per milestone', 'Completion trigger type and status', 'Invoice generated (yes/no) and date', 'Retainage held', 'Percentage of total contract value']}
-      userActions={['Define milestone billing schedule', 'Mark milestone as complete', 'Trigger invoice generation', 'Preview and send milestone invoice', 'Configure retainage rules', 'Map milestone to revenue recognition', 'Export milestone billing report']}
-      relatedPages={[
-        { label: 'Milestones Setup', href: '/projects/project-setup/milestones' },
-        { label: 'Project Billing', href: '/projects/billing/project-billing' },
-        { label: 'Revenue Recognition', href: '/sales/revenue-management/revenue-recognition' },
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

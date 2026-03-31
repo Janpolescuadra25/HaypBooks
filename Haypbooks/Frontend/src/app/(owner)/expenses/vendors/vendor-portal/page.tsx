@@ -1,49 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Active Item', type: 'Revenue', contact: 'Monthly', balance: 29700, status: 'Draft' },
+    { id: 'r2', name: 'Metro Manila', type: 'Operating', contact: 'Sample Entry', balance: 31500, status: 'Medium' },
+    { id: 'r3', name: 'Main', type: 'Operating', contact: 'Metro Manila', balance: 42000, status: 'Connected' },
+    { id: 'r4', name: 'Standard', type: 'Direct', contact: 'Main', balance: 2400, status: 'Completed' },
+    { id: 'r5', name: 'Main', type: 'Direct', contact: 'Main', balance: 21700, status: 'Completed' },
+    { id: 'r6', name: 'Standard', type: 'Annual', contact: 'Sample Entry', balance: 35800, status: 'Connected' },
+    { id: 'r7', name: 'Monthly', type: 'Standard', contact: 'Standard', balance: 31300, status: 'Approved' },
+    { id: 'r8', name: 'Metro Manila', type: 'Monthly', contact: 'Sample Entry', balance: 23000, status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Vendor Portal"
-      module="EXPENSES"
-      breadcrumb="Expenses / Vendors / Vendor Portal"
-      purpose="The Vendor Portal is a self-service web portal for vendors to submit invoices electronically, check payment status, view their payment history, and update their contact or banking details. When vendors submit invoices through the portal, they enter the invoice data and attach the PDF — the system creates a bill for the AP team's review. This reduces paper-based invoice submission, eliminates manual data entry, and gives vendors transparency on their payment status without having to call or email the AP team."
-      components={[
-        { name: 'Portal Configuration Panel', description: 'Enable/disable vendor portal, configure branding, and manage available features (invoice submission, payment status).' },
-        { name: 'Vendor Access List', description: 'Vendors with portal credentials issued, last login, and pending invoice submissions count.' },
-        { name: 'Invoice Submission Queue', description: 'Invoices submitted by vendors through the portal pending AP team review and approval.' },
-        { name: 'Portal Preview', description: 'Preview of the vendor-facing portal experience.' },
-        { name: 'Vendor Notification Settings', description: 'Email notifications sent to vendors: payment confirmation, statement, invoice received acknowledgment.' },
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Configuration', 'Vendor Access', 'Invoice Queue', 'Portal Preview', 'Notifications']}
-      features={[
-        'Electronic invoice submission from vendors',
-        'Payment status visibility for vendors',
-        'Self-service contact and bank detail updates by vendors',
-        'Invoice routing from portal to AP team review',
-        'Automated vendor acknowledgment emails',
-        'Reduce AP data entry through portal submission',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Vendors with portal access',
-        'Invoices submitted via portal (pending and processed)',
-        'Vendor payment status visible in portal',
-        'Portal usage metrics',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enable vendor portal access',
-        'Invite a vendor to the portal',
-        'Review and process portal-submitted invoices',
-        'Configure portal branding',
-        'Configure vendor notification emails',
-      ]}
-      relatedPages={[
-        { label: 'Vendor List', href: '/expenses/vendors/vendor-list' },
-        { label: 'Bills', href: '/expenses/bills/bill-list' },
-        { label: 'Vendor Payments', href: '/banking-cash/payments/vendor-payments' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

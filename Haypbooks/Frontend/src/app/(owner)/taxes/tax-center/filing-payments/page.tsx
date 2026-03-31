@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function TaxCenterFilingPaymentsPage() {
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', type: 'Basic', contact: 'Acme Corp', balance: 14200, status: 'High' },
+    { id: 'r2', name: 'Acme Corp', type: 'Revenue', contact: 'BPI Account', balance: 33700, status: 'Low' },
+    { id: 'r3', name: 'Standard', type: 'Standard', contact: 'Primary', balance: 25800, status: 'Processing' },
+    { id: 'r4', name: 'Monthly', type: 'Fixed', contact: 'Active Item', balance: 15500, status: 'Processing' },
+    { id: 'r5', name: 'General', type: 'Monthly', contact: 'Q1 2026', balance: 34400, status: 'Connected' },
+    { id: 'r6', name: 'Default', type: 'Basic', contact: 'Active Item', balance: 42000, status: 'Draft' },
+    { id: 'r7', name: 'Active Item', type: 'Operating', contact: 'Active Item', balance: 49100, status: 'Processing' },
+    { id: 'r8', name: 'Default', type: 'Fixed', contact: 'Main', balance: 1900, status: 'Medium' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Tax Center — Filing & Payments"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Center / Filing & Payments"
-      purpose="Tax Center Filing & Payments is the operational hub for managing all upcoming tax filing deadlines and payment due dates in one consolidated view. Finance teams use this page to ensure no filing or payment obligation is missed, with color-coded urgency indicators and direct links to the corresponding return preparation module. Completed filings and payments are logged here for quick reference and compliance confirmation."
-      components={[
-        { name: 'Obligation Calendar', description: 'Monthly calendar view of all tax filing and payment due dates with urgency color coding.' },
-        { name: 'Upcoming Obligations List', description: 'Sorted list of the next 30 days of tax obligations with days-to-due-date countdown.' },
-        { name: 'Completed This Period', description: 'Checklist of obligations completed this period with filed date and confirmation number.' },
-        { name: 'Quick Links Panel', description: 'One-click links to open the preparation module for each upcoming obligation.' },
-        { name: 'Overdue Alert Banner', description: 'Prominent banner listing any obligations that have passed their due date without completion.' },
+    <OwnerPageTemplate
+      title="Filing Payments"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Calendar', 'Upcoming', 'Completed', 'Overdue']}
-      features={[
-        'Single-screen view of all upcoming tax filing and payment deadlines',
-        'Color-coded urgency: green (on track), amber (due soon), red (overdue)',
-        'Quick-link to return preparation for each obligation',
-        'Track completion status with confirmation numbers',
-        'Alert on overdue obligations with penalty risk estimate',
-        'Filter obligations by tax type or authority',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tax obligation type and authority',
-        'Due date and days remaining',
-        'Completion status and confirmation number',
-        'Estimated amount due',
-        'Responsible user assignment',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View all upcoming tax obligations',
-        'Navigate to return preparation via quick link',
-        'Mark obligation as completed',
-        'View overdue obligations and risk',
-        'Filter by tax type or date range',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

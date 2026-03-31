@@ -1,51 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', sku: 'Main', category: 'Operating', price: 18000, qty: 31, status: 'Pending' },
+    { id: 'r2', name: 'BPI Account', sku: 'General', category: 'Basic', price: 2900, qty: 15, status: 'Current' },
+    { id: 'r3', name: 'Primary', sku: 'Primary', category: 'Revenue', price: 41900, qty: 15, status: 'Approved' },
+    { id: 'r4', name: 'Q1 2026', sku: 'Acme Corp', category: 'Annual', price: 49700, qty: 34, status: 'Paid' },
+    { id: 'r5', name: 'Sample Entry', sku: 'Active Item', category: 'Operating', price: 29500, qty: 59, status: 'Processing' },
+    { id: 'r6', name: 'Standard', sku: 'Monthly', category: 'Fixed', price: 3600, qty: 73, status: 'Connected' },
+    { id: 'r7', name: 'General', sku: 'Main', category: 'Premium', price: 25700, qty: 92, status: 'In Stock' },
+    { id: 'r8', name: 'Default', sku: 'Metro Manila', category: 'Variable', price: 47300, qty: 57, status: 'Low' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Intercompany Transfers"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Treasury / Intercompany Transfers"
-      purpose="Intercompany Transfers manages cash movements between legal entities within the same corporate group — capital injections, intercompany loans, and management fee settlements. Each transfer records the sending entity, receiving entity, amount, currency, exchange rate (if cross-currency), and the intercompany accounting treatment. Transfers automatically post to the due-to/due-from intercompany accounts in both entities and appear in the intercompany elimination schedule at consolidation."
-      components={[
-        { name: 'Transfer Form', description: 'Select sending entity, receiving entity, transfer type (loan/capital/settlement), amount, currency, bank accounts, and effective date.' },
-        { name: 'Intercompany Balance Dashboard', description: 'Intercompany receivable and payable balances between all entity pairs — showing which entities owe which.' },
-        { name: 'Transfer History', description: 'All intercompany transfers with date, sending/receiving entities, amount, type, and status.' },
-        { name: 'Settlement Proposal', description: 'Suggest netting of intercompany balances to minimize bank transfers.' },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['New Transfer', 'IC Balances', 'Transfer History', 'Netting']}
-      features={[
-        'Multi-entity intercompany cash transfer recording',
-        'Automatic dual-entity journal entries (both entities)',
-        'Cross-currency transfer support with FX rate',
-        'Intercompany balance dashboard',
-        'Netting of intercompany receivables/payables',
-        'Transfer approval workflow for large amounts',
-        'Integration with consolidation elimination',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All intercompany balances between entity pairs',
-        'Transfer history with entity details',
-        'Net intercompany position per entity',
-        'Pending approval transfers',
-        'Cross-currency transfer exchange rates',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Record a new intercompany transfer',
-        'Approve a pending intercompany transfer',
-        'View intercompany balances',
-        'Propose intercompany netting',
-        'Export intercompany schedule for consolidation',
-      ]}
-      relatedPages={[
-        { label: 'Treasury Overview', href: '/banking-cash/treasury/treasury-overview' },
-        { label: 'Intercompany', href: '/organization/entity-structure/intercompany' },
-        { label: 'Consolidation', href: '/organization/entity-structure/consolidation' },
-        { label: 'Bank Accounts', href: '/banking-cash/accounts/bank-accounts' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

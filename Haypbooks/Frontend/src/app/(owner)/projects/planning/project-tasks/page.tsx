@@ -1,31 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', assignee: 'Q1 2026', dueDate: '2026-01-27', priority: 'Completed', status: 'Enabled' },
+    { id: 'r2', name: 'Acme Corp', assignee: 'Monthly', dueDate: '2026-02-04', priority: 'Active', status: 'Closed' },
+    { id: 'r3', name: 'Acme Corp', assignee: 'Default', dueDate: '2026-02-20', priority: 'Draft', status: 'High' },
+    { id: 'r4', name: 'Main', assignee: 'General', dueDate: '2026-03-16', priority: 'Pending', status: 'Paid' },
+    { id: 'r5', name: 'Primary', assignee: 'Q1 2026', dueDate: '2026-02-26', priority: 'Paid', status: 'High' },
+    { id: 'r6', name: 'Active Item', assignee: 'Primary', dueDate: '2026-01-26', priority: 'Current', status: 'Active' },
+    { id: 'r7', name: 'Q1 2026', assignee: 'Monthly', dueDate: '2026-01-19', priority: 'Filed', status: 'Closed' },
+    { id: 'r8', name: 'Monthly', assignee: 'Standard', dueDate: '2026-01-20', priority: 'Enabled', status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title='Project Tasks'
-      module='PROJECTS'
-      breadcrumb='Projects / Planning / Project Tasks'
-      purpose='Central task management interface for creating, assigning, prioritizing, and tracking all project tasks. Provides hierarchical work breakdown structure (WBS) views, dependency management, and progress tracking to keep project execution on schedule.'
-      components={[
-        { name: 'Task List View', description: 'Sortable and filterable list of all tasks with status, assignee, due date, and priority' },
-        { name: 'WBS Tree View', description: 'Hierarchical tree display of tasks organized by phase and deliverable' },
-        { name: 'Task Detail Panel', description: 'Side panel for entering task descriptions, estimates, dependencies, and attachments' },
-        { name: 'Dependency Map', description: 'Visual representation of task predecessors and successors' },
-        { name: 'Progress Bar Summary', description: 'Aggregate completion percentage per project phase' },
+    <OwnerPageTemplate
+      title="Project Tasks"
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['List View', 'WBS View', 'By Assignee', 'Overdue Tasks']}
-      features={['Hierarchical WBS structure with unlimited nesting', 'Task dependency and predecessor management', 'Effort estimation and actual hours tracking', 'Priority and status workflow', 'Bulk task assignment and reassignment', 'File attachment per task', 'Task comments and activity log']}
-      dataDisplayed={['Task name, description, and phase', 'Assigned team member', 'Estimated vs. actual hours', 'Start and due dates', 'Task status (not started, in progress, complete, blocked)', 'Priority level', 'Task dependencies']}
-      userActions={['Create new task or subtask', 'Assign task to team member', 'Set task dependencies', 'Update task progress', 'Add task comments and attachments', 'Bulk update task status', 'Export task list for reporting']}
-      relatedPages={[
-        { label: 'Schedule', href: '/projects/planning/schedule' },
-        { label: 'Resource Planning', href: '/projects/planning/resource-planning' },
-        { label: 'Project Time', href: '/projects/tracking/project-time' },
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

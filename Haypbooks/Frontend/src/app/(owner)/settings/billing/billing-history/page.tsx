@@ -1,46 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Billing History"
-      module="SETTINGS"
-      breadcrumb="Settings / Billing / Billing History"
-      purpose="Billing History shows all past invoices and payment receipts from Haypbooks to the company for their subscription. Each line shows the billing period, plan, amount charged, payment method, and payment status. Invoices can be downloaded as PDFs for accounting records. The billing history provides the trail needed to verify subscription charges recognized in the company's own accounting system and to resolve any billing disputes with Haypbooks support."
-      components={[
-        { name: 'Invoice List', description: 'All historical Haypbooks subscription invoices with billing period, amount, and payment status.' },
-        { name: 'Payment Method', description: 'Current payment method on file (credit card last 4 digits, or bank transfer). Update payment method here.' },
-        { name: 'Download Invoice PDF', description: "Download any past invoice as a PDF for the company's own AP records." },
-        { name: 'Failed Payment Recovery', description: 'If a payment fails: retry button and alternative payment method option.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Invoice History', 'Payment Method', 'Failed Payments']}
-      features={[
-        'Complete Haypbooks subscription billing history',
-        'Invoice PDF download for company accounting',
-        'Payment method management',
-        'Failed payment notification and retry',
-        'VAT receipt available (if applicable)',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All subscription invoices with amounts and dates',
-        'Payment status per invoice',
-        'Current payment method',
-        'Failed payments (if any)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View all past subscription invoices',
-        'Download invoice PDF',
-        'Update payment method',
-        'Retry a failed payment',
-        'Contact support for billing dispute',
-      ]}
-      relatedPages={[
-        { label: 'Subscription', href: '/settings/billing/subscription' },
-        { label: 'Company Profile', href: '/settings/company/company-profile' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

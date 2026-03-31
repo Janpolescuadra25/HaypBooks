@@ -1,50 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', sku: 'Standard', category: 'Annual', price: 2100, qty: 75, status: 'Draft' },
+    { id: 'r2', name: 'BPI Account', sku: 'Primary', category: 'Quarterly', price: 7600, qty: 24, status: 'Closed' },
+    { id: 'r3', name: 'Standard', sku: 'Primary', category: 'Fixed', price: 45200, qty: 69, status: 'Medium' },
+    { id: 'r4', name: 'Main', sku: 'Standard', category: 'Operating', price: 33100, qty: 47, status: 'Filed' },
+    { id: 'r5', name: 'BPI Account', sku: 'Sample Entry', category: 'Variable', price: 2100, qty: 12, status: 'Open' },
+    { id: 'r6', name: 'Active Item', sku: 'Q1 2026', category: 'Premium', price: 10300, qty: 38, status: 'Low' },
+    { id: 'r7', name: 'Monthly', sku: 'Sample Entry', category: 'Direct', price: 24500, qty: 88, status: 'Draft' },
+    { id: 'r8', name: 'Monthly', sku: 'Q1 2026', category: 'Fixed', price: 1400, qty: 10, status: 'Medium' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Transfers"
-      module="INVENTORY"
-      breadcrumb="Inventory / Warehouses / Transfers"
-      purpose="Transfers manages the movement of inventory between warehouses or locations. A transfer order is created to move items from a source location to a destination location — reducing stock at source and adding to destination. Transfers can be authorized (require approval above a quantity or value threshold), recorded with a transit time (in-transit status between dispatch and receipt), and are fully auditable. All transfers create matching stock movement records at both ends."
-      components={[
-        { name: 'Transfer Order List', description: 'All transfer orders with source warehouse, destination warehouse, items, quantity, transfer date, and status (Pending/In-Transit/Received).' },
-        { name: 'Transfer Order Creator', description: 'Create a transfer: select source and destination, add items and quantities, set transfer date, and requestor.' },
-        { name: 'Dispatch Confirmation', description: 'Source warehouse confirms dispatch — items move to "In-Transit" status.' },
-        { name: 'Receipt Confirmation', description: 'Destination warehouse confirms receipt — items move from "In-Transit" to destination stock.' },
-        { name: 'Discrepancy Recording', description: 'Record any quantity discrepancy between dispatched and received quantities.' },
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Transfers', 'Pending', 'In Transit', 'Received', 'Discrepancies']}
-      features={[
-        'Inter-warehouse inventory transfer management',
-        'In-transit status for transfers not yet received',
-        'Dispatch and receipt confirmation workflow',
-        'Discrepancy recording and resolution',
-        'Full movement audit trail for both warehouses',
-        'Transfer approval for large quantity moves',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All transfers with source, destination, and status',
-        'In-transit stock (dispatched but not received)',
-        'Transfer history with discrepancy summary',
-        'Stock impact on both locations',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new transfer order',
-        'Confirm dispatch of transfer',
-        'Confirm receipt at destination',
-        'Record quantity discrepancy',
-        'Cancel a pending transfer',
-        'View transfer history',
-      ]}
-      relatedPages={[
-        { label: 'Warehouse List', href: '/inventory/warehouses/warehouse-list' },
-        { label: 'Stock Levels', href: '/inventory/stock/stock-levels' },
-        { label: 'Stock Movements', href: '/inventory/stock/stock-movements' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

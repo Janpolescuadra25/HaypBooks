@@ -1,44 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function PaymentMethodsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Payment Methods"
-      module="SETTINGS"
-      breadcrumb="Settings / Account & Billing / Payment Methods"
-      purpose="Payment Methods allows account administrators to add, update, or remove the payment instruments used for Haypbooks subscription billing. This page supports credit cards, debit cards, and bank transfer details, ensuring billing continuity. Admins can set a primary payment method and add backups to prevent service interruptions."
-      components={[
-        { name: 'Saved Payment Cards', description: 'Grid of stored payment methods showing card type, masked number, expiry, and primary/backup designation.' },
-        { name: 'Add Payment Method Form', description: 'Secure tokenized form to add a new credit/debit card or bank account via payment gateway.' },
-        { name: 'Primary Method Selector', description: 'Radio selector to designate one method as the default for automatic subscription renewal charges.' },
-        { name: 'Remove Confirmation Dialog', description: 'Safety dialog requiring confirmation before deleting a stored payment method.' },
-        { name: 'Billing Address Section', description: 'Form fields for billing address associated with the primary payment method.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Saved Methods', 'Add New', 'Billing Address']}
-      features={[
-        'Add multiple credit/debit cards as primary or backup payment methods',
-        'PCI-compliant tokenized card storage — no raw card data stored on servers',
-        'Set primary billing method for automatic subscription renewals',
-        'Update expiry dates and billing address without re-entering card number',
-        'Remove payment methods with confirmation guard against accidental deletion',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Card brand (Visa, Mastercard, etc.) and masked last 4 digits',
-        'Expiry date and cardholder name',
-        'Primary vs. backup method designation',
-        'Billing address linked to each card',
-        'Date each card was added',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new credit or debit card',
-        'Set a card as the primary billing method',
-        'Update billing address for an existing card',
-        'Remove a saved payment method',
-        'View card status (active, expired, failed)',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,43 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function AssetLocationsPage() {
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', type: 'Standard', contact: 'Metro Manila', balance: 29200, status: 'Open' },
+    { id: 'r2', name: 'Primary', type: 'Operating', contact: 'Monthly', balance: 2600, status: 'Low' },
+    { id: 'r3', name: 'Metro Manila', type: 'Revenue', contact: 'Active Item', balance: 9900, status: 'Medium' },
+    { id: 'r4', name: 'Active Item', type: 'Monthly', contact: 'Monthly', balance: 8400, status: 'Completed' },
+    { id: 'r5', name: 'Metro Manila', type: 'Standard', contact: 'Q1 2026', balance: 42400, status: 'Low' },
+    { id: 'r6', name: 'Primary', type: 'Annual', contact: 'Main', balance: 6000, status: 'Draft' },
+    { id: 'r7', name: 'Q1 2026', type: 'Quarterly', contact: 'Active Item', balance: 20200, status: 'High' },
+    { id: 'r8', name: 'General', type: 'Fixed', contact: 'Standard', balance: 14500, status: 'Connected' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Asset Locations"
-      module="ACCOUNTING — FIXED ASSETS"
-      breadcrumb="Accounting / Fixed Assets / Asset Management / Asset Locations"
-      purpose="Maintain a registry of physical locations where assets are deployed, enabling location-based reporting and asset tracking."
-      components={[
-        { name: "Location List", description: "All registered locations with address and asset count" },
-        { name: "Location Form", description: "Create/edit form for location name, address, and responsible manager" },
-        { name: "Assets at Location", description: "Drill-down view of all assets assigned to a specific location" },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={[
-        "All Locations",
-        "Create New",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      features={[
-        "Hierarchical location structure (site > building > floor)",
-        "Asset count per location",
-        "Location transfer history",
-        "QR code printing for location labels",
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      dataDisplayed={[
-        "Location name and code",
-        "Address and contact",
-        "Number of assets at location",
-        "Asset net book value by location",
-      ]}
-      userActions={[
-        "Create a new location",
-        "Edit location details",
-        "View assets at a location",
-        "Transfer assets between locations",
-        "Export location report",
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

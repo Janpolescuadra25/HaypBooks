@@ -1,51 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-01', description: 'Primary', amount: 42900, account: 'Standard', status: 'Connected' },
+    { id: 'r2', date: '2026-03-20', description: 'Acme Corp', amount: 5700, account: 'Acme Corp', status: 'Open' },
+    { id: 'r3', date: '2026-01-16', description: 'Main', amount: 31600, account: 'Sample Entry', status: 'Approved' },
+    { id: 'r4', date: '2026-03-11', description: 'Metro Manila', amount: 47300, account: 'Metro Manila', status: 'Connected' },
+    { id: 'r5', date: '2026-03-19', description: 'Metro Manila', amount: 27100, account: 'Main', status: 'Closed' },
+    { id: 'r6', date: '2026-03-14', description: 'Q1 2026', amount: 18000, account: 'Monthly', status: 'Medium' },
+    { id: 'r7', date: '2026-02-11', description: 'Acme Corp', amount: 30400, account: 'Metro Manila', status: 'Completed' },
+    { id: 'r8', date: '2026-03-16', description: 'Default', amount: 26800, account: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Leave Policy"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Leaves / Leave Policy"
-      purpose="Leave Policy configures the leave rules for the organization — annual VL/SL entitlement per employment classification, accrual method (upfront vs. monthly accrual), carry-over maximum, monetization rate, leave filing lead time requirements, and special leave types (maternity leave, paternity leave, solo parent leave, VAWC leave, etc.) as required by Philippine labor law. These rules drive automated leave balance calculations and ensure compliance with the Labor Code."
-      components={[
-        { name: 'Leave Type Library', description: 'All configured leave types: name, code, legal basis (if mandatory), annual entitlement days, and paid/unpaid classification.' },
-        { name: 'Entitlement Rules', description: 'Days per employment type (Regular: 15 VL + 15 SL, Probationary: prorated, etc.) and accrual method (upfront or monthly).' },
-        { name: 'Carry-Over Rules', description: 'How many unused leave days carry over to next year vs. forfeit vs. monetize.' },
-        { name: 'Filing Requirements', description: 'Minimum advance filing notice per leave type (e.g., VL: 5 days notice; SL: file upon return with medical cert).' },
-        { name: 'Monetization Settings', description: 'Rate for leave monetization at year-end or upon separation (usually daily equivalent of basic pay).' },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Leave Types', 'Entitlement Rules', 'Carry-Over Rules', 'Filing Rules', 'Monetization']}
-      features={[
-        'Complete leave type configuration',
-        'Philippine legal mandatory leave types (ML, PL, SL, VL, VAWC, etc.)',
-        'Accrual method: monthly or upfront',
-        'Carry-over and forfeiture rules',
-        'Leave monetization at year-end',
-        'Employee group differentiated entitlements',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All configured leave types',
-        'Entitlement days per type per classification',
-        'Carry-over and forfeiture rules',
-        'Monetization rate',
-        'BIR-relevant leave details (maternity pay treatment)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create or edit a leave type',
-        'Set entitlement days per employment classification',
-        'Configure accrual method',
-        'Set carry-over limit',
-        'Configure monetization rate',
-        'Enable or disable a leave type',
-      ]}
-      relatedPages={[
-        { label: 'Leave Requests', href: '/payroll-workforce/leaves/leave-requests' },
-        { label: 'Leave Balances', href: '/payroll-workforce/leaves/leave-balances' },
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

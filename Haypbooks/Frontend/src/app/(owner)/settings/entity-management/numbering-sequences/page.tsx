@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function NumberingSequencesPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Standard', description: 'Primary', status: 'In Stock' },
+    { id: 'r2', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Sample Entry', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', category: 'Premium', value: 'Sample Entry', description: 'General', status: 'Low' },
+    { id: 'r4', name: 'Main', category: 'Premium', value: 'BPI Account', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r5', name: 'Standard', category: 'Direct', value: 'Metro Manila', description: 'Monthly', status: 'Medium' },
+    { id: 'r6', name: 'Active Item', category: 'Premium', value: 'Q1 2026', description: 'BPI Account', status: 'Connected' },
+    { id: 'r7', name: 'Default', category: 'Fixed', value: 'Q1 2026', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', category: 'Basic', value: 'Primary', description: 'Active Item', status: 'In Stock' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Numbering Sequences"
-      module="SETTINGS"
-      breadcrumb="Settings / Entity Management / Numbering Sequences"
-      purpose="Numbering Sequences defines the auto-numbering format and counters for all transaction documents — invoices, bills, purchase orders, receipts, and journal entries. Customizable prefixes, suffixes, and padding allow businesses to adopt their own document numbering convention for branding or regulatory compliance. Sequences can be reset at year-start or run continuously across fiscal years."
-      components={[
-        { name: 'Sequence List Table', description: 'Table of all document types with their current prefix, format pattern, last number, and next number.' },
-        { name: 'Format Editor', description: 'Inline editor to set prefix, suffix, digit padding, and separator for each document sequence.' },
-        { name: 'Reset on Year Start', description: 'Toggle per sequence to reset the counter to 1 at the beginning of each new fiscal year.' },
-        { name: 'Manual Override Field', description: 'Admin-only field to manually set the next number in a sequence when correction is needed.' },
-        { name: 'Preview Number Badge', description: 'Live preview showing what the next generated document number will look like with current settings.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Sales Documents', 'Purchase Documents', 'Journal Entries', 'Other Documents']}
-      features={[
-        'Configure prefix, suffix, and digit padding for every document type',
-        'Set sequences to auto-increment or reset at fiscal-year start',
-        'Preview the next generated number before saving changes',
-        'Manually override the next sequence number for corrections',
-        'Prevent duplicate numbers with system-level uniqueness enforcement',
-        'Apply different number sequences per branch or entity',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Document type and current sequence format',
-        'Last assigned number and next upcoming number',
-        'Year-reset toggle status',
-        'Sequence start date',
-        'Number of documents generated year-to-date for each type',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Edit prefix, suffix, or padding for any document type',
-        'Toggle year-start counter reset',
-        'Manually set next sequence number',
-        'Preview generated number format',
-        'Save and apply sequence changes',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

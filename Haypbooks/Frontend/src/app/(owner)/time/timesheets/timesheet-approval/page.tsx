@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Clock, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', assignee: 'Monthly', dueDate: '2026-01-21', priority: 'Closed', status: 'Completed' },
+    { id: 'r2', name: 'BPI Account', assignee: 'Default', dueDate: '2026-02-06', priority: 'Low', status: 'Low' },
+    { id: 'r3', name: 'General', assignee: 'BPI Account', dueDate: '2026-03-23', priority: 'Pending', status: 'Enabled' },
+    { id: 'r4', name: 'Sample Entry', assignee: 'General', dueDate: '2026-01-23', priority: 'Active', status: 'Current' },
+    { id: 'r5', name: 'Active Item', assignee: 'Monthly', dueDate: '2026-01-21', priority: 'Closed', status: 'Active' },
+    { id: 'r6', name: 'General', assignee: 'Active Item', dueDate: '2026-01-16', priority: 'Processing', status: 'Processing' },
+    { id: 'r7', name: 'Active Item', assignee: 'Active Item', dueDate: '2026-03-20', priority: 'Current', status: 'Open' },
+    { id: 'r8', name: 'Primary', assignee: 'Primary', dueDate: '2026-02-27', priority: 'Open', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Timesheet Approval"
-      module="TIME"
-      breadcrumb="Time / Timesheets / Timesheet Approval"
-      purpose="Timesheet Approval is the dedicated approval management page — centralizing all timesheet submissions that need action. Approvers see all submitted timesheets across all teams they are authorized to approve, with summary stats (total hours, billable %, project breakdown) for each. Bulk approval is supported for routine timesheet reviews. Rejected timesheets return to the employee with mandatory feedback. The approval audit trail supports payroll and billing compliance."
-      components={[
-        { name: 'Approval Queue', description: 'All submitted timesheets queued for approval with employee, period, total hours, and submission date.' },
-        { name: 'Timesheet Review Panel', description: 'Per-timesheet full detail: days worked, project breakdown, billable highlights, and any notes from the employee.' },
-        { name: 'Batch Approval Controls', description: 'Approve all selected timesheets at once with a single action and timestamp.' },
-        { name: 'Rejection Form', description: 'Reject a timesheet with mandatory reason and specific correction instructions.' },
-        { name: 'Approval History', description: 'Archive of all approved timesheets with approval timestamp, approver, and any notes.' },
+      section="Time Tracking"
+      icon={<Clock size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Pending Approval', 'Approved', 'Rejected', 'Approval History']}
-      features={[
-        'Centralized timesheet approval queue',
-        'Full timesheet detail review in approval interface',
-        'Batch approval for high-volume periods',
-        'Mandatory rejection feedback',
-        'Approval timestamp and audit trail',
-        'Integration with payroll on approval',
-        'Notification to employee on approval or rejection',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All timesheets pending approval',
-        'Employee, period, and hour summary per submission',
-        'Billable hours per timesheet',
-        'Approval history with timestamps',
-        'Rejection reasons log',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Review a submitted timesheet',
-        'Approve a timesheet',
-        'Batch approve multiple timesheets',
-        'Reject with feedback',
-        'View approval history',
-        'Filter by team, project, or employee',
-      ]}
-      relatedPages={[
-        { label: 'Team Timesheets', href: '/time/timesheets/team-timesheets' },
-        { label: 'My Timesheet', href: '/time/timesheets/my-timesheet' },
-        { label: 'Billable Hours', href: '/projects/time-billing/billable-hours' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

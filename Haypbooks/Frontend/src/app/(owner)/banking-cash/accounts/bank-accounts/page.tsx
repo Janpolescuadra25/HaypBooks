@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', type: 'Variable', contact: 'Default', balance: 24900, status: 'In Stock' },
+    { id: 'r2', name: 'Sample Entry', type: 'Basic', contact: 'BPI Account', balance: 9400, status: 'Medium' },
+    { id: 'r3', name: 'General', type: 'Revenue', contact: 'BPI Account', balance: 24200, status: 'Paid' },
+    { id: 'r4', name: 'Standard', type: 'Basic', contact: 'Q1 2026', balance: 11600, status: 'Processing' },
+    { id: 'r5', name: 'Sample Entry', type: 'Fixed', contact: 'General', balance: 8800, status: 'Draft' },
+    { id: 'r6', name: 'Default', type: 'Direct', contact: 'Primary', balance: 38500, status: 'Medium' },
+    { id: 'r7', name: 'Q1 2026', type: 'Variable', contact: 'Default', balance: 4600, status: 'Completed' },
+    { id: 'r8', name: 'Acme Corp', type: 'Annual', contact: 'General', balance: 15700, status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Bank Accounts"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Accounts / Bank Accounts"
-      purpose="Bank Accounts is the registry of all company bank accounts connected to the accounting system. Each account record stores the bank name, account number (masked), account type (current, savings, payroll, USD foreign currency), currency, opening balance, current balance, and GL account mapping. Bank accounts serve as the connected source for bank feed imports, reconciliation, and payment processing."
-      components={[
-        { name: 'Account List', description: 'All connected bank accounts with bank name, last 4 digits, account type, currency, and current balance.' },
-        { name: 'Account Detail', description: 'Full account profile: bank name, branch, SWIFT/routing, account type, currency, GL mapping, and feed connection status.' },
-        { name: 'Connect Bank Feed', description: 'Setup wizard for connecting a bank account to automated feed via direct integration or CSV import template.' },
-        { name: 'Transaction History', description: 'Recent transactions for the account imported from bank feed or manually entered.' },
-        { name: 'Account Summary', description: 'Total balance across all accounts in base currency with FX conversion.' },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Accounts', 'Current Accounts', 'Savings', 'Foreign Currency', 'Payroll Accounts']}
-      features={[
-        'Multi-bank, multi-currency account registry',
-        'Bank feed connection management',
-        'GL account mapping per bank account',
-        'Total cash position across all accounts',
-        'Account reconciliation status indicator',
-        'Inactive/dormant account management',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All bank accounts with current balances',
-        'Bank feed connection status',
-        'Last reconciliation date',
-        'Unreconciled transaction count',
-        'Total cash in base and foreign currencies',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new bank account to the registry',
-        'Connect a bank feed to an account',
-        'Update bank account details',
-        'View transactions for an account',
-        'Navigate to reconcile an account',
-        'Mark account as inactive',
-      ]}
-      relatedPages={[
-        { label: 'Bank Transactions', href: '/banking-cash/transactions/bank-transactions' },
-        { label: 'Reconcile', href: '/banking-cash/reconciliation/reconcile' },
-        { label: 'Feed Connections', href: '/banking-cash/bank-feeds/feed-connections' },
-        { label: 'Treasury Overview', href: '/banking-cash/treasury/treasury-overview' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

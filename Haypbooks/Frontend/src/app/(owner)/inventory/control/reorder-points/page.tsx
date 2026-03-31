@@ -1,26 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'General', sku: 'Acme Corp', category: 'Operating', price: 10600, qty: 30, status: 'Draft' },
+    { id: 'r2', name: 'General', sku: 'Standard', category: 'Annual', price: 17600, qty: 66, status: 'Draft' },
+    { id: 'r3', name: 'Standard', sku: 'General', category: 'Direct', price: 46000, qty: 24, status: 'Active' },
+    { id: 'r4', name: 'Default', sku: 'Acme Corp', category: 'Premium', price: 40500, qty: 6, status: 'Closed' },
+    { id: 'r5', name: 'Metro Manila', sku: 'Monthly', category: 'Operating', price: 10700, qty: 28, status: 'Filed' },
+    { id: 'r6', name: 'Default', sku: 'General', category: 'Revenue', price: 20200, qty: 21, status: 'Processing' },
+    { id: 'r7', name: 'General', sku: 'Metro Manila', category: 'Standard', price: 16000, qty: 32, status: 'Filed' },
+    { id: 'r8', name: 'Acme Corp', sku: 'Active Item', category: 'Standard', price: 42300, qty: 21, status: 'Approved' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Reorder Points"
-      module="INVENTORY"
-      breadcrumb="Inventory / Control / Reorder Points"
-      purpose="Configure minimum stock levels that trigger automatic purchase order suggestions or alerts. Set reorder points, reorder quantities, and preferred suppliers for each item."
-      components={[
-        { name: "Reorder Point Config", description: "Per-item reorder point and reorder quantity settings" },
-        { name: "Current Stock vs. Reorder", description: "Color-coded table showing items at or below reorder point" },
-        { name: "Reorder Suggestions", description: "Auto-generated PO suggestions for items below reorder point" },
-        { name: "Preferred Supplier Settings", description: "Assign preferred supplier per item for automated PO creation" },
-        { name: "Lead Time Settings", description: "Set supplier lead times to calculate safety stock requirements" },
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Reorder Configuration","Below Reorder Point","Suggestions","History"]}
-      features={["Automated reorder suggestions","Safety stock calculation","Preferred supplier assignment","Lead time consideration","Bulk update via CSV"]}
-      dataDisplayed={["Item name and SKU","Current stock level","Reorder point threshold","Reorder quantity","Preferred supplier"]}
-      userActions={["Set reorder point","Set reorder quantity","Review reorder suggestions","Create PO from suggestion","Import reorder settings"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

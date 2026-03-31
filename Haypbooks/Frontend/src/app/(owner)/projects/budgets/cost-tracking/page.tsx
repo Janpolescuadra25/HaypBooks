@@ -1,49 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-11', description: 'Metro Manila', amount: 47700, account: 'Metro Manila', status: 'Enabled' },
+    { id: 'r2', date: '2026-01-13', description: 'Standard', amount: 5400, account: 'Sample Entry', status: 'Closed' },
+    { id: 'r3', date: '2026-01-26', description: 'Monthly', amount: 34500, account: 'BPI Account', status: 'High' },
+    { id: 'r4', date: '2026-03-27', description: 'General', amount: 27000, account: 'Sample Entry', status: 'Paid' },
+    { id: 'r5', date: '2026-02-10', description: 'Q1 2026', amount: 45300, account: 'Main', status: 'High' },
+    { id: 'r6', date: '2026-03-18', description: 'Acme Corp', amount: 44700, account: 'Active Item', status: 'Active' },
+    { id: 'r7', date: '2026-02-13', description: 'BPI Account', amount: 33400, account: 'Monthly', status: 'Closed' },
+    { id: 'r8', date: '2026-02-15', description: 'Metro Manila', amount: 35300, account: 'Active Item', status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Cost Tracking"
-      module="PROJECTS"
-      breadcrumb="Projects / Budgets / Cost Tracking"
-      purpose="Cost Tracking monitors all actual costs incurred by a project — labor costs from time entries, direct material purchases, vendor bills, employee expenses, and overhead allocations. All costs coded to a project code are captured here, giving the project manager full visibility into total WIP costs. This is the aggregate view of the project P&L: estimated revenue vs. total costs traceable to the project."
-      components={[
-        { name: 'Cost Ledger by Category', description: 'Total actual costs per project grouped by category: Labor, Materials, Subcontractors, Expenses, Overhead.' },
-        { name: 'Transaction Detail', description: 'Drill into each category to see individual transactions: timesheet entries, PO lines, bills, expense reports charged to this project.' },
-        { name: 'Cost-to-Revenue Ratio', description: 'Total costs vs. total billings: the project P&L showing gross margin.' },
-        { name: 'Committed Costs', description: 'Costs committed but not yet incurred: open POs, unapproved expense reports coded to the project.' },
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['By Category', 'Transaction Detail', 'Labor Costs', 'Material Costs', 'Committed Costs']}
-      features={[
-        'Consolidated project cost view from all transaction types',
-        'Labor cost from timesheets at billing or cost rates',
-        'Direct material from POs and bills',
-        'Expense reimbursements coded to project',
-        'Committed cost tracking (open POs)',
-        'Project gross margin calculation',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Actual costs by category and transaction',
-        'Committed (not-yet-incurred) costs',
-        'Total project cost vs. revenue',
-        'Cost per phase or milestone',
-        'Cost trend over project timeline',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View all costs for a project',
-        'Drill into cost category transactions',
-        'View labor hours at cost vs. billing rate',
-        'Track committed costs (open POs)',
-        'Export project cost report',
-      ]}
-      relatedPages={[
-        { label: 'Project Budget', href: '/projects/budgets/project-budget' },
-        { label: 'Project Invoicing', href: '/projects/time-billing/project-invoicing' },
-        { label: 'Profitability Report', href: '/projects/reports/profitability-report' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function VatSalesTaxPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-27', description: 'Acme Corp', amount: 14200, account: 'Main', status: 'Completed' },
+    { id: 'r2', date: '2026-01-09', description: 'Active Item', amount: 48200, account: 'Standard', status: 'Paid' },
+    { id: 'r3', date: '2026-02-15', description: 'Standard', amount: 23400, account: 'Primary', status: 'Current' },
+    { id: 'r4', date: '2026-01-16', description: 'General', amount: 17200, account: 'Q1 2026', status: 'Current' },
+    { id: 'r5', date: '2026-02-26', description: 'General', amount: 34400, account: 'Default', status: 'Draft' },
+    { id: 'r6', date: '2026-03-03', description: 'Active Item', amount: 49100, account: 'Standard', status: 'High' },
+    { id: 'r7', date: '2026-02-23', description: 'Sample Entry', amount: 46600, account: 'BPI Account', status: 'Current' },
+    { id: 'r8', date: '2026-02-14', description: 'Metro Manila', amount: 23800, account: 'Main', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="VAT / Sales Tax"
-      module="TAXES"
-      breadcrumb="Taxes / Sales & Output Tax / VAT / Sales Tax"
-      purpose="VAT / Sales Tax is the central management hub for tracking, calculating, and reporting the value-added tax or sales tax collected on all customer sales. This module summarizes output tax by jurisdiction, provides a period-end VAT position (output less input), and prepares the data needed for periodic VAT or sales tax returns. It supports both destination-based consumption taxes (VAT) and origin-based sales taxes depending on the business's operating jurisdictions."
-      components={[
-        { name: 'VAT Position Summary', description: 'Net VAT payable or refundable card showing output VAT, input VAT, and net position for the period.' },
-        { name: 'Tax Rate Register', description: 'List of enabled VAT / sales tax rates with jurisdiction, rate %, effective date, and status.' },
-        { name: 'Sales Tax Report Table', description: 'Breakdown of taxable sales and tax collected per jurisdiction for the reporting period.' },
-        { name: 'Exemption Certificate Tracker', description: 'Storage for customer-provided exemption certificates with validity dates.' },
-        { name: 'Period-End VAT Computation', description: 'Automated computation of VAT payable or carryforward for each reporting period.' },
+    <OwnerPageTemplate
+      title="Vat Sales Tax"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['VAT Position', 'Sales Breakdown', 'Tax Rates', 'Exemptions', 'Returns']}
-      features={[
-        'View net VAT position (output minus input) per period',
-        'Break down taxable sales and tax collected per jurisdiction',
-        'Maintain a register of active VAT and sales tax rates',
-        'Track customer exemption certificates and validity',
-        'Compute period-end VAT payable or refund amount',
-        'Export data for periodic VAT or sales tax return filing',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Output VAT total for period',
-        'Input VAT credit total for period',
-        'Net VAT payable or refundable',
-        'Sales amounts by tax rate and jurisdiction',
-        'Customer exemption certificates on file',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View VAT position for current or past period',
-        'Add or update tax rate entries',
-        'Upload customer exemption certificate',
-        'Run period-end VAT computation',
-        'Export VAT return data',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

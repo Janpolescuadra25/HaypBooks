@@ -77,14 +77,14 @@ export class OnboardingService {
 
         // Look up workspace by ownerUserId directly (avoids WorkspaceUser table)
         try {
-          const existingWs = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
+          const existingWs = await this.prisma.workspace.findFirst({ where: { ownerUserId: userId } })
           if (existingWs) {
             // Workspace exists — ensure/update Practice record
             const existingPractice = await this.prisma.practice.findFirst({ where: { workspaceId: existingWs.id } })
             if (existingPractice) {
-              try { await this.prisma.practice.update({ where: { id: existingPractice.id }, data: { name: normalizedFirm } }) } catch (e) { }
+              try { await this.prisma.practice.update({ where: { id: existingPractice.id }, data: { name: normalizedFirm, displayName: normalizedFirm } }) } catch (e) { }
             } else {
-              try { await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: existingWs.id } }) } catch (e) { }
+              try { await this.prisma.practice.create({ data: { name: normalizedFirm, displayName: normalizedFirm, workspaceId: existingWs.id } }) } catch (e) { }
             }
             return { success: true }
           }
@@ -102,7 +102,7 @@ export class OnboardingService {
             }
           })
           try {
-            await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: newWs.id } })
+            await this.prisma.practice.create({ data: { name: normalizedFirm, displayName: normalizedFirm, workspaceId: newWs.id } })
           } catch (practiceErr) { /* non-fatal */ }
           return { success: true }
         } catch (e) {
@@ -123,7 +123,7 @@ export class OnboardingService {
     return steps
   }
 
-  async complete(userId: string, onboardingType: 'quick' | 'full' = 'full', hub: 'OWNER' | 'ACCOUNTANT' = 'OWNER') {
+  async complete(userId: string, onboardingType: 'quick' | 'full' = 'full', hub: 'OWNER' | 'ACCOUNTANT' = 'OWNER', mode: 'append' | 'replace' = 'replace', practiceName?: string, companyName?: string) {
     // Ensure required values are present before marking onboarding complete
     const steps = await this.onboardingRepository.load(userId)
     const user = await this.userRepository.findById(userId)
@@ -135,8 +135,8 @@ export class OnboardingService {
       const workspaceVal = steps?.owner_workspace?.workspaceName || steps?.business?.workspaceName || steps?.business?.companyName || steps?.business?.businessName
       if (!workspaceVal) throw new BadRequestException('businessName is required to complete owner onboarding')
 
-      // Prefer business step for company name; fallback to workspace name
-      const companyVal = steps?.business?.companyName || steps?.business?.businessName || steps?.business?.workspaceName || steps?.owner_workspace?.workspaceName
+      // Prefer explicit companyName payload, then business step, then workspace name
+      const companyVal = companyName?.trim() || steps?.business?.companyName || steps?.business?.businessName || steps?.business?.workspaceName || steps?.owner_workspace?.workspaceName
 
       // Normalize names
       const normalizedWorkspace = String(workspaceVal).trim().slice(0, 140)
@@ -162,7 +162,7 @@ export class OnboardingService {
 
         await this.prisma.$transaction(async (tx) => {
           let workspaceId: string | null = null
-          const existingWorkspace = await tx.workspace.findUnique({ where: { ownerUserId: userId } })
+          const existingWorkspace = await tx.workspace.findFirst({ where: { ownerUserId: userId } })
           if (existingWorkspace) {
             workspaceId = existingWorkspace.id
             this.logger.log('[ONBOARDING-COMPLETE] ✅ Found existing workspace: ' + workspaceId)
@@ -182,44 +182,75 @@ export class OnboardingService {
           ownerWorkspaceId = workspaceId
 
           if (workspaceId) {
+            const roleName = 'Owner'
+            let roleRecord = await tx.role.findFirst({ where: { workspaceId, name: { equals: roleName, mode: 'insensitive' } } })
+            if (!roleRecord) {
+              roleRecord = await tx.role.create({ data: { workspaceId, name: roleName } })
+            }
+            const roleId = roleRecord.id
+
+            const existingUser = await tx.workspaceUser.findFirst({ where: { workspaceId, userId } })
+            if (existingUser) {
+              await tx.workspaceUser.update({
+                where: { workspaceId_userId: { workspaceId, userId } },
+                data: {
+                  status: 'ACTIVE',
+                  isOwner: true,
+                  joinedAt: new Date(),
+                  Role: { connect: { id: roleId } },
+                },
+              })
+            } else {
+              await tx.workspaceUser.create({
+                data: {
+                  workspace: { connect: { id: workspaceId } },
+                  user: { connect: { id: userId } },
+                  Role: { connect: { id: roleId } },
+                  isOwner: true,
+                  joinedAt: new Date(),
+                  status: 'ACTIVE',
+                } as any,
+              })
+            }
+
             const existingCompany = await tx.company.findFirst({ where: { workspaceId } })
-            if (!existingCompany) {
-              const companyName = (businessStep && (businessStep.businessName || businessStep.companyName || normalizedCompany)) || `Workspace ${workspaceId}`
+            const effectiveCompanyName = (businessStep && (businessStep.businessName || businessStep.companyName || normalizedCompany)) || `Workspace ${workspaceId}`
 
-              const COUNTRY_NAME_TO_ISO2: Record<string, string> = {
-                'Philippines': 'PH', 'United States': 'US', 'United Kingdom': 'GB',
-                'Australia': 'AU', 'Canada': 'CA', 'Singapore': 'SG', 'Malaysia': 'MY',
-                'Indonesia': 'ID', 'Thailand': 'TH', 'Vietnam': 'VN', 'Japan': 'JP',
-                'South Korea': 'KR', 'China': 'CN', 'India': 'IN', 'Germany': 'DE',
-                'France': 'FR', 'Spain': 'ES', 'Italy': 'IT', 'Netherlands': 'NL',
-                'Brazil': 'BR', 'Mexico': 'MX', 'Other': '', '': '',
-              }
-              const rawCountry = businessStep?.country || 'PH'
-              const countryCode = (COUNTRY_NAME_TO_ISO2[rawCountry] ?? rawCountry).toUpperCase()
+            const COUNTRY_NAME_TO_ISO2: Record<string, string> = {
+              'Philippines': 'PH', 'United States': 'US', 'United Kingdom': 'GB',
+              'Australia': 'AU', 'Canada': 'CA', 'Singapore': 'SG', 'Malaysia': 'MY',
+              'Indonesia': 'ID', 'Thailand': 'TH', 'Vietnam': 'VN', 'Japan': 'JP',
+              'South Korea': 'KR', 'China': 'CN', 'India': 'IN', 'Germany': 'DE',
+              'France': 'FR', 'Spain': 'ES', 'Italy': 'IT', 'Netherlands': 'NL',
+              'Brazil': 'BR', 'Mexico': 'MX', 'Other': '', '': '',
+            }
+            const rawCountry = businessStep?.country || 'PH'
+            const countryCode = (COUNTRY_NAME_TO_ISO2[rawCountry] ?? rawCountry).toUpperCase()
 
-              let resolvedCountryId: string | undefined = undefined
-              try {
-                const countryRow = await tx.country.findFirst({ where: { code: countryCode as any } })
-                if (countryRow?.id) resolvedCountryId = countryRow.id
-              } catch { /* Country code may not be a valid enum value — proceed without countryId */ }
+            let resolvedCountryId: string | undefined = undefined
+            try {
+              const countryRow = await tx.country.findFirst({ where: { code: countryCode as any } })
+              if (countryRow?.id) resolvedCountryId = countryRow.id
+            } catch { /* Country code may not be a valid enum value — proceed without countryId */ }
 
-              const monthNames: Record<string, number> = {
-                January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
-                July: 7, August: 8, September: 9, October: 10, November: 11, December: 12,
-              }
-              const fiscalStartMonth = monthNames[(fiscalStep?.fiscalStart ?? '').toString()] || undefined
+            const monthNames: Record<string, number> = {
+              January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
+              July: 7, August: 8, September: 9, October: 10, November: 11, December: 12,
+            }
+            const fiscalStartMonth = monthNames[(fiscalStep?.fiscalStart ?? '').toString()] || undefined
 
-              const countryCurrency: Record<string, string> = {
-                PH: 'PHP', US: 'USD', AU: 'AUD', GB: 'GBP', CA: 'CAD', SG: 'SGD',
-                MY: 'MYR', ID: 'IDR', TH: 'THB', VN: 'VND', JP: 'JPY', KR: 'KRW',
-                CN: 'CNY', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR',
-                BR: 'BRL', MX: 'MXN',
-              }
-              const finalCurrency = (fiscalStep?.currency as string) || countryCurrency[countryCode] || 'USD'
+            const countryCurrency: Record<string, string> = {
+              PH: 'PHP', US: 'USD', AU: 'AUD', GB: 'GBP', CA: 'CAD', SG: 'SGD',
+              MY: 'MYR', ID: 'IDR', TH: 'THB', VN: 'VND', JP: 'JPY', KR: 'KRW',
+              CN: 'CNY', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR',
+              BR: 'BRL', MX: 'MXN',
+            }
+            const finalCurrency = (fiscalStep?.currency as string) || countryCurrency[countryCode] || 'USD'
 
+            if (mode === 'append' || !existingCompany) {
               const created = await tx.company.create({
                 data: {
-                  name: companyName,
+                  name: effectiveCompanyName,
                   workspaceId,
                   isActive: true,
                   ...(resolvedCountryId ? { countryId: resolvedCountryId } : {}),
@@ -234,15 +265,19 @@ export class OnboardingService {
                 },
               } as any)
 
-              this.logger.log('[ONBOARDING-COMPLETE] ✅ Created Company record: ' + companyName + ' (' + created.id + ')')
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ Created Company record: ' + effectiveCompanyName + ' (' + created.id + ')')
               createdCompanyId = created.id
               if (!createdTenant) createdTenant = { id: workspaceId, __createdCompany: created }
               else (createdTenant as any).__createdCompany = created
             } else {
-              this.logger.log('[ONBOARDING-COMPLETE] ℹ️ Company already exists for workspace: ' + existingCompany.id)
-              createdCompanyId = existingCompany.id
-              if (!createdTenant) createdTenant = { id: workspaceId }
-              ;(createdTenant as any).__createdCompany = existingCompany
+              const updated = await tx.company.update({
+                where: { id: existingCompany!.id },
+                data: { name: effectiveCompanyName },
+              })
+              this.logger.log('[ONBOARDING-COMPLETE] 🔁 Updated existing Company record for replace mode: ' + updated.id)
+              createdCompanyId = updated.id
+              if (!createdTenant) createdTenant = { id: workspaceId, __createdCompany: updated }
+              else (createdTenant as any).__createdCompany = updated
             }
 
             const step5Data = steps?.coa || {}
@@ -274,29 +309,31 @@ export class OnboardingService {
       }
 
     } else {
-      // Support PracticeProfile sending `name` field (newer) as well as legacy `firmName`
-      const fromStep = steps?.accountant_firm?.firmName ?? steps?.accountant_firm?.name
+      // Support explicit practiceName payload, PracticeProfile `name`, and legacy `firmName`
+      const fromStep = practiceName?.trim() || steps?.accountant_firm?.name || steps?.accountant_firm?.firmName
       const val = typeof fromStep === 'string' && fromStep.trim().length > 0 ? fromStep : null
       if (!val) throw new BadRequestException('Practice name is required to complete onboarding')
       // Normalize & persist trimmed value on the accountant tenant
       const normalizedFirm = String(val).trim().slice(0, 140)
       try {
         // Look up workspace by ownerUserId directly (avoids WorkspaceUser table which doesn't include type)
-        const existingWorkspace = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
+        const existingWorkspace = await this.prisma.workspace.findFirst({ where: { ownerUserId: userId } })
         if (existingWorkspace) {
           createdTenant = existingWorkspace
           this.logger.log('[ONBOARDING-COMPLETE] ✅ Found existing workspace for accountant: ' + existingWorkspace.id)
-          // Ensure/update the Practice row for this workspace
+          // Create or update Practice rows depending on mode
           try {
             const existingPractice = await this.prisma.practice.findFirst({ where: { workspaceId: existingWorkspace.id } })
-            if (!existingPractice) {
+            if (mode === 'append' || !existingPractice) {
               await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: existingWorkspace.id } })
-              this.logger.log('[ONBOARDING-COMPLETE] ✅ Created Practice record: ' + normalizedFirm)
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ Created new Practice record: ' + normalizedFirm)
             } else {
               await this.prisma.practice.update({ where: { id: existingPractice.id }, data: { name: normalizedFirm } })
-              this.logger.log('[ONBOARDING-COMPLETE] ✅ Updated Practice record: ' + normalizedFirm)
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ Updated existing Practice record: ' + normalizedFirm)
             }
-          } catch (e) { /* ignore */ }
+          } catch (e) {
+            this.logger.warn('[ONBOARDING-COMPLETE] Practice record change failed (non-fatal): ' + (e as any)?.message)
+          }
         } else {
           // No workspace yet — create a PRACTICE workspace
           const newPracticeWorkspace = await this.prisma.workspace.create({

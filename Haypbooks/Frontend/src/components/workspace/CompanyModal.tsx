@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function CompanyModal({ company, onClose }: any) {
+export default function CompanyModal({ company, onClose, onSuccess }: any) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
@@ -18,6 +18,15 @@ export default function CompanyModal({ company, onClose }: any) {
         // non-fatal; we still navigate even if patch fails
         console.warn('[CompanyModal] failed to patch last-accessed (tolerance)', e)
       }
+
+      if (typeof onSuccess === 'function') {
+        try {
+          await onSuccess()
+        } catch (e) {
+          console.warn('[CompanyModal] onSuccess callback failed', e)
+        }
+      }
+
       // navigate with explicit query param to make behaviour consistent with CompanySwitcher
       router.replace(`/dashboard?company=${encodeURIComponent(company.id)}`)
     } catch (err) {

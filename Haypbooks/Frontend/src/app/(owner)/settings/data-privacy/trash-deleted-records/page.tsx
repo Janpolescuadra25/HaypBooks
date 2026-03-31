@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function TrashDeletedRecordsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Trash & Deleted Records"
-      module="SETTINGS"
-      breadcrumb="Settings / Data & Privacy / Trash & Deleted Records"
-      purpose="Trash & Deleted Records is a safety net that holds soft-deleted records for a recovery window before permanent deletion, giving administrators the ability to restore accidentally deleted customers, transactions, documents, or configurations. Records in the trash are excluded from all normal views and reports but remain accessible here for restoration. After the retention window expires, records are permanently purged from the system."
-      components={[
-        { name: 'Deleted Records Table', description: 'Filterable table of all soft-deleted records with type, name, delete date, and deleted-by user.' },
-        { name: 'Record Type Filter', description: 'Dropdown to filter the trash view by record type: Customers, Vendors, Transactions, Documents.' },
-        { name: 'Restore Action', description: 'Per-row restore button that returns a deleted record to its original location with all linked data intact.' },
-        { name: 'Permanent Delete Action', description: 'Guarded permanent delete button for records that should be purged before the auto-expiry window.' },
-        { name: 'Expiry Countdown', description: 'Visual indicator on each row showing days remaining before the record is permanently auto-purged.' },
+    <OwnerPageTemplate
+      title="Trash Deleted Records"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Deleted', 'Transactions', 'Contacts', 'Documents', 'Configuration']}
-      features={[
-        'View all soft-deleted records across the system in one place',
-        'Restore deleted records with all linked data intact',
-        'Filter trash by record type and deletion date',
-        'Permanently delete records before auto-purge window',
-        'Search for a specific deleted record by name or ID',
-        'See who deleted each record and when',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Record type, name, and ID',
-        'Deleted by user and deletion timestamp',
-        'Days remaining until permanent purge',
-        'Original module and parent record',
-        'Record status at time of deletion',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Restore a deleted record to active state',
-        'Permanently delete a record from trash',
-        'Filter trash by record type',
-        'Search for specific deleted records',
-        'Review deletion audit (who deleted what)',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

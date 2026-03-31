@@ -40,14 +40,15 @@ export class AccountingController {
         return this.svc.createAccount(req.user.userId, companyId, body)
     }
 
+    @HttpCode(HttpStatus.OK)
     @Post('accounts/seed-default')
     async seedDefaultAccounts(
         @Req() req: any,
         @Param('companyId') companyId: string,
     ) {
         await this.svc.assertCompanyAccessPublic(req.user.userId, companyId)
-        await this.svc.seedDefaultAccounts(companyId)
-        return { message: 'Default Chart of Accounts seeded successfully' }
+        await this.svc.assertCompanyOwner(req.user.userId, companyId)
+        return this.svc.seedDefaultAccounts(companyId)
     }
 
     @Get('coa-templates')

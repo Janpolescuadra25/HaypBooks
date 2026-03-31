@@ -1,55 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Active Item', type: 'Revenue', contact: 'Monthly', balance: 29700, status: 'Draft' },
+    { id: 'r2', name: 'Metro Manila', type: 'Operating', contact: 'Sample Entry', balance: 31500, status: 'Medium' },
+    { id: 'r3', name: 'Main', type: 'Operating', contact: 'Metro Manila', balance: 42000, status: 'Connected' },
+    { id: 'r4', name: 'Standard', type: 'Direct', contact: 'Main', balance: 2400, status: 'Completed' },
+    { id: 'r5', name: 'Main', type: 'Direct', contact: 'Main', balance: 21700, status: 'Completed' },
+    { id: 'r6', name: 'Standard', type: 'Annual', contact: 'Sample Entry', balance: 35800, status: 'Connected' },
+    { id: 'r7', name: 'Monthly', type: 'Standard', contact: 'Standard', balance: 31300, status: 'Approved' },
+    { id: 'r8', name: 'Metro Manila', type: 'Monthly', contact: 'Sample Entry', balance: 23000, status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Vendor List"
-      module="EXPENSES"
-      breadcrumb="Expenses / Vendors / Vendor List"
-      purpose="The Vendor List is the master directory of all supplier and vendor accounts. Each vendor record stores company name, contact details, billing address, payment terms, bank account details (for payment), tax registration number (TIN), AP account mapping, and current AP balance. The vendor database drives the purchase order, bills, and payment workflows — ensuring accurate and consistent vendor information across all procurement and payables processes."
-      components={[
-        { name: 'Vendor Table', description: 'All vendors with name, contact, phone, email, payment terms, TIN, current AP balance, and status.' },
-        { name: 'Vendor Profile Card', description: 'Full vendor record: company details, contacts, address, payment terms, payment account details (bank/account for EFT), and GL AP account.' },
-        { name: 'AP Balance per Vendor', description: 'Current AP outstanding, aging summary, and last payment date.' },
-        { name: 'Vendor Documents Folder', description: 'Store filed documents per vendor: business registration, BIR TIN certificate, contract, price list.' },
-        { name: 'Transaction Timeline', description: 'Chronological activity: POs, bills, payments, and credit notes from this vendor.' },
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Vendors', 'Active', 'By Category', 'Overdue Payables']}
-      features={[
-        'Comprehensive vendor master data management',
-        'Payment terms and bank details management',
-        'Vendor-level AP balance and aging',
-        'Document storage per vendor',
-        'TIN and tax compliance fields for 1099/2307',
-        'Vendor category tagging for reporting',
-        'Bulk CSV import/export',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Vendor name, TIN, and contact details',
-        'Payment terms and bank payment details',
-        'Current AP balance and aging buckets',
-        'Last bill date and last payment date',
-        'Total spend YTD from vendor',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new vendor',
-        'Update contact or payment details',
-        'Change payment terms',
-        'Update bank details for EFT payment',
-        'View vendor AP balance and bills',
-        'Attach vendor document',
-        'Deactivate an inactive vendor',
-        'Export vendor list',
-      ]}
-      relatedPages={[
-        { label: 'Purchase Orders', href: '/expenses/purchase-orders/po-list' },
-        { label: 'Bills', href: '/expenses/bills/bill-list' },
-        { label: 'Vendor Payments', href: '/banking-cash/payments/vendor-payments' },
-        { label: 'AP Aging', href: '/reporting/reports-center/ap-aging' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

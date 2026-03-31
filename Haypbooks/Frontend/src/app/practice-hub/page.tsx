@@ -36,116 +36,157 @@ import PracticeProgressChecklist from '@/components/practice-hub/PracticeProgres
 const NAV = [
   {
     key: 'home', label: 'Home', icon: LayoutDashboard,
-    items: [
-      { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { key: 'practice-health', label: 'Practice Health', icon: HeartPulse },
-      { key: 'performance', label: 'Performance', icon: TrendingUp },
-      { key: 'deadlines-home', label: 'Deadlines', icon: AlertCircle },
-      { key: 'shortcuts', label: 'Shortcuts', icon: Zap },
-      { key: 'setup-center', label: 'Setup Center', icon: Layers },
-      { key: 'notifications', label: 'Notifications Inbox', icon: Bell },
-      { key: 'help', label: 'Help & Support', icon: HelpCircle },
+    groups: [
+      { group_name: 'Overview', items: [
+        { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { key: 'practice-health', label: 'Practice Health', icon: HeartPulse },
+        { key: 'performance', label: 'Performance', icon: TrendingUp },
+        { key: 'shortcuts', label: 'Shortcuts', icon: Zap },
+      ], },
+      { group_name: 'Management', items: [
+        { key: 'deadlines-home', label: 'Deadlines', icon: AlertCircle },
+        { key: 'notifications', label: 'Notifications Inbox', icon: Bell },
+        { key: 'setup-center', label: 'Setup Center', icon: Layers },
+      ], },
     ],
   },
   {
     key: 'clients', label: 'Clients', icon: Users,
-    items: [
-      { key: 'client-list', label: 'My Clients', icon: Users },
-      { key: 'client-onboarding', label: 'Client Onboarding', icon: UserPlus },
-      { key: 'client-documents', label: 'Client Documents', icon: FolderOpen },
-      { key: 'client-portal', label: 'Client Portal', icon: Globe },
-      { key: 'client-crm', label: 'Client CRM', icon: Filter },
-      { key: 'client-groups', label: 'Client Groups', icon: Tag },
-      { key: 'client-transitions', label: 'Client Transitions', icon: ArrowUpRight },
-      { key: 'communications', label: 'Communications', icon: MessageSquare },
+    groups: [
+      { group_name: 'Management', items: [
+        { key: 'client-list', label: 'My Clients', icon: Users },
+        { key: 'client-groups', label: 'Client Groups', icon: Tag },
+        { key: 'client-portal', label: 'Client Portal', icon: Globe },
+      ], },
+      { group_name: 'CRM & Engagement', items: [
+        { key: 'client-crm', label: 'Client Relationships', icon: Filter },
+        { key: 'communications', label: 'Communications', icon: MessageSquare },
+        { key: 'client-documents', label: 'Client Documents', icon: FolderOpen },
+        { key: 'engagements', label: 'Engagements', icon: ClipboardList },
+      ], },
+      { group_name: 'Lifecycle', items: [
+        { key: 'client-onboarding', label: 'Client Onboarding', icon: UserPlus },
+        { key: 'client-transitions', label: 'Transitions & Exits', icon: ArrowUpRight },
+      ], },
     ],
   },
   {
     key: 'work', label: 'Work Mgmt', icon: ListChecks,
-    items: [
-      { key: 'work-queue', label: 'Work Queue', icon: ListChecks },
-      { key: 'monthly-close', label: 'Monthly Close', icon: RefreshCw },
-      { key: 'annual-engagements', label: 'Annual Engagements', icon: BookMarked },
-      { key: 'work-in-progress', label: 'WIP Ledger', icon: BarChart },
-      { key: 'calendar', label: 'Calendar', icon: CalendarDays },
-      { key: 'deadline-tracker', label: 'Deadline Tracker', icon: AlertCircle },
+    groups: [
+      { group_name: 'Workflow', items: [
+        { key: 'work-queue', label: 'Work Queue', icon: ListChecks },
+        { key: 'work-in-progress', label: 'Work in Progress (WIP)', icon: BarChart },
+        { key: 'deadline-tracker', label: 'Deadline Tracker', icon: AlertCircle },
+      ], },
+      { group_name: 'Schedule', items: [
+        { key: 'calendar', label: 'Calendar', icon: CalendarDays },
+        { key: 'monthly-close', label: 'Monthly Close', icon: RefreshCw },
+        { key: 'annual-close', label: 'Annual Close', icon: BookMarked },
+      ], },
     ],
   },
   {
-    key: 'accountant', label: 'Workspace', icon: BriefcaseBusiness,
-    items: [
-      { key: 'books-review', label: 'Books Review', icon: BookMarked },
-      { key: 'reconciliation', label: 'Reconciliation Hub', icon: RefreshCw },
-      { key: 'adjusting', label: 'Adjusting Entries', icon: FileDiff },
-      { key: 'client-requests', label: 'Client Requests', icon: ClipboardList },
-      { key: 'audit-trail', label: 'Audit Trail', icon: Eye },
-      { key: 'period-close', label: 'Period Close', icon: CheckCircle2 },
-      { key: 'expert-help', label: 'Expert Help', icon: HelpCircle },
+    key: 'workspace', label: 'Workspace', icon: BriefcaseBusiness,
+    groups: [
+      { group_name: 'Review Tools', items: [
+        { key: 'books-review', label: 'Books Review', icon: BookMarked },
+        { key: 'reconciliation', label: 'Reconciliation Hub', icon: RefreshCw },
+        { key: 'audit-trail', label: 'Audit Trail', icon: Eye },
+        { key: 'work-papers', label: 'Work Papers', icon: FileText },
+      ], },
+      { group_name: 'Accounting Actions', items: [
+        { key: 'adjusting', label: 'Adjusting Entries', icon: FileDiff },
+        { key: 'period-close', label: 'Period Close', icon: CheckCircle2 },
+      ], },
+      { group_name: 'Requests', items: [
+        { key: 'client-requests', label: 'Client Requests', icon: ClipboardList },
+        { key: 'expert-help', label: 'Live Expert Support', icon: HelpCircle },
+      ], },
     ],
   },
   {
     key: 'billing', label: 'Billing', icon: Receipt,
-    items: [
-      { key: 'invoice-generation', label: 'Generate Invoices', icon: FileText },
-      { key: 'invoice-list', label: 'Invoice List', icon: LayoutGrid },
-      { key: 'recurring-billing', label: 'Recurring Billing', icon: RefreshCw },
-      { key: 'payment-tracking', label: 'Payment Tracking', icon: DollarSign },
-      { key: 'rate-cards', label: 'Rate Cards', icon: FileSpreadsheet },
-      { key: 'retainers', label: 'Retainers', icon: Briefcase },
-      { key: 'collections', label: 'Collections', icon: AlertCircle },
-      { key: 'write-offs', label: 'Write-offs', icon: Trash2 },
-    ],
-  },
-  {
-    key: 'analytics', label: 'Analytics', icon: PieChart,
-    items: [
-      { key: 'practice-overview', label: 'Practice Overview', icon: BarChart3 },
-      { key: 'client-analytics', label: 'Client Analytics', icon: Users },
-      { key: 'staff-reports', label: 'Staff Reports', icon: UsersRound },
-      { key: 'billing-reports', label: 'Billing Reports', icon: Receipt },
-      { key: 'work-reports', label: 'Work Reports', icon: ListChecks },
-      { key: 'financial-reports', label: 'Financial Reports', icon: FileSpreadsheet },
+    groups: [
+      { group_name: 'Invoicing', items: [
+        { key: 'invoice-generation', label: 'Generate Invoices', icon: FileText },
+        { key: 'invoice-list', label: 'Invoice List', icon: LayoutGrid },
+        { key: 'recurring-billing', label: 'Recurring Billing', icon: RefreshCw },
+      ], },
+      { group_name: 'Revenue Management', items: [
+        { key: 'payment-tracking', label: 'Payment Tracking', icon: DollarSign },
+        { key: 'retainers', label: 'Retainers', icon: Briefcase },
+        { key: 'collections', label: 'Collections', icon: AlertCircle },
+        { key: 'write-offs', label: 'Bad Debt Write-offs', icon: Trash2 },
+      ], },
+      { group_name: 'Setup', items: [
+        { key: 'rate-cards', label: 'Rate Cards', icon: FileSpreadsheet },
+      ], },
     ],
   },
   {
     key: 'team', label: 'Team', icon: UsersRound,
-    items: [
-      { key: 'team-members', label: 'Team Members', icon: Users },
-      { key: 'time-off', label: 'Time Off', icon: CalendarDays },
-      { key: 'schedule', label: 'Schedule', icon: Calendar },
-      { key: 'team-performance', label: 'Performance', icon: Award },
-      { key: 'team-capacity', label: 'Capacity View', icon: Target },
+    groups: [
+      { group_name: 'Staffing', items: [
+        { key: 'team-members', label: 'Team Members', icon: Users },
+        { key: 'time-off', label: 'Time Off', icon: CalendarDays },
+        { key: 'schedule', label: 'Team Schedule', icon: Calendar },
+      ], },
+      { group_name: 'Time Tracking', items: [
+        { key: 'timesheet-entry', label: 'Timesheet Entry', icon: Clock },
+        { key: 'time-approvals', label: 'Time Approvals', icon: CheckCircle2 },
+      ], },
+      { group_name: 'Performance', items: [
+        { key: 'team-performance', label: 'Staff Performance', icon: Award },
+        { key: 'team-capacity', label: 'Capacity Planning', icon: Target },
+      ], },
+      { group_name: 'Collaboration', items: [
+        { key: 'team-chat', label: 'Team Chat', icon: MessageSquare },
+        { key: 'client-communication', label: 'Client Messages', icon: Mail },
+        { key: 'announcements', label: 'Announcements', icon: Bell },
+        { key: 'document-collab', label: 'Document Collaboration', icon: FileText },
+      ], },
     ],
   },
   {
-    key: 'communication', label: 'Communication', icon: MessageSquare,
-    items: [
-      { key: 'team-chat', label: 'Team Chat', icon: MessageSquare },
-      { key: 'client-communication', label: 'Client Messages', icon: Mail },
-      { key: 'announcements', label: 'Announcements', icon: Bell },
-      { key: 'document-collab', label: 'Document Collaboration', icon: FileText },
-      { key: 'comm-settings', label: 'Comm Settings', icon: Settings },
+    key: 'analytics', label: 'Analytics', icon: PieChart,
+    groups: [
+      { group_name: 'Executive Insights', items: [
+        { key: 'practice-analytics', label: 'Practice Analytics', icon: BarChart3 },
+        { key: 'financial-reports', label: 'Financial Reports', icon: FileSpreadsheet },
+      ], },
+      { group_name: 'Operational Reports', items: [
+        { key: 'client-analytics', label: 'Client Reports', icon: Users },
+        { key: 'staff-reports', label: 'Staff Reports', icon: UsersRound },
+        { key: 'billing-reports', label: 'Billing Reports', icon: Receipt },
+        { key: 'work-reports', label: 'Work Reports', icon: ListChecks },
+      ], },
     ],
   },
   {
     key: 'settings', label: 'Settings', icon: Settings,
-    items: [
-      { key: 'profile', label: 'Practice Profile', icon: Building2 },
-        { key: 'team-management', label: 'Team Management', icon: UsersRound },
-      { key: 'templates', label: 'Templates', icon: LayoutTemplate },
-      { key: 'automation', label: 'Automation', icon: Zap },
-      { key: 'integrations', label: 'Integrations', icon: Layers },
-      { key: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
-      { key: 'security', label: 'Security', icon: ShieldCheck },
-      { key: 'data-management', label: 'Data Management', icon: Archive },
-      { key: 'localization', label: 'Localization', icon: Globe },
+    groups: [
+      { group_name: 'Practice Profile', items: [
+        { key: 'profile', label: 'Details', icon: Building2 },
+        { key: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+        { key: 'localization', label: 'Localization', icon: Globe },
+      ], },
+      { group_name: 'Configuration', items: [
+        { key: 'templates', label: 'Templates', icon: LayoutTemplate },
+        { key: 'automation', label: 'Automation', icon: Zap },
+        { key: 'integrations', label: 'Integrations', icon: Layers },
+      ], },
+      { group_name: 'Security & Data', items: [
+        { key: 'security', label: 'Security', icon: ShieldCheck },
+        { key: 'data-management', label: 'Data & Privacy', icon: Archive },
+        { key: 'comm-settings', label: 'Communication Settings', icon: Settings },
+      ], },
     ],
   },
 ]
 
 // ── Stats (used as fallback when API is empty) ────────────────────────────────
 const SAMPLE_STATS = [
-  { label: 'Active Clients', value: '0', sub: 'No data yet', accent: 'border-l-green-500', light: 'bg-green-50', text: 'text-green-700', icon: Users },
+  { label: 'Active Clients', value: '0', sub: 'No data yet', accent: 'border-l-blue-600', light: 'bg-blue-50', text: 'text-blue-800', icon: Users },
   { label: 'Open Tasks', value: '0', sub: 'No data yet', accent: 'border-l-amber-500', light: 'bg-amber-50', text: 'text-amber-700', icon: ListChecks },
   { label: 'Pending Reviews', value: '0', sub: 'No data yet', accent: 'border-l-rose-500', light: 'bg-rose-50', text: 'text-rose-600', icon: AlertCircle },
   { label: 'Completed MTD', value: '0', sub: 'No data yet', accent: 'border-l-slate-400', light: 'bg-slate-100', text: 'text-slate-600', icon: CheckCircle2 },
@@ -185,7 +226,7 @@ function Badge({ label, color }: { label: string; color: string }) {
 
 function PrimaryBtn({ onClick, children }: { onClick?: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-600/20 transition-all hover:scale-105 active:scale-95">
+    <button onClick={onClick} className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-700/20 transition-all hover:scale-105 active:scale-95">
       {children}
     </button>
   )
@@ -502,14 +543,14 @@ function ClientListPanel() {
             <button
               type="button"
               onClick={() => setActiveTab('connected')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === 'connected' ? 'bg-green-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === 'connected' ? 'bg-blue-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
             >
               Connected Clients ({clients.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('incoming')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === 'incoming' ? 'bg-green-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === 'incoming' ? 'bg-blue-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
             >
               Incoming Requests ({incoming.length})
             </button>
@@ -3311,6 +3352,23 @@ function LocalizationPanel() {
   )
 }
 
+
+// Placeholder panel for nav items without dedicated panels
+function PlaceholderPanel({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
+        <BriefcaseBusiness size={28} className="text-blue-400" />
+      </div>
+      <h2 className="text-lg font-bold text-slate-800 mb-1">{label}</h2>
+      <p className="text-sm text-slate-500 mb-4">This feature is under development.</p>
+      <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">
+        <Clock size={12} />
+        Coming Soon
+      </span>
+    </div>
+  )
+}
 function DashboardPanel() {
   const { data, loading: dashboardLoading, error: dashboardError, refresh: refreshDashboard } = usePracticeDashboard()
   const { clients, loading: clientsLoading, error: clientsError, refresh: refreshClients } = usePracticeClients()
@@ -3339,7 +3397,7 @@ function DashboardPanel() {
           <p className="text-sm text-slate-500 mt-0.5">Active clients: {data?.activeClientCount ?? 0}</p>
         </div>
         <div className="flex gap-2 items-center">
-          <button onClick={refreshDashboard} className="px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-bold">Refresh Dashboard</button>
+          <button onClick={refreshDashboard} className="px-3 py-2 rounded-lg bg-blue-700 text-white text-xs font-bold">Refresh Dashboard</button>
           <button onClick={refreshClients} className="px-3 py-2 rounded-lg bg-slate-100 text-slate-800 text-xs font-bold">Refresh Clients</button>
           <button onClick={() => setHelpOpen(true)} className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold" aria-label="Open Dashboard help">?</button>
         </div>
@@ -3362,7 +3420,7 @@ function DashboardPanel() {
                   <p className="text-sm font-semibold text-slate-900">{client.name}</p>
                   <p className="text-xs text-slate-500">{client.currency} • {client.isActive ? 'Active' : 'Inactive'}</p>
                 </div>
-                <span className={`text-xs font-semibold ${client.isActive ? 'text-green-600' : 'text-slate-500'}`}>
+                <span className={`text-xs font-semibold ${client.isActive ? 'text-blue-700' : 'text-slate-500'}`}>
                   {client.isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
@@ -3477,12 +3535,14 @@ export default function PracticeHubPage() {
   }, [router])
 
   const currentGroup = NAV.find(g => g.key === activeGroup)!
-  const activeItem = currentGroup?.items.find(i => i.key === activeSection)
+  const allItems = currentGroup?.groups?.flatMap(g => g.items) ?? []
+  const activeItem = allItems.find((i: any) => i.key === activeSection)
 
   const selectGroup = (key: string) => {
     setActiveGroup(key)
     const group = NAV.find(g => g.key === key)!
-    setActiveSection(group.items[0].key)
+    const firstItem = group.groups?.[0]?.items?.[0]?.key
+    if (firstItem) setActiveSection(firstItem)
     setPanelOpen(true)
   }
 
@@ -3494,16 +3554,16 @@ export default function PracticeHubPage() {
         {/* Left: logo + switcher */}
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-3 pr-5 border-r border-slate-700">
-            <div className="w-8 h-8 bg-green-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30">
+            <div className="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30">
               <BriefcaseBusiness size={15} className="text-white" />
             </div>
             <div>
               <p className="text-sm font-black text-white leading-none tracking-tight">Haypbooks</p>
-              <p className="text-[9px] text-green-400 font-bold uppercase tracking-widest leading-none mt-0.5">Practice Hub</p>
+              <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest leading-none mt-0.5">Practice Hub</p>
             </div>
           </div>
           <button className="hidden md:flex items-center gap-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl hover:bg-slate-700 transition-colors group">
-            <LayoutGrid size={13} className="text-green-400 group-hover:rotate-90 transition-transform duration-300" />
+            <LayoutGrid size={13} className="text-blue-400 group-hover:rotate-90 transition-transform duration-300" />
             <div className="flex flex-col items-start">
               <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest leading-none">Organization</span>
               <div className="flex items-center gap-1 mt-0.5">
@@ -3517,10 +3577,10 @@ export default function PracticeHubPage() {
         {/* Center: global search */}
         <div className="flex-1 max-w-xl mx-8 hidden lg:block">
           <div className="relative group">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-green-500 transition-colors" />
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
             <input
               placeholder="Search clients, tasks, reports..."
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 pl-9 pr-20 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-all"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 pl-9 pr-20 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition-all"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 bg-slate-700 text-slate-400 rounded text-[9px] font-bold border border-slate-600">⌘K</kbd>
@@ -3554,7 +3614,7 @@ export default function PracticeHubPage() {
               onClick={() => setUserMenuOpen((prev) => !prev)}
               className="flex items-center gap-2.5 text-left"
             >
-              <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-green-600/30">
+              <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-blue-700/30">
                 {userLoading ? '...' : userInitials}
               </div>
               <div className="hidden md:block">
@@ -3599,7 +3659,7 @@ export default function PracticeHubPage() {
           className="relative w-20 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-4 gap-2 overflow-y-auto"
         >
           <motion.div
-            className="absolute left-1.5 w-1.5 rounded-r-full bg-green-400 shadow-[2px_0_8px_rgba(74,222,128,0.5)] pointer-events-none z-20"
+            className="absolute left-1.5 w-1.5 rounded-r-full bg-blue-400 shadow-[2px_0_8px_rgba(59,130,246,0.5)] pointer-events-none z-20"
             animate={{ top: indicator.top }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             style={{ height: 36 }}
@@ -3614,15 +3674,15 @@ export default function PracticeHubPage() {
                 title={group.label}
                 onClick={() => selectGroup(group.key)}
                 className={`relative z-10 w-16 flex flex-col items-center justify-center py-3 rounded-xl transition-all group ${isActive
-                    ? 'bg-slate-700 text-white shadow-lg ring-1 ring-emerald-600/40'
+                    ? 'bg-slate-700 text-white shadow-lg ring-1 ring-blue-500/40'
                     : 'text-slate-500 hover:bg-slate-800 hover:text-slate-200'
                   }`}
               >
                 <group.icon
                   size={20}
-                  className={isActive ? 'text-green-200' : 'text-slate-500 group-hover:text-slate-300'}
+                  className={isActive ? 'text-blue-200' : 'text-slate-500 group-hover:text-slate-300'}
                 />
-                <span className={`text-[10px] mt-1.5 font-black uppercase tracking-tight text-center leading-tight px-1 w-full break-words ${isActive ? 'text-green-300' : 'text-slate-600 group-hover:text-slate-400'
+                <span className={`text-[10px] mt-1.5 font-black uppercase tracking-tight text-center leading-tight px-1 w-full break-words ${isActive ? 'text-blue-300' : 'text-slate-600 group-hover:text-slate-400'
                   }`}>
                   {group.label}
                 </span>
@@ -3637,8 +3697,8 @@ export default function PracticeHubPage() {
             {/* Panel header */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center">
-                  <currentGroup.icon size={14} className="text-green-600" />
+                <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <currentGroup.icon size={14} className="text-blue-700" />
                 </div>
                 <span className="text-xs font-black text-slate-800 uppercase tracking-wide">{currentGroup.label}</span>
               </div>
@@ -3655,22 +3715,36 @@ export default function PracticeHubPage() {
 
             {/* Nav items */}
             <nav className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-0.5">
-              {currentGroup.items.map((item) => {
-                const isActive = activeSection === item.key
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setActiveSection(item.key)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
-                        ? 'bg-green-600 text-white shadow-md shadow-green-600/20'
-                        : 'text-slate-600 hover:bg-green-50 hover:text-green-800'
-                      }`}
-                  >
-                    <span className="flex-1 text-left truncate">{item.label}</span>
-                    {isActive && <ChevronRight size={12} className="ml-auto text-green-300 flex-shrink-0" />}
-                  </button>
-                )
-              })}
+              {currentGroup.groups?.map((group, gIdx) => (
+                <React.Fragment key={group.group_name}>
+                  {gIdx > 0 && (
+                    <div className="text-[10px] uppercase tracking-wider text-slate-400 mt-3 mb-1 px-3 font-bold">
+                      {group.group_name}
+                    </div>
+                  )}
+                  {gIdx === 0 && (
+                    <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 px-3 font-bold">
+                      {group.group_name}
+                    </div>
+                  )}
+                  {group.items.map((item) => {
+                    const isActive = activeSection === item.key
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => setActiveSection(item.key)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
+                            ? 'bg-blue-600/10 text-blue-700 shadow-sm'
+                            : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+                          }`}
+                      >
+                        <span className="flex-1 text-left truncate">{item.label}</span>
+                        {isActive && <ChevronRight size={12} className="ml-auto text-blue-400 flex-shrink-0" />}
+                      </button>
+                    )
+                  })}
+                </React.Fragment>
+              ))}
             </nav>
 
           </aside>
@@ -3681,7 +3755,7 @@ export default function PracticeHubPage() {
           <button
             title="Open navigation"
             onClick={() => setPanelOpen(true)}
-            className="absolute top-[15px] left-[79px] z-50 flex items-center justify-center p-1.5 bg-green-500 hover:bg-green-400 active:bg-green-600 text-white rounded-lg shadow-lg shadow-green-500/30 transition-all"
+            className="absolute top-[15px] left-[79px] z-50 flex items-center justify-center p-1.5 bg-blue-500 hover:bg-blue-500 active:bg-blue-700 text-white rounded-lg shadow-lg shadow-blue-600/30 transition-all"
           >
             <ChevronRight size={13} />
           </button>
@@ -3704,6 +3778,7 @@ export default function PracticeHubPage() {
             {activeSection === 'work-queue' && <WorkQueuePanel />}
             {activeSection === 'monthly-close' && <MonthlyClosePanel />}
             {activeSection === 'annual-engagements' && <AnnualEngagementsPanel />}
+            {activeSection === 'annual-close' && <AnnualEngagementsPanel />}
             {activeSection === 'work-in-progress' && <WIPLedgerPanel />}
             {activeSection === 'calendar' && <CalendarPanel />}
             {activeSection === 'books-review' && <BooksReviewPanel />}
@@ -3717,6 +3792,7 @@ export default function PracticeHubPage() {
             {activeSection === 'payment-tracking' && <PaymentTrackingPanel />}
             {activeSection === 'rate-cards' && <RateCardsPanel />}
             {activeSection === 'practice-overview' && <PracticeOverviewPanel />}
+            {activeSection === 'practice-analytics' && <PracticeOverviewPanel />}
             {activeSection === 'client-analytics' && <ClientAnalyticsPanel />}
             {activeSection === 'staff-reports' && <StaffReportsPanel />}
             {activeSection === 'billing-reports' && <BillingReportsPanel />}
@@ -3753,6 +3829,10 @@ export default function PracticeHubPage() {
             {activeSection === 'security' && <SecurityPanel />}
             {activeSection === 'data-management' && <DataManagementPanel />}
             {activeSection === 'localization' && <LocalizationPanel />}
+            {activeSection === 'engagements' && <PlaceholderPanel label="Engagements" />}
+            {activeSection === 'work-papers' && <PlaceholderPanel label="Work Papers" />}
+            {activeSection === 'timesheet-entry' && <PlaceholderPanel label="Timesheet Entry" />}
+            {activeSection === 'time-approvals' && <PlaceholderPanel label="Time Approvals" />}
           </main>
         </div>
       </div>

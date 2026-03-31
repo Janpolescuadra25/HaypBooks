@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function EntityDefaultsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', category: 'Revenue', value: 'Standard', description: 'Primary', status: 'In Stock' },
+    { id: 'r2', name: 'General', category: 'Operating', value: 'Acme Corp', description: 'Sample Entry', status: 'Open' },
+    { id: 'r3', name: 'Acme Corp', category: 'Premium', value: 'Sample Entry', description: 'General', status: 'Low' },
+    { id: 'r4', name: 'Main', category: 'Premium', value: 'BPI Account', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r5', name: 'Standard', category: 'Direct', value: 'Metro Manila', description: 'Monthly', status: 'Medium' },
+    { id: 'r6', name: 'Active Item', category: 'Premium', value: 'Q1 2026', description: 'BPI Account', status: 'Connected' },
+    { id: 'r7', name: 'Default', category: 'Fixed', value: 'Q1 2026', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r8', name: 'Monthly', category: 'Basic', value: 'Primary', description: 'Active Item', status: 'In Stock' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Entity Defaults"
-      module="SETTINGS"
-      breadcrumb="Settings / Entity Management / Entity Defaults"
-      purpose="Entity Defaults configures system-wide default behaviors for the business entity — including default payment terms, transaction rounding, tax inclusiveness, and language preferences. These defaults flow into every new transaction and contact record, reducing repetitive data entry and ensuring consistency. Defaults can be overridden at the transaction or contact level when exceptions are needed."
-      components={[
-        { name: 'Payment Terms Default', description: 'Dropdown to select the standard payment terms (Net 30, Net 60, Due on Receipt) applied to new invoices.' },
-        { name: 'Tax Defaults', description: 'Toggle for whether prices are entered as tax-inclusive or tax-exclusive, and the default tax rate applied.' },
-        { name: 'Language & Locale', description: 'Selectors for default document language, date format, number format, and decimal separator.' },
-        { name: 'Rounding Preferences', description: 'Controls for transaction total rounding: round half-up, half-even, or no rounding.' },
-        { name: 'Default Timezone', description: 'Timezone setting for all timestamp display and date-based due date calculations.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Transaction Defaults', 'Tax Defaults', 'Format & Locale', 'Time & Dates']}
-      features={[
-        'Set default payment terms for all new customers and invoices',
-        'Choose between tax-inclusive and tax-exclusive price entry',
-        'Configure default language and locale for document generation',
-        'Set number formatting, decimal separator, and date format',
-        'Define rounding rules for transaction totals',
-        'Override defaults at customer, vendor, or transaction level',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Current default payment terms',
-        'Tax inclusiveness setting and default tax rate',
-        'Active language and locale configuration',
-        'Date and number format preview',
-        'Last modified by user and timestamp',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Update default payment terms',
-        'Toggle tax-inclusive/exclusive pricing',
-        'Set document language and locale',
-        'Configure number and date formats',
-        'Save changes and preview effect on new transactions',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

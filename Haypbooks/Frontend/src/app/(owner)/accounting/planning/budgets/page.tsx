@@ -1,55 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-19', description: 'Active Item', amount: 11700, account: 'Monthly', status: 'Paid' },
+    { id: 'r2', date: '2026-01-17', description: 'Active Item', amount: 36600, account: 'Primary', status: 'Medium' },
+    { id: 'r3', date: '2026-02-22', description: 'Monthly', amount: 21500, account: 'Acme Corp', status: 'High' },
+    { id: 'r4', date: '2026-01-10', description: 'Standard', amount: 43600, account: 'Standard', status: 'Pending' },
+    { id: 'r5', date: '2026-02-22', description: 'Standard', amount: 5200, account: 'Primary', status: 'Completed' },
+    { id: 'r6', date: '2026-01-26', description: 'Sample Entry', amount: 17900, account: 'Acme Corp', status: 'Approved' },
+    { id: 'r7', date: '2026-01-20', description: 'Primary', amount: 38300, account: 'Primary', status: 'Approved' },
+    { id: 'r8', date: '2026-02-27', description: 'Primary', amount: 19400, account: 'Primary', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Budgets"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Planning / Budgets"
-      purpose="The Budgets page is the annual budget input and management tool. Finance teams create detailed operating budgets by account, department, cost center, and month. Budgets can be built from scratch, based on prior year actuals with adjustments, or by allocating top-down targets to departments. Once approved, the budget locks and flows through to the Budget vs. Actual report for ongoing performance monitoring throughout the year."
-      components={[
-        { name: 'Budget Input Grid', description: 'Spreadsheet-style input grid: rows are accounts/departments, columns are months. Direct cell entry with totals row and column.' },
-        { name: 'Budget Version Manager', description: 'Manage multiple budget versions: Draft, Under Review, Approved, Revised. Toggle between versions for comparison.' },
-        { name: 'Copy From Prior Year', description: 'Pre-populate budget grid from prior year actuals with an optional growth/adjustment percentage.' },
-        { name: 'Top-Down Allocation', description: 'Enter a total budget target and allocate it across departments using configured allocation drivers.' },
-        { name: 'Approval Workflow', description: 'Submit budget for review and approval. Each department submits their budget section; controller consolidates and approves.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Budget Input', 'Versions', 'Department View', 'Approval', 'Summary']}
-      features={[
-        'Spreadsheet-like budget input interface',
-        'Multi-version budget management',
-        'Copy from prior year with growth assumptions',
-        'Department-level budget submission and consolidation',
-        'Budget approval workflow',
-        'Revenue and expense budget by account and month',
-        'Headcount and payroll budget section',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Monthly budget amounts by account and department',
-        'Annual total per budget line',
-        'Budget totals by P&L category',
-        'Version history and approval status',
-        'Headcount assumption inputs',
-        'Revenue and cost assumptions',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enter monthly budget amounts per account',
-        'Copy prior year actuals as budget starting point',
-        'Apply growth percentage to copied actuals',
-        'Submit department budget for approval',
-        'Approve consolidated company budget',
-        'Create a revised or supplemental budget',
-        'Export budget to Excel',
-      ]}
-      relatedPages={[
-        { label: 'Budget vs. Actual', href: '/accounting/planning/budget-vs-actual' },
-        { label: 'Forecasts', href: '/accounting/planning/forecasts' },
-        { label: 'Scenario Planning', href: '/accounting/planning/scenario-planning' },
-        { label: 'P&L Report', href: '/reporting/reports-center/financial-statements/profit-and-loss' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

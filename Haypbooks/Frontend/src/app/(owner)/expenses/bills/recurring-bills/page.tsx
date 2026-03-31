@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Standard', assignee: 'General', dueDate: '2026-03-28', priority: 'Draft', status: 'Completed' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'Monthly', dueDate: '2026-03-14', priority: 'Low', status: 'Medium' },
+    { id: 'r3', name: 'General', assignee: 'Active Item', dueDate: '2026-03-06', priority: 'Open', status: 'In Stock' },
+    { id: 'r4', name: 'Metro Manila', assignee: 'Acme Corp', dueDate: '2026-02-17', priority: 'Processing', status: 'In Stock' },
+    { id: 'r5', name: 'Acme Corp', assignee: 'Primary', dueDate: '2026-03-23', priority: 'Completed', status: 'Connected' },
+    { id: 'r6', name: 'General', assignee: 'Primary', dueDate: '2026-01-24', priority: 'Processing', status: 'High' },
+    { id: 'r7', name: 'Primary', assignee: 'General', dueDate: '2026-01-04', priority: 'Enabled', status: 'Open' },
+    { id: 'r8', name: 'Primary', assignee: 'Active Item', dueDate: '2026-01-07', priority: 'Pending', status: 'Filed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Recurring Bills"
-      module="EXPENSES"
-      breadcrumb="Expenses / Bills / Recurring Bills"
-      purpose="Recurring Bills automates the creation of bills for regular, predictable vendor charges — monthly rent, utility bills, subscription services, insurance premiums, and maintenance contracts. A recurring bill template is set up once with the vendor, bill items, amount, and frequency. On the scheduled date, the system generates the bill automatically (and optionally routes it for approval). This eliminates the need to manually enter the same bills every month."
-      components={[
-        { name: 'Recurring Bill Schedules', description: 'All active recurring bill templates with vendor, frequency, amount, next bill date, and status.' },
-        { name: 'Template Builder', description: 'Set up a recurring bill: vendor, description, line items, amounts, frequency, start date, end date (optional), and approval routing.' },
-        { name: 'Upcoming Bills Calendar', description: 'Calendar showing all bills scheduled to auto-generate in the next 90 days.' },
-        { name: 'History', description: 'All bills generated from each recurring template with a link to the actual bill.' },
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Active Schedules', 'Upcoming', 'History', 'Paused']}
-      features={[
-        'Automated recurring vendor bill generation',
-        'Multiple frequencies: weekly, monthly, quarterly, annually',
-        'Auto-route for approval on generation',
-        'Pause and resume capability',
-        'Auto-notify accounts payable team on generation',
-        'Budget forecast integration: recurring bills appear in projected AP',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Active recurring bill schedules',
-        'Next bill date per schedule',
-        'Monthly recurring payables total',
-        'History of bills generated per schedule',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Set up a new recurring bill template',
-        'Edit bill amount or frequency',
-        'Pause a recurring schedule',
-        'Resume a paused schedule',
-        'Cancel a recurring bill schedule',
-        'View bills generated from a template',
-      ]}
-      relatedPages={[
-        { label: 'Bills', href: '/expenses/bills/bill-list' },
-        { label: 'Vendor List', href: '/expenses/vendors/vendor-list' },
-        { label: 'Recurring Transactions', href: '/automation/scheduled-jobs/recurring-transactions' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

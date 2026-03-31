@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Data Backup"
-      module="SETTINGS"
-      breadcrumb="Settings / Data / Data Backup"
-      purpose="Data Backup manages the backup and restore configuration for the company's Haypbooks data. All data is automatically backed up by Haypbooks on a continuous basis, but this page gives company administrators visibility into backup status, backup history, and the ability to trigger a manual backup or request a data restore. It also allows downloading a full data export for the company's own off-system archive — important for long-term data retention compliance and as a safety net."
-      components={[
-        { name: 'Backup Status', description: 'Last successful backup timestamp, backup frequency, and data coverage (all modules).' },
-        { name: 'Backup History', description: 'Log of all backups: timestamp, size, status (success/in-progress/failed).' },
-        { name: 'Manual Backup Trigger', description: 'Request an immediate backup outside the normal schedule.' },
-        { name: 'Restore Request', description: 'Request data restore from a specific backup point — initiates a support request to Haypbooks.' },
-        { name: 'Data Export', description: 'Download a full export of all company data as a structured data pack (JSON or CSV) for off-system archive.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Backup Status', 'Backup History', 'Restore', 'Data Export']}
-      features={[
-        'Automated continuous data backup visibility',
-        'Backup history log',
-        'Manual backup trigger',
-        'Restore from backup request',
-        'Full data export for off-system archive',
-        'Data retention policy visibility',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Last backup timestamp and status',
-        'Backup frequency and coverage',
-        'Backup history log',
-        'Data export availability',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View backup status and history',
-        'Trigger manual backup',
-        'Request data restore',
-        'Download full data export',
-        'Archive export for long-term retention',
-      ]}
-      relatedPages={[
-        { label: 'Audit Log', href: '/settings/data/audit-log' },
-        { label: 'Security Settings', href: '/settings/security/security-settings' },
-        { label: 'Subscription', href: '/settings/billing/subscription' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

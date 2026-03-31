@@ -1,9 +1,7 @@
 'use client'
 
-import dynamic from 'next/dynamic'
-
-const PaymentsPage = dynamic(() => import('@/components/sales/PaymentsPage'), { ssr: false })
+import CustomerPaymentsPage from '@/components/sales/CustomerPaymentsPage'
 
 export default function Page() {
-  return <PaymentsPage />
+  return <CustomerPaymentsPage />
 }

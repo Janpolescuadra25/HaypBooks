@@ -1,7 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
+import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorException } from '@nestjs/common'
+import { randomUUID } from 'crypto'
+import * as bcrypt from 'bcryptjs'
 import { CompanyRepository } from './company.repository.prisma'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { AccountingService } from '../accounting/accounting.service'
+import { MailService } from '../common/mail.service'
 
 @Injectable()
 export class CompanyService {
@@ -9,6 +12,7 @@ export class CompanyService {
     private readonly repo: CompanyRepository,
     private readonly prisma: PrismaService,
     private readonly accountingService: AccountingService,
+    private readonly mailService?: MailService,
   ) { }
 
   async createCompany(payload: any) {
@@ -74,7 +78,7 @@ export class CompanyService {
 
   /** Returns the ID of the workspace owned by the given user, or null if none exists. */
   async getOwnedWorkspaceId(userId: string): Promise<string | null> {
-    const ws = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId }, select: { id: true } })
+    const ws = await this.prisma.workspace.findFirst({ where: { ownerUserId: userId }, select: { id: true } })
     return ws?.id ?? null
   }
 
@@ -154,8 +158,19 @@ export class CompanyService {
 
   async acceptInvite(userId: string, inviteId: string, setIsAccountant: boolean = false) {
     if (!userId || !inviteId) return { success: false }
-    // Delegate to repository which knows about TenantInvite / TenantUser semantics
     const result = await this.repo.acceptInviteForUser(userId, inviteId, setIsAccountant)
+    if (!result || result.success !== true) {
+      if (result?.reason === 'email_mismatch') {
+        throw new ForbiddenException('This invite is intended for a different email address. Please sign in with the invited email or request a new invite.')
+      }
+      if (result?.reason === 'invite_not_found') {
+        throw new NotFoundException('Invite not found')
+      }
+      if (result?.reason === 'invite_not_pending') {
+        throw new ForbiddenException('Invite is no longer pending')
+      }
+      throw new InternalServerErrorException('Unable to accept invite')
+    }
     return result
   }
 
@@ -218,6 +233,77 @@ export class CompanyService {
       include: { user: { select: { id: true, email: true, name: true } }, Role: { select: { id: true, name: true } } } as any,
     })
     return members
+  }
+
+  async inviteCompanyUser(requestingUserId: string, companyId: string, email: string, roleId?: string) {
+    if (!email) throw new NotFoundException('Email is required')
+
+    const company = await this.repo.findByIdForUser(requestingUserId, companyId)
+    if (!company) throw new NotFoundException('Company not found')
+
+    const workspaceId = (company as any).workspaceId
+    if (!workspaceId) throw new NotFoundException('Workspace not found for company')
+
+    // Ensure requesting user is owner to invite users
+    const requester = await this.prisma.workspaceUser.findFirst({
+      where: { workspaceId, userId: requestingUserId, status: 'ACTIVE', isOwner: true }
+    })
+    if (!requester) throw new ForbiddenException('Only company owners can invite members')
+
+    const normalizedEmail = String(email).trim().toLowerCase()
+    let user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } })
+    if (!user) {
+      const tempPassword = randomUUID()
+      const hashedPassword = await bcrypt.hash(tempPassword, 10)
+      user = await this.prisma.user.create({ data: { email: normalizedEmail, systemRole: 'USER', password: hashedPassword, isEmailVerified: false } as any })
+    }
+
+    let targetRoleId = roleId
+    if (!targetRoleId) {
+      const memberRole = await this.prisma.role.findFirst({ where: { workspaceId, name: 'MEMBER' } })
+      const firstRole = memberRole ?? await this.prisma.role.findFirst({ where: { workspaceId } })
+      if (!firstRole) throw new NotFoundException('No role available for this workspace')
+      targetRoleId = firstRole.id
+    }
+
+    const invited = await this.prisma.workspaceUser.upsert({
+      where: { workspaceId_userId: { workspaceId, userId: user.id } },
+      update: {
+        status: 'INVITED',
+        roleId: targetRoleId,
+        isOwner: false,
+        invitedBy: requestingUserId,
+        invitedAt: new Date(),
+      },
+      create: {
+        workspaceId,
+        userId: user.id,
+        roleId: targetRoleId,
+        status: 'INVITED',
+        isOwner: false,
+        invitedBy: requestingUserId,
+        invitedAt: new Date(),
+        joinedAt: new Date(),
+      },
+    })
+
+    // Send invite email (best-effort, non-blocking)
+    try {
+      const inviter = await this.prisma.user.findUnique({ where: { id: requestingUserId } })
+      const inviterName = inviter?.name || inviter?.email || 'A teammate'
+      const workspaceName = 'your workspace'
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+      const inviteUrl = `${baseUrl}/accept-invite?email=${encodeURIComponent(normalizedEmail)}`
+      if (this.mailService) {
+        const html = this.mailService.buildInviteHtml(inviterName, workspaceName, inviteUrl)
+        const text = this.mailService.buildInviteText(inviterName, workspaceName, inviteUrl)
+        await this.mailService.sendEmail(normalizedEmail, 'You have been invited to HaypBooks', html, text)
+      }
+    } catch (e) {
+      console.warn('[COMPANY-SERVICE] invite email send failed (non-fatal):', (e as Error)?.message || e)
+    }
+
+    return invited
   }
 
   async grantCompanyAccess(requestingUserId: string, companyId: string, targetUserId: string, roleId?: string) {
@@ -290,11 +376,29 @@ export class CompanyService {
         email: email.toLowerCase().trim(),
         invitedBy: userId,
         status: 'PENDING',
-        token: randomUUID(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         ...(roleId ? { roleId } : {}),
       } as any,
+      include: {
+        invitedByUser: { select: { name: true, email: true } },
+      },
     })
+
+    // send invite link email (best effort)
+    if (invite && invite.email && this.mailService) {
+      try {
+        const inviterName = (invite as any).invitedByUser?.name || (invite as any).invitedByUser?.email || 'A teammate'
+        const workspaceName = (invite as any).workspace?.workspaceName || (invite as any).workspace?.name || 'your workspace'
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+        const link = `${baseUrl}/accept-invite?code=${invite.id}`
+        const html = this.mailService.buildInviteHtml(inviterName, workspaceName, link)
+        const text = this.mailService.buildInviteText(inviterName, workspaceName, link)
+        await this.mailService.sendEmail(invite.email, 'You have been invited to HaypBooks', html, text)
+      } catch (e) {
+        console.warn('[COMPANY-SERVICE] sendInvite email error (non-fatal):', (e as Error)?.message || e)
+      }
+    }
+
     return invite
   }
 
@@ -354,6 +458,75 @@ export class CompanyService {
     }
   }
 
+  async getOwnerDashboard(userId: string) {
+    if (!userId) throw new ForbiddenException('Authenticated user required')
+
+    const recently = await this.listRecentForUser(userId, 1)
+    if (!Array.isArray(recently) || recently.length === 0) throw new NotFoundException('No company found for user')
+
+    const companyId = recently[0].id
+    const company = await this.repo.findByIdForUser(userId, companyId)
+    if (!company) throw new NotFoundException('Company not found')
+
+    const workspaceId = (company as any).workspaceId
+    if (!workspaceId) throw new NotFoundException('Workspace not found for company')
+
+    const [activeUserCount, accountCount, cashPosition] = await Promise.all([
+      this.prisma.workspaceUser.count({ where: { workspaceId, status: 'ACTIVE' } }),
+      this.prisma.account.count({ where: { companyId } }),
+      this.getCashPosition(userId, companyId),
+    ])
+
+    return {
+      companyName: company.name,
+      currency: company.currency ?? 'USD',
+      activeUserCount,
+      isCoASeeded: accountCount > 0,
+      bankBalance: Number(cashPosition.totalCash ?? 0),
+      companyId,
+      workspaceId,
+    }
+  }
+
+  async getOwnerFinancialSummary(userId: string) {
+    if (!userId) throw new ForbiddenException('Authenticated user required')
+
+    const recently = await this.listRecentForUser(userId, 1)
+    if (!Array.isArray(recently) || recently.length === 0) throw new NotFoundException('No company found for user')
+    const companyId = recently[0].id
+
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const [revenueAgg, expenseAgg, receivableSummary, payableSummary, cashPosition] = await Promise.all([
+      this.prisma.journalEntryLine.aggregate({
+        where: { companyId, account: { type: 'REVENUE' } as any, journalEntry: { status: 'POSTED', date: { gte: startOfMonth } } } as any,
+        _sum: { credit: true },
+      }).catch(() => ({ _sum: { credit: null } })),
+      this.prisma.journalEntryLine.aggregate({
+        where: { companyId, account: { type: 'EXPENSE' } as any, journalEntry: { status: 'POSTED', date: { gte: startOfMonth } } } as any,
+        _sum: { debit: true },
+      }).catch(() => ({ _sum: { debit: null } })),
+      this.getReceivablesSummary(userId, companyId).catch(() => ({ outstanding: 0, invoiceCount: 0 })),
+      this.getPayablesSummary(userId, companyId).catch(() => ({ outstanding: 0, billCount: 0 })),
+      this.getCashPosition(userId, companyId).catch(() => ({ totalCash: 0 })),
+    ])
+
+    const revenue = Number((revenueAgg as any)._sum?.credit ?? 0)
+    const expenses = Number((expenseAgg as any)._sum?.debit ?? 0)
+
+    return {
+      companyId,
+      period: { start: startOfMonth, end: now },
+      revenue,
+      expenses,
+      netIncome: revenue - expenses,
+      overdueReceivables: { amount: Number(receivableSummary.outstanding ?? 0), count: Number(receivableSummary.invoiceCount ?? 0) },
+      overduePayables: { amount: Number(payableSummary.outstanding ?? 0), count: Number(payableSummary.billCount ?? 0) },
+      bankBalance: Number(cashPosition.totalCash ?? 0),
+    }
+  }
+
   async getCashPosition(userId: string, companyId: string) {
     const company = await this.repo.findByIdForUser(userId, companyId)
     if (!company) throw new NotFoundException('Company not found')
@@ -363,6 +536,16 @@ export class CompanyService {
     }).catch(() => [])
     const total = (accounts as any[]).reduce((s, a) => s + Number((a as any).currentBalance ?? 0), 0)
     return { accounts, totalCash: total }
+  }
+
+  async getOwnerCashPosition(userId: string) {
+    if (!userId) throw new ForbiddenException('Authenticated user required')
+
+    const recently = await this.listRecentForUser(userId, 1)
+    if (!Array.isArray(recently) || recently.length === 0) throw new NotFoundException('No company found for user')
+
+    const companyId = recently[0].id
+    return this.getCashPosition(userId, companyId)
   }
 
   async getReceivablesSummary(userId: string, companyId: string) {

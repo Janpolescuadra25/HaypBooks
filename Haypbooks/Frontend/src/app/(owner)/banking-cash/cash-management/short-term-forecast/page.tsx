@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-02', description: 'BPI Account', amount: 16500, account: 'Acme Corp', status: 'Low' },
+    { id: 'r2', date: '2026-01-10', description: 'Acme Corp', amount: 36300, account: 'Standard', status: 'Active' },
+    { id: 'r3', date: '2026-01-04', description: 'Metro Manila', amount: 24400, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r4', date: '2026-01-27', description: 'BPI Account', amount: 23200, account: 'Q1 2026', status: 'Approved' },
+    { id: 'r5', date: '2026-02-13', description: 'Main', amount: 23400, account: 'Primary', status: 'Current' },
+    { id: 'r6', date: '2026-01-02', description: 'Active Item', amount: 44600, account: 'BPI Account', status: 'Connected' },
+    { id: 'r7', date: '2026-01-23', description: 'Main', amount: 41300, account: 'Default', status: 'Processing' },
+    { id: 'r8', date: '2026-01-26', description: 'General', amount: 27900, account: 'Standard', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Short-Term Forecast"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Cash Management / Short-Term Forecast"
-      purpose="Projected cash position for the next 7, 14, 30, and 90 days based on scheduled payments, expected customer receipts, recurring transactions, and historical patterns."
-      components={[
-        { name: "Forecast Summary Bar", description: "Projected opening/closing balance for selected forecast period" },
-        { name: "Day-by-Day Projection Table", description: "Daily expected inflows and outflows with running balance" },
-        { name: "Inflow Detail Panel", description: "Expected customer receipts from outstanding invoices and recurring income" },
-        { name: "Outflow Detail Panel", description: "Scheduled bill payments, payroll, and recurring payments" },
-        { name: "Scenario Comparison", description: "Compare optimistic, base, and pessimistic cash scenarios" },
+    <OwnerPageTemplate
+      title="Short Term Forecast"
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["7 Days","14 Days","30 Days","90 Days","Scenarios"]}
-      features={["7/14/30/90-day forecast horizons","Invoice due date-based inflows","Scheduled payment outflows","Scenario modeling","Shortfall alerts"]}
-      dataDisplayed={["Opening balance date","Expected daily inflows by source","Expected daily outflows by type","Projected end-of-day balance","Shortfall warning days"]}
-      userActions={["Select forecast period","View projection details","Adjust scenario assumptions","Export forecast to Excel","Set cash alert thresholds"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

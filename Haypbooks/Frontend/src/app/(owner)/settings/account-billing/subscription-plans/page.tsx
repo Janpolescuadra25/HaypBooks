@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function SubscriptionPlansPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Subscription Plans"
-      module="SETTINGS"
-      breadcrumb="Settings / Account & Billing / Subscription Plans"
-      purpose="Subscription Plans displays the current Haypbooks plan, available upgrade tiers, and billing cycle options. Account owners can compare feature sets across plans, switch between monthly and annual billing, and initiate plan upgrades or downgrades. Transparent pricing and feature comparison help businesses choose the right tier as they scale."
-      components={[
-        { name: 'Current Plan Banner', description: 'Highlighted card showing active plan name, renewal date, seats used, and storage consumed.' },
-        { name: 'Plan Comparison Grid', description: 'Side-by-side feature comparison table for Starter, Growth, and Enterprise plan tiers.' },
-        { name: 'Billing Cycle Toggle', description: 'Monthly/Annual toggle that shows discounted pricing when annual billing is selected.' },
-        { name: 'Upgrade/Downgrade CTA', description: 'Action buttons on each plan card to initiate a plan change with prorated billing preview.' },
-        { name: 'Add-Ons Section', description: 'Optional module add-ons such as extra user seats, additional storage, or premium support.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Current Plan', 'Available Plans', 'Add-Ons', 'Billing Cycle']}
-      features={[
-        'View current plan details including seats, modules, and renewal date',
-        'Compare all subscription tiers with feature-by-feature breakdown',
-        'Toggle between monthly and annual billing to see prorated pricing',
-        'Upgrade or downgrade plans with immediate or end-of-cycle effect',
-        'Add optional modules or extra user seats a la carte',
-        'Preview prorated charges before confirming any plan change',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Current plan name, price, and renewal date',
-        'Active user seats vs. plan limit',
-        'Available plan tiers with feature sets and pricing',
-        'Prorated adjustment amount for mid-cycle changes',
-        'Add-on modules and their individual costs',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Upgrade to a higher subscription tier',
-        'Downgrade plan at end of current billing cycle',
-        'Switch between monthly and annual billing',
-        'Add extra user seats or storage',
-        'Request Enterprise plan quote',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

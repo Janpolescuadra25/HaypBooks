@@ -1,31 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FolderKanban, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', type: 'Operating', contact: 'Sample Entry', balance: 49300, status: 'Approved' },
+    { id: 'r2', name: 'Main', type: 'Operating', contact: 'Sample Entry', balance: 18700, status: 'Filed' },
+    { id: 'r3', name: 'Primary', type: 'Basic', contact: 'Q1 2026', balance: 17800, status: 'Approved' },
+    { id: 'r4', name: 'Sample Entry', type: 'Revenue', contact: 'General', balance: 4400, status: 'Completed' },
+    { id: 'r5', name: 'Metro Manila', type: 'Revenue', contact: 'Sample Entry', balance: 9500, status: 'Closed' },
+    { id: 'r6', name: 'Standard', type: 'Premium', contact: 'Sample Entry', balance: 37600, status: 'Current' },
+    { id: 'r7', name: 'Acme Corp', type: 'Revenue', contact: 'General', balance: 3700, status: 'Pending' },
+    { id: 'r8', name: 'Acme Corp', type: 'Monthly', contact: 'Monthly', balance: 16100, status: 'Approved' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title='Subcontractor Costs'
-      module='PROJECTS'
-      breadcrumb='Projects / Tracking / Subcontractor Costs'
-      purpose='Tracks all subcontractor invoices, purchase orders, and committed costs on projects. Provides visibility into subcontractor spending against budget, manages retention, and ensures subcontractor costs are accurately reflected in project financials and billing.'
-      components={[
-        { name: 'Subcontractor Cost Log', description: 'List of all subcontractor invoices and POs linked to projects' },
-        { name: 'Committed Cost Tracker', description: 'Tracks open POs and contract amounts not yet invoiced' },
-        { name: 'Subcontractor Retention Manager', description: 'Manages retention amounts withheld from subcontractor payments' },
-        { name: 'PO vs. Invoice Reconciliation', description: 'Compares purchase order amounts to invoices received per subcontractor' },
-        { name: 'Subcontractor Markup Tool', description: 'Applies agreed markup to subcontractor costs for client billing' },
+    <OwnerPageTemplate
+      title="Subcontractor Costs"
+      section="Projects"
+      icon={<FolderKanban size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Subcontractors', 'Committed Costs', 'Invoiced Costs', 'Retention']}
-      features={['Committed cost tracking from POs', 'Subcontractor retention management', 'PO-to-invoice matching and reconciliation', 'Cost markup for client billing', 'Subcontractor spend by project and budget category', 'Certified payment application processing', 'Export subcontractor cost report']}
-      dataDisplayed={['Subcontractor name', 'PO number and amount', 'Invoices received vs. PO', 'Committed but uninvoiced balance', 'Retention withheld amount', 'Markup percentage and billed amount', 'Budget category assigned to']}
-      userActions={['Record subcontractor PO', 'Log subcontractor invoice', 'Match invoice to PO', 'Apply markup for billing', 'Manage retention release', 'Approve subcontractor payment', 'Export subcontractor cost report']}
-      relatedPages={[
-        { label: 'Materials Usage', href: '/projects/tracking/materials-usage' },
-        { label: 'Project Expenses', href: '/projects/tracking/project-expenses' },
-        { label: 'Budget vs. Actual', href: '/projects/financials/budget-vs-actual' },
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

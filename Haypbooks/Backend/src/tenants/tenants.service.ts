@@ -38,7 +38,7 @@ async updateFirmName(tenantId: string, firmName: string) {
    * Create a Practice under the owned workspace of the given user.
    */
   async createPractice(userId: string, name: string, servicesOffered?: string) {
-    const workspace = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
+    const workspace = await this.prisma.workspace.findFirst({ where: { ownerUserId: userId } })
     if (!workspace) {
       throw new BadRequestException('No workspace found for user. Complete onboarding first.')
     }

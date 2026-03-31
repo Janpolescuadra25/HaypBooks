@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-17', description: 'Acme Corp', amount: 32900, account: 'Active Item', status: 'Approved' },
+    { id: 'r2', date: '2026-01-06', description: 'BPI Account', amount: 29100, account: 'Sample Entry', status: 'Connected' },
+    { id: 'r3', date: '2026-03-21', description: 'BPI Account', amount: 13300, account: 'Active Item', status: 'Pending' },
+    { id: 'r4', date: '2026-02-16', description: 'Metro Manila', amount: 13400, account: 'Active Item', status: 'Closed' },
+    { id: 'r5', date: '2026-02-01', description: 'BPI Account', amount: 12400, account: 'Active Item', status: 'Open' },
+    { id: 'r6', date: '2026-01-16', description: 'Q1 2026', amount: 49100, account: 'Metro Manila', status: 'Closed' },
+    { id: 'r7', date: '2026-01-04', description: 'Standard', amount: 4600, account: 'Active Item', status: 'Low' },
+    { id: 'r8', date: '2026-01-25', description: 'General', amount: 16400, account: 'Primary', status: 'Approved' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Benefits"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Compensation / Benefits"
-      purpose="Benefits manages the employee benefits program — HMO/medical insurance, life insurance, rice allowance, transportation allowance, clothing allowance, meal subsidy, mobile allowance, gym, retirement plan, and other non-mandatory benefits. Benefit enrollment, coverage start date, coverage amount, and payroll treatment (taxable/non-taxable under TRAIN Law De Minimis rules) are managed here. Benefits that impact payroll (taxable allowances above De Minimis limits) feed into the payroll computation automatically."
-      components={[
-        { name: 'Benefits Catalog', description: 'All available employee benefits with type, amount/coverage, taxability, and applicable employee groups.' },
-        { name: 'Employee Enrollment', description: 'For each employee: which benefits they are enrolled in, effective date, and coverage allocation.' },
-        { name: 'De Minimis Tracker', description: 'Tracks whether employee non-mandatory benefits stay within BIR De Minimis limits (non-taxable ceiling per benefit type).' },
-        { name: 'HMO Management', description: 'HMO provider, plan type, coverage limit, and HMO member ID per employee.' },
-        { name: 'Annual Leave Conversion', description: 'Cash conversion of unused leave entitlements (monetization) as a benefit.' },
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Benefits Catalog', 'Employee Enrollment', 'De Minimis Tracker', 'HMO', 'Leave Monetization']}
-      features={[
-        'Benefits catalog management',
-        'Employee-level benefits enrollment',
-        'BIR De Minimis ceiling tracking',
-        'HMO enrollment and coverage details',
-        'Benefit amounts integrate with payroll computation',
-        'Taxable vs. non-taxable benefit classification',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All benefit types and amounts',
-        'Employee enrollment per benefit',
-        'De Minimis utilization per employee',
-        'HMO coverage and expiry per employee',
-        'Benefits cost per employee and total',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new benefit type',
-        'Enroll an employee in a benefit',
-        'Update benefit amounts',
-        'Check De Minimis status for employee',
-        'Process leave monetization',
-        'Export benefits cost report',
-      ]}
-      relatedPages={[
-        { label: 'Employee List', href: '/payroll-workforce/employees/employee-list' },
-        { label: 'Salary Bands', href: '/payroll-workforce/compensation/salary-bands' },
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Deductions', href: '/payroll-workforce/compensation/deductions' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

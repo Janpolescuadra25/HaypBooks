@@ -293,6 +293,9 @@ export class AuthController {
       // Log signup success
       try { await this.securityEventRepo.create({ userId: created.id, email: created.email, type: 'SIGNUP_SUCCESS' }) } catch (e) { /* ignore */ }
 
+      // Ensure any pending invitations for this user are activated
+      await this.authService.activateInvitedWorkspaceUser(created.id).catch(() => {})
+
       // Set session cookies as in signup
       const cookieOptions = {
         httpOnly: true,

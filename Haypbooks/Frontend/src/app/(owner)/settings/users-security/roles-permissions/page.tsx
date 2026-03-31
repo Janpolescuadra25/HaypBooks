@@ -1,46 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function RolesPermissionsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', category: 'Standard', value: 'Main', description: 'Sample Entry', status: 'High' },
+    { id: 'r2', name: 'General', category: 'Monthly', value: 'Metro Manila', description: 'Sample Entry', status: 'Pending' },
+    { id: 'r3', name: 'Default', category: 'Quarterly', value: 'Sample Entry', description: 'BPI Account', status: 'Completed' },
+    { id: 'r4', name: 'Active Item', category: 'Fixed', value: 'Metro Manila', description: 'Primary', status: 'Processing' },
+    { id: 'r5', name: 'Active Item', category: 'Operating', value: 'Default', description: 'Sample Entry', status: 'Filed' },
+    { id: 'r6', name: 'Sample Entry', category: 'Variable', value: 'BPI Account', description: 'Active Item', status: 'Approved' },
+    { id: 'r7', name: 'Main', category: 'Standard', value: 'Main', description: 'Monthly', status: 'Medium' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Monthly', status: 'Enabled' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Roles & Permissions"
-      module="SETTINGS"
-      breadcrumb="Settings / Users & Security / Roles & Permissions"
-      purpose="Roles & Permissions defines the access control structure for the organization by creating named roles with specific module-level and action-level permissions. Each user is assigned one or more roles, and their access to view, create, edit, delete, approve, or export records is governed entirely by those role definitions. This page lets admins design least-privilege access structures that protect sensitive data while enabling team productivity."
-      components={[
-        { name: 'Roles List', description: 'Left-panel list of all roles with user count, description, and system vs. custom designation.' },
-        { name: 'Permission Matrix', description: 'Granular table with module rows and action columns (View, Create, Edit, Delete, Approve, Export) with toggles.' },
-        { name: 'Role Inheritance', description: 'Optional config to make a role inherit all permissions from a parent role, then add restrictions or additions.' },
-        { name: 'Users Assigned Panel', description: 'Tab showing all users currently assigned to the selected role.' },
-        { name: 'Clone Role Button', description: 'One-click action to duplicate an existing role as a starting point for a new variation.' },
+    <OwnerPageTemplate
+      title="Roles Permissions"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Role List', 'Permission Matrix', 'Users Assigned', 'Audit Log']}
-      features={[
-        'Create unlimited custom roles with granular module and action permissions',
-        'Use role inheritance to build tiered permission hierarchies',
-        'Assign multiple roles to a single user for combined access',
-        'Preview effective permissions for any user before saving',
-        'Clone existing roles to quickly create similar access variants',
-        'Track all role changes in built-in permission audit log',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Role name, description, and type (system/custom)',
-        'Per-module, per-action permission toggles',
-        'Number of users assigned to each role',
-        'Inherited permissions from parent role',
-        'Last modified date and user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new custom role',
-        'Edit permission matrix for any role',
-        'Set role inheritance from parent role',
-        'Clone an existing role',
-        'Assign or remove users from a role',
-        'View permission audit log',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

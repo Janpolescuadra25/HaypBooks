@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-17', description: 'Acme Corp', amount: 32900, account: 'Active Item', status: 'Approved' },
+    { id: 'r2', date: '2026-01-06', description: 'BPI Account', amount: 29100, account: 'Sample Entry', status: 'Connected' },
+    { id: 'r3', date: '2026-03-21', description: 'BPI Account', amount: 13300, account: 'Active Item', status: 'Pending' },
+    { id: 'r4', date: '2026-02-16', description: 'Metro Manila', amount: 13400, account: 'Active Item', status: 'Closed' },
+    { id: 'r5', date: '2026-02-01', description: 'BPI Account', amount: 12400, account: 'Active Item', status: 'Open' },
+    { id: 'r6', date: '2026-01-16', description: 'Q1 2026', amount: 49100, account: 'Metro Manila', status: 'Closed' },
+    { id: 'r7', date: '2026-01-04', description: 'Standard', amount: 4600, account: 'Active Item', status: 'Low' },
+    { id: 'r8', date: '2026-01-25', description: 'General', amount: 16400, account: 'Primary', status: 'Approved' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="13th Month Pay"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Compliance / 13th Month Pay"
-      badge="PH ONLY"
-      purpose="13th Month Pay automates the computation of the mandatory 13th month pay benefit required under Philippine Presidential Decree 851. The computation is: Total basic pay earned in the year ÷ 12. The 13th month pay is tax-exempt up to PHP 90,000 under the TRAIN Law. The system pro-rates for new hires and employees who resign during the year. The 13th month run generates the payroll entries, pay slips, and the required DOLE report certifying the company has paid the benefit."
-      components={[
-        { name: 'Computation Wizard', description: 'Run-by-run computation: select year, compute total basic pay per employee, calculate 13th month amount, review, finalize, and post to payroll.' },
-        { name: 'Employee 13th Month Details', description: 'Per-employee: monthly basic pay per month + total basic used in computation + computed 13th month amount.' },
-        { name: 'Tax Exemption Tracker', description: 'Track if the 13th month (combined with other mandated benefits) exceeds the PHP 90,000 BIR tax exemption cap. Excess is subject to withholding tax.' },
-        { name: 'DOLE Report Generator', description: 'Generate the DOLE Establishment Report on 13th Month Pay for regulatory compliance filing.' },
+    <OwnerPageTemplate
+      title="13th Month"
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Compute 13th Month', 'Employee Details', 'Tax Exemption', 'DOLE Report', 'History']}
-      features={[
-        'Automated 13th month pay computation (PD 851)',
-        'Pro-rating for new hires and resignees during the year',
-        'PHP 90,000 tax exemption management',
-        'Withholding tax on excess over exemption',
-        'DOLE report generation',
-        'Integration with payroll run (new pay run or special run)',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All active employees with computed 13th month',
-        'Monthly basic pay used in computation',
-        'Pro-rated amounts for new hires/resignees',
-        'Tax-exempt vs. taxable portion per employee',
-        'Total 13th month cost for the year',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Run 13th month computation for the year',
-        'Review and adjust individual amounts if needed',
-        'Post 13th month as a special payroll run',
-        'Generate DOLE report',
-        'Generate pay slips for 13th month',
-        'View 13th month history from prior years',
-      ]}
-      relatedPages={[
-        { label: 'Payroll Runs', href: '/payroll-workforce/payroll/payroll-runs' },
-        { label: 'Government Reports', href: '/payroll-workforce/compliance/government-reports' },
-        { label: 'Pay Slips', href: '/payroll-workforce/payroll/pay-slips' },
-        { label: 'Alphalist', href: '/philippine-tax/reports/alphalist' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

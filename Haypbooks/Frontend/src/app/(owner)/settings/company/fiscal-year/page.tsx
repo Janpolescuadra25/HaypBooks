@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Monthly', category: 'Basic', value: 'Default', description: 'Sample Entry', status: 'In Stock' },
+    { id: 'r2', name: 'Default', category: 'Direct', value: 'Primary', description: 'Metro Manila', status: 'Paid' },
+    { id: 'r3', name: 'BPI Account', category: 'Variable', value: 'Active Item', description: 'Main', status: 'Closed' },
+    { id: 'r4', name: 'Q1 2026', category: 'Standard', value: 'Acme Corp', description: 'Q1 2026', status: 'Draft' },
+    { id: 'r5', name: 'Monthly', category: 'Fixed', value: 'General', description: 'Primary', status: 'High' },
+    { id: 'r6', name: 'Main', category: 'Direct', value: 'Acme Corp', description: 'Active Item', status: 'Processing' },
+    { id: 'r7', name: 'Monthly', category: 'Quarterly', value: 'Default', description: 'BPI Account', status: 'Connected' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Q1 2026', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Fiscal Year"
-      module="SETTINGS"
-      breadcrumb="Settings / Company / Fiscal Year"
-      purpose="Fiscal Year configures the company's accounting year — when it starts and ends. The most common is January 1 to December 31 (calendar year), but some companies use April 1 – March 31 or July 1 – June 30 fiscal years based on their SEC registration or business cycle. The fiscal year setting affects period-end processing, annual report generation, BIR annual tax return due dates, tax calendar, budget periods, and all year-to-date calculations across the system. Changing fiscal year requires a system administrator and may require year-end close processing."
-      components={[
-        { name: 'Fiscal Year Configuration', description: 'Set fiscal year start month (January = calendar year, or any other month for non-calendar fiscal year).' },
-        { name: 'Accounting Periods List', description: 'All 12 (or 13 for some configurations) accounting periods for the fiscal year with open/closed status.' },
-        { name: 'Year-End Close Status', description: 'Current year-end close progress: periods locked, retained earnings entry posted, beginning balances for new year set.' },
-        { name: 'Prior Year Archives', description: 'Access to prior fiscal year data and opening balance history.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Fiscal Year Settings', 'Accounting Periods', 'Year-End Close', 'Prior Years']}
-      features={[
-        'Fiscal year start/end month configuration',
-        '12-period accounting calendar management',
-        'Year-end close workflow support',
-        'Retained earnings posting at year close',
-        'Prior year financial data access',
-        'BIR tax return due date integration with fiscal year',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Current fiscal year and periods',
-        'Each period: open or closed status',
-        'Year-end close step completion status',
-        'Prior fiscal years archive',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Set fiscal year start month (initial setup)',
-        'Open or close an accounting period',
-        'Initiate year-end close process',
-        'Post retained earnings entry',
-        'Access prior year data',
-      ]}
-      relatedPages={[
-        { label: 'Company Profile', href: '/settings/company/company-profile' },
-        { label: 'Period Close Checklist', href: '/accounting/period-close/close-checklist' },
-        { label: 'Lock Periods', href: '/accounting/period-close/lock-periods' },
-        { label: 'Tax Calendar', href: '/philippine-tax/compliance/tax-compliance-calendar' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

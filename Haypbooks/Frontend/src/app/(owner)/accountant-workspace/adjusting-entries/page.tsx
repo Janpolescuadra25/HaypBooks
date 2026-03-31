@@ -1,51 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { UserCheck, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function AdjustingEntriesPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-26', description: 'Active Item', amount: 46800, account: 'Sample Entry', status: 'Filed' },
+    { id: 'r2', date: '2026-01-10', description: 'Q1 2026', amount: 10400, account: 'Active Item', status: 'Completed' },
+    { id: 'r3', date: '2026-01-18', description: 'BPI Account', amount: 300, account: 'Standard', status: 'Pending' },
+    { id: 'r4', date: '2026-01-27', description: 'Main', amount: 30000, account: 'Metro Manila', status: 'In Stock' },
+    { id: 'r5', date: '2026-02-12', description: 'Q1 2026', amount: 22200, account: 'Standard', status: 'Connected' },
+    { id: 'r6', date: '2026-02-24', description: 'BPI Account', amount: 22400, account: 'Primary', status: 'In Stock' },
+    { id: 'r7', date: '2026-01-12', description: 'General', amount: 9500, account: 'Default', status: 'Active' },
+    { id: 'r8', date: '2026-01-09', description: 'Q1 2026', amount: 400, account: 'Standard', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Adjusting Entries"
-      module="ACCOUNTANT WORKSPACE"
-      breadcrumb="Accountant Workspace / Adjusting Entries"
-      purpose="Create, review, and post period-end adjusting journal entries to ensure financial statements comply with accrual-basis accounting. Supports auto-reversal, recurring entry templates, and approval workflows."
-      components={[
-        { name: "Entry List", description: "Paginated list of all adjusting entries with status, amount, and period filters" },
-        { name: "Entry Form", description: "Guided form for debit/credit lines, GL account picker, and memo fields" },
-        { name: "Template Bank", description: "Library of pre-built templates for common adjustments (accruals, prepayments, depreciation)" },
-        { name: "Reversal Scheduler", description: "Configure automatic reversal dates for each entry" },
+      section="Accountant Workspace"
+      icon={<UserCheck size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={[
-        "All Entries",
-        "Create New",
-        "Templates",
-        "Recurring",
-        "History",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      features={[
-        "Auto-reversal scheduling",
-        "Recurring entry templates",
-        "Multi-line journal support",
-        "Period lock enforcement",
-        "Approval routing",
-        "Audit trail with timestamps",
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      dataDisplayed={[
-        "All adjusting entries for the current period",
-        "Entry status (Draft / Pending Approval / Posted / Reversed)",
-        "GL account pairs with debit/credit amounts",
-        "Supporting document attachments",
-        "Reversal dates and reversal entry links",
-      ]}
-      userActions={[
-        "Create a new adjusting entry",
-        "Post or reverse an entry",
-        "Attach support documents",
-        "Schedule auto-reversal",
-        "Submit for approval",
-        "Export entries to CSV",
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

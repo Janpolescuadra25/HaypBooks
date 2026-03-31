@@ -1,49 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Package, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', sku: 'Main', category: 'Monthly', price: 31300, qty: 52, status: 'Draft' },
+    { id: 'r2', name: 'Acme Corp', sku: 'Primary', category: 'Quarterly', price: 12600, qty: 45, status: 'Paid' },
+    { id: 'r3', name: 'Standard', sku: 'BPI Account', category: 'Quarterly', price: 45600, qty: 96, status: 'Low' },
+    { id: 'r4', name: 'BPI Account', sku: 'Q1 2026', category: 'Basic', price: 36800, qty: 76, status: 'High' },
+    { id: 'r5', name: 'Active Item', sku: 'Main', category: 'Premium', price: 6400, qty: 70, status: 'Draft' },
+    { id: 'r6', name: 'Main', sku: 'Acme Corp', category: 'Annual', price: 40200, qty: 79, status: 'Closed' },
+    { id: 'r7', name: 'Metro Manila', sku: 'Acme Corp', category: 'Annual', price: 20200, qty: 60, status: 'Medium' },
+    { id: 'r8', name: 'BPI Account', sku: 'Standard', category: 'Operating', price: 46800, qty: 65, status: 'Current' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Reorder Points"
-      module="INVENTORY"
-      breadcrumb="Inventory / Stock / Reorder Points"
-      purpose="Reorder Points configures the minimum stock level threshold for each inventory item that triggers a reorder alert or automatic purchase order. Each item can have a reorder point (minimum before restocking), reorder quantity (how much to order), preferred vendor, and lead time days. The system monitors current stock against reorder points and surfaces alerts in the Stock Levels and Reorder Alerts panels. This drives a just-in-time replenishment workflow, preventing stockouts."
-      components={[
-        { name: 'Reorder Configuration Grid', description: 'All items with current reorder point, reorder quantity, lead time days, and preferred vendor.' },
-        { name: 'Reorder Point Editor', description: 'Set/edit reorder point, economic order quantity (EOQ), safety stock level, and lead time for each item.' },
-        { name: 'Auto-Reorder Rules', description: 'Configure whether the system should auto-create a draft PO when reorder point is reached, or only alert.' },
-        { name: 'Bulk Configuration', description: 'Set reorder parameters for multiple items at once, or by category.' },
+      section="Inventory"
+      icon={<Package size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Items', 'Below Reorder Point', 'Auto-Reorder Rules', 'Lead Time Settings']}
-      features={[
-        'Per-item reorder point and quantity configuration',
-        'Safety stock calculation support',
-        'Lead time days for replenishment planning',
-        'Auto-draft PO option on trigger',
-        'Category-level reorder parameter templates',
-        'Alert notifications when below reorder point',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Reorder point and EOQ per item',
-        'Items currently below reorder point',
-        'Lead time and safety stock per item',
-        'Auto-reorder settings status',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Set reorder point for an item',
-        'Configure reorder quantity',
-        'Set lead time days',
-        'Enable auto-draft PO on trigger',
-        'Update reorder parameters in bulk',
-        'View items below reorder point',
-      ]}
-      relatedPages={[
-        { label: 'Stock Levels', href: '/inventory/stock/stock-levels' },
-        { label: 'Purchase Orders', href: '/inventory/purchasing/inventory-pos' },
-        { label: 'Item List', href: '/inventory/items/item-list' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

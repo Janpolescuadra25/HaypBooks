@@ -1,53 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-03', description: 'Sample Entry', amount: 8500, account: 'General', status: 'In Stock' },
+    { id: 'r2', date: '2026-03-13', description: 'Sample Entry', amount: 3500, account: 'Q1 2026', status: 'Processing' },
+    { id: 'r3', date: '2026-03-25', description: 'Active Item', amount: 36200, account: 'Primary', status: 'Processing' },
+    { id: 'r4', date: '2026-03-27', description: 'Sample Entry', amount: 40500, account: 'Active Item', status: 'Closed' },
+    { id: 'r5', date: '2026-02-09', description: 'Active Item', amount: 43000, account: 'Active Item', status: 'Filed' },
+    { id: 'r6', date: '2026-02-05', description: 'Metro Manila', amount: 200, account: 'BPI Account', status: 'Draft' },
+    { id: 'r7', date: '2026-02-19', description: 'Standard', amount: 19700, account: 'Monthly', status: 'Closed' },
+    { id: 'r8', date: '2026-02-09', description: 'Sample Entry', amount: 30300, account: 'Primary', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Accounts Payable Ledger"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Core Accounting / Accounts Payable"
-      purpose="The Accounts Payable Ledger is the sub-ledger that tracks all outstanding amounts owed to vendors and suppliers. It reconciles to the Accounts Payable control account on the balance sheet. It shows the aging of payables by vendor, due dates, discount opportunities, and payment status. It is the source-of-truth for what is owed and when, used for cash flow planning, vendor relationship management, and financial statement preparation."
-      components={[
-        { name: 'AP Summary Tiles', description: 'Tiles for: total outstanding AP, overdue AP, due in 7 days, and total credits available.' },
-        { name: 'Vendor Balance List', description: 'Per-vendor outstanding balance with aging buckets: current, 1–30 days, 31–60 days, 61–90 days, 90+ days.' },
-        { name: 'Invoice Detail View', description: 'All open bills per vendor with invoice date, due date, original amount, amount paid, and outstanding balance.' },
-        { name: 'AP Aging Report', description: 'Formal AP aging summary across all vendors for month-end reporting.' },
-        { name: 'Payment Due Calendar', description: 'Upcoming payment due dates in a calendar view with amounts.' },
+    <OwnerPageTemplate
+      title="Accounts Payable"
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Summary', 'Vendor Balances', 'Open Bills', 'Aging Report', 'Payment Calendar']}
-      features={[
-        'Sub-ledger AP balance tracking with aging buckets',
-        'Cash flow forecasting based on due dates',
-        'Early payment discount tracking',
-        'AP-to-GL control account reconciliation',
-        'Drill-through to individual bill transactions',
-        'Export AP aging for audit or bank presentations',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Total outstanding AP balance',
-        'Per-vendor balances with aging buckets',
-        'Open invoices with due dates and outstanding amounts',
-        'Early payment discount opportunities',
-        'Days payable outstanding (DPO) metric',
-        'AP balance vs. GL control account',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View AP aging for a specific vendor',
-        'Drill through to an individual bill',
-        'Navigate to pay a bill',
-        'Export AP aging report',
-        'Filter by due date or vendor',
-        'View payment discount details',
-      ]}
-      relatedPages={[
-        { label: 'Bills', href: '/expenses/bills/bill-list' },
-        { label: 'Vendor List', href: '/expenses/vendors/vendor-list' },
-        { label: 'AP Aging Report', href: '/reporting/reports-center/ap-aging' },
-        { label: 'Vendor Payments', href: '/banking-cash/payments/vendor-payments' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

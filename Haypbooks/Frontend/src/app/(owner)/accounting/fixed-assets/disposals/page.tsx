@@ -1,49 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function FixedAssetDisposalsPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-25', description: 'Default', amount: 10100, account: 'Metro Manila', status: 'Current' },
+    { id: 'r2', date: '2026-01-01', description: 'Default', amount: 20100, account: 'Sample Entry', status: 'Open' },
+    { id: 'r3', date: '2026-01-10', description: 'Primary', amount: 3900, account: 'Q1 2026', status: 'Current' },
+    { id: 'r4', date: '2026-01-05', description: 'BPI Account', amount: 17100, account: 'Primary', status: 'Current' },
+    { id: 'r5', date: '2026-01-15', description: 'Acme Corp', amount: 49000, account: 'Active Item', status: 'Draft' },
+    { id: 'r6', date: '2026-03-16', description: 'Acme Corp', amount: 9000, account: 'Active Item', status: 'Draft' },
+    { id: 'r7', date: '2026-01-19', description: 'Primary', amount: 4100, account: 'Standard', status: 'Draft' },
+    { id: 'r8', date: '2026-02-18', description: 'Main', amount: 49800, account: 'Primary', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Disposals"
-      module="ACCOUNTING — FIXED ASSETS"
-      breadcrumb="Accounting / Fixed Assets / Disposals"
-      purpose="Record the disposal of fixed assets through sale, write-off, or trade-in and automatically calculate gain or loss on disposal."
-      components={[
-        { name: "Disposal List", description: "All completed and pending disposal records" },
-        { name: "Disposal Form", description: "Select asset, disposal method, proceeds, and disposal date" },
-        { name: "Gain/Loss Calculator", description: "Automatic computation of gain or loss based on NBV and proceeds" },
-        { name: "Journal Preview", description: "Preview of the disposal journal entry before posting" },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={[
-        "All Disposals",
-        "Pending",
-        "Completed",
-        "Write-offs",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      features={[
-        "Auto-calculation of gain/loss",
-        "Support for partial disposal",
-        "Trade-in with offset",
-        "Journal entry auto-generation",
-        "Disposal certificate printing",
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      dataDisplayed={[
-        "Asset being disposed",
-        "Disposal date and method",
-        "Net book value at disposal",
-        "Proceeds from sale",
-        "Gain or loss amount",
-        "Journal entry reference",
-      ]}
-      userActions={[
-        "Record a new disposal",
-        "Enter sale proceeds",
-        "Review gain/loss calculation",
-        "Post disposal journal entry",
-        "Print disposal certificate",
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

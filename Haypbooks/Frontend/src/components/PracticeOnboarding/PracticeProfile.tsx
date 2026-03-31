@@ -125,6 +125,7 @@ export default function PracticeProfile({
 
   const [form, setForm] = useState({
     name: initial.name ?? '',
+    firmName: initial.firmName ?? '',
     type: initial.type ?? '',
     industry: initial.industry ?? '',
     firmSize: initial.firmSize ?? '',
@@ -193,6 +194,11 @@ export default function PracticeProfile({
             <label htmlFor="practice-name" className="block text-sm font-medium text-slate-700 mb-2">Practice Name <span className="text-emerald-600">*</span></label>
             <input id="practice-name" className={`w-full h-10 px-3 border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm ${errors.name ? 'border-red-500' : 'border-slate-200'}`} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Rivera CPA" />
             {errors.name && <div role="alert" className="mt-1 text-xs text-red-600">{errors.name}</div>}
+          </div>
+
+          <div>
+            <label htmlFor="firm-name" className="block text-sm font-medium text-slate-700 mb-2">Firm Name (Optional)</label>
+            <input id="firm-name" className="w-full h-10 px-3 border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white text-sm border-slate-200" value={form.firmName} onChange={e => setForm({ ...form, firmName: e.target.value })} placeholder="e.g. Rivera & Associates" />
           </div>
 
           <div>

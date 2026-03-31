@@ -1,46 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function CountryTemplatesPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Main', category: 'Variable', value: 'BPI Account', description: 'Active Item', status: 'Active' },
+    { id: 'r2', name: 'Acme Corp', category: 'Direct', value: 'BPI Account', description: 'Primary', status: 'High' },
+    { id: 'r3', name: 'Q1 2026', category: 'Direct', value: 'Primary', description: 'Default', status: 'Paid' },
+    { id: 'r4', name: 'Monthly', category: 'Monthly', value: 'Primary', description: 'Active Item', status: 'Enabled' },
+    { id: 'r5', name: 'Sample Entry', category: 'Direct', value: 'Acme Corp', description: 'BPI Account', status: 'Pending' },
+    { id: 'r6', name: 'Metro Manila', category: 'Variable', value: 'Primary', description: 'BPI Account', status: 'Open' },
+    { id: 'r7', name: 'Primary', category: 'Monthly', value: 'Acme Corp', description: 'Q1 2026', status: 'Completed' },
+    { id: 'r8', name: 'Standard', category: 'Standard', value: 'Active Item', description: 'Main', status: 'Active' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Country Templates"
-      module="TAXES"
-      badge="ENT"
-      breadcrumb="Taxes / Tax Studio / Country Templates"
-      purpose="Country Templates provides out-of-the-box pre-configured tax setups for specific countries, bundling the correct tax types, rates, codes, agencies, and filing schedules for each jurisdiction. Businesses entering a new market can apply a country template to instantly provision the complete tax setup for that country rather than building from scratch. Templates are maintained by Haypbooks and updated when country tax rules change."
-      components={[
-        { name: 'Template Library Grid', description: 'Cards of all available country templates with flag, country name, tax system summary, and last updated date.' },
-        { name: 'Template Preview', description: 'Detailed preview showing all tax types, rates, codes, and forms included in the template.' },
-        { name: 'Import Wizard', description: 'Step-by-step wizard to apply a country template to the current entity, with merge or replace option.' },
-        { name: 'Customization Post-Import', description: 'Guided workflow to customize the imported template to match any country-specific variations.' },
-        { name: 'Update Notification', description: 'Alert banner when Haypbooks publishes an update to a country template already in use.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Template Library', 'Applied Templates', 'Updates Available']}
-      features={[
-        'Browse country-specific pre-built tax configuration templates',
-        'Preview all components included in each template before import',
-        'Apply template with merge vs. replace import options',
-        'Customize template after import for local variations',
-        'Receive notifications when a template is updated by Haypbooks',
-        'Track which template version is active per entity',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Country name and tax system type',
-        'Template components included (types, rates, codes, forms)',
-        'Template version and last updated date',
-        'Import status per entity',
-        'Pending updates for applied templates',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Browse and preview country templates',
-        'Apply a country template to the entity',
-        'Choose merge or replace import mode',
-        'Customize imported template',
-        'Apply available template updates',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

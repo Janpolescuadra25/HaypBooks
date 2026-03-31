@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-19', description: 'Active Item', amount: 11700, account: 'Monthly', status: 'Paid' },
+    { id: 'r2', date: '2026-01-17', description: 'Active Item', amount: 36600, account: 'Primary', status: 'Medium' },
+    { id: 'r3', date: '2026-02-22', description: 'Monthly', amount: 21500, account: 'Acme Corp', status: 'High' },
+    { id: 'r4', date: '2026-01-10', description: 'Standard', amount: 43600, account: 'Standard', status: 'Pending' },
+    { id: 'r5', date: '2026-02-22', description: 'Standard', amount: 5200, account: 'Primary', status: 'Completed' },
+    { id: 'r6', date: '2026-01-26', description: 'Sample Entry', amount: 17900, account: 'Acme Corp', status: 'Approved' },
+    { id: 'r7', date: '2026-01-20', description: 'Primary', amount: 38300, account: 'Primary', status: 'Approved' },
+    { id: 'r8', date: '2026-02-27', description: 'Primary', amount: 19400, account: 'Primary', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Forecasts"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Planning / Forecasts"
-      purpose="Forecasts provides rolling financial forecasting — projecting the company's expected financial performance for the remainder of the fiscal year based on year-to-date actuals plus forward-looking assumptions. Unlike the static annual budget, forecasts are updated monthly or quarterly as new information emerges. The Rolling Forecast model (typically 12 or 18 months forward) gives management an always-current view of where the business is headed."
-      components={[
-        { name: 'Forecast Input Grid', description: 'For each remaining month of the year, enter forecast revenue and expense amounts. Completed months auto-fill with actuals.' },
-        { name: 'Forecast vs. Budget', description: 'Side-by-side comparison: original budget, updated forecast, and latest actuals. Shows how the full-year forecast compares to original plan.' },
-        { name: 'Assumption Manager', description: 'Document the key assumptions driving the forecast (revenue growth rate, headcount plan, major cost changes).' },
-        { name: 'Rolling Forecast Setup', description: 'Configure the rolling forecast horizon (12 or 18 months) that extends beyond fiscal year end.' },
-        { name: 'Forecast Versions', description: 'Maintain multiple forecast snapshots (Q1 Forecast, Q2 Forecast, Q3 Forecast) for comparison over time.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Forecast Input', 'Forecast vs. Budget', 'Assumptions', 'Forecast Versions', 'Rolling View']}
-      features={[
-        'Rolling or period-specific forecast models',
-        'Forecast vs. budget vs. actuals three-way view',
-        'Key assumption documentation',
-        'Multi-version forecast management',
-        'Auto-populate with YTD actuals for completed periods',
-        'Projected year-end P&L from current forecast',
-        'Cash flow forecast derived from P&L forecast',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Monthly forecast amounts for remaining periods',
-        'Forecast vs. original budget (annual and monthly)',
-        'Year-end projected outcome based on forecast',
-        'Key assumptions driving the forecast',
-        'Forecast accuracy vs. prior forecast version',
-        'YTD actuals for completed periods',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enter forecast amounts for future periods',
-        'Update forecast for the current month',
-        'Document forecast assumptions',
-        'Compare current forecast to prior version',
-        'Save a forecast version snapshot',
-        'Export full-year forecast to Excel',
-      ]}
-      relatedPages={[
-        { label: 'Budgets', href: '/accounting/planning/budgets' },
-        { label: 'Budget vs. Actual', href: '/accounting/planning/budget-vs-actual' },
-        { label: 'Scenario Planning', href: '/accounting/planning/scenario-planning' },
-        { label: 'Cash Flow Report', href: '/reporting/reports-center/financial-statements/cash-flow-statement' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,45 +1,65 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function AssetCategoriesPage() {
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'price', label: 'Price', type: 'currency' },
+    { key: 'qty', label: 'Quantity', type: 'number' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', sku: 'Main', category: 'Direct', price: 29200, qty: 22, status: 'In Stock' },
+    { id: 'r2', name: 'Acme Corp', sku: 'Monthly', category: 'Revenue', price: 48400, qty: 18, status: 'Active' },
+    { id: 'r3', name: 'Active Item', sku: 'Metro Manila', category: 'Premium', price: 35800, qty: 33, status: 'Filed' },
+    { id: 'r4', name: 'Metro Manila', sku: 'Acme Corp', category: 'Operating', price: 36800, qty: 39, status: 'High' },
+    { id: 'r5', name: 'General', sku: 'Primary', category: 'Annual', price: 38700, qty: 12, status: 'Draft' },
+    { id: 'r6', name: 'Q1 2026', sku: 'Q1 2026', category: 'Variable', price: 20200, qty: 85, status: 'Low' },
+    { id: 'r7', name: 'Primary', sku: 'Standard', category: 'Monthly', price: 23900, qty: 71, status: 'Enabled' },
+    { id: 'r8', name: 'Active Item', sku: 'Acme Corp', category: 'Annual', price: 34800, qty: 7, status: 'Paid' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Asset Categories"
-      module="ACCOUNTING — FIXED ASSETS"
-      breadcrumb="Accounting / Fixed Assets / Asset Management / Asset Categories"
-      purpose="Define and manage asset categories (e.g., Vehicles, Equipment, Furniture) that control default depreciation method, useful life, and GL account mappings."
-      components={[
-        { name: "Category List", description: "All asset categories with default depreciation settings" },
-        { name: "Category Form", description: "Create/edit form for category name, depreciation method, useful life, and salvage value rate" },
-        { name: "GL Account Mapping", description: "Link each category to the corresponding asset, accumulated depreciation, and depreciation expense accounts" },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={[
-        "All Categories",
-        "Create New",
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      features={[
-        "Depreciation method defaults (SL, DB, Units)",
-        "Useful life presets",
-        "GL account auto-mapping",
-        "Category-level reporting",
-        "Import/export categories",
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      dataDisplayed={[
-        "Category name and code",
-        "Default depreciation method",
-        "Default useful life (months/years)",
-        "Linked GL accounts",
-        "Number of assets in category",
-      ]}
-      userActions={[
-        "Create a new asset category",
-        "Edit depreciation defaults",
-        "Map GL accounts",
-        "Delete an unused category",
-        "Export category list",
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

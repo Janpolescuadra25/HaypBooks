@@ -1,55 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Landmark, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'General', type: 'Operating', contact: 'General', balance: 47200, status: 'Pending' },
+    { id: 'r2', name: 'Sample Entry', type: 'Operating', contact: 'Default', balance: 49000, status: 'Completed' },
+    { id: 'r3', name: 'Q1 2026', type: 'Direct', contact: 'Primary', balance: 13100, status: 'Medium' },
+    { id: 'r4', name: 'Default', type: 'Quarterly', contact: 'Monthly', balance: 46800, status: 'Low' },
+    { id: 'r5', name: 'Q1 2026', type: 'Revenue', contact: 'Primary', balance: 9300, status: 'Connected' },
+    { id: 'r6', name: 'Q1 2026', type: 'Quarterly', contact: 'Active Item', balance: 8600, status: 'Current' },
+    { id: 'r7', name: 'Primary', type: 'Direct', contact: 'Metro Manila', balance: 33500, status: 'Completed' },
+    { id: 'r8', name: 'Main', type: 'Variable', contact: 'General', balance: 5200, status: 'Filed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Vendor Payments"
-      module="BANKING & CASH"
-      breadcrumb="Banking & Cash / Payments / Vendor Payments"
-      purpose="Vendor Payments is the execution module for paying outstanding vendor bills. Users select bills due for payment, choose the payment method (bank transfer, check, online payment), specify the payment date and bank account to pay from, and generate the payment. Upon posting, the payment reduces the AP balance, records the bank outflow, and can generate remittance advice email notifications to vendors. Supports individual payments and batch payments."
-      components={[
-        { name: 'Bills Due for Payment', description: 'Queue of all open bills with due date, vendor, amount, early payment discount (if applicable), and days overdue.' },
-        { name: 'Payment Selection Panel', description: 'Checkbox-select bills to include in the payment run with real-time total calculation.' },
-        { name: 'Payment Method Selector', description: 'Choose payment method: bank transfer, check, online payment gateway. Enter bank account to pay from.' },
-        { name: 'Payment Confirmation Summary', description: 'Review total payment amount, number of bills, and per-vendor breakdown before posting.' },
-        { name: 'Payment History', description: 'Archive of all payments made with date, vendor, amount, payment method, and bank reference.' },
+      section="Banking & Cash"
+      icon={<Landmark size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Bills Due', 'Scheduled Payments', 'Payment Entry', 'Payment History']}
-      features={[
-        'Individual and batch payment creation',
-        'Early payment discount application',
-        'Multiple payment methods: bank transfer, check, online',
-        'Remittance advice generation and email to vendor',
-        'Partial payment support',
-        'AP balance auto-update upon payment posting',
-        'Duplicate payment detection',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Open bills with due dates and amounts',
-        'Overdue bills with days past due',
-        'Early payment discount opportunities',
-        'Total AP due in next 7/14/30 days',
-        'Payment history by vendor',
-        'Payment method and bank reference per payment',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Select bills for immediate payment',
-        'Apply early payment discount',
-        'Choose payment method and bank account',
-        'Schedule a future payment date',
-        'Confirm and post payment batch',
-        'Send remittance advice to vendor',
-        'Void a payment',
-      ]}
-      relatedPages={[
-        { label: 'Bills', href: '/expenses/bills/bill-list' },
-        { label: 'Batch Payments', href: '/banking-cash/payments/batch-payments' },
-        { label: 'Bank Accounts', href: '/banking-cash/accounts/bank-accounts' },
-        { label: 'AP Aging', href: '/reporting/reports-center/ap-aging' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

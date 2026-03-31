@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Acme Corp', category: 'Direct', value: 'Active Item', description: 'Primary', status: 'Approved' },
+    { id: 'r2', name: 'Default', category: 'Revenue', value: 'Standard', description: 'Metro Manila', status: 'High' },
+    { id: 'r3', name: 'Monthly', category: 'Operating', value: 'Active Item', description: 'Monthly', status: 'Pending' },
+    { id: 'r4', name: 'Q1 2026', category: 'Revenue', value: 'Metro Manila', description: 'General', status: 'Completed' },
+    { id: 'r5', name: 'Q1 2026', category: 'Variable', value: 'BPI Account', description: 'Sample Entry', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Annual', value: 'Metro Manila', description: 'BPI Account', status: 'In Stock' },
+    { id: 'r7', name: 'Standard', category: 'Operating', value: 'Monthly', description: 'Default', status: 'Medium' },
+    { id: 'r8', name: 'Monthly', category: 'Revenue', value: 'Primary', description: 'Primary', status: 'Low' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Account Defaults"
-      module="SETTINGS"
-      breadcrumb="Settings / Accounting Settings / Account Defaults"
-      purpose="Account Defaults sets the default GL accounts used automatically when transactions are created — to prevent users from needing to manually select accounts for every transaction. Common defaults include: default accounts receivable account, default accounts payable account, default bank account for payments, default income account for sales, default retained earnings account, default FX gain/loss accounts, default bad debt expense account, and default rounding account. These defaults flow into invoice, bill, payment, and journal entry creation."
-      components={[
-        { name: 'AR Default Account', description: 'The default GL account debited when an invoice is created (Accounts Receivable).' },
-        { name: 'AP Default Account', description: 'The default GL account credited when a bill is created (Accounts Payable).' },
-        { name: 'Default Bank Account', description: 'The default bank/cash account used in payment transactions if not manually overridden.' },
-        { name: 'Retained Earnings Account', description: 'GL account for year-end retained earnings close entry.' },
-        { name: 'FX Gain/Loss Accounts', description: 'GL accounts for realized and unrealized FX gains and losses.' },
-        { name: 'Rounding Account', description: 'GL account for minor rounding differences in calculations.' },
-        { name: 'Tax Payable Accounts', description: 'Default GL accounts for VAT Output Payable, Input VAT Receivable, and withholding tax payable.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['AR/AP Defaults', 'Cash & Bank', 'Revenue & Cost', 'Tax Accounts', 'Other Defaults']}
-      features={[
-        'System-wide GL account default configuration',
-        'Prevents missing accounts on transaction creation',
-        'Retained earnings and year-end close accounts',
-        'FX gain/loss account assignment',
-        'Tax payable and creditable account setup',
-        'Overridable per transaction or per entity',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All configured default accounts',
-        'Account code and name for each default',
-        'Last modified and modified by',
-        'Accounts with no default configured (gaps)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Set or change default GL accounts',
-        'Map tax accounts to GL accounts',
-        'Configure retained earnings account',
-        'Update FX gain/loss accounts',
-        'Verify all required defaults are configured',
-      ]}
-      relatedPages={[
-        { label: 'Chart of Accounts', href: '/accounting/core-accounting/chart-of-accounts' },
-        { label: 'Fiscal Year', href: '/settings/company/fiscal-year' },
-        { label: 'Currencies', href: '/settings/company/currencies' },
-        { label: 'Tax Mapping', href: '/philippine-tax/compliance/tax-mapping' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

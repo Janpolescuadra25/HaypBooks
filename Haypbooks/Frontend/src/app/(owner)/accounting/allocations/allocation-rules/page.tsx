@@ -1,51 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', assignee: 'Active Item', dueDate: '2026-02-28', priority: 'Open', status: 'Connected' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'General', dueDate: '2026-01-16', priority: 'Draft', status: 'High' },
+    { id: 'r3', name: 'Monthly', assignee: 'Sample Entry', dueDate: '2026-01-10', priority: 'Draft', status: 'Closed' },
+    { id: 'r4', name: 'BPI Account', assignee: 'Acme Corp', dueDate: '2026-01-04', priority: 'Completed', status: 'Active' },
+    { id: 'r5', name: 'General', assignee: 'Primary', dueDate: '2026-03-16', priority: 'Processing', status: 'Approved' },
+    { id: 'r6', name: 'Default', assignee: 'Metro Manila', dueDate: '2026-01-18', priority: 'Active', status: 'Current' },
+    { id: 'r7', name: 'General', assignee: 'Monthly', dueDate: '2026-03-25', priority: 'Medium', status: 'Pending' },
+    { id: 'r8', name: 'General', assignee: 'Primary', dueDate: '2026-01-12', priority: 'Connected', status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Allocation Rules"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Allocations / Allocation Rules"
-      purpose="Allocation Rules define how shared costs and overhead amounts are automatically distributed across departments, cost centers, projects, or business units. Rules specify the source account(s), the allocation method (fixed percentage, headcount-based, revenue-based, area-based), and the target distribution pools. Common uses: allocate rent across departments by office area, allocate IT costs by headcount, allocate shared service costs by revenue contribution."
-      components={[
-        { name: 'Rule List', description: 'All configured allocation rules with name, source accounts, method, target pools, and active/inactive status.' },
-        { name: 'Rule Builder', description: 'Form to create a new rule: select source accounts, allocation method, allocation basis (percentages or formula), and target cost centers.' },
-        { name: 'Allocation Basis Manager', description: 'Maintain the allocation driver data (headcount per department, office area per department) used by formula-based methods.' },
-        { name: 'Rule Preview', description: "Preview the allocation result for last month's actuals to validate rule configuration before going live." },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Rules', 'Create Rule', 'Allocation Basis', 'Rule Preview']}
-      features={[
-        'Multiple allocation methods: fixed %, headcount, revenue, area',
-        'Multi-source and multi-target allocation rules',
-        'Allocation driver (basis) data management',
-        'Rule preview against actual data before live use',
-        'Tiered allocation support (allocate to interim pool, then reallocate)',
-        'Rule version history for audit trail',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All allocation rules with source/target accounts',
-        'Allocation method and driver basis',
-        'Allocation percentages or formula',
-        'Last run date and amounts allocated',
-        'Rule status (active/inactive)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new allocation rule',
-        'Edit allocation percentages or method',
-        'Update allocation driver data (e.g., new headcount)',
-        'Preview allocation result before running',
-        'Activate or deactivate a rule',
-        'View rule version history',
-      ]}
-      relatedPages={[
-        { label: 'Run Allocations', href: '/accounting/allocations/run-allocations' },
-        { label: 'Allocation History', href: '/accounting/allocations/allocation-history' },
-        { label: 'Journal Entries', href: '/accounting/core-accounting/journal-entries' },
-        { label: 'Departments', href: '/organization/operational-structure/departments' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -14,4 +14,12 @@ export class CompleteDto {
   @IsOptional()
   @IsIn(['quick', 'full'])
   type?: 'quick' | 'full'
+
+  @IsOptional()
+  @IsString()
+  practiceName?: string
+
+  @IsOptional()
+  @IsString()
+  companyName?: string
 }

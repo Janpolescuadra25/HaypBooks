@@ -44,8 +44,9 @@ interface LeafItem {
 }
 
 // Recursively collect all leaf items (items with a path)
-function flattenLeaves(items: NavItem[], parentCrumb = ''): LeafItem[] {
+function flattenLeaves(items: NavItem[] | undefined, parentCrumb = ''): LeafItem[] {
   const result: LeafItem[] = []
+  if (!items?.length) return result
   for (const item of items) {
     if (item.path) {
       result.push({ title: item.title, path: item.path, breadcrumb: parentCrumb })
@@ -85,7 +86,11 @@ export default function OwnerProgressChecklist({ open, onClose }: Props) {
   }, [])
 
   const totalLeaves = useMemo(
-    () => orderedSections.reduce((sum, s) => sum + flattenLeaves(s.items).length, 0),
+    () => orderedSections.reduce((sum, s) => {
+      const fromItems = flattenLeaves(s.items)
+      const fromGroups = s.groups?.flatMap((g) => flattenLeaves(g.items)) || []
+      return sum + fromItems.length + fromGroups.length
+    }, 0),
     [orderedSections],
   )
 
@@ -171,7 +176,9 @@ export default function OwnerProgressChecklist({ open, onClose }: Props) {
         {/* ── Section List ── */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {orderedSections.map((section, idx) => {
-            const allLeaves = flattenLeaves(section.items)
+            const fromItems = flattenLeaves(section.items)
+            const fromGroups = section.groups?.flatMap((g) => flattenLeaves(g.items)) || []
+            const allLeaves = [...fromItems, ...fromGroups]
             const q = search.toLowerCase()
             const filteredLeaves = allLeaves.filter((leaf) => {
               const isBuilt = BUILT_PATHS.has(leaf.path)

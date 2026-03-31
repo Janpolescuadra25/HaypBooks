@@ -1,56 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', assignee: 'Primary', dueDate: '2026-03-14', priority: 'In Stock', status: 'Active' },
+    { id: 'r2', name: 'General', assignee: 'BPI Account', dueDate: '2026-01-26', priority: 'Low', status: 'Active' },
+    { id: 'r3', name: 'BPI Account', assignee: 'Monthly', dueDate: '2026-03-15', priority: 'Medium', status: 'Approved' },
+    { id: 'r4', name: 'Metro Manila', assignee: 'Standard', dueDate: '2026-01-18', priority: 'Low', status: 'Completed' },
+    { id: 'r5', name: 'BPI Account', assignee: 'Default', dueDate: '2026-01-18', priority: 'Paid', status: 'Medium' },
+    { id: 'r6', name: 'Q1 2026', assignee: 'Primary', dueDate: '2026-03-03', priority: 'Completed', status: 'Pending' },
+    { id: 'r7', name: 'Standard', assignee: 'General', dueDate: '2026-01-19', priority: 'Closed', status: 'Current' },
+    { id: 'r8', name: 'Active Item', assignee: 'BPI Account', dueDate: '2026-01-11', priority: 'Current', status: 'Enabled' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Workflow Builder"
-      module="AUTOMATION"
-      breadcrumb="Automation / Workflow Engine / Workflow Builder"
-      purpose="The Workflow Builder is a no-code visual automation designer that allows users to create multi-step business process workflows triggered by events in the system. Users define triggers (e.g., 'Invoice Created'), conditions (e.g., 'Amount > 10,000'), and actions (e.g., 'Assign for Approval', 'Send Email', 'Create Task'). Complex workflows with branching logic, parallel steps, and time-based triggers can all be built without writing code."
-      components={[
-        { name: 'Workflow Canvas', description: 'Drag-and-drop visual canvas where users place and connect trigger, condition, and action nodes to build workflows.' },
-        { name: 'Node Library', description: 'Panel listing all available trigger types, condition operators, and action types organized by category.' },
-        { name: 'Node Configuration Panel', description: 'Click any node to configure its properties: field mappings, conditions, recipient selection, delay settings.' },
-        { name: 'Workflow List', description: 'Table of all existing workflows with name, trigger, status (active/inactive), last run, and run count.' },
-        { name: 'Test Run Panel', description: 'Test a workflow against sample data before activating it to verify branching logic.' },
-        { name: 'Version History', description: 'Each workflow saves version history; revert to any previous version.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['My Workflows', 'Templates', 'Workflow Builder Canvas', 'Run History']}
-      features={[
-        'Visual no-code drag-and-drop workflow canvas',
-        'Event triggers from any module (invoice, bill, payment, employee, etc.)',
-        'Conditional branching with AND/OR logic',
-        'Action types: create task, send email, send notification, create record, update field, trigger approval',
-        'Time delays and schedule-based triggers',
-        'Parallel branches for concurrent actions',
-        'Workflow versioning and rollback',
-        'Pre-built workflow templates for common scenarios',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All workflows with status, trigger type, last run',
-        'Workflow run history with success/failure count',
-        'Node execution trace for debugging',
-        'Workflow trigger event statistics',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new workflow from scratch',
-        'Use a pre-built workflow template',
-        'Drag and connect trigger/condition/action nodes',
-        'Configure each node with specific logic',
-        'Test workflow with sample event data',
-        'Activate or deactivate a workflow',
-        'Duplicate a workflow to modify',
-        'Review and revert to previous workflow version',
-      ]}
-      relatedPages={[
-        { label: 'Smart Rules', href: '/automation/workflow-engine/smart-rules' },
-        { label: 'Email Notifications', href: '/automation/workflow-engine/email-notifications' },
-        { label: 'Approval Chains', href: '/automation/approvals-governance/approval-chains' },
-        { label: 'Automation Logs', href: '/automation/monitoring/automation-logs' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

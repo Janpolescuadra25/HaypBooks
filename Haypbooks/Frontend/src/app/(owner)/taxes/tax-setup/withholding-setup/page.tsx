@@ -1,46 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function WithholdingSetupPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-18', description: 'BPI Account', amount: 34900, account: 'Sample Entry', status: 'Pending' },
+    { id: 'r2', date: '2026-01-09', description: 'Primary', amount: 43200, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r3', date: '2026-02-24', description: 'Main', amount: 23000, account: 'Q1 2026', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-22', description: 'Sample Entry', amount: 13500, account: 'Acme Corp', status: 'Closed' },
+    { id: 'r5', date: '2026-01-06', description: 'Active Item', amount: 30000, account: 'BPI Account', status: 'Open' },
+    { id: 'r6', date: '2026-02-09', description: 'Acme Corp', amount: 19200, account: 'Acme Corp', status: 'Processing' },
+    { id: 'r7', date: '2026-03-20', description: 'Main', amount: 900, account: 'Standard', status: 'Completed' },
+    { id: 'r8', date: '2026-03-09', description: 'Active Item', amount: 28400, account: 'Metro Manila', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Withholding Setup"
-      module="TAXES"
-      badge="PH ONLY"
-      breadcrumb="Taxes / Tax Setup / Withholding Setup"
-      purpose="Withholding Setup configures all aspects of the business's withholding tax obligations — including the tax categories (compensation, expanded, final), the applicable ATC codes, rates per payee classification, and the GL account assignments for each. This setup drives automatic withholding computation on payroll and purchase transactions, and ensures the correct BIR forms and remittance schedules are triggered for each withholding type."
-      components={[
-        { name: 'Withholding Type Config', description: 'Table of withholding categories (compensation/expanded/final) with associated BIR forms and frequencies.' },
-        { name: 'ATC Code Registry', description: 'List of all Alphanumeric Tax Codes with income classification, applicable rate, and status.' },
-        { name: 'Rate Table per ATC', description: 'Configurable rate table for each ATC code with thresholds and applicable percentage.' },
-        { name: 'GL Account Assignment', description: 'Map each withholding type to its tax payable liability account and expense account.' },
-        { name: 'Remittance Schedule', description: 'Configure payment schedule (monthly/quarterly) and the corresponding BIR form per withholding type.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Withholding Types', 'ATC Codes', 'Rate Tables', 'GL Assignments', 'Remittance Schedule']}
-      features={[
-        'Configure all BIR withholding types with corresponding forms',
-        'Set up and maintain ATC code registry',
-        'Define rates per ATC code and income classification',
-        'Map withholding types to GL accounts',
-        'Configure remittance schedule per withholding type',
-        'Auto-populate vendor withholding from ATC code setup',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Withholding type and BIR form number',
-        'ATC code, income classification, and rate',
-        'GL account assignments',
-        'Remittance frequency and due date',
-        'ATC code active/inactive status',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add or update ATC codes and rates',
-        'Configure GL account mappings',
-        'Set remittance schedule per withholding type',
-        'Activate or deactivate ATC codes',
-        'Export withholding configuration',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function EFilingPage() {
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Standard', type: 'Annual', contact: 'Primary', balance: 4100, status: 'Active' },
+    { id: 'r2', name: 'Sample Entry', type: 'Monthly', contact: 'Main', balance: 40900, status: 'Filed' },
+    { id: 'r3', name: 'Standard', type: 'Revenue', contact: 'BPI Account', balance: 35600, status: 'Pending' },
+    { id: 'r4', name: 'Acme Corp', type: 'Monthly', contact: 'Q1 2026', balance: 45200, status: 'Enabled' },
+    { id: 'r5', name: 'General', type: 'Variable', contact: 'Default', balance: 22400, status: 'Active' },
+    { id: 'r6', name: 'BPI Account', type: 'Revenue', contact: 'Q1 2026', balance: 34900, status: 'Open' },
+    { id: 'r7', name: 'Acme Corp', type: 'Operating', contact: 'Active Item', balance: 30400, status: 'Draft' },
+    { id: 'r8', name: 'Metro Manila', type: 'Operating', contact: 'Standard', balance: 23400, status: 'Filed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="E-Filing"
-      module="TAXES"
-      breadcrumb="Taxes / Filing & Payments / E-Filing"
-      purpose="E-Filing provides integration with government tax portals and electronic filing systems to submit tax returns and forms directly from Haypbooks without manual re-entry. The module validates return data against filing rules, generates the required submission file, and tracks acknowledgment from tax authorities. Supported e-filing channels include BIR eFPS and eBIRForms for Philippine filers, and IRS MeF for US filers."
-      components={[
-        { name: 'Filing Queue', description: 'List of tax forms ready for e-filing with validation status, due date, and file-now action.' },
-        { name: 'Form Validator', description: 'Pre-submission validation engine that checks for errors, missing fields, and compliance rule violations.' },
-        { name: 'Portal Credential Config', description: 'Secure storage for government portal credentials (eFPS, eBIRForms, MeF) used for submission.' },
-        { name: 'Submission Status Tracker', description: 'Real-time status tracker showing submitted, pending acknowledgment, accepted, and rejected filings.' },
-        { name: 'Acknowledgment Receipt Store', description: 'Repository of all electronic acknowledgment receipts from tax authorities for compliance records.' },
+    <OwnerPageTemplate
+      title="E Filing"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Filing Queue', 'Ready to File', 'Submitted', 'Acknowledgments', 'Rejected']}
-      features={[
-        'Validate tax return data before e-filing to prevent rejection',
-        'Submit returns directly to government portals via API integration',
-        'Track submission status from filed to acknowledged',
-        'Store all e-filing acknowledgment receipts for compliance',
-        'Manage portal credentials securely for multiple filing authorities',
-        'Re-submit rejected filings with error corrections',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tax form type and tax period covered',
-        'Filing due date and submission status',
-        'Validation errors or warnings',
-        'Acknowledgment receipt number and date',
-        'Portal used and submitting user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Validate a return before filing',
-        'Submit return via e-filing integration',
-        'View submission acknowledgment receipt',
-        'Correct and resubmit rejected filings',
-        'Configure government portal credentials',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

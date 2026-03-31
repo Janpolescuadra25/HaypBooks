@@ -1,53 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Network, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', type: 'Annual', contact: 'Monthly', balance: 2100, status: 'Enabled' },
+    { id: 'r2', name: 'BPI Account', type: 'Monthly', contact: 'Primary', balance: 21200, status: 'Completed' },
+    { id: 'r3', name: 'Metro Manila', type: 'Monthly', contact: 'Standard', balance: 30800, status: 'Processing' },
+    { id: 'r4', name: 'Default', type: 'Variable', contact: 'Default', balance: 37600, status: 'Processing' },
+    { id: 'r5', name: 'Acme Corp', type: 'Variable', contact: 'Monthly', balance: 22100, status: 'Draft' },
+    { id: 'r6', name: 'Sample Entry', type: 'Variable', contact: 'Sample Entry', balance: 5900, status: 'Open' },
+    { id: 'r7', name: 'Active Item', type: 'Quarterly', contact: 'Default', balance: 10300, status: 'Approved' },
+    { id: 'r8', name: 'General', type: 'Annual', contact: 'Sample Entry', balance: 12500, status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Legal Entities"
-      module="ORGANIZATION"
-      breadcrumb="Organization / Entity Structure / Legal Entities"
-      purpose="Legal Entities manages the registry of all legal business entities within the organization — parent companies, subsidiaries, branches, and holding companies. Each entity has its own tax registrations, bank accounts, chart of accounts sub-segment, and financial statements. This page is the foundation for multi-entity accounting and consolidated reporting."
-      components={[
-        { name: 'Entity Hierarchy Tree', description: 'Visual tree showing the parent-child relationships between all legal entities in the organizational structure.' },
-        { name: 'Entity List', description: 'Table of all entities with legal name, entity type, country, tax ID, functional currency, and status.' },
-        { name: 'Entity Detail Panel', description: 'Full entity profile: legal name, registration number, tax IDs, address, directors, bank accounts, and module settings.' },
-        { name: 'Add Entity Form', description: 'Create a new legal entity with all required registration details, currency, and initial chart of accounts linkage.' },
-        { name: 'Access Control', description: 'Configure which users have access to each entity for data segregation.' },
+      section="Organization"
+      icon={<Network size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Entities', 'Active', 'Hierarchy View', 'By Country']}
-      features={[
-        'Multi-entity hierarchy management',
-        'Per-entity tax registration and currency settings',
-        'Intercompany balance tracking across entities',
-        'Consolidated financial statements generation',
-        'User access control per entity',
-        'Entity-level chart of accounts configuration',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All registered legal entities with status',
-        'Entity type (Parent / Subsidiary / Branch / JV)',
-        'Country of incorporation and tax IDs',
-        'Functional currency per entity',
-        'Parent entity relationship',
-        'Active module configuration per entity',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new legal entity',
-        'Edit entity registration details',
-        'Set parent-child relationship in hierarchy',
-        'Configure entity-specific settings (currency, accounts)',
-        'Manage user access per entity',
-        'Deactivate or archive an entity',
-      ]}
-      relatedPages={[
-        { label: 'Intercompany Transactions', href: '/organization/entity-structure/intercompany' },
-        { label: 'Consolidation', href: '/organization/entity-structure/consolidation' },
-        { label: 'Intercompany Transfers', href: '/banking-cash/treasury/intercompany-transfers' },
-        { label: 'Entity Defaults', href: '/settings/entity-management/entity-defaults' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Receipt, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-27', description: 'Main', amount: 48800, account: 'BPI Account', status: 'Completed' },
+    { id: 'r2', date: '2026-01-14', description: 'Main', amount: 24400, account: 'General', status: 'Medium' },
+    { id: 'r3', date: '2026-03-20', description: 'Main', amount: 10000, account: 'Metro Manila', status: 'In Stock' },
+    { id: 'r4', date: '2026-01-05', description: 'Primary', amount: 30000, account: 'Standard', status: 'In Stock' },
+    { id: 'r5', date: '2026-01-18', description: 'Main', amount: 39800, account: 'Acme Corp', status: 'Connected' },
+    { id: 'r6', date: '2026-03-18', description: 'Acme Corp', amount: 42400, account: 'Standard', status: 'High' },
+    { id: 'r7', date: '2026-02-27', description: 'Acme Corp', amount: 5800, account: 'Active Item', status: 'Open' },
+    { id: 'r8', date: '2026-02-21', description: 'Sample Entry', amount: 12400, account: 'Acme Corp', status: 'Filed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Expenses"
-      module="EXPENSES"
-      breadcrumb="Expenses / Expense Capture / Expenses"
-      purpose="Employee expense report management. Submit, review, approve, and reimburse individual expense claims. Attach receipts, assign to projects, and track reimbursement status end-to-end."
-      components={[
-        { name: "Expense Report List", description: "All submitted expense reports with status, amount, and submitter" },
-        { name: "Submit Expense Form", description: "Create a new expense report with line items, categories, and receipts" },
-        { name: "Review and Approval Panel", description: "Manager review interface with line-item approval and rejection" },
-        { name: "Reimbursement Status", description: "Track whether approved reports have been paid and when" },
-        { name: "Policy Compliance Checker", description: "Flag line items that exceed policy limits or lack receipts" },
+      section="Expenses"
+      icon={<Receipt size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["My Expenses","Pending Approval","Approved","Paid","All Expenses"]}
-      features={["Multi-line expense reports","Receipt OCR pre-fill","Policy limit enforcement","Multi-level approval","Payroll reimbursement integration"]}
-      dataDisplayed={["Submitter name and department","Expense date range and total","Category and merchant per line","Policy compliance status","Approval and reimbursement status"]}
-      userActions={["Submit expense report","Attach receipts","Review and approve","Request corrections","Reimburse approved report"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

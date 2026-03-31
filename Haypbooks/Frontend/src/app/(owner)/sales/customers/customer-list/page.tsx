@@ -1,56 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { TrendingUp, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', category: 'Operating', value: 'Sample Entry', description: 'General', status: 'Approved' },
+    { id: 'r2', name: 'Main', category: 'Operating', value: 'Sample Entry', description: 'Q1 2026', status: 'Filed' },
+    { id: 'r3', name: 'Primary', category: 'Basic', value: 'Q1 2026', description: 'Q1 2026', status: 'Approved' },
+    { id: 'r4', name: 'Sample Entry', category: 'Revenue', value: 'General', description: 'Acme Corp', status: 'Completed' },
+    { id: 'r5', name: 'Metro Manila', category: 'Revenue', value: 'Sample Entry', description: 'Metro Manila', status: 'Closed' },
+    { id: 'r6', name: 'Standard', category: 'Premium', value: 'Sample Entry', description: 'Main', status: 'Current' },
+    { id: 'r7', name: 'Acme Corp', category: 'Revenue', value: 'General', description: 'Sample Entry', status: 'Pending' },
+    { id: 'r8', name: 'Acme Corp', category: 'Monthly', value: 'Monthly', description: 'BPI Account', status: 'Approved' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Customer List"
-      module="SALES"
-      breadcrumb="Sales / Customers / Customer List"
-      purpose="Customer List is the master directory of all customer accounts in the system. Each customer record stores the contact details, billing address, credit terms, credit limit, assigned sales person, payment history, and current AR balance. The customer list is the starting point for creating invoices, quotes, and managing the commercial relationship. Customers can be imported in bulk, tagged, segmented, and searched for rapid lookup."
-      components={[
-        { name: 'Customer Table', description: 'All customers with name, contact person, phone, email, payment terms, credit limit, current balance, and status (active/inactive).' },
-        { name: 'Customer Profile Card', description: 'Full customer details: company info, contacts, billing/shipping addresses, credit terms, GL account, tax registration details.' },
-        { name: 'AR Balance Summary per Customer', description: 'Current outstanding AR balance, aging summary, and last payment date for each customer.' },
-        { name: 'Customer Segmentation Tags', description: 'Tag customers by segment (VIP, Retail, Wholesale, Government) for filtered reporting.' },
-        { name: 'Activity Timeline', description: 'Timeline of all transactions with the customer: invoices, payments, credit notes, and communications.' },
+      section="Sales & Revenue"
+      icon={<TrendingUp size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Customers', 'Active', 'Overdue', 'By Segment', 'Imported']}
-      features={[
-        'Comprehensive customer master data management',
-        'Credit term and credit limit assignment',
-        'Customer-level AR balance and aging view',
-        'Customer segmentation and tagging',
-        'Activity and transaction timeline per customer',
-        'Bulk import from CSV/Excel',
-        'Export customer list for CRM or mailing',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Customer name, contact, email, and phone',
-        'Credit terms (Net 30, Net 60, COD, etc.)',
-        'Credit limit',
-        'Current AR balance and aging buckets',
-        'Last invoice date and last payment date',
-        'Total revenue YTD from customer',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new customer',
-        'Edit customer contact details',
-        'Update credit terms or credit limit',
-        'View customer AR balance and invoices',
-        'Tag customer with segment',
-        'Export customer list',
-        'Deactivate an inactive customer',
-        'Import customer from CSV',
-      ]}
-      relatedPages={[
-        { label: 'Invoices', href: '/sales/billing/invoices' },
-        { label: 'Estimates', href: '/sales/estimates/estimate-list' },
-        { label: 'Collections Center', href: '/sales/collections/collections-center' },
-        { label: 'AR Aging', href: '/reporting/reports-center/ar-aging' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

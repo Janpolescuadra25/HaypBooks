@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-01', description: 'Primary', amount: 42900, account: 'Standard', status: 'Connected' },
+    { id: 'r2', date: '2026-03-20', description: 'Acme Corp', amount: 5700, account: 'Acme Corp', status: 'Open' },
+    { id: 'r3', date: '2026-01-16', description: 'Main', amount: 31600, account: 'Sample Entry', status: 'Approved' },
+    { id: 'r4', date: '2026-03-11', description: 'Metro Manila', amount: 47300, account: 'Metro Manila', status: 'Connected' },
+    { id: 'r5', date: '2026-03-19', description: 'Metro Manila', amount: 27100, account: 'Main', status: 'Closed' },
+    { id: 'r6', date: '2026-03-14', description: 'Q1 2026', amount: 18000, account: 'Monthly', status: 'Medium' },
+    { id: 'r7', date: '2026-02-11', description: 'Acme Corp', amount: 30400, account: 'Metro Manila', status: 'Completed' },
+    { id: 'r8', date: '2026-03-16', description: 'Default', amount: 26800, account: 'Active Item', status: 'In Stock' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Bonuses & Commissions"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Payroll Processing / Bonuses & Commissions"
-      purpose="Calculate, manage, and pay employee bonuses and sales commissions. Configure bonus rules, track commission earnings, and include bonus payments in payroll runs or as standalone off-cycle payments."
-      components={[
-        { name: "Bonus Types Setup", description: "Define bonus types (performance, signing, project, annual) with calculation rules" },
-        { name: "Commission Plans", description: "Configure commission rate structures by product tier or quota achievement" },
-        { name: "Earnings Tracker", description: "Accrued but unpaid bonuses and commissions per employee" },
-        { name: "Payment Queue", description: "Approved bonuses and commissions ready for inclusion in payroll" },
-        { name: "Withholding Calculator", description: "Tax calculation for bonus payments using supplemental rate" },
+    <OwnerPageTemplate
+      title="Bonuses Commissions"
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Bonus Types","Commission Plans","Earnings","Payment Queue"]}
-      features={["Bonus and commission plan configuration","Quota-based commission tiers","Accrual tracking","Supplemental tax rate","Payroll integration"]}
-      dataDisplayed={["Employee name and plan type","Earned amount and period","Payment status","Tax withheld","Year-to-date total"]}
-      userActions={["Create bonus payment","Set commission plan","Track earned commissions","Approve for payment","Include in payroll run"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

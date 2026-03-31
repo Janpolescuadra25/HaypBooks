@@ -1,31 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { TrendingUp, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-25', description: 'Metro Manila', amount: 20100, account: 'Primary', status: 'Paid' },
+    { id: 'r2', date: '2026-02-02', description: 'Q1 2026', amount: 17000, account: 'Monthly', status: 'Filed' },
+    { id: 'r3', date: '2026-02-20', description: 'Standard', amount: 1800, account: 'Main', status: 'Medium' },
+    { id: 'r4', date: '2026-02-10', description: 'Q1 2026', amount: 49800, account: 'Active Item', status: 'Paid' },
+    { id: 'r5', date: '2026-03-25', description: 'Standard', amount: 47100, account: 'Metro Manila', status: 'Processing' },
+    { id: 'r6', date: '2026-03-07', description: 'Monthly', amount: 23700, account: 'Active Item', status: 'Paid' },
+    { id: 'r7', date: '2026-02-11', description: 'Sample Entry', amount: 22000, account: 'Main', status: 'Paid' },
+    { id: 'r8', date: '2026-02-19', description: 'Monthly', amount: 9400, account: 'Acme Corp', status: 'Paid' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title='Subscription Billing'
-      module='SALES'
-      breadcrumb='Sales / Revenue Management / Subscription Billing'
-      purpose='Manages recurring subscription billing for software, services, and membership products. Automates invoice generation at configurable billing intervals, handles upgrades, downgrades, and cancellations, and integrates with revenue recognition for proper accounting of subscription revenue.'
-      components={[
-        { name: 'Subscription Catalog', description: 'List of all active subscriptions with customer, plan, billing cycle, and status' },
-        { name: 'Recurring Invoice Engine', description: 'Automated invoice generation at configured billing intervals' },
-        { name: 'Subscription Lifecycle Manager', description: 'Handles subscription creation, trial, upgrade, downgrade, pause, and cancellation' },
-        { name: 'Proration Calculator', description: 'Calculates pro-rated amounts for mid-cycle plan changes or cancellations' },
-        { name: 'Renewal Automation', description: 'Auto-renews subscriptions and sends renewal notices at configurable lead times' },
+    <OwnerPageTemplate
+      title="Subscription Billing"
+      section="Sales & Revenue"
+      icon={<TrendingUp size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Active Subscriptions', 'Billing Schedule', 'Lifecycle Events', 'Revenue Recognition']}
-      features={['Automated recurring invoice generation', 'Flexible billing intervals: monthly, quarterly, annually', 'Mid-cycle proration calculations', 'Trial period and grace period management', 'Automatic renewal and cancellation processing', 'Integration with deferred revenue recognition', 'Subscription MRR and ARR metrics']}
-      dataDisplayed={['Customer name and subscription plan', 'Subscription start and renewal date', 'Monthly recurring revenue (MRR) per customer', 'Billing cycle and next invoice date', 'Subscription status (active, trial, paused, cancelled)', 'Proration adjustments', 'Churn rate and renewal rate']}
-      userActions={['Create new subscription', 'Upgrade or downgrade plan', 'Pause or cancel subscription', 'Generate recurring invoice', 'Handle proration on changes', 'Process renewal', 'Export subscription report']}
-      relatedPages={[
-        { label: 'Deferred Revenue', href: '/sales/revenue-management/deferred-revenue' },
-        { label: 'Contract Revenue', href: '/sales/revenue-management/contract-revenue' },
-        { label: 'Revenue Recognition', href: '/sales/revenue-management/revenue-recognition' },
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

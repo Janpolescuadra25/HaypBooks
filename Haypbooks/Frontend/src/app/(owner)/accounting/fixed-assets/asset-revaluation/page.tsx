@@ -1,54 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Calculator, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-14', description: 'Q1 2026', amount: 49900, account: 'Monthly', status: 'Processing' },
+    { id: 'r2', date: '2026-01-15', description: 'Sample Entry', amount: 43400, account: 'General', status: 'Connected' },
+    { id: 'r3', date: '2026-03-15', description: 'Acme Corp', amount: 35400, account: 'Sample Entry', status: 'Approved' },
+    { id: 'r4', date: '2026-02-10', description: 'BPI Account', amount: 33000, account: 'Acme Corp', status: 'Filed' },
+    { id: 'r5', date: '2026-02-25', description: 'Metro Manila', amount: 34300, account: 'Standard', status: 'Open' },
+    { id: 'r6', date: '2026-01-17', description: 'Acme Corp', amount: 40200, account: 'Monthly', status: 'Current' },
+    { id: 'r7', date: '2026-03-13', description: 'Sample Entry', amount: 28200, account: 'General', status: 'Completed' },
+    { id: 'r8', date: '2026-03-26', description: 'Default', amount: 39300, account: 'Standard', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Asset Revaluation"
-      module="ACCOUNTING"
-      breadcrumb="Accounting / Fixed Assets / Asset Revaluation"
-      purpose="Asset Revaluation supports the revaluation model under PAS 16 (and PFRS for SMEs) where certain asset classes (typically land and buildings) are carried at fair value rather than historical cost. Users can record revaluation uplifts (increasing asset value via other comprehensive income) or revaluation decrements/impairments (decreasing asset value to P&L). The system generates the appropriate journal entries and updates the asset's depreciation base to the new revalued amount."
-      components={[
-        { name: 'Revaluation Entry Form', description: 'Select asset, enter new fair value, revaluation effective date, and valuation basis (independent appraisal reference). System computes revaluation difference.' },
-        { name: 'Revaluation Impact Preview', description: 'Shows: old NBV, new fair value, surplus/deficit amount, and journal entry preview with OCI or P&L treatment.' },
-        { name: 'Revaluation Surplus Account', description: 'Tracks cumulative revaluation surplus in OCI per asset class with balance history.' },
-        { name: 'Revaluation History', description: 'Full history of all revaluations per asset with dates, old values, and new values.' },
-        { name: 'Impairment Testing', description: 'Flag assets for impairment testing with impairment loss calculation and journal entry.' },
+      section="Accounting"
+      icon={<Calculator size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Revalue Asset', 'Surplus Accounts', 'Revaluation History', 'Impairment']}
-      features={[
-        'Revaluation model support per PAS 16',
-        'Automatic OCI vs. P&L treatment determination',
-        'Revaluation surplus account tracking',
-        'Post-revaluation depreciation recalculation',
-        'Impairment testing workflow and loss posting',
-        'Valuation evidence document attachment',
-        'Revaluation cycle scheduling',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Asset historical cost vs. current revalued amount',
-        'Revaluation surplus balance per asset class',
-        'Revaluation gain/loss posted to OCI or P&L',
-        'Post-revaluation depreciation calculation',
-        'Revaluation history per asset',
-        'Impairment indicators and test results',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Enter new fair value for an asset',
-        'Attach valuation report as evidence',
-        'Preview and post revaluation journal entries',
-        'View revaluation surplus account balance',
-        'Record an impairment loss',
-        'Schedule next revaluation review',
-      ]}
-      relatedPages={[
-        { label: 'Asset Register', href: '/accounting/fixed-assets/asset-register' },
-        { label: 'Depreciation', href: '/accounting/fixed-assets/depreciation' },
-        { label: 'FX Revaluation', href: '/accounting/revaluations/fx-revaluation' },
-          { label: 'Balance Sheet', href: '/reporting/reports-center/financial-statements/balance-sheet' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

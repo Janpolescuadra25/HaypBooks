@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Zap, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Metro Manila', assignee: 'BPI Account', dueDate: '2026-02-09', priority: 'High', status: 'Medium' },
+    { id: 'r2', name: 'Metro Manila', assignee: 'Main', dueDate: '2026-01-12', priority: 'Medium', status: 'Draft' },
+    { id: 'r3', name: 'General', assignee: 'Active Item', dueDate: '2026-01-04', priority: 'In Stock', status: 'Pending' },
+    { id: 'r4', name: 'Main', assignee: 'Main', dueDate: '2026-01-27', priority: 'Filed', status: 'Medium' },
+    { id: 'r5', name: 'Default', assignee: 'Metro Manila', dueDate: '2026-02-10', priority: 'In Stock', status: 'High' },
+    { id: 'r6', name: 'Default', assignee: 'Active Item', dueDate: '2026-03-21', priority: 'Medium', status: 'Filed' },
+    { id: 'r7', name: 'Acme Corp', assignee: 'Main', dueDate: '2026-03-04', priority: 'Enabled', status: 'Connected' },
+    { id: 'r8', name: 'Acme Corp', assignee: 'Standard', dueDate: '2026-01-05', priority: 'Processing', status: 'Connected' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Automation Logs"
-      module="AUTOMATION"
-      breadcrumb="Automation / Monitoring / Automation Logs"
-      purpose="Automation Logs shows the execution history of all workflow automations, smart rules, scheduled jobs, and system processes. Every workflow run is logged with success/failure status, execution time, trigger event details, and any errors encountered. This page is essential for monitoring automation health, diagnosing failures, and ensuring business-critical automations are running correctly."
-      components={[
-        { name: 'Log Table', description: 'All automation execution records with workflow/rule name, trigger event, execution time, status (success/failed/skipped), and timestamp.' },
-        { name: 'Error Detail Panel', description: 'For failed runs: full error trace, affected records, and suggested resolution steps.' },
-        { name: 'Run Statistics', description: 'Summary metrics: total runs today, success rate, average execution time, and top failing workflows.' },
-        { name: 'Retry Button', description: 'Manually retry a failed automation run after fixing the underlying issue.' },
+      section="Automation"
+      icon={<Zap size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Runs', 'Workflows', 'Smart Rules', 'Scheduled Jobs', 'Failed Runs']}
-      features={[
-        'Complete execution history for all automations',
-        'Per-run error traces and diagnostic information',
-        'Success rate and performance metrics',
-        'Manual retry for failed runs',
-        'Alerting when automation failure rate exceeds threshold',
-        'Log export for technical review',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Automation/workflow name and type',
-        'Trigger event and trigger record',
-        'Execution status (success / failed / skipped)',
-        'Execution timestamp and duration (ms)',
-        'Error message and stack trace (for failures)',
-        'Actions taken by the automation (tasks created, emails sent, etc.)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Filter logs by workflow, date range, or status',
-        'View error detail for a failed run',
-        'Retry a failed automation',
-        'Navigate to triggered workflow definition',
-        'Export automation log to CSV',
-        'Set up alert for repeated failures',
-      ]}
-      relatedPages={[
-        { label: 'Workflow Builder', href: '/automation/workflow-engine/workflow-builder' },
-        { label: 'Smart Rules', href: '/automation/workflow-engine/smart-rules' },
-        { label: 'Performance Dashboard', href: '/automation/monitoring/performance-dashboard' },
-        { label: 'Audit Trails', href: '/automation/approvals-governance/audit-trails' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

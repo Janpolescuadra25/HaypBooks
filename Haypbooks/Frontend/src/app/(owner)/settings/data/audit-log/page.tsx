@@ -1,52 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Audit Log"
-      module="SETTINGS"
-      breadcrumb="Settings / Data / Audit Log"
-      purpose="The Audit Log is a comprehensive, immutable record of every data-changing action made in Haypbooks — who created, edited, approved, or deleted what record and when. It is distinct from the Security Log (which covers authentication and access events): the Audit Log covers transactional and data changes — invoices created/edited/deleted, journal entries posted, GL accounts changed, user permissions modified, settings changed. The Audit Log is required for financial statement integrity, internal controls, and external audit purposes."
-      components={[
-        { name: 'Audit Log Feed', description: 'Chronological record of all actions with user, timestamp, entity type (Invoice/Journal/Payment), record ID, and change type (Create/Edit/Delete/Approve).' },
-        { name: 'Before/After Comparison', description: 'For edits: show field-by-field what changed — old value vs. new value.' },
-        { name: 'Filter and Search', description: 'Filter by user, date range, module, record type, or action type.' },
-        { name: 'Audit Export', description: 'Export audit log for external auditors or regulatory submission.' },
-        { name: 'Record-Level Audit History', description: 'From any transaction record, view its complete audit trail: who created it, all edits, and who approved it.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Complete Audit Log', 'By Module', 'By User', 'Critical Changes', 'Audit Export']}
-      features={[
-        'Immutable audit trail for all data changes',
-        'Before/after field comparison for edits',
-        'Multi-dimension filtering (user/module/date)',
-        'Record-level audit history access',
-        'Critical change highlighting (GL, permissions, settings)',
-        'Export for external audit purpose',
-        'Perpetual retention (no data expiry)',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All data changes with user and timestamp',
-        'Before and after values for edits',
-        'Deleted records (not recoverable from UI)',
-        'Critical changes (GL, settings, user changes)',
-        'Records with no audit trail gap',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Browse audit log',
-        'Filter by user, date, module, or action',
-        'View before/after for a specific edit',
-        'View audit trail for a specific record',
-        'Export audit log for external auditor',
-      ]}
-      relatedPages={[
-        { label: 'Security Log', href: '/settings/security/security-log' },
-        { label: 'Data Backup', href: '/settings/data/data-backup' },
-        { label: 'Audit Trails', href: '/automation/monitoring/audit-trails' },
-        { label: 'Internal Controls', href: '/compliance/controls/internal-controls' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

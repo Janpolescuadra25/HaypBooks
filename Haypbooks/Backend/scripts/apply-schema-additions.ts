@@ -6,11 +6,19 @@ async function main() {
   console.log('\n=== Manually applying schema additions ===\n');
 
   try {
-    // Add name column to Tenant table
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "name" TEXT;
+    // Only run Tenant column update if Tenant table exists
+    const tenantExists = await prisma.$queryRawUnsafe(`
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'Tenant'
     `);
-    console.log('✓ Added Tenant.name column');
+    if (Array.isArray(tenantExists) && tenantExists.length > 0) {
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "name" TEXT;
+      `);
+      console.log('✓ Added Tenant.name column');
+    } else {
+      console.log('Tenant table does not exist; skipping Tenant.name migration.');
+    }
 
     // Add firmname column to User table
     await prisma.$executeRawUnsafe(`

@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function BaseCurrencyPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Base Currency"
-      module="SETTINGS"
-      breadcrumb="Settings / Entity Management / Base Currency"
-      purpose="Base Currency sets the primary functional currency for the business entity — the currency in which all financial statements, ledger balances, and reports are denominated. This is a foundational setting that affects every transaction, report, and tax filing. Changing the base currency after transactions have been recorded requires a currency revaluation process and should be done with care."
-      components={[
-        { name: 'Current Base Currency Display', description: 'Prominent display of the currently active base currency with ISO code and symbol.' },
-        { name: 'Currency Change Form', description: 'Controlled form to request a base currency change with warning about impact on historical data.' },
-        { name: 'Impact Preview', description: 'Summary of how many transactions and accounts will be affected by a currency change.' },
-        { name: 'Revaluation Notice', description: 'Informational notice explaining the revaluation journal entries that will be generated on change.' },
-        { name: 'Administrator Confirmation Gate', description: 'Mandatory confirmation with account owner authentication before any currency change is applied.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Current Setting', 'Change Currency', 'Revaluation History']}
-      features={[
-        'View and confirm the currently active base (functional) currency',
-        'Request a base currency change with full impact preview',
-        'Understand revaluation effects before committing to change',
-        'Authenticate as account owner before change is allowed',
-        'Review past currency revaluation history',
-        'Link to currency settings for exchange rate configuration',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Current base currency (code, name, symbol)',
-        'Number of transactions denominated in current currency',
-        'Date currency was last set',
-        'Revaluation history with gain/loss amounts',
-        'Available currencies for change request',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View current base currency details',
-        'Initiate a base currency change request',
-        'Confirm identity before applying currency change',
-        'Review impact preview and revaluation notice',
-        'View revaluation journal history',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

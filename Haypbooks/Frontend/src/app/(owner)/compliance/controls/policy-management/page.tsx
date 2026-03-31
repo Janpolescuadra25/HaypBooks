@@ -1,55 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Shield, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-07', description: 'Primary', amount: 28100, account: 'Acme Corp', status: 'Completed' },
+    { id: 'r2', date: '2026-01-13', description: 'Main', amount: 29400, account: 'Metro Manila', status: 'Filed' },
+    { id: 'r3', date: '2026-03-11', description: 'Primary', amount: 10400, account: 'Monthly', status: 'Current' },
+    { id: 'r4', date: '2026-03-27', description: 'Standard', amount: 33700, account: 'Default', status: 'Active' },
+    { id: 'r5', date: '2026-02-09', description: 'Sample Entry', amount: 44100, account: 'Active Item', status: 'In Stock' },
+    { id: 'r6', date: '2026-01-12', description: 'Primary', amount: 22400, account: 'General', status: 'Completed' },
+    { id: 'r7', date: '2026-02-02', description: 'Q1 2026', amount: 1600, account: 'Monthly', status: 'Paid' },
+    { id: 'r8', date: '2026-02-26', description: 'Primary', amount: 7900, account: 'Active Item', status: 'Open' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Policy Management"
-      module="COMPLIANCE"
-      breadcrumb="Compliance / Controls / Policy Management"
-      purpose="Policy Management is the central repository for all company financial and operational policies. It stores the official versions of policies (expense policy, procurement policy, travel policy, data retention policy), tracks acknowledgment by employees, and enforces policy rules by linking them to approval workflows and validation rules in the system. It acts as both a document library and a live policy enforcement engine."
-      components={[
-        { name: 'Policy Library', description: 'Grid of all policies with name, version, effective date, category, and acknowledgment rate.' },
-        { name: 'Policy Editor', description: 'Rich text editor for creating and versioning policy documents with section headers and formatted content.' },
-        { name: 'Acknowledgment Tracker', description: 'Shows which employees have read and acknowledged each policy, with deadline and completion percentage.' },
-        { name: 'Policy Rules Linker', description: 'Link policy sections to enforcement rules in the system (e.g., "Expense policy §3 requires approval for >500").' },
-        { name: 'Version History', description: 'Full version history with changes tracked between versions and reason for update.' },
+      section="Compliance"
+      icon={<Shield size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Policies', 'Finance Policies', 'HR Policies', 'IT Policies', 'Acknowledgments', 'Versions']}
-      features={[
-        'Central policy document repository with version control',
-        'Employee acknowledgment tracking with deadline enforcement',
-        'Policy-to-system-rule linking for automated enforcement',
-        'Policy expiry alerts for periodic review',
-        'Full-text search across all policy documents',
-        'Export policies to PDF for external sharing',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Policy name, category, and effective date',
-        'Current version number and last updated by',
-        'Acknowledgment completion rate per policy',
-        'Employees who have not yet acknowledged',
-        'Linked enforcement rules in the system',
-        'Policy expiry/review due date',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new policy document',
-        'Publish a new version of an existing policy',
-        'Send acknowledgment requests to all employees',
-        'Check acknowledgment completion status',
-        'Link policy to approval or validation rule',
-        'Export policy to PDF',
-        'Archive an obsolete policy',
-      ]}
-      relatedPages={[
-        { label: 'Risk Register', href: '/compliance/controls/risk-register' },
-        { label: 'Internal Controls', href: '/compliance/controls/internal-controls' },
-        { label: 'Document Storage', href: '/organization/governance/document-storage' },
-        { label: 'Approval Matrices', href: '/automation/approvals-governance/approval-matrices' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-
-

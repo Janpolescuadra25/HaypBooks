@@ -1,27 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Building, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-08', description: 'Standard', amount: 16900, account: 'Metro Manila', status: 'In Stock' },
+    { id: 'r2', date: '2026-01-26', description: 'Active Item', amount: 33800, account: 'Metro Manila', status: 'Pending' },
+    { id: 'r3', date: '2026-03-22', description: 'Main', amount: 16500, account: 'BPI Account', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-27', description: 'Default', amount: 46700, account: 'Main', status: 'Medium' },
+    { id: 'r5', date: '2026-02-12', description: 'Main', amount: 34900, account: 'Metro Manila', status: 'High' },
+    { id: 'r6', date: '2026-01-14', description: 'Primary', amount: 5900, account: 'Default', status: 'Current' },
+    { id: 'r7', date: '2026-03-10', description: 'General', amount: 3400, account: 'Primary', status: 'Current' },
+    { id: 'r8', date: '2026-03-01', description: 'Default', amount: 20400, account: 'Metro Manila', status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="VAT Transactions"
-      module="PHILIPPINE TAX"
-      breadcrumb="Philippine Tax / VAT / VAT Transactions"
-      badge="PH ONLY"
-      purpose="Detailed register of all VAT-related transactions for the period. Review sales and purchase transactions with their VAT classification, amounts, and supplier/customer TIN for BIR compliance."
-      components={[
-        { name: "Sales Transactions", description: "All sales broken down by VAT type (VATable, zero-rated, VAT-exempt)" },
-        { name: "Purchase Transactions", description: "All purchases with input VAT, supplier TIN, and invoice details" },
-        { name: "VAT Code Lookup", description: "Reference list of all BIR VAT codes, rates, and applicability" },
-        { name: "Transaction Search", description: "Search by date, TIN, amount, or invoice number" },
-        { name: "Export for Alphalist", description: "Export BIR-compliant data for annual information returns" },
+    <OwnerPageTemplate
+      title="Vat Transactions"
+      section="Philippine Tax"
+      icon={<Building size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Sales","Purchases","VAT Codes","Export"]}
-      features={["Complete VAT transaction register","VAT type classification","TIN and invoice validation","Alphalist export","VAT code reference"]}
-      dataDisplayed={["Transaction date and type","Gross amount","VAT amount and rate","VAT code","Customer/supplier TIN and name"]}
-      userActions={["Review VAT transactions","Search and filter","Reclassify VAT type","Export transaction list","View VAT code descriptions"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

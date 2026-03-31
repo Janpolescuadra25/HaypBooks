@@ -1,26 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Users, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-20', description: 'Main', amount: 13700, account: 'Active Item', status: 'Connected' },
+    { id: 'r2', date: '2026-01-21', description: 'Acme Corp', amount: 700, account: 'General', status: 'Current' },
+    { id: 'r3', date: '2026-01-25', description: 'General', amount: 31200, account: 'Main', status: 'Draft' },
+    { id: 'r4', date: '2026-02-16', description: 'Q1 2026', amount: 43600, account: 'General', status: 'Pending' },
+    { id: 'r5', date: '2026-02-27', description: 'General', amount: 22800, account: 'Metro Manila', status: 'Completed' },
+    { id: 'r6', date: '2026-02-20', description: 'Main', amount: 38000, account: 'Sample Entry', status: 'In Stock' },
+    { id: 'r7', date: '2026-03-08', description: 'Default', amount: 34600, account: 'Monthly', status: 'Processing' },
+    { id: 'r8', date: '2026-03-11', description: 'BPI Account', amount: 31300, account: 'Metro Manila', status: 'High' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Off-Cycle Payroll"
-      module="PAYROLL & WORKFORCE"
-      breadcrumb="Payroll & Workforce / Payroll Processing / Off-Cycle Payroll"
-      purpose="Process payroll runs outside the normal schedule for bonuses, corrections, new hires mid-period, or final pay. Off-cycle runs follow the same approval and posting workflow as regular payroll."
-      components={[
-        { name: "Off-Cycle Run Setup", description: "Define run type, affected employees, pay period, and reason" },
-        { name: "Earnings Entry", description: "Enter earnings, deductions, and adjustments for selected employees" },
-        { name: "Tax Calculation", description: "Automatic tax withholding calculation for the off-cycle payment" },
-        { name: "Approval Workflow", description: "Route for payroll manager approval before payment" },
-        { name: "Run History", description: "All past off-cycle runs with amounts and employees affected" },
+    <OwnerPageTemplate
+      title="Off Cycle Payroll"
+      section="Payroll & Workforce"
+      icon={<Users size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Create Run","Review","Approve","History"]}
-      features={["Mid-period payroll capability","Same validation as regular payroll","Tax withholding on off-cycle","Approval workflow","GL posting"]}
-      dataDisplayed={["Run type and reason","Employees included","Total gross and net pay","Tax withheld","Payment date"]}
-      userActions={["Create off-cycle run","Enter earnings","Review tax calculations","Submit for approval","Post and pay"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

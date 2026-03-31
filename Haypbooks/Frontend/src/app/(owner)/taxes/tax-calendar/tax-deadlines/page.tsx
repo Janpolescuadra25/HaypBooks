@@ -1,48 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Q1 2026', assignee: 'General', dueDate: '2026-01-08', priority: 'High', status: 'Completed' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'BPI Account', dueDate: '2026-03-28', priority: 'Processing', status: 'Paid' },
+    { id: 'r3', name: 'Primary', assignee: 'Standard', dueDate: '2026-02-14', priority: 'In Stock', status: 'Current' },
+    { id: 'r4', name: 'BPI Account', assignee: 'Standard', dueDate: '2026-03-10', priority: 'Approved', status: 'Current' },
+    { id: 'r5', name: 'Standard', assignee: 'Default', dueDate: '2026-03-20', priority: 'High', status: 'Draft' },
+    { id: 'r6', name: 'Active Item', assignee: 'Acme Corp', dueDate: '2026-03-28', priority: 'Processing', status: 'High' },
+    { id: 'r7', name: 'Standard', assignee: 'Main', dueDate: '2026-01-27', priority: 'Closed', status: 'Current' },
+    { id: 'r8', name: 'Standard', assignee: 'Monthly', dueDate: '2026-01-14', priority: 'Paid', status: 'Active' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Deadlines"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Calendar / Tax Deadlines"
-      purpose="Tax Deadlines provides a focused list view of all upcoming tax filing and payment deadlines across all tax types — VAT, EWT, income tax, compensation withholding tax, and local taxes. Unlike the Philippine Tax Compliance Calendar which includes government agency contributions and local government fees, the Tax Deadlines page focuses specifically on BIR obligations. Users can quickly see what is due in the next 30/60/90 days and plan their tax preparation work accordingly."
-      components={[
-        { name: 'Upcoming Deadlines List', description: 'All BIR-related deadlines sorted by date: form, tax type, period covered, deadline, days remaining, and status.' },
-        { name: 'Due-This-Month Panel', description: 'Quick panel: everything due in the current month with urgency flags (past due, due in <7 days, on track).' },
-        { name: 'Annual Tax Calendar Grid', description: 'Month-by-month grid showing which forms are due each month across VAT, EWT, income tax, and compensation WT.' },
-        { name: 'Filing Status Integration', description: 'Directly link to associated form generators from each deadline line.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Upcoming Deadlines', 'This Month', 'Annual Grid', 'Filing Status']}
-      features={[
-        'Focused BIR tax deadline calendar',
-        'Days remaining countdown per deadline',
-        'Direct link to form generators',
-        'Annual deadline grid view',
-        'Past due alerts',
-        'Integration with compliance calendar',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'All BIR deadlines by form and period',
-        'Days remaining per deadline',
-        'Filing status (filed/pending/overdue)',
-        'Annual grid of deadlines',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'View upcoming tax deadlines',
-        'Navigate to form generator from deadline',
-        'View full year tax deadline calendar',
-        'Export deadline list',
-      ]}
-      relatedPages={[
-        { label: 'Tax Compliance Calendar', href: '/philippine-tax/compliance/tax-compliance-calendar' },
-        { label: 'VAT Returns', href: '/taxes/vat/vat-returns' },
-        { label: 'EWT', href: '/taxes/withholding-tax/ewt' },
-        { label: 'Quarterly ITR', href: '/taxes/income-tax/quarterly-itr' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function FilingHistoryPage() {
+const columns = [
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    { key: 'type', label: 'Type', type: 'badge', badgeColors },
+    { key: 'contact', label: 'Contact', type: 'text' },
+    { key: 'balance', label: 'Balance', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Standard', type: 'Annual', contact: 'Primary', balance: 4100, status: 'Active' },
+    { id: 'r2', name: 'Sample Entry', type: 'Monthly', contact: 'Main', balance: 40900, status: 'Filed' },
+    { id: 'r3', name: 'Standard', type: 'Revenue', contact: 'BPI Account', balance: 35600, status: 'Pending' },
+    { id: 'r4', name: 'Acme Corp', type: 'Monthly', contact: 'Q1 2026', balance: 45200, status: 'Enabled' },
+    { id: 'r5', name: 'General', type: 'Variable', contact: 'Default', balance: 22400, status: 'Active' },
+    { id: 'r6', name: 'BPI Account', type: 'Revenue', contact: 'Q1 2026', balance: 34900, status: 'Open' },
+    { id: 'r7', name: 'Acme Corp', type: 'Operating', contact: 'Active Item', balance: 30400, status: 'Draft' },
+    { id: 'r8', name: 'Metro Manila', type: 'Operating', contact: 'Standard', balance: 23400, status: 'Filed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Filing History"
-      module="TAXES"
-      breadcrumb="Taxes / Filing & Payments / Filing History"
-      purpose="Filing History is a complete archive of all tax returns and payments filed through Haypbooks, providing a searchable record for compliance audits and lookback references. Every filing entry includes the tax type, period, filed amount, submission method, and confirmation details. This page acts as the single source of truth for demonstrating compliance with tax filing obligations across all periods."
-      components={[
-        { name: 'Filing History Table', description: 'Sortable archive table with tax type, period, filed amount, submission date, method, and status.' },
-        { name: 'Tax Type & Period Filters', description: 'Dropdown filters for tax authority, form type, and date range to narrow history search.' },
-        { name: 'Detail Drawer', description: 'Slide-out panel showing full details of a selected filing: submitted form copy, payment confirmation.' },
-        { name: 'Amendment Flag', description: 'Indicator on any filing that has been subsequently amended, with link to the amendment record.' },
-        { name: 'Export to PDF / CSV', description: 'Export filtered or full history as a PDF report or CSV data file for auditor submission.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Filings', 'Income Tax', 'VAT / GST', 'Withholding', 'Payroll Tax']}
-      features={[
-        'Complete archive of all tax filings with period and amount details',
-        'Filter by tax type, authority, period, and filing status',
-        'View filed form copy and payment confirmation in detail drawer',
-        'Identify and access amended returns flagged in history',
-        'Export filing history for external audit documentation',
-        'Trace each filing back to source return data in Haypbooks',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Tax form type and filing period',
-        'Filed amount and payment date',
-        'Submission method (e-filed, manual, agent)',
-        'Confirmation/reference number',
-        'Amendment status and link',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Search and filter filing history',
-        'View full filing detail with form copy',
-        'Export filing history report',
-        'Navigate to amendment record',
-        'Download acknowledgment receipt',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

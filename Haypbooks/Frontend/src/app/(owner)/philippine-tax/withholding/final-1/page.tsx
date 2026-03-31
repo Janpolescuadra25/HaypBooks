@@ -1,27 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Building, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-01-08', description: 'Standard', amount: 16900, account: 'Metro Manila', status: 'In Stock' },
+    { id: 'r2', date: '2026-01-26', description: 'Active Item', amount: 33800, account: 'Metro Manila', status: 'Pending' },
+    { id: 'r3', date: '2026-03-22', description: 'Main', amount: 16500, account: 'BPI Account', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-27', description: 'Default', amount: 46700, account: 'Main', status: 'Medium' },
+    { id: 'r5', date: '2026-02-12', description: 'Main', amount: 34900, account: 'Metro Manila', status: 'High' },
+    { id: 'r6', date: '2026-01-14', description: 'Primary', amount: 5900, account: 'Default', status: 'Current' },
+    { id: 'r7', date: '2026-03-10', description: 'General', amount: 3400, account: 'Primary', status: 'Current' },
+    { id: 'r8', date: '2026-03-01', description: 'Default', amount: 20400, account: 'Metro Manila', status: 'Draft' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Final WHT 1% - Rentals"
-      module="PHILIPPINE TAX"
-      breadcrumb="Philippine Tax / Withholding / Final WHT 1% on Rentals"
-      badge="PH ONLY"
-      purpose="Track and remit final withholding tax at 1% on rental income. Record rental payments, compute gross and net amounts, issue 2306 certificates to lessors, and file 1601-FQ."
-      components={[
-        { name: "Rental Payment Register", description: "All rental payments with lessor TIN and monthly amounts" },
-        { name: "Final WHT Computation", description: "1% final WHT computed on gross rental amount" },
-        { name: "2306 Certificate Generator", description: "Final withholding tax certificate for lessors" },
-        { name: "1601-FQ Data", description: "Quarterly final WHT data for BIR Form 1601-FQ" },
-        { name: "Lessor Directory", description: "All registered lessors with TIN and monthly rental amounts" },
+    <OwnerPageTemplate
+      title="Final 1"
+      section="Philippine Tax"
+      icon={<Building size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={["Payments","2306 Certificates","1601-FQ","Remittance"]}
-      features={["1% final WHT on rentals","2306 certificate generation","1601-FQ support","Lessor TIN tracking","Payment remittance"]}
-      dataDisplayed={["Lessor name and TIN","Monthly rental amount","Final WHT at 1%","Net rental paid","Quarter total"]}
-      userActions={["Record rental payment","Generate 2306 certificate","Export 1601-FQ data","Record remittance","View filing history"]}
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
+      ]}
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
+      ]}
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
+      ]}
     />
   )
 }
-

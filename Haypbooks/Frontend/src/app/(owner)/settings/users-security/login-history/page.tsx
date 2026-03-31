@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function LoginHistoryPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', category: 'Standard', value: 'Main', description: 'Sample Entry', status: 'High' },
+    { id: 'r2', name: 'General', category: 'Monthly', value: 'Metro Manila', description: 'Sample Entry', status: 'Pending' },
+    { id: 'r3', name: 'Default', category: 'Quarterly', value: 'Sample Entry', description: 'BPI Account', status: 'Completed' },
+    { id: 'r4', name: 'Active Item', category: 'Fixed', value: 'Metro Manila', description: 'Primary', status: 'Processing' },
+    { id: 'r5', name: 'Active Item', category: 'Operating', value: 'Default', description: 'Sample Entry', status: 'Filed' },
+    { id: 'r6', name: 'Sample Entry', category: 'Variable', value: 'BPI Account', description: 'Active Item', status: 'Approved' },
+    { id: 'r7', name: 'Main', category: 'Standard', value: 'Main', description: 'Monthly', status: 'Medium' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Monthly', status: 'Enabled' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Login History"
-      module="SETTINGS"
-      breadcrumb="Settings / Users & Security / Login History"
-      purpose="Login History shows a complete record of all authentication events for all users in the organization — including successful logins, failed attempts, logouts, and session durations. Security administrators use this page to detect suspicious access patterns, identify unauthorized login attempts, and confirm that multi-factor authentication is being enforced. Records include device type, browser, IP address, and geolocation for each event."
-      components={[
-        { name: 'Login Events Table', description: 'Chronological table of all auth events with user, timestamp, IP, device, status (success/failed), and action.' },
-        { name: 'User Filter', description: 'Dropdown to filter events by a specific user or show all users at once.' },
-        { name: 'Date Range Filter', description: 'Date picker to narrow login history to a specific investigation window.' },
-        { name: 'Suspicious Activity Flags', description: 'Auto-flagged rows for events that match anomaly patterns: unknown location, multiple failures, new device.' },
-        { name: 'Session Revocation', description: 'Admin action to force-terminate an active session for any user from this table.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Events', 'Failed Attempts', 'Active Sessions', 'Flagged Activity']}
-      features={[
-        'View full login history for all users with device and IP data',
-        'Filter by user, date range, or event type',
-        'See auto-flagged anomalous events for security review',
-        'Force-terminate active sessions for any user',
-        'Export login history for security audit reports',
-        'Identify patterns of failed login attempts by IP',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'User name and email',
-        'Login timestamp and session duration',
-        'IP address and geolocation',
-        'Device type, browser, and OS',
-        'Event status (success, failed, logout, 2FA challenge)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Filter login history by user or date range',
-        'Review flagged suspicious activity',
-        'Force-terminate an active user session',
-        'Export login history to CSV',
-        'Block an IP address from login attempts',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

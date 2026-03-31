@@ -1,49 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { CheckSquare, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Default', assignee: 'Acme Corp', dueDate: '2026-01-08', priority: 'In Stock', status: 'Active' },
+    { id: 'r2', name: 'Sample Entry', assignee: 'Active Item', dueDate: '2026-03-18', priority: 'Medium', status: 'Pending' },
+    { id: 'r3', name: 'BPI Account', assignee: 'Sample Entry', dueDate: '2026-03-04', priority: 'High', status: 'Processing' },
+    { id: 'r4', name: 'Sample Entry', assignee: 'Q1 2026', dueDate: '2026-03-23', priority: 'Filed', status: 'Closed' },
+    { id: 'r5', name: 'General', assignee: 'Active Item', dueDate: '2026-02-16', priority: 'High', status: 'Filed' },
+    { id: 'r6', name: 'BPI Account', assignee: 'Active Item', dueDate: '2026-03-23', priority: 'Completed', status: 'Paid' },
+    { id: 'r7', name: 'Primary', assignee: 'Main', dueDate: '2026-03-07', priority: 'Open', status: 'In Stock' },
+    { id: 'r8', name: 'Active Item', assignee: 'Metro Manila', dueDate: '2026-02-03', priority: 'Paid', status: 'Closed' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Scheduled Follow-ups"
-      module="TASKS"
-      breadcrumb="Tasks & Approvals / Follow-ups / Scheduled"
-      purpose="Scheduled Follow-ups manages all future follow-up actions that have been queued for a specific date. Follow-ups are created when users want to revisit a record or action at a future time — such as following up with a customer about a payment in 7 days, or checking on a pending PO in 14 days. They appear as reminders in the user's task feed on the scheduled date."
-      components={[
-        { name: 'Follow-up List', description: 'Upcoming follow-ups sorted by scheduled date with linked record, reminder note, and days until due.' },
-        { name: 'Create Follow-up Form', description: 'Schedule a new follow-up with date, linked record (customer/vendor/invoice), reminder text, and assignee.' },
-        { name: 'Calendar Preview', description: 'Mini calendar showing which dates have follow-ups scheduled.' },
-        { name: 'Follow-up Templates', description: 'Common follow-up templates: "Payment follow-up in 7 days", "PO status check in 5 days".' },
+    <OwnerPageTemplate
+      title="Scheduled"
+      section="Tasks & Approvals"
+      icon={<CheckSquare size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Scheduled', 'This Week', 'Next Week', 'This Month']}
-      features={[
-        'Future-date reminder system for any record type',
-        'Assignable to any team member',
-        'Pre-built follow-up templates for common scenarios',
-        'Email reminder on follow-up due date',
-        'Snooze: reschedule to new date from notification',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Follow-up title and linked record',
-        'Scheduled date and days remaining',
-        'Assigned to',
-        'Reminder/note text',
-        'Created by and creation date',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new scheduled follow-up',
-        'Edit the scheduled date or note',
-        'Mark follow-up as completed',
-        'Reschedule (snooze) to a later date',
-        'Reassign to another team member',
-        'Delete a follow-up no longer needed',
-      ]}
-      relatedPages={[
-        { label: 'Overdue Follow-ups', href: '/tasks-approvals/follow-ups/overdue' },
-        { label: 'Completed Follow-ups', href: '/tasks-approvals/follow-ups/completed' },
-        { label: 'My Tasks', href: '/tasks-approvals/my-work/my-tasks' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

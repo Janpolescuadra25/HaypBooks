@@ -1,52 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
+
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-02-16', description: 'Primary', amount: 4100, account: 'Sample Entry', status: 'Active' },
+    { id: 'r2', date: '2026-02-22', description: 'Main', amount: 21700, account: 'Standard', status: 'Pending' },
+    { id: 'r3', date: '2026-01-20', description: 'Sample Entry', amount: 5000, account: 'BPI Account', status: 'Approved' },
+    { id: 'r4', date: '2026-03-21', description: 'General', amount: 33200, account: 'Default', status: 'Filed' },
+    { id: 'r5', date: '2026-01-08', description: 'Sample Entry', amount: 19700, account: 'Active Item', status: 'Open' },
+    { id: 'r6', date: '2026-01-05', description: 'Active Item', amount: 30400, account: 'BPI Account', status: 'Open' },
+    { id: 'r7', date: '2026-01-17', description: 'Monthly', amount: 20800, account: 'Main', status: 'Connected' },
+    { id: 'r8', date: '2026-03-23', description: 'BPI Account', amount: 13400, account: 'Active Item', status: 'Paid' }
+]
 
 export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Quarterly ITR"
-      module="TAXES"
-      breadcrumb="Taxes / Income Tax / Quarterly ITR"
-      purpose="Quarterly ITR manages the preparation and filing of BIR Form 1702Q (Quarterly Income Tax Return for Corporations). Corporations must file quarterly ITR for the first 3 quarters (Q1, Q2, Q3) — covering cumulative income and deductions from the start of the fiscal year to each quarter's end — and then file the annual 1702RT as the final return. The quarterly ITR requires a Q3-of-quarter corporate income tax payment. Haypbooks computes the quarterly ITR from the financial books and generates the EFPS filing."
-      components={[
-        { name: 'Quarterly ITR Computation', description: 'YTD income, deductions, net taxable income, income tax at applicable rate, less credits (2307s received + prior quarterly payments).' },
-        { name: 'Tax Credit Schedule', description: 'Summary of 2307s received in the quarter to credit against the quarterly income tax.' },
-        { name: 'Form 1702Q Preview', description: '1702Q form in BIR layout preview.' },
-        { name: 'EFPS File', description: 'EFPS-ready filing format generation.' },
-        { name: 'Quarterly ITR History', description: 'All filed 1702Qs with period, amount, and confirmation.' },
+    <OwnerPageTemplate
+      title="Quarterly Itr"
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['Compute Quarter', 'Tax Credits', 'Form Preview', 'EFPS File', 'Filing History']}
-      features={[
-        'Quarterly corporate income tax computation',
-        'Cumulative YTD income and deduction summary',
-        '2307 tax credit application',
-        'Prior quarterly payment credit',
-        'EFPS format generation',
-        'Link to annual 1702RT for final reconciliation',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'YTD gross revenue and deductions',
-        'Net taxable income',
-        'Income tax due at applicable rate',
-        'Tax credits applied',
-        'Net amount due for the quarter',
-        'Prior quarters\' filings',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Compute quarterly ITR for a quarter',
-        'Apply 2307 credits',
-        'Generate EFPS file',
-        'Mark as filed with confirmation',
-        'View all quarterly ITR filings',
-      ]}
-      relatedPages={[
-        { label: 'Annual ITR', href: '/taxes/income-tax/annual-itr' },
-        { label: 'Form 2307', href: '/philippine-tax/bir-forms/form-2307' },
-        { label: 'Tax Calendar', href: '/philippine-tax/compliance/tax-compliance-calendar' },
-        { label: 'P&L Report', href: '/reporting/reports-center/financial-statements/profit-and-loss' },
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

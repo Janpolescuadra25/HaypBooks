@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function TaxAgenciesPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-18', description: 'BPI Account', amount: 34900, account: 'Sample Entry', status: 'Pending' },
+    { id: 'r2', date: '2026-01-09', description: 'Primary', amount: 43200, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r3', date: '2026-02-24', description: 'Main', amount: 23000, account: 'Q1 2026', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-22', description: 'Sample Entry', amount: 13500, account: 'Acme Corp', status: 'Closed' },
+    { id: 'r5', date: '2026-01-06', description: 'Active Item', amount: 30000, account: 'BPI Account', status: 'Open' },
+    { id: 'r6', date: '2026-02-09', description: 'Acme Corp', amount: 19200, account: 'Acme Corp', status: 'Processing' },
+    { id: 'r7', date: '2026-03-20', description: 'Main', amount: 900, account: 'Standard', status: 'Completed' },
+    { id: 'r8', date: '2026-03-09', description: 'Active Item', amount: 28400, account: 'Metro Manila', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Tax Agencies"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Setup / Tax Agencies"
-      purpose="Tax Agencies is the directory of all government tax authorities to which the business has filing and payment obligations. Each agency record stores the authority name, contact information, payment methods, portal URLs, and bank details for remittances. This central reference is used throughout the system to correctly route tax liabilities, payments, and filings to the appropriate authority."
-      components={[
-        { name: 'Agency Directory Table', description: 'List of all configured tax agencies with name, type (federal, state, local), and country.' },
-        { name: 'Agency Detail Form', description: 'Form fields for authority name, address, payment instructions, portal URL, and account number.' },
-        { name: 'Payment Methods Panel', description: 'Configuration of accepted payment methods per agency: bank transfer, check, e-payment portal.' },
-        { name: 'Filing Contact Info', description: "Contact details for the agency's taxpayer support or filing desk." },
-        { name: 'Linked Tax Types', description: 'Shows which tax types in the system are configured to report and remit to this agency.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Agencies', 'Federal / National', 'State / Provincial', 'Local']}
-      features={[
-        'Maintain a complete directory of all tax authorities',
-        'Store payment instructions and portal URLs per agency',
-        'Configure accepted payment methods per authority',
-        'Link tax types to the correct agency for automatic routing',
-        'Store agency contact information for compliance queries',
-        'Track which jurisdictions each agency covers',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Agency name and type (federal/state/local)',
-        'Address and contact information',
-        'Portal URL and e-filing system name',
-        'Payment methods and bank account details',
-        'Tax types linked to this agency',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new tax agency record',
-        'Update agency payment instructions',
-        'Link tax types to this agency',
-        'Access agency portal via stored URL',
-        'Edit agency contact details',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

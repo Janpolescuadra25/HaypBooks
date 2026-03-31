@@ -1,45 +1,64 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function JurisdictionsPage() {
+const columns = [
+    { key: 'date', label: 'Date', type: 'date', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'amount', label: 'Amount', type: 'currency', sortable: true },
+    { key: 'account', label: 'Account', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', date: '2026-03-18', description: 'BPI Account', amount: 34900, account: 'Sample Entry', status: 'Pending' },
+    { id: 'r2', date: '2026-01-09', description: 'Primary', amount: 43200, account: 'Q1 2026', status: 'Closed' },
+    { id: 'r3', date: '2026-02-24', description: 'Main', amount: 23000, account: 'Q1 2026', status: 'In Stock' },
+    { id: 'r4', date: '2026-03-22', description: 'Sample Entry', amount: 13500, account: 'Acme Corp', status: 'Closed' },
+    { id: 'r5', date: '2026-01-06', description: 'Active Item', amount: 30000, account: 'BPI Account', status: 'Open' },
+    { id: 'r6', date: '2026-02-09', description: 'Acme Corp', amount: 19200, account: 'Acme Corp', status: 'Processing' },
+    { id: 'r7', date: '2026-03-20', description: 'Main', amount: 900, account: 'Standard', status: 'Completed' },
+    { id: 'r8', date: '2026-03-09', description: 'Active Item', amount: 28400, account: 'Metro Manila', status: 'Closed' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Jurisdictions"
-      module="TAXES"
-      breadcrumb="Taxes / Tax Setup / Jurisdictions"
-      purpose="Jurisdictions registers all the geographic tax jurisdictions in which the business has tax obligations — countries, states, provinces, and cities — and associates the applicable tax rules, rates, and filing requirements for each. This foundational setup drives automatic jurisdiction-based tax calculation on transactions and ensures the correct rules are applied based on the transaction's location. Multi-jurisdiction businesses use this to manage their full compliance footprint."
-      components={[
-        { name: 'Jurisdiction Registry Table', description: 'List of all registered jurisdictions with type (country/state/city), tax system, and status.' },
-        { name: 'Jurisdiction Detail Form', description: 'Configuration form for each jurisdiction: tax authority, registration number, and applicable tax types.' },
-        { name: 'Tax Type Assignment', description: 'Assign which tax types (VAT, GST, Sales Tax, Withholding) apply within each jurisdiction.' },
-        { name: 'Nexus Tracking', description: 'Mark which jurisdictions have established nexus requiring collection and registration.' },
-        { name: 'Registration Status', description: 'Track registration date, registration number, and renewal dates per jurisdiction.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
       ]}
-      tabs={['All Jurisdictions', 'Active', 'Nexus Established', 'Registration Status']}
-      features={[
-        'Register all tax jurisdictions with applicable tax systems',
-        'Assign tax types and rates per jurisdiction',
-        'Track nexus status and obligated registration per location',
-        'Store registration numbers and renewal dates',
-        'Link jurisdictions to filing schedules and due dates',
-        'Deactivate jurisdictions when nexus is removed',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Jurisdiction name, type, and country',
-        'Applicable tax types',
-        'Registration number and status',
-        'Nexus determination date',
-        'Associated tax rates and rates effective date',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Add a new tax jurisdiction',
-        'Assign tax types to a jurisdiction',
-        'Mark nexus establishment',
-        'Enter or update registration number',
-        'Deactivate an inactive jurisdiction',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

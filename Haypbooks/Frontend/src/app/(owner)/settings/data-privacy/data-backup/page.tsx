@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function DataBackupPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'BPI Account', category: 'Monthly', value: 'Q1 2026', description: 'Metro Manila', status: 'Approved' },
+    { id: 'r2', name: 'General', category: 'Basic', value: 'Acme Corp', description: 'Sample Entry', status: 'Draft' },
+    { id: 'r3', name: 'BPI Account', category: 'Quarterly', value: 'Sample Entry', description: 'Primary', status: 'Paid' },
+    { id: 'r4', name: 'Main', category: 'Operating', value: 'Q1 2026', description: 'Main', status: 'Completed' },
+    { id: 'r5', name: 'Monthly', category: 'Monthly', value: 'Monthly', description: 'Default', status: 'Draft' },
+    { id: 'r6', name: 'Monthly', category: 'Operating', value: 'Monthly', description: 'Default', status: 'In Stock' },
+    { id: 'r7', name: 'General', category: 'Monthly', value: 'General', description: 'Primary', status: 'Enabled' },
+    { id: 'r8', name: 'Main', category: 'Variable', value: 'Active Item', description: 'General', status: 'Processing' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Data Backup"
-      module="SETTINGS"
-      breadcrumb="Settings / Data & Privacy / Data Backup"
-      purpose="Data Backup manages automated and manual backups of your entire Haypbooks company data, ensuring a recovery point is always available in case of accidental deletion or system issues. Administrators can schedule recurring backups, trigger manual snapshots, and download backup archives for offline storage. Backup status and health are visible at a glance so issues can be caught early."
-      components={[
-        { name: 'Backup Schedule Config', description: 'Form to set backup frequency (daily, weekly, monthly) and preferred time window for automated backups.' },
-        { name: 'Backup History Table', description: 'Log of all past backups with date, size, type (auto/manual), and status (success/failed/in-progress).' },
-        { name: 'Manual Backup Trigger', description: 'Button to initiate an on-demand backup snapshot immediately outside the scheduled cycle.' },
-        { name: 'Download Archive', description: 'Download button on completed backups to retrieve the encrypted backup file for offline storage.' },
-        { name: 'Retention Settings', description: 'Configure how many backup copies to retain before older backups are automatically purged.' },
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Backup Schedule', 'Backup History', 'Retention Policy']}
-      features={[
-        'Schedule automatic backups on daily, weekly, or monthly cadence',
-        'Trigger manual backups at any time for pre-change snapshots',
-        'Download encrypted backup archives for external storage',
-        'Configure backup retention count to manage storage',
-        'Receive email alerts on backup failures',
-        'View backup size trend to anticipate storage needs',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Next scheduled backup date and time',
-        'Last successful backup timestamp and file size',
-        'Backup history with status per entry',
-        'Retention count (current kept vs. max allowed)',
-        'Total backup storage consumed',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Configure automated backup schedule',
-        'Run a manual backup immediately',
-        'Download a backup archive',
-        'Set backup retention count',
-        'View and troubleshoot failed backup entries',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

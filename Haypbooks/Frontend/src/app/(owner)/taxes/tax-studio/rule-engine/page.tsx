@@ -1,46 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { FileText, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors } from '@/components/owner/statusColors'
 
-export default function RuleEnginePage() {
+const columns = [
+    { key: 'name', label: 'Task', type: 'text', sortable: true },
+    { key: 'assignee', label: 'Assignee', type: 'text' },
+    { key: 'dueDate', label: 'Due Date', type: 'date' },
+    { key: 'priority', label: 'Priority', type: 'status', statusColors },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Primary', assignee: 'Sample Entry', dueDate: '2026-03-26', priority: 'Paid', status: 'Open' },
+    { id: 'r2', name: 'General', assignee: 'Default', dueDate: '2026-02-12', priority: 'Approved', status: 'Low' },
+    { id: 'r3', name: 'General', assignee: 'Primary', dueDate: '2026-01-24', priority: 'Current', status: 'Medium' },
+    { id: 'r4', name: 'Acme Corp', assignee: 'Standard', dueDate: '2026-01-27', priority: 'In Stock', status: 'Connected' },
+    { id: 'r5', name: 'Standard', assignee: 'Default', dueDate: '2026-02-26', priority: 'Approved', status: 'Closed' },
+    { id: 'r6', name: 'Acme Corp', assignee: 'BPI Account', dueDate: '2026-01-22', priority: 'Approved', status: 'Open' },
+    { id: 'r7', name: 'Metro Manila', assignee: 'General', dueDate: '2026-02-15', priority: 'Pending', status: 'Draft' },
+    { id: 'r8', name: 'BPI Account', assignee: 'Sample Entry', dueDate: '2026-02-22', priority: 'Draft', status: 'Connected' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
+    <OwnerPageTemplate
       title="Rule Engine"
-      module="TAXES"
-      badge="ENT"
-      breadcrumb="Taxes / Tax Studio / Rule Engine"
-      purpose="Rule Engine is the advanced logic layer of the tax system, allowing enterprise tax teams to encode complex conditional tax rules that respond to any combination of transaction attributes — customer type, location, product category, amount threshold, or date. Rules are evaluated in real time during transaction entry, ensuring automated and accurate tax determination across even the most complex multi-variable scenarios. The rule engine replaces the need for manual tax overrides and reduces audit risk from human error."
-      components={[
-        { name: 'Rule Library', description: 'List of all defined rules with name, condition summary, resulting tax action, and priority rank.' },
-        { name: 'Visual Rule Builder', description: 'Drag-and-drop condition builder for defining IF-THEN-ELSE logic without coding.' },
-        { name: 'Attribute Selector', description: 'Picker for available transaction attributes that can be used as rule conditions.' },
-        { name: 'Test Harness', description: 'Simulated transaction input to test rule evaluation outcome before activating a rule in production.' },
-        { name: 'Rule Conflict Detector', description: 'Automatic detection of two rules that could fire simultaneously, with reconciliation options.' },
+      section="Tax"
+      icon={<FileText size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['Rule Library', 'Rule Builder', 'Test Harness', 'Conflict Report']}
-      features={[
-        'Build conditional tax rules with visual IF-THEN logic editor',
-        'Reference any transaction attribute (type, location, amount, date) as a condition',
-        'Prioritize rules to control evaluation order on overlapping conditions',
-        'Test rules against simulated transactions before going live',
-        'Detect and resolve conflicting rules',
-        'Audit log of all rule changes with before/after comparison',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Rule name, description, and priority',
-        'Condition logic summary',
-        'Resulting tax action (apply code, rate, exempt)',
-        'Conflict status and conflicting rule name',
-        'Last modified date and user',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new tax rule via visual builder',
-        'Set rule priority order',
-        'Run rule test with sample transaction',
-        'Resolve rule conflicts',
-        'Activate or deactivate rules',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-

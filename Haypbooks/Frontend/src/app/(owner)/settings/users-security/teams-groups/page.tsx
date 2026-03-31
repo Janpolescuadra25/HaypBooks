@@ -1,45 +1,63 @@
-'use client'
+﻿'use client'
 
-import PageDocumentation from '@/components/owner/PageDocumentation'
+import { useState } from 'react'
+import { Settings, List, CheckCircle, Calendar, DollarSign, Eye, Edit2, Trash2, Download } from 'lucide-react'
+import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
+import { statusColors, badgeColors } from '@/components/owner/statusColors'
 
-export default function TeamsGroupsPage() {
+const columns = [
+    { key: 'name', label: 'Setting', type: 'text', sortable: true },
+    { key: 'category', label: 'Category', type: 'badge', badgeColors },
+    { key: 'value', label: 'Value', type: 'text' },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'status', label: 'Status', type: 'status', statusColors }
+]
+
+const mockData = [
+    { id: 'r1', name: 'Sample Entry', category: 'Standard', value: 'Main', description: 'Sample Entry', status: 'High' },
+    { id: 'r2', name: 'General', category: 'Monthly', value: 'Metro Manila', description: 'Sample Entry', status: 'Pending' },
+    { id: 'r3', name: 'Default', category: 'Quarterly', value: 'Sample Entry', description: 'BPI Account', status: 'Completed' },
+    { id: 'r4', name: 'Active Item', category: 'Fixed', value: 'Metro Manila', description: 'Primary', status: 'Processing' },
+    { id: 'r5', name: 'Active Item', category: 'Operating', value: 'Default', description: 'Sample Entry', status: 'Filed' },
+    { id: 'r6', name: 'Sample Entry', category: 'Variable', value: 'BPI Account', description: 'Active Item', status: 'Approved' },
+    { id: 'r7', name: 'Main', category: 'Standard', value: 'Main', description: 'Monthly', status: 'Medium' },
+    { id: 'r8', name: 'Acme Corp', category: 'Direct', value: 'Standard', description: 'Monthly', status: 'Enabled' }
+]
+
+export default function Page() {
+  const [data] = useState(mockData)
+
   return (
-    <PageDocumentation
-      title="Teams & Groups"
-      module="SETTINGS"
-      breadcrumb="Settings / Users & Security / Teams & Groups"
-      purpose="Teams & Groups organizes users into logical groupings for assignment of tasks, approval workflows, notifications, and access policies. Teams can represent departments, functional units, or project groups, and can have team-level settings such as a manager designation and shared inbox. Grouping users simplifies notification routing and approval delegation at scale."
-      components={[
-        { name: 'Teams Directory', description: 'Card grid of all teams with member count, manager, and department tag.' },
-        { name: 'Team Detail Form', description: 'Form to create or edit a team: name, description, manager, department, and member list.' },
-        { name: 'Member Picker', description: 'Multi-select user picker to add members to a team from the full user directory.' },
-        { name: 'Team Permissions Panel', description: 'Optional tab to apply shared permission overrides to all members of the team.' },
-        { name: 'Org Chart View', description: 'Visual tree chart showing team hierarchy and reporting structure.' },
+    <OwnerPageTemplate
+      title="Teams Groups"
+      section="Settings"
+      icon={<Settings size={20}/>}
+      columns={columns}
+      data={data}
+      searchable
+      searchableFields={['name', 'description']}
+      summaryCards={[
+        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
       ]}
-      tabs={['All Teams', 'My Team', 'Org Chart']}
-      features={[
-        'Create and name teams or departments for organizational grouping',
-        'Assign a manager to each team for escalation and approval routing',
-        'Add members via searchable user picker',
-        'Apply shared permission settings at the team level',
-        'Use org chart view to visualize team hierarchy',
-        'Integrate teams with approval workflows and notification rules',
+      bulkActions={[
+        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
+        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
       ]}
-      dataDisplayed={[
-        'Team name, description, and department',
-        'Manager and member list',
-        'Number of open tasks or approvals assigned to team',
-        'Date team was created and last modified',
-        'Linked permission policy (if any)',
+      filters={[
+        { key: 'date_from', label: 'Date Range', type: 'date-range' },
       ]}
-      userActions={[
-        'Create a new team or group',
-        'Add or remove members from a team',
-        'Designate a team manager',
-        'Apply shared permissions to a team',
-        'View org chart hierarchy',
+      showCreate
+      createLabel="Create New"
+      onCreate={() => {}}
+      showExport
+      onRefresh={() => {}}
+      rowMenuItems={(row) => [
+        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
+        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
+        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
       ]}
     />
   )
 }
-
