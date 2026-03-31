@@ -1060,7 +1060,7 @@ model TaxProvision {
 model Workspace {
   id                       String          @id @default(uuid())
   // Owner of the workspace (system-level user)
-  ownerUserId              String
+  ownerUserId              String          @unique
   type                     WorkspaceType   @default(OWNER)
   status                   WorkspaceStatus @default(ACTIVE)
   // Workspace-level per-firm trial info
@@ -1090,7 +1090,7 @@ model Workspace {
 
   owner                       User                         @relation("WorkspaceOwner", fields: [ownerUserId], references: [id])
 
-  @@index([ownerUserId])
+  @@index([ownerUserId], map: "Workspace_ownerUserId_idx_2")
   users                       WorkspaceUser[]
   auditLogs                   AuditLog[]
   events                      EventLog[]
@@ -1276,7 +1276,7 @@ model Workspace {
   InvoiceTemplate           InvoiceTemplate[]
   ApprovalWorkflow          ApprovalWorkflow[]
 
-  @@index([ownerUserId])
+  @@index([ownerUserId], map: "Workspace_ownerUserId_idx_3")
 }
 
 model Subscription {
