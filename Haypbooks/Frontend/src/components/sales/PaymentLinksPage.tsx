@@ -1,6 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
+import apiClient from '@/lib/api-client'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 
 type PaymentLinkRow = {
   id: string
@@ -14,14 +17,31 @@ type PaymentLinkRow = {
 }
 
 export default function PaymentLinksPage() {
+  const { companyId, loading: companyLoading } = useCompanyId()
+  const { currency } = useCompanyCurrency()
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const fetchData = useCallback(async () => {
+    if (!companyId) return
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/invoices`)
+      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { fetchData() }, [fetchData])
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
 
-  const items: PaymentLinkRow[] = useMemo(() => [
-    { id: 'p1', linkId: 'PL-2026-001', description: 'Balance invoice INV-2026-100', amount: '$380.00', createdDate: '2026-03-10', expiryDate: '2026-04-10', views: 12, status: 'Active' },
-    { id: 'p2', linkId: 'PL-2026-002', description: 'Deposit for project alpha', amount: '$1,200.00', createdDate: '2026-03-08', expiryDate: '2026-04-08', views: 19, status: 'Paid' },
-    { id: 'p3', linkId: 'PL-2026-003', description: 'Late fee payment', amount: '$58.00', createdDate: '2026-02-01', expiryDate: '2026-03-01', views: 5, status: 'Expired' },
-  ], [])
+  // Data fetched from API (see fetchData above)
 
   const filtered = useMemo(() => {
     if (!search) return items
@@ -77,7 +97,21 @@ export default function PaymentLinksPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
+                    <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
+                    Loading...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={20} className="px-4 py-10 text-center">
+                    <p className="text-rose-500 font-medium">{error}</p>
+                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No payment links found.</td>
                 </tr>

@@ -1,6 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
+import apiClient from '@/lib/api-client'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 
 type RecurringRow = {
   id: string
@@ -13,14 +16,31 @@ type RecurringRow = {
 }
 
 export default function RecurringInvoicesPage() {
+  const { companyId, loading: companyLoading } = useCompanyId()
+  const { currency } = useCompanyCurrency()
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const fetchData = useCallback(async () => {
+    if (!companyId) return
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/invoices?isRecurring=true`)
+      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { fetchData() }, [fetchData])
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
 
-  const items: RecurringRow[] = useMemo(() => [
-    { id: 'r1', templateName: 'Monthly Rent - Acme', customer: 'Acme Corp', frequency: 'Monthly', amount: '$5,000.00', nextRunDate: '2026-04-01', status: 'Active' },
-    { id: 'r2', templateName: 'Annual Support - TechStart', customer: 'TechStart LLC', frequency: 'Yearly', amount: '$15,000.00', nextRunDate: '2027-01-01', status: 'Active' },
-    { id: 'r3', templateName: 'Quarterly Service - Global', customer: 'Global Services', frequency: 'Monthly', amount: '$7,500.00', nextRunDate: '2026-06-01', status: 'Paused' },
-  ], [])
+  // Data fetched from API (see fetchData above)
 
   const filtered = useMemo(() => {
     if (!search) return items
@@ -75,7 +95,21 @@ export default function RecurringInvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
+                    <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
+                    Loading...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={20} className="px-4 py-10 text-center">
+                    <p className="text-rose-500 font-medium">{error}</p>
+                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No recurring invoices found.</td>
                 </tr>

@@ -1,15 +1,11 @@
-# Logs
-Haypbooks/Backend/logs/
-
-# Test artifacts
-# Root-level test-results moved to frontend test-results
-Haypbooks/Frontend/test-results/
-
-# Temporary / local files
-tmp/
-
-# Local test fixtures (do not commit credentials)
-Haypbooks/Frontend/e2e/fixtures/tmp_acct.json
-
-# General
-*.log
+# Auto-generated ignore rules for cleanup
+*_error.txt
+*_result.txt
+*_raw.txt
+tmp_*
+*.tmp
+cookie.txt
+Credentials
+jest-output.json
+tsc-errors.txt
+validate_errors.txt

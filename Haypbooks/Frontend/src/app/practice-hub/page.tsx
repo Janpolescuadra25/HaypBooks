@@ -3458,6 +3458,24 @@ export default function PracticeHubPage() {
   const [activeGroup, setActiveGroup] = useState('home')
   const [activeSection, setActiveSection] = useState('dashboard')
   const [panelOpen, setPanelOpen] = useState(true)
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+
+  // Auto-expand the group containing the active section
+  useEffect(() => {
+    if (!currentGroup?.groups) return
+    const matchingGroup = currentGroup.groups.find(g =>
+      g.items.some(item => item.key === activeSection)
+    )
+    if (matchingGroup) {
+      setOpenGroups(prev => {
+        if (prev.has(matchingGroup.group_name)) return prev
+        const next = new Set(prev)
+        next.add(matchingGroup.group_name)
+        return next
+      })
+    }
+  }, [activeSection, currentGroup])
+
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [checklistOpen, setChecklistOpen] = useState(false)
 
@@ -3713,38 +3731,61 @@ export default function PracticeHubPage() {
 
 
 
-            {/* Nav items */}
+
+            {/* Nav items - Collapsible Groups */}
             <nav className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-0.5">
-              {currentGroup.groups?.map((group, gIdx) => (
-                <React.Fragment key={group.group_name}>
-                  {gIdx > 0 && (
-                    <div className="text-[10px] uppercase tracking-wider text-slate-400 mt-3 mb-1 px-3 font-bold">
-                      {group.group_name}
-                    </div>
-                  )}
-                  {gIdx === 0 && (
-                    <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 px-3 font-bold">
-                      {group.group_name}
-                    </div>
-                  )}
-                  {group.items.map((item) => {
-                    const isActive = activeSection === item.key
-                    return (
-                      <button
-                        key={item.key}
-                        onClick={() => setActiveSection(item.key)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
-                            ? 'bg-blue-600/10 text-blue-700 shadow-sm'
-                            : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
-                          }`}
-                      >
-                        <span className="flex-1 text-left truncate">{item.label}</span>
-                        {isActive && <ChevronRight size={12} className="ml-auto text-blue-400 flex-shrink-0" />}
-                      </button>
-                    )
-                  })}
-                </React.Fragment>
-              ))}
+              {currentGroup.groups?.map((group, gIdx) => {
+                const isOpen = openGroups.has(group.group_name)
+                return (
+                  <div key={group.group_name}>
+                    {/* Group Header - Collapsible */}
+                    <button
+                      onClick={() => setOpenGroups(prev => {
+                        const next = new Set(prev)
+                        if (next.has(group.group_name)) { next.delete(group.group_name) }
+                        else { next.add(group.group_name) }
+                        return next
+                      })}
+                      className={`w-full flex items-center justify-between px-3 py-2 mt-3 rounded-lg transition-colors group ${
+                        isOpen ? 'bg-blue-50' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-slate-600 select-none">
+                        {group.group_name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        {isOpen ? (
+                          <ChevronDown size={12} className="text-blue-500" />
+                        ) : (
+                          <ChevronRight size={12} className="text-slate-300" />
+                        )}
+                      </span>
+                    </button>
+
+                    {/* Group Items - Expandable */}
+                    {isOpen && (
+                      <div className="mt-0.5 space-y-0.5">
+                        {group.items.map((item) => {
+                          const isActive = activeSection === item.key
+                          return (
+                            <button
+                              key={item.key}
+                              onClick={() => setActiveSection(item.key)}
+                              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
+                                ? 'bg-blue-600/10 text-blue-700 shadow-sm'
+                                : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+                              }`}
+                            >
+                              <span className="flex-1 text-left truncate">{item.label}</span>
+                              {isActive && <ChevronRight size={12} className="ml-auto text-blue-400 flex-shrink-0" />}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </nav>
 
           </aside>

@@ -1,6 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
+import apiClient from '@/lib/api-client'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 
 type PaymentRow = {
   id: string
@@ -14,20 +17,34 @@ type PaymentRow = {
 }
 
 export default function CustomerPaymentsPage() {
+  const { companyId, loading: companyLoading } = useCompanyId()
+  const { currency } = useCompanyCurrency()
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const fetchData = useCallback(async () => {
+    if (!companyId) return
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/payments`)
+      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { fetchData() }, [fetchData])
   const [search, setSearch] = useState('')
   const [dateStart, setDateStart] = useState('')
   const [dateEnd, setDateEnd] = useState('')
   const [methodFilter, setMethodFilter] = useState('All')
   const [helpOpen, setHelpOpen] = useState(false)
 
-  const items: PaymentRow[] = useMemo(
-    () => [
-      { id: 'p1', paymentNumber: 'PAY-2026-001', customer: 'Acme Corp', date: '2026-03-01', method: 'Credit Card', amount: '$1,800.00', appliedTo: 'INV-2026-050', status: 'Completed' },
-      { id: 'p2', paymentNumber: 'PAY-2026-002', customer: 'Omega Ltd', date: '2026-03-03', method: 'Bank Transfer', amount: '$2,400.00', appliedTo: 'INV-2026-053', status: 'Completed' },
-      { id: 'p3', paymentNumber: 'PAY-2026-003', customer: 'Gamma Co', date: '2026-03-05', method: 'Cash', amount: '$750.00', appliedTo: 'INV-2026-059', status: 'Pending' },
-    ],
-    []
-  )
+  // Data fetched from API (see fetchData above)
 
   const filtered = useMemo(() => {
     let list = items
@@ -121,7 +138,21 @@ export default function CustomerPaymentsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
+                    <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
+                    Loading...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={20} className="px-4 py-10 text-center">
+                    <p className="text-rose-500 font-medium">{error}</p>
+                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No payments found.</td>
                 </tr>
