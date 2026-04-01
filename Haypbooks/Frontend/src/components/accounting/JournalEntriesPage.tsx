@@ -130,14 +130,13 @@ export default function JournalEntriesPage() {
     { key: 'ALL', label: 'All' },
     { key: 'DRAFT', label: 'Draft' },
     { key: 'POSTED', label: 'Posted' },
-    { key: 'UNPOSTED', label: 'Unposted' },
     { key: 'VOIDED', label: 'Voided' },
   ]
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
+    <div className="flex flex-col min-h-full">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="px-6 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Journal Entries</h1>
           <p className="text-sm text-slate-500 mt-0.5">{filtered.length} entries</p>
@@ -151,15 +150,15 @@ export default function JournalEntriesPage() {
       </div>
 
       {/* Status tab bar */}
-      <div className="flex items-center gap-1 border-b border-slate-200 pb-0">
+      <div className="flex items-center gap-1 border-b border-slate-200 px-6">
         {STATUS_TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               statusFilter === tab.key
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
             {tab.label}
@@ -168,7 +167,7 @@ export default function JournalEntriesPage() {
       </div>
 
       {/* Search bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3">
+      <div className="px-6 py-3">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -176,30 +175,30 @@ export default function JournalEntriesPage() {
             placeholder="Search by entry #, memo, or reference…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           />
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700">
+        <div className="mx-6 mb-3 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700">
           <AlertCircle size={16} /> {error}
           <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button>
         </div>
       )}
 
-      {/* table */}
-      <div className="bg-white rounded-xl border border-emerald-100 overflow-hidden">
-        <table className="w-full text-sm">
+      {/* Table */}
+      <div className="mx-6 mb-4 rounded-lg border border-gray-200 overflow-x-auto bg-white">
+        <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="bg-emerald-50/50 border-b border-emerald-100">
-              <th className="text-left px-4 py-3 font-medium text-emerald-700">Entry #</th>
-              <th className="text-left px-4 py-3 font-medium text-emerald-700">Date</th>
-              <th className="text-left px-4 py-3 font-medium text-emerald-700 hidden md:table-cell">Memo</th>
-              <th className="text-left px-4 py-3 font-medium text-emerald-700">Status</th>
-              <th className="text-right px-4 py-3 font-medium text-emerald-700">Debit</th>
-              <th className="text-right px-4 py-3 font-medium text-emerald-700">Credit</th>
-              <th className="text-right px-4 py-3 font-medium text-emerald-700 w-28">Actions</th>
+            <tr className="bg-gray-100 border-b border-gray-300">
+              <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200">Entry #</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200">Date</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-gray-700 hidden md:table-cell border-r border-gray-200">Memo</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200">Status</th>
+              <th className="text-right px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200">Debit</th>
+              <th className="text-right px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200">Credit</th>
+              <th className="text-right px-4 py-2.5 font-semibold text-gray-700 w-28">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -215,17 +214,17 @@ export default function JournalEntriesPage() {
                 const debit = entry.totalDebit ?? entry.lines?.reduce((s, l) => s + (l.debit ?? 0), 0) ?? 0
                 const credit = entry.totalCredit ?? entry.lines?.reduce((s, l) => s + (l.credit ?? 0), 0) ?? 0
                 return (
-                  <tr key={entry.id} className="border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors">
-                    <td className="px-4 py-2.5 font-mono text-xs text-emerald-600">{entry.entryNumber ?? entry.id.slice(0, 8)}</td>
-                    <td className="px-4 py-2.5 text-emerald-800">{fmtDate(entry.date)}</td>
-                    <td className="px-4 py-2.5 text-emerald-600/70 hidden md:table-cell truncate max-w-[200px]">{entry.memo ?? '—'}</td>
-                    <td className="px-4 py-2.5">
+                  <tr key={entry.id} className="border-b border-gray-100 hover:bg-blue-50/20 transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-xs text-slate-700 border-r border-gray-100">{entry.entryNumber ?? entry.id.slice(0, 8)}</td>
+                    <td className="px-4 py-2.5 text-slate-700 border-r border-gray-100">{fmtDate(entry.date)}</td>
+                    <td className="px-4 py-2.5 text-slate-500 hidden md:table-cell truncate max-w-[200px] border-r border-gray-100">{entry.memo ?? '—'}</td>
+                    <td className="px-4 py-2.5 border-r border-gray-100">
                       <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[entry.status] ?? ''}`}>
                         {entry.status}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(debit)}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(credit)}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100">{fmt(debit)}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100">{fmt(credit)}</td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => setViewEntry(entry)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="View"><Eye size={14} /></button>
