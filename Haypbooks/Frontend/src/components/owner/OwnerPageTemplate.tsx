@@ -1,3 +1,4 @@
+'use client'
 /**
  * OwnerPageTemplate — A reusable page shell for the HaypBooks Owner Hub.
  *
@@ -15,7 +16,7 @@
  *     onExport={() => handleExport()}
  *     filters={[...]}
  *     searchable
- *     searchableFields={['name', 'email']}
+ *     searchableFields={[]}
  *     bulkActions={[...]}
  *   />
  */

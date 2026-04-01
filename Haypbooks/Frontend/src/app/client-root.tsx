@@ -1,5 +1,5 @@
 "use client"
-import { ReactNode, useEffect } from 'react'
+import { ReactNode, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 import { PUBLIC_PATH_PREFIXES } from '../config/publicPaths'
@@ -15,9 +15,9 @@ const MockInit = dynamic(() => import('@/components/MockInit'), { ssr: false })
 export default function ClientRoot({ children }: { children: ReactNode }) {
   const { openPalette } = useCommandPalette()
   const { setSidebarCollapsed } = useUI()
-  const prevCollapsedRef = (require('react') as typeof import('react')).useRef<boolean | null>(null)
-  const compactActiveRef = (require('react') as typeof import('react')).useRef<boolean>(false)
-  const expandedActiveRef = (require('react') as typeof import('react')).useRef<boolean>(false)
+  const prevCollapsedRef = useRef<boolean | null>(null)
+  const compactActiveRef = useRef<boolean>(false)
+  const expandedActiveRef = useRef<boolean>(false)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const key = (typeof e.key === 'string' ? e.key : '').toLowerCase()

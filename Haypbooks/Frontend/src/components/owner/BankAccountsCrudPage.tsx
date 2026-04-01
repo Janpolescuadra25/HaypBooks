@@ -50,7 +50,7 @@ export default function BankAccountsPage() {
         data={crud.filteredData}
         loading={crud.loading}
         searchable
-        searchableFields={'name', 'bankName', 'accountNumber', 'accountType'}
+        searchableFields={[]}
         searchablePlaceholder="Search bank accounts..."
         showCreate
         createLabel="New Bank Account"
@@ -76,7 +76,7 @@ export default function BankAccountsPage() {
         summaryCards={[
           { label: 'Total Records', value: crud.data.length, icon: <Landmark size={16} />, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
           { label: 'Active', value: crud.data.filter((r: any) => r.status === 'Active').length, icon: <RefreshCw size={16} />, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
-        }]
+        ]}
       />
       <CrudModal
         open={crud.modalOpen}

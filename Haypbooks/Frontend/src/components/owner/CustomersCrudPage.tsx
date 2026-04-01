@@ -73,7 +73,7 @@ export default function CustomersPage() {
         data={crud.filteredData}
         loading={crud.loading}
         searchable
-        searchableFields={['displayName', 'email', 'phone']}
+        searchableFields={[]}
         searchablePlaceholder="Search customers by name, email, or phone..."
         summaryCards={[
           { label: 'Total Customers', value: crud.data.length, icon: <Building2 size={16} />, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },

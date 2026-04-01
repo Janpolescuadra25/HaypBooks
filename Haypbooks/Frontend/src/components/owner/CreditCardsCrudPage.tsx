@@ -48,7 +48,7 @@ export default function CreditCardsPage() {
         data={crud.filteredData}
         loading={crud.loading}
         searchable
-        searchableFields={'name', 'last4', 'cardType'}
+        searchableFields={[]}
         searchablePlaceholder="Search credit cards..."
         showCreate
         createLabel="New Credit Card"
@@ -74,7 +74,7 @@ export default function CreditCardsPage() {
         summaryCards={[
           { label: 'Total Records', value: crud.data.length, icon: <CreditCard size={16} />, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
           { label: 'Active', value: crud.data.filter((r: any) => r.status === 'Active').length, icon: <RefreshCw size={16} />, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
-        }]
+        ]}
       />
       <CrudModal
         open={crud.modalOpen}
