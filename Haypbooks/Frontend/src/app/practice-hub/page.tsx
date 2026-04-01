@@ -3460,6 +3460,8 @@ export default function PracticeHubPage() {
   const [panelOpen, setPanelOpen] = useState(true)
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
 
+  const currentGroup = NAV.find(g => g.key === activeGroup)!
+
   // Auto-expand the group containing the active section
   useEffect(() => {
     if (!currentGroup?.groups) return
@@ -3552,7 +3554,6 @@ export default function PracticeHubPage() {
     router.replace('/login')
   }, [router])
 
-  const currentGroup = NAV.find(g => g.key === activeGroup)!
   const allItems = currentGroup?.groups?.flatMap(g => g.items) ?? []
   const activeItem = allItems.find((i: any) => i.key === activeSection)
 
