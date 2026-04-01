@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useRouter } from 'next/navigation'
 import {
-  Plus, Search, Filter, Eye, X, Check, AlertCircle, Loader2,
-  FileText, Send, Ban, ChevronDown, Calendar, ArrowUpDown
+  Plus, Search, Eye, X, AlertCircle, Loader2,
+  FileText, Send, Ban,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -51,12 +52,12 @@ const statusStyles: Record<string, string> = {
 export default function JournalEntriesPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const router = useRouter()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
-  const [showForm, setShowForm] = useState(false)
   const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null)
 
   const fetchEntries = useCallback(async () => {
@@ -74,39 +75,6 @@ export default function JournalEntriesPage() {
   }, [companyId])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
-
-  const unpostedTotal = useMemo(() => {
-    return entries
-      .filter(e => e.status === 'DRAFT')
-      .reduce((sum, e) => {
-        const debit = e.totalDebit ?? e.lines?.reduce((s, l) => s + (l.debit ?? 0), 0) ?? 0
-        const credit = e.totalCredit ?? e.lines?.reduce((s, l) => s + (l.credit ?? 0), 0) ?? 0
-        return sum + Math.max(debit, credit)
-      }, 0)
-  }, [entries])
-
-  const hasDiscrepancy = useMemo(() => {
-    return entries.some(e => {
-      const debit = e.totalDebit ?? e.lines?.reduce((s, l) => s + (l.debit ?? 0), 0) ?? 0
-      const credit = e.totalCredit ?? e.lines?.reduce((s, l) => s + (l.credit ?? 0), 0) ?? 0
-      return Math.abs(debit - credit) > 0.005
-    })
-  }, [entries])
-
-  const volumeTrend = useMemo(() => {
-    // simple daily count for last 7 days
-    const counts: number[] = Array(7).fill(0)
-    const now = new Date()
-    entries.forEach(e => {
-      const d = new Date(e.date)
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(now)
-        day.setDate(now.getDate() - i)
-        if (d.toDateString() === day.toDateString()) counts[i]++
-      }
-    })
-    return counts.reverse()
-  }, [entries])
 
   const filtered = useMemo(() => {
     let list = entries
@@ -158,61 +126,59 @@ export default function JournalEntriesPage() {
   }
   if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
 
+  const STATUS_TABS = [
+    { key: 'ALL', label: 'All' },
+    { key: 'DRAFT', label: 'Draft' },
+    { key: 'POSTED', label: 'Posted' },
+    { key: 'UNPOSTED', label: 'Unposted' },
+    { key: 'VOIDED', label: 'Voided' },
+  ]
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
+      {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Journal Entries</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} entries</p>
+          <h1 className="text-2xl font-bold text-slate-900">Journal Entries</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{filtered.length} entries</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => router.push('/accounting/core-accounting/journal-entries/new')}
           className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
         >
           <Plus size={16} /> New Entry
         </button>
       </div>
 
-      {/* KPI ribbon */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
-          <h3 className="text-xs font-semibold uppercase text-emerald-500">Unposted Total</h3>
-          <p className="text-2xl font-bold text-emerald-900">{fmt(unpostedTotal)}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
-          <h3 className="text-xs font-semibold uppercase text-rose-500">Discrepancy Alert</h3>
-          <p className={`text-2xl font-bold ${hasDiscrepancy ? 'text-rose-600' : 'text-emerald-600'}`}>
-            {hasDiscrepancy ? 'Yes' : 'No'}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
-          <h3 className="text-xs font-semibold uppercase text-emerald-500">Volume Trend (7d)</h3>
-          <p className="mt-2 text-sm text-emerald-700">{volumeTrend.join(' / ')}</p>
-        </div>
+      {/* Status tab bar */}
+      <div className="flex items-center gap-1 border-b border-slate-200 pb-0">
+        {STATUS_TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusFilter(tab.key)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+              statusFilter === tab.key
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* filters */}
-      <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+      {/* Search bar */}
+      <div className="bg-white rounded-xl border border-slate-200 p-3">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search entries…"
+            placeholder="Search by entry #, memo, or reference…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-        >
-          <option value="ALL">All Status</option>
-          <option value="DRAFT">Draft</option>
-          <option value="POSTED">Posted</option>
-          <option value="VOIDED">Voided</option>
-        </select>
       </div>
 
       {error && (
@@ -285,17 +251,6 @@ export default function JournalEntriesPage() {
           <JEDetailModal entry={viewEntry} onClose={() => setViewEntry(null)} />
         )}
       </AnimatePresence>
-
-      {/* Create form modal */}
-      <AnimatePresence>
-        {showForm && (
-          <JEFormModal
-            companyId={companyId!}
-            onClose={() => setShowForm(false)}
-            onSaved={() => { setShowForm(false); fetchEntries() }}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }
@@ -357,175 +312,4 @@ function JEDetailModal({ entry, onClose }: { entry: JournalEntry; onClose: () =>
   )
 }
 
-/* ──── Create Form Modal ──── */
-function JEFormModal({ companyId, onClose, onSaved }: { companyId: string; onClose: () => void; onSaved: () => void }) {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [memo, setMemo] = useState('')
-  const [reference, setReference] = useState('')
-  const [postingStatus, setPostingStatus] = useState<'DRAFT' | 'POSTED'>('DRAFT')
-  const [lines, setLines] = useState<JELine[]>([
-    { accountId: '', debit: 0, credit: 0, description: '' },
-    { accountId: '', debit: 0, credit: 0, description: '' },
-  ])
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
 
-  useEffect(() => {
-    apiClient.get(`/companies/${companyId}/accounting/accounts`)
-      .then(({ data }) => setAccounts(Array.isArray(data) ? data : data.accounts ?? []))
-      .catch(() => {})
-  }, [companyId])
-
-  const addLine = () => setLines(prev => [...prev, { accountId: '', debit: 0, credit: 0, description: '' }])
-  const removeLine = (idx: number) => setLines(prev => prev.filter((_, i) => i !== idx))
-  const updateLine = (idx: number, field: keyof JELine, value: any) =>
-    setLines(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l))
-
-  const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0)
-  const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0)
-  const balanced = Math.abs(totalDebit - totalCredit) < 0.005 && totalDebit > 0
-
-  const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-
-  const handleSave = async (status: 'DRAFT' | 'POSTED') => {
-    if (!balanced) { setError('Debits must equal credits.'); return }
-    const validLines = lines.filter(l => l.accountId)
-    if (validLines.length < 2) { setError('At least 2 lines required.'); return }
-    setSaving(true)
-    setError('')
-    try {
-      await apiClient.post(`/companies/${companyId}/accounting/journal-entries`, {
-        date, memo, reference,
-        postingStatus: status,
-        lines: validLines.map(l => ({
-          accountId: l.accountId,
-          debit: Number(l.debit) || 0,
-          credit: Number(l.credit) || 0,
-          description: l.description,
-        })),
-      })
-      onSaved()
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to create journal entry')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-        onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-bold text-emerald-900">New Journal Entry</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
-        </div>
-
-        <div className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2">
-              <AlertCircle size={14} /> {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Date *</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Reference</label>
-              <input value={reference} onChange={e => setReference(e.target.value)} placeholder="REF-001"
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Memo</label>
-              <input value={memo} onChange={e => setMemo(e.target.value)} placeholder="Description"
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-          </div>
-
-          {/* Lines table */}
-          <div className="border border-emerald-100 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-emerald-50/50">
-                  <th className="text-left px-3 py-2 font-medium text-emerald-700">Account</th>
-                  <th className="text-left px-3 py-2 font-medium text-emerald-700 hidden sm:table-cell">Description</th>
-                  <th className="text-right px-3 py-2 font-medium text-emerald-700 w-28">Debit</th>
-                  <th className="text-right px-3 py-2 font-medium text-emerald-700 w-28">Credit</th>
-                  <th className="w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line, idx) => (
-                  <tr key={idx} className="border-t border-emerald-50">
-                    <td className="px-3 py-1.5">
-                      <select value={line.accountId} onChange={e => updateLine(idx, 'accountId', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-emerald-100 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                        <option value="">Select…</option>
-                        {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
-                      </select>
-                    </td>
-                    <td className="px-3 py-1.5 hidden sm:table-cell">
-                      <input value={line.description ?? ''} onChange={e => updateLine(idx, 'description', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-emerald-100 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30" placeholder="Note" />
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <input type="number" min="0" step="0.01" value={line.debit || ''} onChange={e => updateLine(idx, 'debit', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm text-right border border-emerald-100 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30" placeholder="0.00" />
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <input type="number" min="0" step="0.01" value={line.credit || ''} onChange={e => updateLine(idx, 'credit', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm text-right border border-emerald-100 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30" placeholder="0.00" />
-                    </td>
-                    <td className="px-1 py-1.5">
-                      {lines.length > 2 && (
-                        <button onClick={() => removeLine(idx)} className="p-1 rounded hover:bg-red-100 text-red-400"><X size={14} /></button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-emerald-200">
-                  <td colSpan={2} className="px-3 py-2">
-                    <button onClick={addLine} className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
-                      <Plus size={12} /> Add Line
-                    </button>
-                  </td>
-                  <td className="px-3 py-2 text-right font-bold tabular-nums text-emerald-800">{fmt(totalDebit)}</td>
-                  <td className="px-3 py-2 text-right font-bold tabular-nums text-emerald-800">{fmt(totalCredit)}</td>
-                  <td></td>
-                </tr>
-                {!balanced && totalDebit > 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-1 text-xs text-red-500">
-                      Difference: {fmt(Math.abs(totalDebit - totalCredit))} — debits must equal credits
-                    </td>
-                  </tr>
-                )}
-              </tfoot>
-            </table>
-          </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2 sticky bottom-0 bg-white">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Cancel</button>
-          <button onClick={() => handleSave('DRAFT')} disabled={saving || !balanced}
-            className="px-4 py-2 text-sm border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-50">
-            Save as Draft
-          </button>
-          <button onClick={() => handleSave('POSTED')} disabled={saving || !balanced}
-            className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-1.5">
-            {saving && <Loader2 size={14} className="animate-spin" />} Create & Post
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  )
-}
