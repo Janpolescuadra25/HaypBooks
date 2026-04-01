@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server'
 // Keep general public assets and landing; specific auth pages are handled below to
 // allow redirecting authenticated users away from auth pages when appropriate.
 const PUBLIC_PATHS = [
+  '/',
   '/landing',
   '/_next',
   '/favicon.ico',
@@ -41,8 +42,8 @@ export function middleware(req: NextRequest) {
 
   if (pathname === '/') {
     if (!token) {
-      // Redirect to landing page for unauthenticated users
-      return NextResponse.redirect(new URL('/landing', req.url))
+      // Let the root page render — CinematicIntro on page.tsx handles the /landing redirect
+      return NextResponse.next()
     }
     // If authenticated but onboarding not finished, send to the main onboarding flow
     if (token && !isOnboardingDone) {
