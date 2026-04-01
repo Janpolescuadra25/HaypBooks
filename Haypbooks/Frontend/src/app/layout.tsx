@@ -4,6 +4,11 @@ import ClientRoot from './client-root'
 import { ToastProvider } from '@/components/ToastProvider'
 import { Inter } from 'next/font/google'
 
+// Prevent static pre-rendering — the entire app relies on React contexts
+// (AppRouter, PathnameContext) that are only available at request-time.
+// Without this, next build pre-renders pages and hits null useContext.
+export const dynamic = 'force-dynamic'
+
 const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
@@ -14,11 +19,6 @@ export const metadata = {
   title: "HaypBooks",
   description: "Accounting, reimagined.",
 }
-
-// Prevent static generation — all pages depend on React context
-// provided by ClientRoot. Without this, next build tries to
-// pre-render pages at build time where the context is null.
-export const dynamic = 'force-dynamic'
 
 // NOTE: RootLayout is a Server Component; client interactivity handled in ClientRoot.
 export default function RootLayout({ children }: { children: ReactNode }) {

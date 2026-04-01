@@ -49,7 +49,7 @@ export default function ChecksPage() {
         data={crud.filteredData}
         loading={crud.loading}
         searchable
-        searchableFields={'checkNumber', 'payee', 'accountName'}
+        searchableFields={[]}
         searchablePlaceholder="Search checks..."
         showCreate
         createLabel="New Check"
@@ -75,7 +75,7 @@ export default function ChecksPage() {
         summaryCards={[
           { label: 'Total Records', value: crud.data.length, icon: <FileText size={16} />, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
           { label: 'Active', value: crud.data.filter((r: any) => r.status === 'Active').length, icon: <RefreshCw size={16} />, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
-        }]
+        ]}
       />
       <CrudModal
         open={crud.modalOpen}

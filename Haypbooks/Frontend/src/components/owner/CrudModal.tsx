@@ -1,3 +1,4 @@
+'use client'
 /**
  * CrudModal — Reusable CRUD modal for Owner Hub pages.
  *

@@ -49,7 +49,7 @@ export default function DepositsPage() {
         data={crud.filteredData}
         loading={crud.loading}
         searchable
-        searchableFields={'reference', 'accountName', 'paymentMethod'}
+        searchableFields={[]}
         searchablePlaceholder="Search deposits..."
         showCreate
         createLabel="New Deposit"
@@ -75,7 +75,7 @@ export default function DepositsPage() {
         summaryCards={[
           { label: 'Total Records', value: crud.data.length, icon: <ArrowDownCircle size={16} />, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
           { label: 'Active', value: crud.data.filter((r: any) => r.status === 'Active').length, icon: <RefreshCw size={16} />, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
-        }]
+        ]}
       />
       <CrudModal
         open={crud.modalOpen}

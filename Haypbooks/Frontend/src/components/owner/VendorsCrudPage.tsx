@@ -65,7 +65,7 @@ export default function VendorsCrudPage() {
         data={crud.filteredData}
         loading={crud.loading}
         searchable
-        searchableFields={['displayName', 'email', 'phone']}
+        searchableFields={[]}
         searchablePlaceholder="Search vendors..."
         summaryCards={[
           { label: 'Total Vendors', value: crud.data.length, icon: <Store size={16} />, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
