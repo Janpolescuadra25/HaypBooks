@@ -30,23 +30,22 @@ interface Account {
 interface AccountType {
   value: string
   label: string
-  subTypes?: string[]
 }
 
 const ACCOUNT_TYPES: AccountType[] = [
-  { value: 'ASSET', label: 'Asset', subTypes: ['Current Asset', 'Fixed Asset', 'Other Asset', 'Bank', 'Cash'] },
-  { value: 'LIABILITY', label: 'Liability', subTypes: ['Current Liability', 'Long-Term Liability', 'Credit Card'] },
-  { value: 'EQUITY', label: 'Equity', subTypes: ['Owner Equity', 'Retained Earnings'] },
-  { value: 'REVENUE', label: 'Revenue', subTypes: ['Operating Revenue', 'Other Revenue'] },
-  { value: 'EXPENSE', label: 'Expense', subTypes: ['Operating Expense', 'Cost of Goods Sold', 'Other Expense'] },
+  { value: 'Asset', label: 'Asset' },
+  { value: 'Liability', label: 'Liability' },
+  { value: 'Equity', label: 'Equity' },
+  { value: 'Revenue', label: 'Revenue' },
+  { value: 'Expense', label: 'Expense' },
 ]
 
 const typeColors: Record<string, string> = {
-  ASSET: 'bg-blue-50 text-blue-700 border-blue-200',
-  LIABILITY: 'bg-amber-50 text-amber-700 border-amber-200',
-  EQUITY: 'bg-purple-50 text-purple-700 border-purple-200',
-  REVENUE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  EXPENSE: 'bg-red-50 text-red-700 border-red-200',
+  Asset: 'bg-blue-50 text-blue-700 border-blue-200',
+  Liability: 'bg-amber-50 text-amber-700 border-amber-200',
+  Equity: 'bg-purple-50 text-purple-700 border-purple-200',
+  Revenue: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Expense: 'bg-red-50 text-red-700 border-red-200',
 }
 
 /* ─── main ─── */
@@ -61,6 +60,7 @@ export default function ChartOfAccountsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(ACCOUNT_TYPES.map(t => t.value)))
+  const [seeding, setSeeding] = useState(false)
 
   /* ─── fetch ─── */
   const fetchAccounts = useCallback(async () => {
@@ -122,6 +122,21 @@ export default function ChartOfAccountsPage() {
     })
   }
 
+  const handleSeedTemplate = async () => {
+    if (!companyId) return
+    setSeeding(true)
+    setError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/accounting/accounts/seed-default`)
+      await fetchAccounts()
+      setExpandedTypes(new Set(ACCOUNT_TYPES.map(t => t.value)))
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to seed default accounts')
+    } finally {
+      setSeeding(false)
+    }
+  }
+
   /* ─── loading / error ─── */
   if (cidLoading || (loading && accounts.length === 0)) {
     return (
@@ -147,6 +162,14 @@ export default function ChartOfAccountsPage() {
           <p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} accounts</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleSeedTemplate}
+            disabled={seeding}
+            className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+          >
+            {seeding && <Loader2 size={16} className="animate-spin" />}
+            Set Up Default COA Template
+          </button>
           <button
             onClick={() => { setEditingAccount(null); setShowForm(true) }}
             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
@@ -320,10 +343,8 @@ function AccountFormModal({
   const [form, setForm] = useState({
     code: account?.code ?? '',
     name: account?.name ?? '',
-    type: account?.type ?? 'ASSET',
-    subType: account?.subType ?? '',
+    type: account?.type ?? 'Asset',
     parentId: account?.parentId ?? '',
-    description: account?.description ?? '',
     isActive: account?.isActive ?? true,
   })
   const [saving, setSaving] = useState(false)
@@ -332,7 +353,6 @@ function AccountFormModal({
   const set = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }))
 
   const parentOptions = accounts.filter(a => a.type === form.type && a.id !== account?.id)
-  const selectedType = ACCOUNT_TYPES.find(t => t.value === form.type)
 
   const handleSave = async () => {
     if (!form.code.trim() || !form.name.trim()) {
@@ -343,8 +363,11 @@ function AccountFormModal({
     setError('')
     try {
       const payload = {
-        ...form,
+        code: form.code.trim(),
+        name: form.name.trim(),
+        type: form.type,
         parentId: form.parentId || null,
+        ...(isEdit ? { isActive: form.isActive } : {}),
       }
       if (isEdit) {
         await apiClient.put(`/companies/${companyId}/accounting/accounts/${account!.id}`, payload)
@@ -400,7 +423,7 @@ function AccountFormModal({
               <label className="block text-xs font-medium text-emerald-700 mb-1">Account Type *</label>
               <select
                 value={form.type}
-                onChange={e => { set('type', e.target.value); set('subType', '') }}
+                onChange={e => set('type', e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
               >
                 {ACCOUNT_TYPES.map(t => (
@@ -420,44 +443,18 @@ function AccountFormModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Sub-Type</label>
-              <select
-                value={form.subType}
-                onChange={e => set('subType', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-              >
-                <option value="">None</option>
-                {(selectedType?.subTypes ?? []).map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Parent Account</label>
-              <select
-                value={form.parentId}
-                onChange={e => set('parentId', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-              >
-                <option value="">None (Top Level)</option>
-                {parentOptions.map(a => (
-                  <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Description</label>
-            <textarea
-              value={form.description}
-              onChange={e => set('description', e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 resize-none"
-              placeholder="Optional description"
-            />
+            <label className="block text-xs font-medium text-emerald-700 mb-1">Parent Account</label>
+            <select
+              value={form.parentId}
+              onChange={e => set('parentId', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            >
+              <option value="">None (Top Level)</option>
+              {parentOptions.map(a => (
+                <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+              ))}
+            </select>
           </div>
 
           {isEdit && (
