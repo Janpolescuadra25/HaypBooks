@@ -63,12 +63,12 @@ export default function ChartOfAccountsPage() {
   const [seeding, setSeeding] = useState(false)
 
   /* ─── fetch ─── */
-  const fetchAccounts = useCallback(async () => {
+  const fetchAccounts = useCallback(async (bustCache = false) => {
     if (!companyId) return
     setLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/accounting/accounts`, {
-        params: { includeInactive: showInactive },
+        params: { includeInactive: showInactive, ...(bustCache ? { _t: Date.now() } : {}) },
       })
       setAccounts(Array.isArray(data) ? data : data.accounts ?? [])
       setError('')
@@ -128,7 +128,7 @@ export default function ChartOfAccountsPage() {
     setError('')
     try {
       await apiClient.post(`/companies/${companyId}/accounting/accounts/seed-default`)
-      await fetchAccounts()
+      await fetchAccounts(true)
       setExpandedTypes(new Set(ACCOUNT_TYPES.map(t => t.value)))
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to seed default accounts')
