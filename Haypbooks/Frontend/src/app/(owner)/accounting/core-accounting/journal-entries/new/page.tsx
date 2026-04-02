@@ -66,7 +66,23 @@ export default function NewJournalEntryPage() {
     setLines(prev => prev.filter((_, i) => i !== idx))
 
   const updateLine = (idx: number, field: keyof JELine, value: string | number) =>
-    setLines(prev => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)))
+    setLines(prev => prev.map((l, i) => {
+      if (i !== idx) return l
+      const updatedLine = { ...l, [field]: value }
+      if (field === 'debit') {
+        const debitValue = Number(value)
+        if (debitValue > 0) {
+          return { ...updatedLine, credit: 0 }
+        }
+      }
+      if (field === 'credit') {
+        const creditValue = Number(value)
+        if (creditValue > 0) {
+          return { ...updatedLine, debit: 0 }
+        }
+      }
+      return updatedLine
+    }))
 
   const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0)
   const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0)
@@ -196,7 +212,7 @@ export default function NewJournalEntryPage() {
                       <select
                         value={line.accountId}
                         onChange={e => updateLine(idx, 'accountId', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white max-h-48 overflow-y-auto"
                       >
                         <option value="">Select account…</option>
                         {accounts.map(a => (
