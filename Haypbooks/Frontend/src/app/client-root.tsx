@@ -118,7 +118,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
               <OwnerSidebar />
               <main
                 id="main"
-                className="flex-1 min-w-0 bg-slate-50 overflow-y-auto"
+                className="flex-1 min-w-0 bg-slate-50"
               >
                 {children}
               </main>
