@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { ChevronDown, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface Account {
   id: string
@@ -16,10 +18,20 @@ interface AccountSelectProps {
   onChange: (value: string) => void
 }
 
+interface DropdownPos {
+  top: number
+  left: number
+  width: number
+  openUp: boolean
+}
+
 export default function AccountSelect({ value, accounts, onChange }: AccountSelectProps) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<DropdownPos | null>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const selected = accounts.find(a => a.id === value)
@@ -32,22 +44,50 @@ export default function AccountSelect({ value, accounts, onChange }: AccountSele
       )
     : accounts
 
-  useEffect(() => {
-    if (open && searchRef.current) {
-      searchRef.current.focus()
-    }
-  }, [open])
+  const calcPos = useCallback(() => {
+    if (!buttonRef.current) return
+    const rect = buttonRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const dropHeight = 260 // approx panel height
+    const openUp = spaceBelow < dropHeight && rect.top > dropHeight
+    setPos({
+      top: openUp ? rect.top + window.scrollY - dropHeight - 4 : rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+      openUp,
+    })
+  }, [])
+
+  function handleOpen() {
+    calcPos()
+    setOpen(o => !o)
+  }
 
   useEffect(() => {
+    if (!open) return
+    if (searchRef.current) searchRef.current.focus()
+
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        panelRef.current && !panelRef.current.contains(target)
+      ) {
         setOpen(false)
         setSearch('')
       }
     }
+    function handleScroll() { calcPos() }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', calcPos)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', calcPos)
+    }
+  }, [open, calcPos])
 
   function handleSelect(id: string) {
     onChange(id)
@@ -55,12 +95,78 @@ export default function AccountSelect({ value, accounts, onChange }: AccountSele
     setSearch('')
   }
 
+  const panel = open && pos ? (
+    <div
+      ref={panelRef}
+      style={{ position: 'absolute', top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
+      className="bg-white border border-gray-200 rounded-lg shadow-xl"
+    >
+      {/* Search */}
+      <div className="p-1.5 border-b border-gray-100">
+        <input
+          ref={searchRef}
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search accounts…"
+          className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+        />
+      </div>
+
+      {/* Options – capped at 192px */}
+      <ul className="max-h-48 overflow-y-auto py-0.5">
+        <li>
+          <button
+            type="button"
+            onClick={() => handleSelect('')}
+            className="w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-emerald-50"
+          >
+            Select account…
+          </button>
+        </li>
+        {filtered.length === 0 && (
+          <li className="px-3 py-2 text-xs text-gray-400">No accounts found</li>
+        )}
+        {filtered.map(a => (
+          <li key={a.id}>
+            <button
+              type="button"
+              onClick={() => handleSelect(a.id)}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-emerald-50 transition-colors ${
+                a.id === value ? 'bg-emerald-50 text-emerald-800 font-medium' : 'text-gray-700'
+              }`}
+            >
+              <span className="font-mono text-xs text-gray-500 mr-1.5">{a.code}</span>
+              {a.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {/* Create new account footer */}
+      <div className="border-t border-gray-100 p-1">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false)
+            router.push('/accounting/core-accounting/chart-of-accounts')
+          }}
+          className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+        >
+          <Plus size={13} />
+          Create new account
+        </button>
+      </div>
+    </div>
+  ) : null
+
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div className="relative w-full">
       {/* Trigger button */}
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={handleOpen}
         className="w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm text-left bg-white border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 hover:border-emerald-400 transition-colors"
       >
         <span className={selected ? 'text-gray-800 truncate' : 'text-gray-400'}>
@@ -69,51 +175,10 @@ export default function AccountSelect({ value, accounts, onChange }: AccountSele
         <ChevronDown size={14} className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown panel */}
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-          {/* Search box */}
-          <div className="p-1.5 border-b border-gray-100">
-            <input
-              ref={searchRef}
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search accounts…"
-              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-            />
-          </div>
-          {/* Options list – capped at 192px (~8 rows) */}
-          <ul className="max-h-48 overflow-y-auto py-0.5">
-            <li>
-              <button
-                type="button"
-                onClick={() => handleSelect('')}
-                className="w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-emerald-50"
-              >
-                Select account…
-              </button>
-            </li>
-            {filtered.length === 0 && (
-              <li className="px-3 py-2 text-xs text-gray-400">No accounts found</li>
-            )}
-            {filtered.map(a => (
-              <li key={a.id}>
-                <button
-                  type="button"
-                  onClick={() => handleSelect(a.id)}
-                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-emerald-50 transition-colors ${
-                    a.id === value ? 'bg-emerald-50 text-emerald-800 font-medium' : 'text-gray-700'
-                  }`}
-                >
-                  <span className="font-mono text-xs text-gray-500 mr-1.5">{a.code}</span>
-                  {a.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Portal-rendered dropdown — escapes table overflow clipping */}
+      {typeof document !== 'undefined' && panel
+        ? createPortal(panel, document.body)
+        : null}
     </div>
   )
 }
