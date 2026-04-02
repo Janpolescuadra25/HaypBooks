@@ -5,7 +5,7 @@ import {
   Plus, Upload, Download, Search, ChevronRight, ChevronDown,
   MoreHorizontal, Edit2, Eye, Trash2, PlusSquare,
   CheckCircle2, X,
-  RefreshCw, BookOpen,
+  RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import apiClient from '@/lib/api-client'
@@ -159,7 +159,7 @@ function RowMenu({ account, hasChildren, onEdit, onDeactivate, onReactivate, onA
 
 // ─── Account Row (recursive) ───────────────────────────────────────────────────
 function AccountRow({
-  account, depth, expanded, onToggle, onEdit, onDeactivate, onReactivate, onAddSubaccount, showInactive, search, fmt,
+  account, depth, expanded, onToggle, onEdit, onDeactivate, onReactivate, onAddSubaccount, statusFilters, search, fmt,
 }: {
   account: Account
   depth: number
@@ -169,7 +169,7 @@ function AccountRow({
   onDeactivate: (a: Account) => void
   onReactivate: (a: Account) => void
   onAddSubaccount: (a: Account) => void
-  showInactive: boolean
+  statusFilters: { active: boolean; inactive: boolean }
   search: string
   fmt: (n: number) => string
 }) {
@@ -180,13 +180,13 @@ function AccountRow({
     account.name.toLowerCase().includes(search.toLowerCase()) ||
     account.code.includes(search)
 
-  if (!showInactive && !account.isActive) return null
+  if ((account.isActive && !statusFilters.active) || (!account.isActive && !statusFilters.inactive)) return null
   if (search && !matchesSearch && !hasChildren) return null
 
   return (
     <>
       <tr className={`border-b border-slate-100 hover:bg-emerald-50/40 transition-colors group ${!account.isActive ? 'opacity-50' : ''}`}>
-        <td className="px-3 py-2.5 w-10">
+        <td className="px-3 py-2.5 w-10 border-r border-slate-100">
           {hasChildren ? (
             <button
               onClick={() => onToggle(account.id)}
@@ -200,33 +200,32 @@ function AccountRow({
             <div className="w-6" />
           )}
         </td>
-        <td className="px-3 py-2.5 w-[90px]">
+        <td className="px-3 py-2.5 w-[90px] border-r border-slate-100">
           <span className="font-mono text-xs text-slate-500" style={{ paddingLeft: depth * 14 }}>
             {account.code}
           </span>
         </td>
-        <td className="px-3 py-2.5">
+        <td className="px-3 py-2.5 border-r border-slate-100">
           <div className="flex items-center gap-2" style={{ paddingLeft: depth * 14 }}>
-            <BookOpen size={13} className={account.isHeader ? 'text-emerald-500' : 'text-slate-300'} />
             <span className={`text-sm ${account.isHeader ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
               {account.name}
             </span>
           </div>
         </td>
-        <td className="px-3 py-2.5 w-[110px] text-center">
+        <td className="px-3 py-2.5 w-[110px] text-center border-r border-slate-100">
           <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full ${TYPE_COLORS[account.type]}`}>
             {account.type}
           </span>
         </td>
-        <td className="px-3 py-2.5 w-[80px] text-center">
+        <td className="px-3 py-2.5 w-[80px] text-center border-r border-slate-100">
           <span className="text-[10px] font-medium text-slate-500">{account.normalSide}</span>
         </td>
-        <td className="px-3 py-2.5 w-[140px] text-right pr-4">
+        <td className="px-3 py-2.5 w-[140px] text-right pr-4 border-r border-slate-100">
           <span className={`text-sm font-semibold font-mono tabular-nums ${account.balance < 0 ? 'text-rose-600' : 'text-slate-800'}`}>
             {fmt(account.balance ?? 0)}
           </span>
         </td>
-        <td className="px-3 py-2.5 w-[80px] text-center">
+        <td className="px-3 py-2.5 w-[80px] text-center border-r border-slate-100">
           <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full ${account.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
             {account.isActive ? 'Active' : 'Inactive'}
           </span>
@@ -246,7 +245,7 @@ function AccountRow({
           onDeactivate={onDeactivate}
           onReactivate={onReactivate}
           onAddSubaccount={onAddSubaccount}
-          showInactive={showInactive}
+          statusFilters={statusFilters}
           search={search}
           fmt={fmt}
         />
@@ -636,11 +635,13 @@ export default function ChartOfAccountsPage() {
   const [seeding, setSeeding] = useState(false)
 
   const [search, setSearch] = useState('')
-  const [filterType, setFilterType] = useState<AccountType | ''>('')
-  const [showInactive, setShowInactive] = useState(false)
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
+  const [statusFilters, setStatusFilters] = useState({ active: true, inactive: false })
+  const [typeFilters, setTypeFilters] = useState<Record<AccountType, boolean>>({ Asset: true, Liability: true, Equity: true, Revenue: true, Expense: true })
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [modalOpen, setModalOpen] = useState(false)
   const [docOpen, setDocOpen] = useState(false)
+  const advancedFilterRef = useRef<HTMLDivElement>(null)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [defaultParentId, setDefaultParentId] = useState<string | undefined>(undefined)
   const [importModal, setImportModal] = useState(false)
@@ -662,6 +663,16 @@ export default function ChartOfAccountsPage() {
       // best-effort; non-blocking if onboarding service is temporarily unavailable
     }
   }, [])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (advancedFiltersOpen && advancedFilterRef.current && !advancedFilterRef.current.contains(event.target as Node)) {
+        setAdvancedFiltersOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [advancedFiltersOpen])
 
   // Load accounts from API
   const loadAccounts = useCallback(async (bustCache = false) => {
@@ -702,9 +713,8 @@ export default function ChartOfAccountsPage() {
   }
 
   const displayAccounts = useMemo(() => {
-    if (!filterType) return treeAccounts
-    return treeAccounts.filter(a => a.type === filterType)
-  }, [filterType, treeAccounts])
+    return treeAccounts.filter(a => typeFilters[a.type])
+  }, [typeFilters, treeAccounts])
 
   const flatDisplayAccounts = useMemo(() => {
     const flattened = flattenAccounts(displayAccounts)
@@ -736,7 +746,7 @@ export default function ChartOfAccountsPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [filterType, flatDisplayAccounts.length, sortConfig])
+  }, [typeFilters, flatDisplayAccounts.length, sortConfig])
 
   const paginatedAccounts = useMemo(() => {
     const start = (page - 1) * pageSize
@@ -851,20 +861,46 @@ export default function ChartOfAccountsPage() {
                   className="pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-52 bg-slate-50"
                 />
               </div>
-              <select
-                value={filterType}
-                onChange={e => setFilterType(e.target.value as AccountType | '')}
-                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 w-36"
-              >
-                <option value="">All Types</option>
-                {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] as AccountType[]).map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-              <label className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 text-sm text-slate-600 select-none">
-                <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="accent-emerald-600" />
-                Inactive
-              </label>
+              <div className="relative" ref={advancedFilterRef}>
+                <button
+                  onClick={() => setAdvancedFiltersOpen(open => !open)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                  aria-label="Advanced filter"
+                  type="button"
+                >
+                  <SlidersHorizontal size={14} />
+                  Filters
+                </button>
+                {advancedFiltersOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-3 z-20">
+                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Status</div>
+                    {['active', 'inactive'].map((status) => (
+                      <label key={status} className="flex items-center justify-between gap-2 px-2 py-1 rounded hover:bg-slate-50 text-sm">
+                        <span className="capitalize">{status}</span>
+                        <input
+                          type="checkbox"
+                          checked={statusFilters[status as 'active' | 'inactive']}
+                          onChange={e => setStatusFilters(prev => ({ ...prev, [status]: e.target.checked }))}
+                          className="accent-emerald-600"
+                        />
+                      </label>
+                    ))}
+
+                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-3 mb-2">Types</div>
+                    {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] as AccountType[]).map(type => (
+                      <label key={type} className="flex items-center justify-between gap-2 px-2 py-1 rounded hover:bg-slate-50 text-sm">
+                        <span>{type}</span>
+                        <input
+                          type="checkbox"
+                          checked={typeFilters[type]}
+                          onChange={e => setTypeFilters(prev => ({ ...prev, [type]: e.target.checked }))}
+                          className="accent-emerald-600"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -919,11 +955,20 @@ export default function ChartOfAccountsPage() {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="w-10 px-3 py-3 border-r border-slate-100" />
-                <th className="w-[90px] px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('code') }>Code</th>
-                <th className="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('name') }>Account Name</th>
+                <th className="w-[90px] px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('code') }>
+                  Code
+                  {sortConfig.key === 'code' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline-block ml-1 text-emerald-600" /> : <ArrowDown size={12} className="inline-block ml-1 text-emerald-600" />) : <ArrowUpDown size={12} className="inline-block ml-1 text-slate-300" />}
+                </th>
+                <th className="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('name') }>
+                  Account Name
+                  {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline-block ml-1 text-emerald-600" /> : <ArrowDown size={12} className="inline-block ml-1 text-emerald-600" />) : <ArrowUpDown size={12} className="inline-block ml-1 text-slate-300" />}
+                </th>
                 <th className="w-[110px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Type</th>
                 <th className="w-[80px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Side</th>
-                <th className="w-[140px] px-3 py-3 text-right pr-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('balance') }>Balance</th>
+                <th className="w-[140px] px-3 py-3 text-right pr-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('balance') }>
+                  Balance
+                  {sortConfig.key === 'balance' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline-block ml-1 text-emerald-600" /> : <ArrowDown size={12} className="inline-block ml-1 text-emerald-600" />) : <ArrowUpDown size={12} className="inline-block ml-1 text-slate-300" />}
+                </th>
                 <th className="w-[80px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Status</th>
                 <th className="w-[60px] px-3 py-3" />
               </tr>
@@ -939,7 +984,6 @@ export default function ChartOfAccountsPage() {
               ) : displayAccounts.length === 0 && flatAccs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-16 text-center">
-                    <BookOpen size={32} className="text-slate-200 mx-auto mb-3" />
                     <p className="text-sm font-semibold text-slate-500 mb-1">No accounts yet</p>
                     <p className="text-xs text-slate-400 mb-4">Set up your default Chart of Accounts template or create accounts manually</p>
                     <button
@@ -970,7 +1014,7 @@ export default function ChartOfAccountsPage() {
                           onDeactivate={handleDeactivate}
                           onReactivate={handleReactivate}
                           onAddSubaccount={openAddSubaccount}
-                          showInactive={showInactive}
+                          statusFilters={statusFilters}
                           search={search}
                           fmt={fmt}
                         />
