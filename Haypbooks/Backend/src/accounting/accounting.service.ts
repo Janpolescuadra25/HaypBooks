@@ -545,11 +545,12 @@ export class AccountingService {
         })
 
         // Force totals from raw lines to avoid old aggregation mismatch.
+        // Also expose `status` as an alias for `postingStatus` for frontend compatibility.
         return (entries || []).map((e: any) => {
             const lines = e.lines || []
             const totalDebit = lines.reduce((sum: number, l: any) => sum + (Number(l.debit) || 0), 0)
             const totalCredit = lines.reduce((sum: number, l: any) => sum + (Number(l.credit) || 0), 0)
-            return { ...e, lines, totalDebit, totalCredit }
+            return { ...e, status: e.postingStatus, lines, totalDebit, totalCredit }
         })
     }
 
@@ -620,6 +621,10 @@ export class AccountingService {
         try {
             const result = await this.repo.updateJournalEntry(companyId, jeId, { ...data, updatedById: userId })
             if (!result) throw new NotFoundException('Journal entry not found')
+            // If caller requested POSTED and the saved entry is still DRAFT, post it now
+            if (data.postingStatus === 'POSTED' && (result as any).postingStatus === 'DRAFT') {
+                return this.repo.postJournalEntry(companyId, (result as any).id, userId)
+            }
             return result
         } catch (e: any) {
             if (e.status === 404) throw e
