@@ -227,7 +227,7 @@ export default function JournalEntriesPage() {
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100">{fmt(credit)}</td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setViewEntry(entry)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="View"><Eye size={14} /></button>
+                        <button onClick={() => router.push(`/accounting/core-accounting/journal-entries/${entry.id}`)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="View"><Eye size={14} /></button>
                         {entry.status === 'DRAFT' && (
                           <button onClick={() => handlePost(entry.id)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="Post"><Send size={14} /></button>
                         )}
