@@ -594,19 +594,20 @@ export class AccountingService {
         await this.assertCompanyAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
         try {
+            // Always create as DRAFT first so postJournalEntry can run its full
+            // balance-update + entry-number logic without hitting "already posted".
             const created = await this.repo.createJournalEntry({
                 workspaceId,
                 companyId,
                 date: new Date(data.date),
                 description: data.description,
                 currency: data.currency,
-                postingStatus: data.postingStatus ?? 'DRAFT',
+                postingStatus: 'DRAFT',
                 createdById: userId,
                 lines: data.lines ?? [],
             })
 
             if ((data.postingStatus ?? 'DRAFT') === 'POSTED') {
-                // Post the entry to update account balances
                 return this.repo.postJournalEntry(companyId, created.id, userId)
             }
 
