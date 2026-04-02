@@ -8,7 +8,7 @@ import OwnerProgressChecklist from './OwnerProgressChecklist'
 
 export default function OwnerTopBar() {
   const router = useRouter()
-  const [user, setUser] = useState<any | null>(() => authService.getStoredUser() ?? null)
+  const [user, setUser] = useState<any | null>(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [checklistOpen, setChecklistOpen] = useState(false)
@@ -22,13 +22,16 @@ export default function OwnerTopBar() {
 
   useEffect(() => {
     let mounted = true
+    // Populate immediately from cache to avoid flash; then refresh from API
+    const stored = authService.getStoredUser()
+    if (stored) setUser(stored)
     authService.getCurrentUser()
       .then((u) => { if (mounted) setUser(u) })
       .catch(() => {})
     return () => { mounted = false }
   }, [])
 
-  const displayName = (user?.name ?? user?.fullName ?? 'User') as string
+  const displayName = (user?.name ?? user?.fullName ?? '') as string
   const initials = displayName
     .split(' ')
     .map((w: string) => w[0])
