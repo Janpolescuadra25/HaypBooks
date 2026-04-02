@@ -25,7 +25,7 @@ interface Account {
 
 export default function NewJournalEntryPage() {
   const router = useRouter()
-  const companyId = useCompanyId()
+  const { companyId, loading: companyLoading, error: companyError } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -39,6 +39,17 @@ export default function NewJournalEntryPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  if (!companyLoading && !companyId) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white border border-red-200 rounded-xl p-6 text-center shadow-sm">
+          <p className="text-sm text-red-600 font-semibold">Please select or create a company before creating a journal entry.</p>
+          {companyError && <p className="text-xs text-red-500 mt-2">{companyError}</p>}
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (!companyId) return
