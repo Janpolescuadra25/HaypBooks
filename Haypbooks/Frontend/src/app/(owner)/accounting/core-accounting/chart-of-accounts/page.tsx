@@ -664,11 +664,12 @@ export default function ChartOfAccountsPage() {
   }, [])
 
   // Load accounts from API
-  const loadAccounts = useCallback(async () => {
+  const loadAccounts = useCallback(async (bustCache = false) => {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/accounting/accounts?includeInactive=true`)
+      const url = `/companies/${companyId}/accounting/accounts?includeInactive=true${bustCache ? `&_t=${Date.now()}` : ''}`
+      const { data } = await apiClient.get(url)
       const flat: Account[] = Array.isArray(data) ? data : (data?.data ?? [])
       const tree = buildTree(flat)
       setFlatAccs(flat)
@@ -739,7 +740,7 @@ export default function ChartOfAccountsPage() {
     setSeeding(true)
     try {
       await apiClient.post(`/companies/${companyId}/accounting/accounts/seed-default`)
-      await loadAccounts()
+      await loadAccounts(true)
     } catch (e: any) {
       alert(e?.response?.data?.message ?? 'Seeding failed. Please try again.')
     } finally {
