@@ -8,6 +8,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import AccountSelect from '@/components/accounting/AccountSelect'
 
 interface JELine {
   id?: string
@@ -250,16 +251,11 @@ export default function EditJournalEntryPage() {
                 {lines.map((line, idx) => (
                   <tr key={idx} className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                     <td className="px-3 py-1.5 border-r border-gray-100">
-                      <select
+                      <AccountSelect
                         value={line.accountId}
-                        onChange={e => updateLine(idx, 'accountId', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white max-h-48 overflow-y-auto"
-                      >
-                        <option value="">Select account…</option>
-                        {accounts.map(a => (
-                          <option key={a.id} value={a.id}>{a.code} – {a.name}</option>
-                        ))}
-                      </select>
+                        accounts={accounts}
+                        onChange={v => updateLine(idx, 'accountId', v)}
+                      />
                     </td>
                     <td className="px-3 py-1.5 border-r border-gray-100">
                       <input
