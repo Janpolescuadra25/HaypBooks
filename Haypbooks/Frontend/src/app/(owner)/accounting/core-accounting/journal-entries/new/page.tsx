@@ -70,7 +70,7 @@ export default function NewJournalEntryPage() {
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries`, {
         date,
-        memo,
+        description: memo,
         reference,
         postingStatus: status,
         lines: validLines.map(l => ({
