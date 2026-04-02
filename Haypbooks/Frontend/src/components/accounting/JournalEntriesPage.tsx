@@ -12,10 +12,15 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 
+const fmtDate = (d: string) => {
+  try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) } catch { return d }
+}
+
 interface JournalEntry {
   id: string
   entryNumber?: string
   date: string
+  description?: string
   memo?: string
   reference?: string
   status: 'DRAFT' | 'POSTED' | 'VOIDED'
@@ -83,7 +88,7 @@ export default function JournalEntriesPage() {
       const q = search.toLowerCase()
       list = list.filter(e =>
         (e.entryNumber ?? '').toLowerCase().includes(q) ||
-        (e.memo ?? '').toLowerCase().includes(q) ||
+        (e.description ?? e.memo ?? '').toLowerCase().includes(q) ||
         (e.reference ?? '').toLowerCase().includes(q)
       )
     }
@@ -102,6 +107,7 @@ export default function JournalEntriesPage() {
 
   const handleVoid = async (id: string) => {
     if (!companyId) return
+    if (!window.confirm('Void this posted entry? This will create a reversing entry and cannot be undone.')) return
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${id}/void`, { reason: 'Voided by user' })
       fetchEntries()
@@ -111,10 +117,6 @@ export default function JournalEntriesPage() {
   }
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-
-  const fmtDate = (d: string) => {
-    try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) } catch { return d }
-  }
 
   if (cidLoading || (loading && entries.length === 0)) {
     return (
@@ -218,7 +220,7 @@ export default function JournalEntriesPage() {
                   <tr key={entry.id} className="border-b border-gray-100 hover:bg-blue-50/20 transition-colors">
                     <td className="px-4 py-2.5 font-mono text-xs text-slate-700 border-r border-gray-100">{entry.entryNumber ?? entry.id.slice(0, 8)}</td>
                     <td className="px-4 py-2.5 text-slate-700 border-r border-gray-100">{fmtDate(entry.date)}</td>
-                    <td className="px-4 py-2.5 text-slate-500 hidden md:table-cell truncate max-w-[200px] border-r border-gray-100">{entry.memo ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-slate-500 hidden md:table-cell truncate max-w-[200px] border-r border-gray-100">{entry.description ?? entry.memo ?? '—'}</td>
                     <td className="px-4 py-2.5 border-r border-gray-100">
                       {!balanced ? (
                         <span className="bg-red-50 text-red-600 px-2 py-0.5 text-xs font-semibold rounded-full border border-red-200">Out of Balance</span>
@@ -282,7 +284,7 @@ function JEDetailModal({ entry, onClose }: { entry: JournalEntry; onClose: () =>
         <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-emerald-900">Journal Entry #{entry.entryNumber ?? entry.id.slice(0, 8)}</h2>
-            <p className="text-xs text-emerald-600/60">{entry.date} · {entry.memo ?? 'No memo'}</p>
+            <p className="text-xs text-emerald-600/60">{fmtDate(entry.date)} · {entry.description ?? entry.memo ?? 'No memo'}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[entry.status]}`}>{entry.status}</span>
