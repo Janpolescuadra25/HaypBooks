@@ -16,6 +16,7 @@ interface AccountSelectProps {
   value: string
   accounts: Account[]
   onChange: (value: string) => void
+  disabled?: boolean
 }
 
 interface DropdownPos {
@@ -25,7 +26,7 @@ interface DropdownPos {
   openUp: boolean
 }
 
-export default function AccountSelect({ value, accounts, onChange }: AccountSelectProps) {
+export default function AccountSelect({ value, accounts, onChange, disabled }: AccountSelectProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -166,8 +167,13 @@ export default function AccountSelect({ value, accounts, onChange }: AccountSele
       <button
         ref={buttonRef}
         type="button"
-        onClick={handleOpen}
-        className="w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm text-left bg-white border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 hover:border-emerald-400 transition-colors"
+        onClick={disabled ? undefined : handleOpen}
+        disabled={disabled}
+        className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm text-left border rounded focus:outline-none transition-colors ${
+          disabled
+            ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-white border-gray-200 hover:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30'
+        }`}
       >
         <span className={selected ? 'text-gray-800 truncate' : 'text-gray-400'}>
           {selected ? `${selected.code} – ${selected.name}` : 'Select account…'}

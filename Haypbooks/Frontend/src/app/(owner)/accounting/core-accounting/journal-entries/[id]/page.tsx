@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Plus, X, AlertCircle, Loader2, Check } from 'lucide-react'
+import { ArrowLeft, Plus, X, AlertCircle, Loader2, Check, Lock, AlertTriangle } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -138,6 +138,9 @@ export default function EditJournalEntryPage() {
   const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0)
   const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0)
   const balanced = Math.abs(totalDebit - totalCredit) < 0.005 && totalDebit > 0
+  const isVoided = status === 'VOIDED'
+  const isPosted = status === 'POSTED'
+  const isReadOnly = isVoided
 
   const handleSave = async (newStatus: 'DRAFT' | 'POSTED') => {
     if (!balanced) { setError('Debits must equal credits.'); return }
@@ -151,7 +154,7 @@ export default function EditJournalEntryPage() {
         date,
         description: memo,
         reference,
-        postingStatus: newStatus,
+        postingStatus: isPosted ? 'POSTED' : newStatus,
         lines: validLines.map(l => ({ accountId: l.accountId, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0, description: l.description })),
       })
       router.push('/accounting/core-accounting/journal-entries')
@@ -176,7 +179,9 @@ export default function EditJournalEntryPage() {
           <p className="text-xs text-emerald-500">Modify and save existing entry</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {balanced && <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full font-medium"><Check size={12} /> Balanced</span>}
+          {isVoided && <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-full font-medium border border-red-200"><Lock size={12} /> Voided — View Only</span>}
+          {isPosted && <span className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full font-medium border border-emerald-200">POSTED</span>}
+          {!isVoided && !isPosted && balanced && <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full font-medium"><Check size={12} /> Balanced</span>}
         </div>
       </div>
 
@@ -184,6 +189,20 @@ export default function EditJournalEntryPage() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-center gap-2">
             <AlertCircle size={16} /> {error}
+          </div>
+        )}
+
+        {isVoided && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-center gap-2">
+            <Lock size={16} className="shrink-0" />
+            <span>This entry has been <strong>voided</strong>. It cannot be edited. Create a new journal entry to make corrections.</span>
+          </div>
+        )}
+
+        {isPosted && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2">
+            <AlertTriangle size={16} className="shrink-0 text-amber-500" />
+            <span>This entry is <strong>posted</strong>. Saving changes will <strong>void the current entry</strong> and create a corrected replacement with the same entry number.</span>
           </div>
         )}
 
@@ -208,15 +227,15 @@ export default function EditJournalEntryPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">Date <span className="text-red-500">*</span></label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} disabled={isReadOnly} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-50 disabled:text-gray-400" />
             </div>
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">Reference</label>
-              <input value={reference} onChange={e => setReference(e.target.value)} placeholder="REF-001" className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+              <input value={reference} onChange={e => setReference(e.target.value)} disabled={isReadOnly} placeholder="REF-001" className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-50 disabled:text-gray-400" />
             </div>
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">Memo</label>
-              <input value={memo} onChange={e => setMemo(e.target.value)} placeholder="Journal entry description" className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+              <input value={memo} onChange={e => setMemo(e.target.value)} disabled={isReadOnly} placeholder="Journal entry description" className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-50 disabled:text-gray-400" />
             </div>
           </div>
         </div>
@@ -244,15 +263,17 @@ export default function EditJournalEntryPage() {
                       <AccountSelect
                         value={line.accountId}
                         accounts={accounts}
-                        onChange={v => updateLine(idx, 'accountId', v)}
+                        onChange={v => !isReadOnly && updateLine(idx, 'accountId', v)}
+                        disabled={isReadOnly}
                       />
                     </td>
                     <td className="px-3 py-1.5 border-r border-gray-100">
                       <input
                         value={line.description ?? ''}
                         onChange={e => updateLine(idx, 'description', e.target.value)}
+                        disabled={isReadOnly}
                         placeholder="Note"
-                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-50 disabled:text-gray-400"
                       />
                     </td>
                     <td className="px-3 py-1.5 border-r border-gray-100 text-right">
@@ -262,8 +283,9 @@ export default function EditJournalEntryPage() {
                         step="0.01"
                         value={line.debit || ''}
                         onChange={e => updateLine(idx, 'debit', Number(e.target.value))}
+                        disabled={isReadOnly}
                         placeholder="0.00"
-                        className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-50 disabled:text-gray-400"
                       />
                     </td>
                     <td className="px-3 py-1.5 border-r border-gray-100 text-right">
@@ -273,12 +295,13 @@ export default function EditJournalEntryPage() {
                         step="0.01"
                         value={line.credit || ''}
                         onChange={e => updateLine(idx, 'credit', Number(e.target.value))}
+                        disabled={isReadOnly}
                         placeholder="0.00"
-                        className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-50 disabled:text-gray-400"
                       />
                     </td>
                     <td className="px-2 py-1.5 text-center">
-                      {lines.length > 1 && (
+                      {!isReadOnly && lines.length > 1 && (
                         <button onClick={() => removeLine(idx)} className="p-1 rounded-lg hover:bg-red-100 text-red-400 transition-colors">
                           <X size={14} />
                         </button>
@@ -290,7 +313,8 @@ export default function EditJournalEntryPage() {
             </table>
           </div>
           <div className="px-4 py-3 border-t border-gray-300 bg-gray-50 flex justify-between items-center">
-            <button onClick={addLine} className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold">+ Add Line</button>
+            {!isReadOnly && <button onClick={addLine} className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold">+ Add Line</button>}
+            {isReadOnly && <span />}
             <div className="text-right">
               <div className="text-xs text-gray-600">Debit: {fmt(totalDebit)}</div>
               <div className="text-xs text-gray-600">Credit: {fmt(totalCredit)}</div>
@@ -300,11 +324,24 @@ export default function EditJournalEntryPage() {
       </div>
 
       <div className="shrink-0 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between">
-        <div className="text-xs text-gray-500">{balanced ? <span className="text-emerald-600">✓ Balanced</span> : <span className="text-red-500">Out of balance</span>}</div>
+        <div className="text-xs text-gray-500">
+          {isVoided ? <span className="text-red-500 flex items-center gap-1"><Lock size={12} /> View only</span>
+            : balanced ? <span className="text-emerald-600">✓ Balanced</span>
+            : <span className="text-red-500">Out of balance</span>}
+        </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/accounting/core-accounting/journal-entries')} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-          <button onClick={() => handleSave('DRAFT')} disabled={saving || !balanced} className="px-5 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-40">Save as Draft</button>
-          <button onClick={() => handleSave('POSTED')} disabled={saving || !balanced} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40">Update & Post</button>
+          <button onClick={() => router.push('/accounting/core-accounting/journal-entries')} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">{isVoided ? 'Back' : 'Cancel'}</button>
+          {!isVoided && !isPosted && (
+            <>
+              <button onClick={() => handleSave('DRAFT')} disabled={saving || !balanced} className="px-5 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-40">Save as Draft</button>
+              <button onClick={() => handleSave('POSTED')} disabled={saving || !balanced} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40">Save & Post</button>
+            </>
+          )}
+          {isPosted && (
+            <button onClick={() => handleSave('POSTED')} disabled={saving || !balanced} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-40">
+              {saving ? 'Saving…' : 'Apply Changes (Void & Re-post)'}
+            </button>
+          )}
         </div>
       </div>
     </div>

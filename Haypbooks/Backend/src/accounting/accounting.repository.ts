@@ -279,9 +279,94 @@ export class AccountingRepository {
         updatedById: string
         lines?: Array<{ accountId: string; debit: number; credit: number; description?: string }>
     }) {
-        const je = await this.prisma.journalEntry.findFirst({ where: { id: jeId, companyId, deletedAt: null } })
+        const je = await this.prisma.journalEntry.findFirst({
+            where: { id: jeId, companyId, deletedAt: null },
+            include: { lines: true },
+        })
         if (!je) return null
-        if (je.postingStatus !== 'DRAFT') throw new Error('Only DRAFT journal entries can be edited')
+        if (je.postingStatus === 'VOIDED') throw new Error('Voided journal entries cannot be edited')
+
+        // ── POSTED path: void original + create corrected entry ─────────────
+        if (je.postingStatus === 'POSTED') {
+            if (data.lines) {
+                const totalDebits = data.lines.reduce((s, l) => s + (l.debit ?? 0), 0)
+                const totalCredits = data.lines.reduce((s, l) => s + (l.credit ?? 0), 0)
+                if (Math.abs(totalDebits - totalCredits) > 0.001) {
+                    throw new Error(`Journal entry is not balanced: debits ${totalDebits} ≠ credits ${totalCredits}`)
+                }
+            }
+
+            const newEntry = await this.prisma.$transaction(async (tx) => {
+                // Reverse account balances from original lines
+                for (const line of je.lines) {
+                    const acct = await tx.account.findUnique({ where: { id: line.accountId } })
+                    if (!acct) continue
+                    const normalSide = (acct.normalSide as string) ?? 'DEBIT'
+                    const balanceDelta = normalSide === 'DEBIT'
+                        ? Number(line.debit) - Number(line.credit)
+                        : Number(line.credit) - Number(line.debit)
+                    await tx.account.update({
+                        where: { id: line.accountId },
+                        data: { balance: { decrement: balanceDelta } },
+                    })
+                }
+                // Mark original as VOIDED
+                await tx.journalEntry.update({ where: { id: jeId }, data: { postingStatus: 'VOIDED' } })
+
+                // Create corrected entry with same entry number
+                const newLines = (data.lines ?? je.lines).map(l => ({
+                    companyId,
+                    workspaceId: je.workspaceId,
+                    accountId: l.accountId,
+                    debit: Number(l.debit ?? 0),
+                    credit: Number(l.credit ?? 0),
+                    description: (l as any).description ?? undefined,
+                }))
+                const created = await tx.journalEntry.create({
+                    data: {
+                        workspaceId: je.workspaceId,
+                        companyId,
+                        date: data.date ?? je.date,
+                        description: data.description ?? je.description,
+                        currency: data.currency ?? je.currency,
+                        postingStatus: 'POSTED',
+                        createdById: data.updatedById,
+                        entryNumber: je.entryNumber,
+                        lines: { create: newLines },
+                    },
+                    include: { lines: { include: { account: { select: { id: true, code: true, name: true } } } } },
+                })
+
+                // Apply new account balances
+                for (const line of created.lines) {
+                    const acct = await tx.account.findUnique({ where: { id: line.accountId } })
+                    if (!acct) continue
+                    const normalSide = (acct.normalSide as string) ?? 'DEBIT'
+                    const balanceDelta = normalSide === 'DEBIT'
+                        ? Number(line.debit) - Number(line.credit)
+                        : Number(line.credit) - Number(line.debit)
+                    await tx.account.update({
+                        where: { id: line.accountId },
+                        data: { balance: { increment: balanceDelta } },
+                    })
+                }
+                return created
+            })
+
+            this.prisma.auditLog.create({
+                data: {
+                    workspaceId: je.workspaceId,
+                    companyId,
+                    userId: data.updatedById,
+                    action: 'UPDATE',
+                    tableName: 'JournalEntry',
+                    recordId: jeId,
+                    changes: JSON.stringify({ replacedBy: newEntry.id, reason: 'Edit of posted entry' }) as any,
+                    lines: { create: [{ fieldName: 'postingStatus', oldValue: 'POSTED', newValue: 'VOIDED (replaced)', changeType: 'UPDATE' }] },
+                },
+            }).catch(() => {})
+            return newEntry
+        }
 
         if (data.lines) {
             const totalDebits = data.lines.reduce((s, l) => s + (l.debit ?? 0), 0)
