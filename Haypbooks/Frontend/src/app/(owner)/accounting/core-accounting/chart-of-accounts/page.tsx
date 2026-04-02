@@ -406,7 +406,7 @@ function AccountModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <div className="flex-1 px-6 py-5 space-y-4">
           {error && <p className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -690,10 +690,36 @@ export default function ChartOfAccountsPage() {
   const totalDebits = flatAccs.filter(a => a.normalSide === 'Debit' && !a.isHeader).reduce((s, a) => s + (a.balance ?? 0), 0)
   const totalCredits = flatAccs.filter(a => a.normalSide === 'Credit' && !a.isHeader).reduce((s, a) => s + Math.abs(a.balance ?? 0), 0)
 
+  const [page, setPage] = useState(1)
+  const pageSize = 20
+
   const displayAccounts = useMemo(() => {
     if (!filterType) return treeAccounts
     return treeAccounts.filter(a => a.type === filterType)
   }, [filterType, treeAccounts])
+
+  const flatDisplayAccounts = useMemo(() => flattenAccounts(displayAccounts), [displayAccounts])
+  const totalPages = Math.max(1, Math.ceil(flatDisplayAccounts.length / pageSize))
+
+  useEffect(() => {
+    setPage(1)
+  }, [filterType, flatDisplayAccounts.length])
+
+  const paginatedAccounts = useMemo(() => {
+    const start = (page - 1) * pageSize
+    const end = start + pageSize
+    return flatDisplayAccounts.slice(start, end).map(a => ({ ...a, children: [] }))
+  }, [flatDisplayAccounts, page])
+
+  const groupedPaginatedAccounts = useMemo(() => {
+    const groups: Record<AccountType, Account[]> = {
+      Asset: [], Liability: [], Equity: [], Revenue: [], Expense: [],
+    }
+    for (const acc of paginatedAccounts) {
+      if (groups[acc.type]) groups[acc.type].push(acc)
+    }
+    return groups
+  }, [paginatedAccounts])
 
   const toggle = (id: string) =>
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -895,27 +921,43 @@ export default function ChartOfAccountsPage() {
                     </button>
                   </td>
                 </tr>
-              ) : displayAccounts.map(account => (
-                <AccountRow
-                  key={account.id}
-                  account={account}
-                  depth={0}
-                  expanded={expanded}
-                  onToggle={toggle}
-                  onEdit={openEdit}
-                  onDeactivate={handleDeactivate}
-                  onReactivate={handleReactivate}
-                  onAddSubaccount={openAddSubaccount}
-                  showInactive={showInactive}
-                  search={search}
-                  fmt={fmt}
-                />
-              ))}
+              ) : (
+                Object.entries(groupedPaginatedAccounts).map(([type, accounts]) => (
+                  accounts.length === 0 ? null : (
+                    <React.Fragment key={type}>
+                      <tr className="bg-slate-100">
+                        <td colSpan={8} className="px-3 py-2 text-sm font-semibold text-slate-700">{type}</td>
+                      </tr>
+                      {accounts.map(account => (
+                        <AccountRow
+                          key={account.id}
+                          account={account}
+                          depth={0}
+                          expanded={expanded}
+                          onToggle={toggle}
+                          onEdit={openEdit}
+                          onDeactivate={handleDeactivate}
+                          onReactivate={handleReactivate}
+                          onAddSubaccount={openAddSubaccount}
+                          showInactive={showInactive}
+                          search={search}
+                          fmt={fmt}
+                        />
+                      ))}
+                    </React.Fragment>
+                  )
+                ))
+              )
+            }
             </tbody>
           </table>
-          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <p className="text-xs text-slate-400">{flatAccs.length} accounts total · {activeAccounts} active</p>
-            <p className="text-xs text-slate-400">Click an account row arrow to expand sub-accounts</p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-slate-400">Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, flatDisplayAccounts.length)} of {flatDisplayAccounts.length} accounts</p>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 text-xs rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-50">Previous</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 text-xs rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-50">Next</button>
+            </div>
           </div>
         </div>
       </div>
