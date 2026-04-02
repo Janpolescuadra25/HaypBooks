@@ -14,7 +14,7 @@ export default function UserMenu() {
     async function load() {
       try {
         const data = await getProfileCached()
-        if (mounted) setName(data?.name ?? 'User')
+        if (mounted) setName(data?.name ?? '')
       } catch (e: any) {
         if (mounted) setError(e.message)
       } finally {
