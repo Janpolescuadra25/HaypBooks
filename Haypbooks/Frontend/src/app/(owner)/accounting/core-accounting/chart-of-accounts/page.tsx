@@ -691,19 +691,52 @@ export default function ChartOfAccountsPage() {
   const totalCredits = flatAccs.filter(a => a.normalSide === 'Credit' && !a.isHeader).reduce((s, a) => s + Math.abs(a.balance ?? 0), 0)
 
   const [page, setPage] = useState(1)
+  const [sortConfig, setSortConfig] = useState<{ key: 'code' | 'name' | 'balance', direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' })
   const pageSize = 20
+
+  const onSort = (key: 'code' | 'name' | 'balance') => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }))
+  }
 
   const displayAccounts = useMemo(() => {
     if (!filterType) return treeAccounts
     return treeAccounts.filter(a => a.type === filterType)
   }, [filterType, treeAccounts])
 
-  const flatDisplayAccounts = useMemo(() => flattenAccounts(displayAccounts), [displayAccounts])
+  const flatDisplayAccounts = useMemo(() => {
+    const flattened = flattenAccounts(displayAccounts)
+    const sorted = [...flattened].sort((a, b) => {
+      let aValue: string | number = ''
+      let bValue: string | number = ''
+      if (sortConfig.key === 'code') {
+        aValue = a.code
+        bValue = b.code
+      } else if (sortConfig.key === 'name') {
+        aValue = a.name
+        bValue = b.name
+      } else {
+        aValue = a.balance ?? 0
+        bValue = b.balance ?? 0
+      }
+      let cmp = 0
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        cmp = aValue - bValue
+      } else {
+        cmp = String(aValue).localeCompare(String(bValue))
+      }
+      return sortConfig.direction === 'asc' ? cmp : -cmp
+    })
+    return sorted
+  }, [displayAccounts, sortConfig])
+
   const totalPages = Math.max(1, Math.ceil(flatDisplayAccounts.length / pageSize))
 
   useEffect(() => {
     setPage(1)
-  }, [filterType, flatDisplayAccounts.length])
+  }, [filterType, flatDisplayAccounts.length, sortConfig])
 
   const paginatedAccounts = useMemo(() => {
     const start = (page - 1) * pageSize
@@ -807,54 +840,52 @@ export default function ChartOfAccountsPage() {
               {companyName || 'Your Company'} · Total: {totalAccounts} &bull; Active: {activeAccounts}{totalAccounts - activeAccounts > 0 ? ` · Inactive: ${totalAccounts - activeAccounts}` : ''}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search accounts…"
-                className="pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-52 bg-slate-50"
-              />
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search accounts…"
+                  className="pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-52 bg-slate-50"
+                />
+              </div>
+              <select
+                value={filterType}
+                onChange={e => setFilterType(e.target.value as AccountType | '')}
+                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 w-36"
+              >
+                <option value="">All Types</option>
+                {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] as AccountType[]).map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <label className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 text-sm text-slate-600 select-none">
+                <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="accent-emerald-600" />
+                Inactive
+              </label>
             </div>
-            <select
-              value={filterType}
-              onChange={e => setFilterType(e.target.value as AccountType | '')}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 w-36"
-            >
-              <option value="">All Types</option>
-              {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] as AccountType[]).map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <label className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 text-sm text-slate-600 select-none">
-              <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="accent-emerald-600" />
-              Inactive
-            </label>
-            <button onClick={loadAccounts} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-              <RefreshCw size={13} /> Refresh
-            </button>
-            <button onClick={collapseAll} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-              <ChevronRight size={13} /> Collapse
-            </button>
-            <button onClick={() => setDocOpen(true)} className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold" aria-label="Open documentation for chart of accounts">?</button>
-            <button onClick={expandAll} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-              <ChevronDown size={13} /> Expand All
-            </button>
-            <button onClick={() => setImportModal(true)} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-              <Upload size={13} /> Import
-            </button>
-            <button onClick={handleExport} disabled={flatAccs.length === 0} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-              <Download size={13} /> Export
-            </button>
-            <button
-              onClick={openCreate}
-              disabled={!companyId || companyLoading}
-              title={!companyId ? 'Select or create a company first' : companyLoading ? 'Loading company...' : ''}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow shadow-emerald-600/25 transition-all active:scale-95 disabled:opacity-50"
-            >
-              <Plus size={14} /> New Account
-            </button>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={loadAccounts} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                <RefreshCw size={13} /> Refresh
+              </button>
+              <button onClick={() => setImportModal(true)} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                <Upload size={13} /> Import
+              </button>
+              <button onClick={handleExport} disabled={flatAccs.length === 0} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                <Download size={13} /> Export
+              </button>
+              <button
+                onClick={openCreate}
+                disabled={!companyId || companyLoading}
+                title={!companyId ? 'Select or create a company first' : companyLoading ? 'Loading company...' : ''}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow shadow-emerald-600/25 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Plus size={14} /> New Account
+              </button>
+            </div>
           </div>
         </div>
 
@@ -887,13 +918,13 @@ export default function ChartOfAccountsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="w-10 px-3 py-3" />
-                <th className="w-[90px] px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Code</th>
-                <th className="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Account Name</th>
-                <th className="w-[110px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Type</th>
-                <th className="w-[80px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Side</th>
-                <th className="w-[140px] px-3 py-3 text-right pr-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Balance</th>
-                <th className="w-[80px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                <th className="w-10 px-3 py-3 border-r border-slate-100" />
+                <th className="w-[90px] px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('code') }>Code</th>
+                <th className="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('name') }>Account Name</th>
+                <th className="w-[110px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Type</th>
+                <th className="w-[80px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Side</th>
+                <th className="w-[140px] px-3 py-3 text-right pr-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('balance') }>Balance</th>
+                <th className="w-[80px] px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Status</th>
                 <th className="w-[60px] px-3 py-3" />
               </tr>
             </thead>
