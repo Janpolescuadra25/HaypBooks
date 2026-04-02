@@ -179,6 +179,20 @@ export class AccountingService {
             return { message: 'Default Chart of Accounts already seeded' }
         }
 
+        const accountTypeCount = await db.accountType.count()
+        if (accountTypeCount === 0) {
+            await db.accountType.createMany({
+                data: [
+                    { name: 'ASSET' },
+                    { name: 'LIABILITY' },
+                    { name: 'EQUITY' },
+                    { name: 'INCOME' },
+                    { name: 'EXPENSE' },
+                ],
+                skipDuplicates: true,
+            })
+        }
+
         const company = await db.company.findUnique({ where: { id: companyId } })
         const currency = company?.currency ?? 'USD'
         const industry = company?.industry ?? null
