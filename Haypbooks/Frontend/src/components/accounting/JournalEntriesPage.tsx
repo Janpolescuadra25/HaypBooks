@@ -213,15 +213,20 @@ export default function JournalEntriesPage() {
               filtered.map(entry => {
                 const debit = entry.totalDebit ?? entry.lines?.reduce((s, l) => s + (l.debit ?? 0), 0) ?? 0
                 const credit = entry.totalCredit ?? entry.lines?.reduce((s, l) => s + (l.credit ?? 0), 0) ?? 0
+                const balanced = Math.abs(debit - credit) <= 0.005
                 return (
                   <tr key={entry.id} className="border-b border-gray-100 hover:bg-blue-50/20 transition-colors">
                     <td className="px-4 py-2.5 font-mono text-xs text-slate-700 border-r border-gray-100">{entry.entryNumber ?? entry.id.slice(0, 8)}</td>
                     <td className="px-4 py-2.5 text-slate-700 border-r border-gray-100">{fmtDate(entry.date)}</td>
                     <td className="px-4 py-2.5 text-slate-500 hidden md:table-cell truncate max-w-[200px] border-r border-gray-100">{entry.memo ?? '—'}</td>
                     <td className="px-4 py-2.5 border-r border-gray-100">
-                      <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[entry.status] ?? ''}`}>
-                        {entry.status}
-                      </span>
+                      {!balanced ? (
+                        <span className="bg-red-50 text-red-600 px-2 py-0.5 text-xs font-semibold rounded-full border border-red-200">Out of Balance</span>
+                      ) : (
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[entry.status] ?? ''}`}>
+                          {entry.status}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100">{fmt(debit)}</td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100">{fmt(credit)}</td>
@@ -229,7 +234,14 @@ export default function JournalEntriesPage() {
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => router.push(`/accounting/core-accounting/journal-entries/${entry.id}`)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="View"><Eye size={14} /></button>
                         {entry.status === 'DRAFT' && (
-                          <button onClick={() => handlePost(entry.id)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="Post"><Send size={14} /></button>
+                          <button
+                            onClick={() => handlePost(entry.id)}
+                            disabled={!balanced}
+                            className={`p-1 rounded ${balanced ? 'hover:bg-emerald-100 text-emerald-600' : 'text-gray-300 cursor-not-allowed'}`}
+                            title={balanced ? 'Post' : 'Cannot post out-of-balance entry'}
+                          >
+                            <Send size={14} />
+                          </button>
                         )}
                         {entry.status === 'POSTED' && (
                           <button onClick={() => handleVoid(entry.id)} className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600" title="Void"><Ban size={14} /></button>
