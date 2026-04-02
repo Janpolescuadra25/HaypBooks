@@ -52,7 +52,6 @@ export default function EditJournalEntryPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [entry, setEntry] = useState<JournalEntry | null>(null)
-  const [activityOpen, setActivityOpen] = useState(false)
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [memo, setMemo] = useState('')
@@ -196,21 +195,12 @@ export default function EditJournalEntryPage() {
               Last modified by <span className="font-semibold text-slate-900">{entry?.updatedBy?.name ?? 'Unknown'}</span> on <span className="font-semibold text-slate-900">{fmtDate(entry?.updatedAt)}</span>
             </div>
             <button
-              onClick={() => setActivityOpen(open => !open)}
+              onClick={() => router.push(`/accounting/core-accounting/journal-entries/${entryId}/activity`)}
               className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline"
             >
-              {activityOpen ? 'Hide Activity Log' : 'View Activity Log'}
+              View Activity Log
             </button>
           </div>
-          {activityOpen && (
-            <div className="mt-3 bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
-              <div className="mb-2 font-semibold text-slate-700">Activity Log</div>
-              <ul className="space-y-1">
-                <li>Created: {fmtDate(entry?.createdAt)} by {entry?.createdBy?.name ?? 'Unknown'}</li>
-                <li>Last Modified: {fmtDate(entry?.updatedAt)} by {entry?.updatedBy?.name ?? 'Unknown'}</li>
-              </ul>
-            </div>
-          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-emerald-100 p-6">

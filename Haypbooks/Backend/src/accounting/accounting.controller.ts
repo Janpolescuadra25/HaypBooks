@@ -126,6 +126,15 @@ export class AccountingController {
         return this.svc.getJournalEntry(req.user.userId, companyId, jeId)
     }
 
+    @Get('journal-entries/:jeId/activity')
+    async getJournalEntryActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('jeId') jeId: string,
+    ) {
+        return this.svc.getJournalEntryActivity(req.user.userId, companyId, jeId)
+    }
+
     @Put('journal-entries/:jeId')
     async updateJournalEntry(
         @Req() req: any,
