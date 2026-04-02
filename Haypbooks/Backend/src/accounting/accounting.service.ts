@@ -536,12 +536,20 @@ export class AccountingService {
 
     async listJournalEntries(userId: string, companyId: string, opts: any) {
         await this.assertCompanyAccess(userId, companyId)
-        return this.repo.findJournalEntries(companyId, {
+        const entries = await this.repo.findJournalEntries(companyId, {
             status: opts.status,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
+        })
+
+        // Force totals from raw lines to avoid old aggregation mismatch.
+        return (entries || []).map((e: any) => {
+            const lines = e.lines || []
+            const totalDebit = lines.reduce((sum: number, l: any) => sum + (Number(l.debit) || 0), 0)
+            const totalCredit = lines.reduce((sum: number, l: any) => sum + (Number(l.credit) || 0), 0)
+            return { ...e, lines, totalDebit, totalCredit }
         })
     }
 
