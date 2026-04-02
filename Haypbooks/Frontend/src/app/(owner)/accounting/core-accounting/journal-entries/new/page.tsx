@@ -212,7 +212,7 @@ export default function NewJournalEntryPage() {
                       <select
                         value={line.accountId}
                         onChange={e => updateLine(idx, 'accountId', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white max-h-48 overflow-y-auto"
+                        className="max-h-48 overflow-y-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                       >
                         <option value="">Select account…</option>
                         {accounts.map(a => (
