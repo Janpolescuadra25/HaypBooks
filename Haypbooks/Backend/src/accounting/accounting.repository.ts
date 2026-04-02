@@ -222,7 +222,7 @@ export class AccountingRepository {
             throw new Error(`Journal entry is not balanced: debits ${totalDebits} ≠ credits ${totalCredits}`)
         }
 
-        return this.prisma.journalEntry.create({
+        const created = await this.prisma.journalEntry.create({
             data: {
                 workspaceId: data.workspaceId,
                 companyId: data.companyId,
@@ -244,6 +244,32 @@ export class AccountingRepository {
             },
             include: { lines: true },
         })
+        // Best-effort audit log — does not block or roll back the create
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: data.workspaceId,
+                companyId: data.companyId,
+                userId: data.createdById,
+                action: 'CREATE',
+                tableName: 'JournalEntry',
+                recordId: created.id,
+                changes: {
+                    postingStatus: data.postingStatus ?? 'DRAFT',
+                    date: data.date.toISOString(),
+                    description: data.description ?? null,
+                    lineCount: data.lines.length,
+                },
+                lines: {
+                    create: [
+                        { fieldName: 'postingStatus', oldValue: null, newValue: data.postingStatus ?? 'DRAFT', changeType: 'CREATE' },
+                        { fieldName: 'date', oldValue: null, newValue: data.date.toISOString().split('T')[0], changeType: 'CREATE' },
+                        ...(data.description ? [{ fieldName: 'description', oldValue: null, newValue: data.description, changeType: 'CREATE' as const }] : []),
+                        { fieldName: 'lines', oldValue: null, newValue: JSON.stringify(data.lines.map(l => ({ accountId: l.accountId, debit: l.debit, credit: l.credit }))), changeType: 'CREATE' as const },
+                    ],
+                },
+            },
+        }).catch(() => {})
+        return created
     }
 
     async updateJournalEntry(companyId: string, jeId: string, data: {
@@ -265,7 +291,7 @@ export class AccountingRepository {
             }
         }
 
-        return this.prisma.$transaction(async (tx) => {
+        const updated = await this.prisma.$transaction(async (tx) => {
             if (data.lines) {
                 await tx.journalEntryLine.deleteMany({ where: { journalId: jeId } })
             }
@@ -293,6 +319,29 @@ export class AccountingRepository {
                 include: { lines: true },
             })
         })
+        const auditLines: any[] = []
+        if (data.date && je.date.toISOString() !== data.date.toISOString()) {
+            auditLines.push({ fieldName: 'date', oldValue: je.date.toISOString().split('T')[0], newValue: data.date.toISOString().split('T')[0], changeType: 'UPDATE' })
+        }
+        if (data.description !== undefined && je.description !== data.description) {
+            auditLines.push({ fieldName: 'description', oldValue: je.description ?? '', newValue: data.description ?? '', changeType: 'UPDATE' })
+        }
+        if (data.lines) {
+            auditLines.push({ fieldName: 'lines', oldValue: null, newValue: JSON.stringify(data.lines.map(l => ({ accountId: l.accountId, debit: l.debit, credit: l.credit }))), changeType: 'UPDATE' })
+        }
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: je.workspaceId,
+                companyId,
+                userId: data.updatedById,
+                action: 'UPDATE',
+                tableName: 'JournalEntry',
+                recordId: jeId,
+                changes: JSON.stringify({ date: data.date, description: data.description, lineCount: data.lines?.length }) as any,
+                ...(auditLines.length > 0 ? { lines: { create: auditLines } } : {}),
+            },
+        }).catch(() => {})
+        return updated
     }
 
     async postJournalEntry(companyId: string, jeId: string, approvedById: string) {
@@ -307,7 +356,7 @@ export class AccountingRepository {
         // Generate entry number if missing
         const entryNumber = je.entryNumber ?? `JE-${Date.now()}`
 
-        return this.prisma.$transaction(async (tx) => {
+        const posted = await this.prisma.$transaction(async (tx) => {
             // Update balances on each account
             for (const line of je.lines) {
                 const acct = await tx.account.findUnique({ where: { id: line.accountId } })
@@ -333,6 +382,19 @@ export class AccountingRepository {
                 include: { lines: { include: { account: { select: { id: true, code: true, name: true } } } } },
             })
         })
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: je.workspaceId,
+                companyId,
+                userId: approvedById,
+                action: 'POST',
+                tableName: 'JournalEntry',
+                recordId: jeId,
+                changes: { postingStatus: 'POSTED', entryNumber },
+                lines: { create: [{ fieldName: 'postingStatus', oldValue: je.postingStatus, newValue: 'POSTED', changeType: 'UPDATE' }] },
+            },
+        }).catch(() => {})
+        return posted
     }
 
     async voidJournalEntry(companyId: string, jeId: string, voidedById: string, reason: string) {
@@ -348,7 +410,7 @@ export class AccountingRepository {
         }
 
         // For POSTED entries: create a reversing entry and mark original as VOID
-        return this.prisma.$transaction(async (tx) => {
+        const voided = await this.prisma.$transaction(async (tx) => {
             // Reverse balances
             for (const line of je.lines) {
                 const acct = await tx.account.findUnique({ where: { id: line.accountId } })
@@ -387,6 +449,32 @@ export class AccountingRepository {
                 },
                 include: { lines: true },
             })
+        })
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: je.workspaceId,
+                companyId,
+                userId: voidedById,
+                action: 'VOID',
+                tableName: 'JournalEntry',
+                recordId: jeId,
+                changes: { reason },
+                lines: { create: [{ fieldName: 'postingStatus', oldValue: 'POSTED', newValue: 'VOIDED', changeType: 'UPDATE' }] },
+            },
+        }).catch(() => {})
+        return voided
+    }
+
+    // ─── Journal Entry Activity ────────────────────────────────────────────────
+
+    async findJournalEntryAuditLogs(companyId: string, jeId: string) {
+        return this.prisma.auditLog.findMany({
+            where: { companyId, tableName: 'JournalEntry', recordId: jeId },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                lines: { where: { isSensitive: false }, orderBy: { fieldName: 'asc' } },
+            },
+            orderBy: { createdAt: 'asc' },
         })
     }
 

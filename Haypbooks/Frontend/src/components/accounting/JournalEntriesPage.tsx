@@ -211,8 +211,8 @@ export default function JournalEntriesPage() {
               </tr>
             ) : (
               filtered.map(entry => {
-                const debit = entry.lines?.reduce((s, l) => s + (l.debit ?? 0), 0) ?? 0
-                const credit = entry.lines?.reduce((s, l) => s + (l.credit ?? 0), 0) ?? 0
+                const debit = entry.lines?.reduce((s, l) => s + Number(l.debit ?? 0), 0) ?? 0
+                const credit = entry.lines?.reduce((s, l) => s + Number(l.credit ?? 0), 0) ?? 0
                 const balanced = Math.abs(debit - credit) <= 0.005
                 return (
                   <tr key={entry.id} className="border-b border-gray-100 hover:bg-blue-50/20 transition-colors">

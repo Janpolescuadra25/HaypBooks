@@ -560,6 +560,35 @@ export class AccountingService {
         return je
     }
 
+    async getJournalEntryActivity(userId: string, companyId: string, jeId: string) {
+        await this.assertCompanyAccess(userId, companyId)
+        const je = await this.repo.findJournalEntryById(companyId, jeId)
+        if (!je) throw new NotFoundException('Journal entry not found')
+        const auditLogs = await this.repo.findJournalEntryAuditLogs(companyId, jeId)
+        // Synthesise a CREATE event from the JE itself if no audit logs exist
+        const events = auditLogs.length > 0 ? auditLogs : [
+            {
+                id: `synth-${je.id}-created`,
+                action: 'CREATE',
+                createdAt: je.createdAt,
+                user: (je as any).createdBy ?? null,
+                changes: null,
+                lines: [],
+                synthetic: true,
+            },
+            ...(je.updatedAt && je.updatedAt.getTime() !== je.createdAt.getTime() ? [{
+                id: `synth-${je.id}-updated`,
+                action: 'UPDATE',
+                createdAt: je.updatedAt,
+                user: (je as any).updatedBy ?? null,
+                changes: null,
+                lines: [],
+                synthetic: true,
+            }] : []),
+        ]
+        return { entry: je, events }
+    }
+
     async createJournalEntry(userId: string, companyId: string, data: any) {
         await this.assertCompanyAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
