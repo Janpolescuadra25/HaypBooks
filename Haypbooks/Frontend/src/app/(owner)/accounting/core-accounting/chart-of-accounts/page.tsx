@@ -280,11 +280,9 @@ function AccountModal({
     code: account?.code ?? '',
     name: account?.name ?? '',
     type: (account?.type ?? 'Asset') as AccountType,
-    normalSide: (account?.normalSide ?? 'Debit') as NormalSide,
     parentId: account?.parentId ?? defaultParentId ?? '',
     description: account?.description ?? '',
     isHeader: account?.isHeader ?? false,
-    openingBalance: 0,
   })
 
   const parentType = useMemo(() => {
@@ -301,7 +299,7 @@ function AccountModal({
     if (parentType && parentType !== newType) {
       return
     }
-    setForm(f => ({ ...f, type: newType, normalSide: AUTO_NORMAL_SIDE[newType] }))
+    setForm(f => ({ ...f, type: newType }))
   }
 
   const hasTransactions = Boolean(account?.balance && account.balance !== 0)
@@ -340,12 +338,7 @@ function AccountModal({
       code: form.code.trim(),
       name: form.name.trim(),
       type: form.type,
-      normalSide: form.normalSide,
-      parentId: form.parentId || null,
-      description: form.description,
-      isHeader: form.isHeader,
     }
-    if (!isEdit) payload.openingBalance = form.openingBalance
     setSaving(true)
     setError('')
     try {
@@ -473,23 +466,7 @@ function AccountModal({
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Normal Side <span className="text-rose-500">*</span></label>
-            <div className="flex gap-4">
-              {(['Debit', 'Credit'] as NormalSide[]).map(side => (
-                <label key={side} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="normalSide"
-                    checked={form.normalSide === side}
-                    onChange={() => setForm(f => ({ ...f, normalSide: side }))}
-                    className="accent-emerald-600"
-                  />
-                  <span className="text-sm text-slate-700 font-medium">{side}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">Description</label>
@@ -502,22 +479,7 @@ function AccountModal({
             />
           </div>
 
-          {!isEdit && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Opening Balance ({currency})</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">{currency}</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.openingBalance || ''}
-                  onChange={e => setForm(f => ({ ...f, openingBalance: parseFloat(e.target.value) || 0 }))}
-                  className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-mono"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-          )}
+
 
           <label className="flex items-center gap-3 cursor-pointer">
             <input
