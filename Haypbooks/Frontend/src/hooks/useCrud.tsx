@@ -21,7 +21,7 @@
  */
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from './useCompanyId'
 import type { CrudField } from '@/components/owner/CrudModal'
@@ -102,6 +102,10 @@ export function useCrud<T extends Record<string, any> = any>(
 
   const { companyId } = useCompanyId()
 
+  // Keep transform in a ref so it never invalidates fetchData's closure
+  const transformRef = useRef(transform)
+  transformRef.current = transform
+
   // Data state
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(autoFetch)
@@ -149,7 +153,7 @@ export function useCrud<T extends Record<string, any> = any>(
     setError(null)
     try {
       const { data: res } = await fetchWithRetries(() => apiClient.get(endpoint(companyId)), 3, 3000)
-      const items = transform ? transform(res) : Array.isArray(res) ? res : res?.items || res?.records || res?.data || []
+      const items = transformRef.current ? transformRef.current(res) : Array.isArray(res) ? res : res?.items || res?.records || res?.data || []
       setData(items)
       setPagination(res?.pagination ?? null)
     } catch (err: any) {
@@ -161,7 +165,7 @@ export function useCrud<T extends Record<string, any> = any>(
     } finally {
       setLoading(false)
     }
-  }, [companyId, endpoint, transform, fetchWithRetries])
+  }, [companyId, endpoint, fetchWithRetries])
 
   useEffect(() => {
     if (autoFetch) fetchData()

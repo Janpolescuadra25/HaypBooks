@@ -66,6 +66,18 @@ export class ContactsRepository {
         },
       })
 
+      if (data.email) {
+        await tx.contactEmail.create({
+          data: { contactId: contact.id, email: data.email, type: 'WORK', isPrimary: true },
+        })
+      }
+
+      if (data.phone) {
+        await tx.contactPhone.create({
+          data: { contactId: contact.id, phone: data.phone, type: 'WORK', isPrimary: true },
+        })
+      }
+
       return tx.customer.create({
         data: {
           workspaceId,
@@ -75,7 +87,7 @@ export class ContactsRepository {
           creditLimit: data.creditLimit ?? null,
           groupId: data.groupId ?? null,
         },
-        include: { contact: true },
+        include: { contact: { include: { contactEmails: true, contactPhones: true } } },
       })
     })
   }
@@ -89,6 +101,23 @@ export class ContactsRepository {
         await tx.contact.update({ where: { id }, data: { displayName: data.displayName } })
       }
 
+      if (data.email) {
+        await tx.contactEmail.upsert({
+          where: { contactId_email: { contactId: id, email: data.email } },
+          create: { contactId: id, email: data.email, type: 'WORK', isPrimary: true },
+          update: { type: 'WORK' },
+        })
+      }
+
+      if (data.phone) {
+        const existing = await tx.contactPhone.findFirst({ where: { contactId: id, isPrimary: true } })
+        if (existing) {
+          await tx.contactPhone.update({ where: { id: existing.id }, data: { phone: data.phone } })
+        } else {
+          await tx.contactPhone.create({ data: { contactId: id, phone: data.phone, type: 'WORK', isPrimary: true } })
+        }
+      }
+
       return tx.customer.update({
         where: { contactId: id },
         data: {
@@ -97,7 +126,7 @@ export class ContactsRepository {
           creditLimit: data.creditLimit ?? undefined,
           groupId: data.groupId ?? undefined,
         },
-        include: { contact: true },
+        include: { contact: { include: { contactEmails: true, contactPhones: true } } },
       })
     })
   }
