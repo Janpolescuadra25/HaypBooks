@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Param, Query, Body, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common'
+import { SkipThrottle } from '@nestjs/throttler'
 import { ContactsService } from './contacts.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
@@ -12,6 +13,7 @@ export class ContactsController {
   constructor(private readonly svc: ContactsService) {}
 
   @Get('customers')
+  @SkipThrottle()
   async findCustomers(
     @Req() req: any,
     @Param('companyId') companyId: string,
@@ -36,6 +38,7 @@ export class ContactsController {
   }
 
   @Get('customers/:id')
+  @SkipThrottle()
   async getCustomer(
     @Req() req: any,
     @Param('companyId') companyId: string,

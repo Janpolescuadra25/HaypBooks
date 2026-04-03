@@ -65,7 +65,10 @@ export default function CustomersPage() {
       const items = Array.isArray(data) ? data : data?.items || data?.records || data?.data || []
       return items.map((c: any) => ({
         ...c,
-        displayName: c.displayName || c.name || c.customerName || '',
+        id: c.id || c.contactId,
+        displayName: c.displayName || c.contact?.displayName || c.name || c.customerName || '',
+        email: c.email || c.contact?.contactEmails?.[0]?.email || c.contact?.email || '',
+        phone: c.phone || c.contact?.contactPhones?.[0]?.phone || c.contact?.phone || '',
         totalSales: c.totalSales || c.salesTotal || 0,
         openBalance: c.openBalance || c.balance || 0,
         paymentTerms: c.paymentTerms || c.terms || 'NET_30',
