@@ -59,6 +59,31 @@ export class ContactsService {
     return this.repo.softDeleteCustomer(workspaceId, id, userId)
   }
 
+  async getCustomerAuditLog(userId: string, companyId: string, customerId: string) {
+    await this.assertCompanyAccess(userId, companyId)
+    const workspaceId = await this.getWorkspaceId(companyId)
+    const logs = await this.prisma.auditLog.findMany({
+      where: { workspaceId, recordId: customerId },
+      include: { user: { select: { id: true, name: true, email: true } }, lines: true },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    })
+    return logs.map(log => ({
+      id: log.id,
+      action: log.action,
+      tableName: log.tableName,
+      performedBy: log.user?.name || log.user?.email || 'System',
+      performedAt: log.createdAt,
+      changes: log.changes,
+      lines: log.lines.map(l => ({
+        fieldName: l.fieldName,
+        oldValue: l.oldValue,
+        newValue: l.newValue,
+        changeType: l.changeType,
+      })),
+    }))
+  }
+
   async findVendors(userId: string, companyId: string, opts: { search?: string; page?: number; limit?: number }) {
     await this.assertCompanyAccess(userId, companyId)
     const workspaceId = await this.getWorkspaceId(companyId)

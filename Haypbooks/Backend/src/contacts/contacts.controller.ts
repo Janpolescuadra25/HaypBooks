@@ -66,6 +66,16 @@ export class ContactsController {
     return this.svc.softDeleteCustomer(req.user.userId, companyId, id)
   }
 
+  @Get('customers/:id/audit-log')
+  @SkipThrottle()
+  async getCustomerAuditLog(
+    @Req() req: any,
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.svc.getCustomerAuditLog(req.user.userId, companyId, id)
+  }
+
   @Get('vendors')
   async findVendors(
     @Req() req: any,

@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
-import { Building2, Eye, Pencil, Trash2, Download, RefreshCw, Plus } from 'lucide-react'
+import React, { useCallback } from 'react'
+import { Building2, Eye, Pencil, Trash2, Download, RefreshCw, Plus, Clock } from 'lucide-react'
 import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
 import CrudModal from '@/components/owner/CrudModal'
+import CustomerAuditLog from '@/components/owner/CustomerAuditLog'
 import { useCrud } from '@/hooks/useCrud'
 import { statusColors } from '@/components/owner/statusColors'
 import { badgeColors } from '@/lib/badge-colors'
@@ -50,6 +51,14 @@ export default function CustomersPage() {
   const [limit, setLimit] = React.useState(50)
   const [search, setSearch] = React.useState('')
 
+  // Audit log state
+  const [auditCustomerId, setAuditCustomerId] = React.useState<string | null>(null)
+  const [auditCustomerName, setAuditCustomerName] = React.useState<string | undefined>(undefined)
+  const [auditOpen, setAuditOpen] = React.useState(false)
+
+  // Search input ref for keyboard shortcut
+  const searchRef = React.useRef<HTMLInputElement | null>(null)
+
   const endpoint = React.useCallback(
     (companyId: string) =>
       `/companies/${companyId}/contacts/customers?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
@@ -61,7 +70,7 @@ export default function CustomersPage() {
     fields: customerFields,
     entityName: 'Customer',
     searchableFields: ['displayName', 'email', 'phone', 'companyName'],
-    transform: (data: any) => {
+    transform: useCallback((data: any) => {
       const items = Array.isArray(data) ? data : data?.items || data?.records || data?.data || []
       return items.map((c: any) => ({
         ...c,
@@ -74,8 +83,32 @@ export default function CustomersPage() {
         paymentTerms: c.paymentTerms || c.terms || 'NET_30',
         status: c.status || (c.isActive !== false ? 'Active' : 'Inactive'),
       }))
-    },
+    }, []),
   })
+
+  // Keyboard shortcuts: Ctrl/Cmd+N → new customer, Ctrl/Cmd+K → focus search, Escape → close audit
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey
+      if (meta && e.key === 'n' && !crud.modalOpen && !auditOpen) {
+        e.preventDefault()
+        crud.openCreate()
+      }
+      if (meta && e.key === 'k') {
+        e.preventDefault()
+        const input = document.querySelector<HTMLInputElement>('input[placeholder*="Search"]')
+        input?.focus()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [crud.modalOpen, auditOpen, crud.openCreate])
+
+  const openAuditLog = useCallback((row: any) => {
+    setAuditCustomerId(row.id)
+    setAuditCustomerName(row.displayName)
+    setAuditOpen(true)
+  }, [])
 
   return (
     <>
@@ -119,6 +152,32 @@ export default function CustomersPage() {
         onRefresh={crud.refetch}
         onSearch={setSearch}
         onRowClick={(row) => crud.openView(row)}
+        rowInlineActions={(row) => [
+          {
+            icon: <Eye size={14} />,
+            title: 'View customer (V)',
+            onClick: () => crud.openView(row),
+            colorClass: 'text-slate-400 hover:text-blue-600 hover:bg-blue-50',
+          },
+          {
+            icon: <Pencil size={14} />,
+            title: 'Edit customer (E)',
+            onClick: () => crud.openEdit(row),
+            colorClass: 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50',
+          },
+          {
+            icon: <Clock size={14} />,
+            title: 'View audit history',
+            onClick: () => openAuditLog(row),
+            colorClass: 'text-slate-400 hover:text-purple-600 hover:bg-purple-50',
+          },
+          {
+            icon: <Trash2 size={14} />,
+            title: 'Delete customer',
+            onClick: () => crud.openDelete(row),
+            colorClass: 'text-slate-400 hover:text-rose-600 hover:bg-rose-50',
+          },
+        ]}
         rowMenuItems={(row) => [
           crud.viewAction(row),
           crud.editAction(row),
@@ -145,6 +204,14 @@ export default function CustomersPage() {
         onSubmit={crud.submitForm}
         onDelete={crud.deleteRecord}
         loading={crud.saving}
+      />
+
+      {/* ── Audit Log Drawer ── */}
+      <CustomerAuditLog
+        customerId={auditCustomerId}
+        customerName={auditCustomerName}
+        isOpen={auditOpen}
+        onClose={() => setAuditOpen(false)}
       />
     </>
   )
