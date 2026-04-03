@@ -12,8 +12,8 @@ import AccountSelect from '@/components/accounting/AccountSelect'
 
 interface JELine {
   accountId: string
-  debit: number
-  credit: number
+  debit: string
+  credit: string
   description: string
 }
 
@@ -34,8 +34,8 @@ export default function NewJournalEntryPage() {
   const [memo, setMemo] = useState('')
   const [reference, setReference] = useState('')
   const [lines, setLines] = useState<JELine[]>([
-    { accountId: '', debit: 0, credit: 0, description: '' },
-    { accountId: '', debit: 0, credit: 0, description: '' },
+    { accountId: '', debit: '', credit: '', description: '' },
+    { accountId: '', debit: '', credit: '', description: '' },
   ])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [saving, setSaving] = useState(false)
@@ -66,21 +66,20 @@ export default function NewJournalEntryPage() {
   const removeLine = (idx: number) =>
     setLines(prev => prev.filter((_, i) => i !== idx))
 
-  const updateLine = (idx: number, field: keyof JELine, value: string | number) =>
+  const updateLine = (idx: number, field: keyof JELine, value: string) =>
     setLines(prev => prev.map((l, i) => {
       if (i !== idx) return l
-      const parsed = (field === 'debit' || field === 'credit') ? Number(value) : value
-      const updatedLine = { ...l, [field]: parsed }
+      const updatedLine = { ...l, [field]: value }
       if (field === 'debit') {
-        const debitValue = Number(parsed)
-        if (debitValue > 0) {
-          return { ...updatedLine, credit: 0 }
+        const debitValue = Number(value)
+        if (!Number.isNaN(debitValue) && debitValue > 0) {
+          return { ...updatedLine, credit: '' }
         }
       }
       if (field === 'credit') {
-        const creditValue = Number(parsed)
-        if (creditValue > 0) {
-          return { ...updatedLine, debit: 0 }
+        const creditValue = Number(value)
+        if (!Number.isNaN(creditValue) && creditValue > 0) {
+          return { ...updatedLine, debit: '' }
         }
       }
       return updatedLine
@@ -89,6 +88,13 @@ export default function NewJournalEntryPage() {
   const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0)
   const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0)
   const balanced = Math.abs(totalDebit - totalCredit) < 0.005 && totalDebit > 0
+
+  const formatAmount = (value: string) => {
+    if (!value || value.trim() === '') return ''
+    const n = Number(value)
+    return Number.isNaN(n) ? '' : n.toFixed(2)
+  }
+
 
   const handleSave = async (status: 'DRAFT' | 'POSTED') => {
     if (!balanced) { setError('Debits must equal credits.'); return }
@@ -230,8 +236,9 @@ export default function NewJournalEntryPage() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={line.debit ? Number(line.debit).toFixed(2) : ''}
+                        value={line.debit}
                         onChange={e => updateLine(idx, 'debit', e.target.value)}
+                        onBlur={e => updateLine(idx, 'debit', formatAmount(e.target.value))}
                         placeholder="0.00"
                         className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                       />
@@ -241,8 +248,9 @@ export default function NewJournalEntryPage() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={line.credit ? Number(line.credit).toFixed(2) : ''}
+                        value={line.credit}
                         onChange={e => updateLine(idx, 'credit', e.target.value)}
+                        onBlur={e => updateLine(idx, 'credit', formatAmount(e.target.value))}
                         placeholder="0.00"
                         className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                       />
