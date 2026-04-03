@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  Plus, Search, Eye, X, AlertCircle, Loader2, FileText, Send, Ban, DollarSign
+  Plus, Search, Eye, X, AlertCircle, Loader2, FileText, Send, Ban, DollarSign,
+  ReceiptText, Clock, CheckCircle2, TrendingUp
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -58,8 +59,8 @@ export default function InvoicesPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/invoices`)
-      setInvoices(Array.isArray(data) ? data : data.invoices ?? [])
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices`)
+      setInvoices(Array.isArray(data) ? data : data.items ?? data.invoices ?? [])
       setError('')
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load invoices') }
     finally { setLoading(false) }
@@ -82,13 +83,13 @@ export default function InvoicesPage() {
 
   const handleSend = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/invoices/${id}/send`); fetchInvoices() }
+    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`); fetchInvoices() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to send') }
   }
 
   const handleVoid = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/invoices/${id}/void`); fetchInvoices() }
+    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`); fetchInvoices() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
   }
 
@@ -106,17 +107,45 @@ export default function InvoicesPage() {
   }
   if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
 
+  const stats = {
+    total: invoices.length,
+    draft: invoices.filter(i => i.status === 'DRAFT').length,
+    sent: invoices.filter(i => i.status === 'SENT').length,
+    overdue: invoices.filter(i => i.status === 'OVERDUE').length,
+    totalAmount: invoices.reduce((s, i) => s + (i.total || 0), 0),
+  }
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Invoices</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} invoices</p>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} of {invoices.length} invoices</p>
         </div>
         <button onClick={() => setShowForm(true)}
           className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
           <Plus size={16} /> New Invoice
         </button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+          <div className="flex items-center gap-2 mb-1"><ReceiptText size={16} className="text-emerald-500" /><span className="text-xs text-emerald-600/60">Total</span></div>
+          <p className="text-2xl font-bold text-emerald-900">{stats.total}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+          <div className="flex items-center gap-2 mb-1"><Clock size={16} className="text-gray-400" /><span className="text-xs text-gray-500">Draft</span></div>
+          <p className="text-2xl font-bold text-gray-700">{stats.draft}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+          <div className="flex items-center gap-2 mb-1"><CheckCircle2 size={16} className="text-blue-500" /><span className="text-xs text-blue-600/60">Sent</span></div>
+          <p className="text-2xl font-bold text-blue-700">{stats.sent}</p>
+          {stats.overdue > 0 && <p className="text-xs text-red-500 mt-0.5">{stats.overdue} overdue</p>}
+        </div>
+        <div className="bg-white rounded-xl border border-emerald-100 p-4">
+          <div className="flex items-center gap-2 mb-1"><TrendingUp size={16} className="text-emerald-500" /><span className="text-xs text-emerald-600/60">Total Amount</span></div>
+          <p className="text-lg font-bold text-emerald-900">{fmt(stats.totalAmount)}</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
@@ -255,7 +284,7 @@ function InvoiceFormModal({ companyId, onClose, onSaved }: { companyId: string; 
   const [error, setError] = useState('')
 
   useEffect(() => {
-    apiClient.get(`/companies/${companyId}/customers`).then(({ data }) => setCustomers(Array.isArray(data) ? data : data.customers ?? [])).catch(() => {})
+    apiClient.get(`/companies/${companyId}/contacts/customers`).then(({ data }) => setCustomers(Array.isArray(data) ? data : data.items ?? data.customers ?? [])).catch(() => {})
   }, [companyId])
 
   const addItem = () => setItems(p => [...p, { description: '', quantity: 1, unitPrice: 0 }])
@@ -272,7 +301,7 @@ function InvoiceFormModal({ companyId, onClose, onSaved }: { companyId: string; 
     if (validItems.length === 0) { setError('Add at least one item.'); return }
     setSaving(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/invoices`, {
+      await apiClient.post(`/companies/${companyId}/ar/invoices`, {
         customerId, date, dueDate, memo,
         items: validItems.map(it => ({ description: it.description, quantity: Number(it.quantity), unitPrice: Number(it.unitPrice), amount: Number(it.quantity) * Number(it.unitPrice) })),
       })

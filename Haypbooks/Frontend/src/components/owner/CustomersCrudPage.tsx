@@ -6,6 +6,7 @@ import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
 import CrudModal from '@/components/owner/CrudModal'
 import { useCrud } from '@/hooks/useCrud'
 import { statusColors } from '@/components/owner/statusColors'
+import { badgeColors } from '@/lib/badge-colors'
 import type { CrudField } from '@/components/owner/CrudModal'
 
 // ─── Field Definitions ────────────────────────────────────────────────────────
@@ -45,8 +46,18 @@ const columns = [
 // ─── Page Component ───────────────────────────────────────────────────────────
 
 export default function CustomersPage() {
+  const [page, setPage] = React.useState(1)
+  const [limit, setLimit] = React.useState(50)
+  const [search, setSearch] = React.useState('')
+
+  const endpoint = React.useCallback(
+    (companyId: string) =>
+      `/companies/${companyId}/contacts/customers?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+    [page, limit, search],
+  )
+
   const crud = useCrud({
-    endpoint: (companyId) => `/companies/${companyId}/customers`,
+    endpoint,
     fields: customerFields,
     entityName: 'Customer',
     searchableFields: ['displayName', 'email', 'phone', 'companyName'],
@@ -73,7 +84,7 @@ export default function CustomersPage() {
         data={crud.filteredData}
         loading={crud.loading}
         searchable
-        searchableFields={[]}
+        searchableFields={['displayName','email','phone','companyName']}
         searchablePlaceholder="Search customers by name, email, or phone..."
         summaryCards={[
           { label: 'Total Customers', value: crud.data.length, icon: <Building2 size={16} />, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
@@ -103,6 +114,7 @@ export default function CustomersPage() {
         onCreate={crud.openCreate}
         showExport
         onRefresh={crud.refetch}
+        onSearch={setSearch}
         onRowClick={(row) => crud.openView(row)}
         rowMenuItems={(row) => [
           crud.viewAction(row),
@@ -112,6 +124,11 @@ export default function CustomersPage() {
         emptyTitle="No customers yet"
         emptyDescription="Add your first customer to start tracking sales and invoices."
         emptyAction={{ label: 'Add Customer', onClick: crud.openCreate }}
+        footer={
+          <div className="px-4 py-2 text-xs text-slate-500">
+            Page {crud.pagination?.page ?? 1} of {crud.pagination?.totalPages ?? 1} • Total {crud.pagination?.total ?? crud.data.length}
+          </div>
+        }
       />
 
       {/* ── CRUD Modal ── */}

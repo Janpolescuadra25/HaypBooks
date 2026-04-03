@@ -5,7 +5,8 @@ import { Store, Eye, Pencil, Trash2, Download, RefreshCw, Plus } from 'lucide-re
 import OwnerPageTemplate from '@/components/owner/OwnerPageTemplate'
 import CrudModal from '@/components/owner/CrudModal'
 import { useCrud } from '@/hooks/useCrud'
-import { statusColors, badgeColors } from '@/components/owner/statusColors'
+import { statusColors } from '@/components/owner/statusColors'
+import { badgeColors } from '@/lib/badge-colors'
 import type { CrudField } from '@/components/owner/CrudModal'
 
 const vendorFields: CrudField[] = [
@@ -38,7 +39,7 @@ const columns = [
 
 export default function VendorsCrudPage() {
   const crud = useCrud({
-    endpoint: (companyId) => `/companies/${companyId}/vendors`,
+    endpoint: (companyId) => `/companies/${companyId}/contacts/vendors`,
     fields: vendorFields,
     entityName: 'Vendor',
     searchableFields: ['displayName', 'email', 'phone', 'companyName'],

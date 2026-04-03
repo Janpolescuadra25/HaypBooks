@@ -302,6 +302,16 @@ export class ArService {
         return result
     }
 
+    async applyPaymentToInvoices(userId: string, companyId: string, paymentId: string, allocations: Array<{ invoiceId: string; amount: number }>) {
+        await this.assertAccess(userId, companyId)
+        const payment = await this.repo.findPaymentById(companyId, paymentId)
+        if (!payment) throw new NotFoundException('Payment not found')
+        const totalAlloc = allocations.reduce((s, a) => s + Number(a.amount), 0)
+        if (totalAlloc > Number(payment.amount) + 0.01) throw new BadRequestException('Total allocations exceed payment amount')
+        const result = await this.repo.applyPaymentToInvoices(companyId, paymentId, allocations)
+        return result
+    }
+
     // ─── AR Aging ─────────────────────────────────────────────────────────────
 
     async getArAging(userId: string, companyId: string) {

@@ -69,6 +69,9 @@ export interface UseCrudResult<T = any> {
   setSearch: (s: string) => void
   filteredData: T[]
 
+  // Pagination
+  pagination: { page: number; limit: number; total: number; totalPages: number } | null
+
   // Selection
   selectedIds: string[]
   toggleSelectAll: () => void
@@ -104,6 +107,7 @@ export function useCrud<T extends Record<string, any> = any>(
   const [loading, setLoading] = useState(autoFetch)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [pagination, setPagination] = useState<{ page: number; limit: number; total: number; totalPages: number } | null>(null)
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -116,21 +120,48 @@ export function useCrud<T extends Record<string, any> = any>(
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  const fetchWithRetries = useCallback(async (fn: () => Promise<any>, retries = 3, delayMs = 3000) => {
+    let attempt = 0
+    while (true) {
+      try {
+        return await fn()
+      } catch (error: any) {
+        const status = error?.response?.status
+        if (status === 401) {
+          throw error
+        }
+        if (status === 429 && attempt < retries) {
+          attempt += 1
+          await delay(delayMs)
+          continue
+        }
+        throw error
+      }
+    }
+  }, [])
+
   // Fetch data
   const fetchData = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
     setError(null)
     try {
-      const { data: res } = await apiClient.get(endpoint(companyId))
+      const { data: res } = await fetchWithRetries(() => apiClient.get(endpoint(companyId)), 3, 3000)
       const items = transform ? transform(res) : Array.isArray(res) ? res : res?.items || res?.records || res?.data || []
       setData(items)
+      setPagination(res?.pagination ?? null)
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to load data')
+      if (err?.response?.status === 429) {
+        setError('Too many requests. Please try again after a few seconds.')
+      } else {
+        setError(err?.response?.data?.message || err?.message || 'Failed to load data')
+      }
     } finally {
       setLoading(false)
     }
-  }, [companyId, endpoint, transform])
+  }, [companyId, endpoint, transform, fetchWithRetries])
 
   useEffect(() => {
     if (autoFetch) fetchData()
@@ -292,6 +323,7 @@ export function useCrud<T extends Record<string, any> = any>(
     viewAction,
     editAction,
     deleteAction,
+    pagination,
     fields,
     entityName,
   }

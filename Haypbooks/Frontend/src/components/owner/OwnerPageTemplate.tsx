@@ -45,6 +45,7 @@ export interface Column<T = any> {
   render?: (value: any, row: T, index: number) => React.ReactNode
   type?: 'text' | 'number' | 'currency' | 'date' | 'status' | 'badge' | 'percentage'
   statusColors?: Record<string, string>
+  badgeColors?: Record<string, string>
   hidden?: boolean
 }
 
@@ -97,6 +98,8 @@ export interface OwnerPageTemplateProps<T = any> {
   searchableFields?: string[]
   /** Search placeholder */
   searchPlaceholder?: string
+  /** Search placeholder (alias for searchPlaceholder) */
+  searchablePlaceholder?: string
   /** Filter options */
   filters?: FilterOption[]
   /** Summary cards above table */
@@ -121,6 +124,8 @@ export interface OwnerPageTemplateProps<T = any> {
   onRefresh?: () => void
   /** Help handler */
   onHelp?: () => void
+  /** Search change callback */
+  onSearch?: (value: string) => void
   /** Empty state */
   emptyTitle?: string
   emptyDescription?: string
@@ -344,6 +349,7 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
   searchable = true,
   searchableFields = [],
   searchPlaceholder,
+  searchablePlaceholder,
   filters = [],
   summaryCards,
   bulkActions = [],
@@ -526,9 +532,16 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
         return <span className="font-mono tabular-nums text-sm">{fmt(Number(value) || 0)}</span>
       case 'date':
         return value ? <span className="text-sm text-slate-600">{new Date(value).toLocaleDateString()}</span> : <span className="text-slate-300">—</span>
-      case 'status':
-      case 'badge': {
+      case 'status': {
         const color = col.statusColors?.[value] ?? 'bg-slate-100 text-slate-600'
+        return (
+          <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${color}`}>
+            {value}
+          </span>
+        )
+      }
+      case 'badge': {
+        const color = col.badgeColors?.[value] ?? col.statusColors?.[value] ?? 'bg-slate-100 text-slate-600'
         return (
           <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${color}`}>
             {value}
@@ -569,8 +582,11 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder={searchPlaceholder ?? `Search ${title.toLowerCase()}...`}
+                  onChange={e => {
+                    setSearch(e.target.value)
+                    if (onSearch) onSearch(e.target.value)
+                  }}
+                  placeholder={searchablePlaceholder ?? searchPlaceholder ?? `Search ${title.toLowerCase()}...`}
                   className="pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-52 bg-slate-50"
                 />
                 {search && (

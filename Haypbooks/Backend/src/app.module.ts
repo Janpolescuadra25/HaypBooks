@@ -38,6 +38,10 @@ const RepositoriesModule = PrismaRepositoriesModule
     TenantsModule,
     // Accounting / GL module (Chart of Accounts, Journal Entries, Periods, Trial Balance)
     (require('./accounting/accounting.module').AccountingModule),
+    // General Ledger (full cross-account GL view with opening/closing balance and running balance)
+    (require('./general-ledger/general-ledger.module').GeneralLedgerModule),
+    // Contacts module (Customers and Vendors)
+    (require('./contacts/contacts.module').ContactsModule),
     // Accounts Receivable (Customers, Quotes, Invoices, Payments, AR Aging)
     (require('./ar/ar.module').ArModule),
     // Sales facade (exposes /api/companies/:companyId/customers in addition to AR routes)
