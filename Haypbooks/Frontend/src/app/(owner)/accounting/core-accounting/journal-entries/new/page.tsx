@@ -41,6 +41,14 @@ export default function NewJournalEntryPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const safeBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 2) {
+      router.back()
+    } else {
+      router.push('/accounting/core-accounting/journal-entries')
+    }
+  }
+
   if (!companyLoading && !companyId) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
@@ -132,7 +140,7 @@ export default function NewJournalEntryPage() {
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 shrink-0 z-10">
         <button
-          onClick={() => router.back()}
+          onClick={safeBack}
           className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
         >
           <ArrowLeft size={18} />
@@ -312,7 +320,7 @@ export default function NewJournalEntryPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={safeBack}
             className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium"
           >
             Cancel

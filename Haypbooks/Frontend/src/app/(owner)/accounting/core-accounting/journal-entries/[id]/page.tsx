@@ -170,10 +170,18 @@ export default function EditJournalEntryPage() {
     try { return new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } catch { return d }
   }
 
+  const safeBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 2) {
+      router.back()
+    } else {
+      router.push('/accounting/core-accounting/journal-entries')
+    }
+  }
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 shrink-0 z-10">
-        <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"><ArrowLeft size={18} /></button>
+        <button onClick={safeBack} className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"><ArrowLeft size={18} /></button>
         <div>
           <h1 className="text-lg font-bold text-emerald-900">Edit Journal Entry</h1>
           <p className="text-xs text-emerald-500">Modify and save existing entry</p>
