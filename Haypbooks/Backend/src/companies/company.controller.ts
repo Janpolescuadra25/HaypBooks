@@ -3,6 +3,7 @@ import {
   Patch, Query, HttpCode, HttpStatus, NotFoundException,
   Put, Delete,
 } from '@nestjs/common'
+import { SkipThrottle } from '@nestjs/throttler'
 import { CompanyService } from './company.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CreateCompanyDto } from './dto/create-company.dto'
@@ -42,6 +43,7 @@ export class CompaniesController {
   // ─── List ─────────────────────────────────────────────────────────────────
 
   @Get()
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   async list(@Req() req: any, @Query('filter') filter?: string) {
     const userId = req.user?.userId
@@ -50,6 +52,7 @@ export class CompaniesController {
   }
 
   @Get('recent')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   async recent(@Req() req: any, @Query('limit') limit?: string) {
     const userId = req.user?.userId
@@ -64,6 +67,7 @@ export class CompaniesController {
    * even if the caller doesn't care about the full array.
    */
   @Get('current')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   async current(@Req() req: any) {
     const userId = req.user?.userId
@@ -78,6 +82,7 @@ export class CompaniesController {
   // ─── Single company CRUD ──────────────────────────────────────────────────
 
   @Get(':id')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   async get(@Req() req: any, @Param('id') id: string) {
     const userId = req.user?.userId

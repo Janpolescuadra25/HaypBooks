@@ -215,11 +215,13 @@ export default function CrudModal({
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ pointerEvents: 'none' }}
           >
             <div
               data-testid="crud-modal-container"
-              className={`bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col pointer-events-auto`}
+              className={`bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col`}
+              style={{ pointerEvents: 'auto' }}
               onClick={e => e.stopPropagation()}
             >
               {/* ── Header ── */}
@@ -255,7 +257,7 @@ export default function CrudModal({
               )}
 
               {/* ── Body ── */}
-              <div data-testid="crud-form" className="flex-1 overflow-y-auto px-6 py-4">
+              <div data-testid="crud-form" className="flex-1 overflow-y-auto px-6 py-4" style={{ pointerEvents: 'auto' }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {visibleFields.map(field => (
                     <div
@@ -425,7 +427,7 @@ export default function CrudModal({
               </div>
 
               {/* ── Footer ── */}
-              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between rounded-b-2xl">
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between rounded-b-2xl" style={{ pointerEvents: 'auto' }}>
                 {submitError && (
                   <p data-testid="form-validation-errors" className="text-xs text-rose-500 flex items-center gap-1">
                     <AlertCircle size={12} /> {submitError}
@@ -445,6 +447,7 @@ export default function CrudModal({
                     data-testid="crud-submit-button"
                     onClick={handleSubmitClick}
                     disabled={loading}
+                    style={{ pointerEvents: 'auto' }}
                     className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 ${variantStyles[config.variant]}`}
                   >
                     {loading ? (
