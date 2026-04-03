@@ -33,23 +33,57 @@ test.describe('Customers Page E2E', () => {
     }
   }
 
-  test('full customers flow', async ({ page }) => {
+  test('full customers flow', async ({ page, request }) => {
     const results = [] as Array<{ step: number; pass: boolean; detail?: string }>;
 
+    const email = `ui-e2e-customers-${Date.now()}@haypbooks.test`;
+    const password = 'Playwright1!';
+
     try {
+      const gate = await request.get('http://127.0.0.1:4000/api/test/users');
+      if (gate.status() === 403) {
+        throw new Error('Test user API endpoint disabled; ensure ALLOW_TEST_ENDPOINTS or fallback with UI signup');
+      }
+
+      const createResp = await request.post('http://127.0.0.1:4000/api/test/create-user', {
+        data: {
+          email,
+          password,
+          name: 'E2E Customer',
+          isEmailVerified: true,
+        },
+      });
+      expect([200, 201]).toContain(createResp.status());
+
+      // Use UI login to set cookies and auth state for next page navigation.
+      await page.goto('/login');
+      await page.waitForSelector('input[type="email"]', { timeout: 15000 });
+      await page.fill('input[type="email"]', email);
+      await page.fill('input[type="password"]', password);
+      // click sign in; the target may vary in label
+      const signinBtn = page.locator('button:has-text("Sign in"), button:has-text("Sign In")').first();
+      await signinBtn.click();
+      await page.waitForURL(/(dashboard|hub|\/home|\/sales)/, { timeout: 30000 }).catch(() => {});
+
+      // create active company
+      const company = await request.post('http://127.0.0.1:4000/api/companies', {
+        data: { name: 'E2E Test Company' },
+      }).then((r) => r.json());
+      expect(company).not.toBeNull();
+
+      // set active company to avoid route auto-redirect issues
+      await request.patch(`http://127.0.0.1:4000/api/companies/${company.id}/last-accessed`);
+
       await page.goto(targetURL, { waitUntil: 'load', timeout: 30000 });
+      await waitForNoOverlay(page, 15000);
       await waitMs(2000);
 
       const h1 = page.locator('h1', { hasText: 'Customers' });
       const table = page.locator('table');
-      const login = page.locator('text=login', { exact: false });
-
       const ready = await Promise.race([
-        h1.first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
-        table.first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
-        login.first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
+        h1.first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false),
+        table.first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false),
       ]);
-
       results.push(log(1, 'Navigate to Customers page', Boolean(ready)));
     } catch (err) {
       results.push(log(1, 'Navigate to Customers page', false, (err as Error).message));
@@ -91,6 +125,9 @@ test.describe('Customers Page E2E', () => {
     }
 
     try {
+      console.log('--- MODAL HTML START ---');
+      console.log(await page.locator('body').innerHTML());
+      console.log('--- MODAL HTML END ---');
       await waitForNoOverlay(page);
       const newCustomer = await page.locator('button', { hasText: 'New Customer' }).first();
       if (!(await newCustomer.count())) {
