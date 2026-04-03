@@ -35,9 +35,51 @@ const customerFields: CrudField[] = [
 // ─── Column Definitions for Table ─────────────────────────────────────────────
 
 const columns = [
-  { key: 'displayName', label: 'Customer Name', type: 'text' as const, sortable: true },
-  { key: 'email', label: 'Email', type: 'text' as const },
-  { key: 'phone', label: 'Phone', type: 'text' as const },
+  {
+    key: 'displayName',
+    label: 'Customer Name',
+    type: 'text' as const,
+    sortable: true,
+    render: (value: string, row: any) => {
+      const initials = (value || '?')
+        .split(' ')
+        .map((n: string) => n[0] || '')
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || '?'
+      return (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm flex-shrink-0">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <div className="font-semibold text-slate-900 truncate text-sm">{value || 'Unnamed'}</div>
+            {row.companyName && (
+              <div className="text-[11px] text-slate-400 truncate">{row.companyName}</div>
+            )}
+          </div>
+        </div>
+      )
+    },
+  },
+  {
+    key: 'email',
+    label: 'Email',
+    type: 'text' as const,
+    render: (value: string) =>
+      value
+        ? <a href={`mailto:${value}`} className="text-blue-600 hover:text-blue-800 hover:underline text-sm" onClick={(e) => e.stopPropagation()}>{value}</a>
+        : <span className="text-slate-300 text-sm">—</span>,
+  },
+  {
+    key: 'phone',
+    label: 'Phone',
+    type: 'text' as const,
+    render: (value: string) =>
+      value
+        ? <a href={`tel:${value}`} className="text-slate-600 hover:text-slate-900 text-sm" onClick={(e) => e.stopPropagation()}>{value}</a>
+        : <span className="text-slate-300 text-sm">—</span>,
+  },
   { key: 'totalSales', label: 'Total Sales', type: 'currency' as const, sortable: true },
   { key: 'openBalance', label: 'Open Balance', type: 'currency' as const, sortable: true },
   { key: 'paymentTerms', label: 'Terms', type: 'badge' as const, badgeColors },
@@ -110,6 +152,41 @@ export default function CustomersPage() {
     setAuditOpen(true)
   }, [])
 
+  // ── Bulk action handlers ─────────────────────────────────────────────────────
+
+  const handleBulkExport = useCallback((ids: string[]) => {
+    const selected = crud.data.filter((c: any) => ids.includes(c.id))
+    const headers = ['Customer Name', 'Email', 'Phone', 'Company', 'Payment Terms', 'Status', 'Total Sales', 'Open Balance']
+    const rows = selected.map((c: any) => [
+      c.displayName || '',
+      c.email || '',
+      c.phone || '',
+      c.companyName || '',
+      c.paymentTerms || '',
+      c.status || '',
+      c.totalSales || 0,
+      c.openBalance || 0,
+    ])
+    const csv = [headers, ...rows]
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `customers-export-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [crud.data])
+
+  const handleBulkDelete = useCallback(async (ids: string[]) => {
+    if (!window.confirm(`Delete ${ids.length} customer${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return
+    for (const id of ids) {
+      await crud.deleteRecord(id)
+    }
+    crud.refetch()
+  }, [crud.deleteRecord, crud.refetch])
+
   return (
     <>
       <OwnerPageTemplate
@@ -129,8 +206,8 @@ export default function CustomersPage() {
           { label: 'Open Balance', value: `PHP ${crud.data.reduce((sum: number, c: any) => sum + (c.openBalance || 0), 0).toLocaleString()}`, icon: <Building2 size={16} />, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
         ]}
         bulkActions={[
-          { label: 'Export Selected', icon: <Download size={13} />, onClick: () => {} },
-          { label: 'Delete Selected', icon: <Trash2 size={13} />, onClick: () => {}, variant: 'danger' },
+          { label: 'Export Selected', icon: <Download size={13} />, onClick: handleBulkExport },
+          { label: 'Delete Selected', icon: <Trash2 size={13} />, onClick: handleBulkDelete, variant: 'danger' },
         ]}
         filters={[
           { key: 'status', label: 'Status', type: 'select' as const, options: [

@@ -239,12 +239,14 @@ export default function CrudModal({
                     {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
                   </div>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <X size={18} />
-                </button>
+                {!isView && (
+                  <button
+                    onClick={onClose}
+                    className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
               </div>
 
               {/* ── Delete warning ── */}
@@ -436,13 +438,15 @@ export default function CrudModal({
                 {!submitError && <span />}
 
                 <div className="flex items-center gap-2">
-                  <button
-                    data-testid="crud-cancel-button"
-                    onClick={onClose}
-                    className="px-4 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
+                  {!isView && (
+                    <button
+                      data-testid="crud-cancel-button"
+                      onClick={onClose}
+                      className="px-4 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  )}
                   <button
                     data-testid="crud-submit-button"
                     onClick={handleSubmitClick}
