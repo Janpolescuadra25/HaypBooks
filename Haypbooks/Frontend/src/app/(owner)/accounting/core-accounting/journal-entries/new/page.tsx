@@ -69,15 +69,16 @@ export default function NewJournalEntryPage() {
   const updateLine = (idx: number, field: keyof JELine, value: string | number) =>
     setLines(prev => prev.map((l, i) => {
       if (i !== idx) return l
-      const updatedLine = { ...l, [field]: value }
+      const parsed = (field === 'debit' || field === 'credit') ? Number(value) : value
+      const updatedLine = { ...l, [field]: parsed }
       if (field === 'debit') {
-        const debitValue = Number(value)
+        const debitValue = Number(parsed)
         if (debitValue > 0) {
           return { ...updatedLine, credit: 0 }
         }
       }
       if (field === 'credit') {
-        const creditValue = Number(value)
+        const creditValue = Number(parsed)
         if (creditValue > 0) {
           return { ...updatedLine, debit: 0 }
         }
@@ -229,7 +230,7 @@ export default function NewJournalEntryPage() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={line.debit || ''}
+                        value={line.debit ? Number(line.debit).toFixed(2) : ''}
                         onChange={e => updateLine(idx, 'debit', e.target.value)}
                         placeholder="0.00"
                         className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
@@ -240,7 +241,7 @@ export default function NewJournalEntryPage() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={line.credit || ''}
+                        value={line.credit ? Number(line.credit).toFixed(2) : ''}
                         onChange={e => updateLine(idx, 'credit', e.target.value)}
                         placeholder="0.00"
                         className="w-full px-2 py-1.5 text-sm text-right border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
