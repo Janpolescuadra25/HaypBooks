@@ -196,6 +196,17 @@ export class ArController {
         return this.svc.getPayment(req.user.userId, companyId, paymentId)
     }
 
+    @Post('payments/:paymentId/apply')
+    @HttpCode(HttpStatus.OK)
+    applyPayment(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('paymentId') paymentId: string,
+        @Body() body: { allocations: Array<{ invoiceId: string; amount: number }> },
+    ) {
+        return this.svc.applyPaymentToInvoices(req.user.userId, companyId, paymentId, body.allocations)
+    }
+
     @Post('payments/:paymentId/void')
     @HttpCode(HttpStatus.OK)
     voidPayment(

@@ -182,7 +182,7 @@ export default function EditJournalEntryPage() {
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 shrink-0 z-10">
         <div>
-          <h1 className="text-lg font-bold text-emerald-900">Edit Journal Entry</h1
+          <h1 className="text-lg font-bold text-emerald-900">Edit Journal Entry</h1>
           <p className="text-xs text-emerald-500">Modify and save existing entry</p>
         </div>
         <div className="ml-auto flex items-center gap-2">

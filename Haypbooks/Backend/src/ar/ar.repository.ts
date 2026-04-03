@@ -463,6 +463,47 @@ export class ArRepository {
         })
     }
 
+    async applyPaymentToInvoices(companyId: string, paymentId: string, allocations: Array<{ invoiceId: string; amount: number }>) {
+        const payment = await this.prisma.paymentReceived.findFirst({ where: { id: paymentId, companyId, deletedAt: null } })
+        if (!payment) throw new Error('Payment not found')
+
+        return this.prisma.$transaction(async (tx) => {
+            let remaining = Number(payment.amount)
+            for (const alloc of allocations || []) {
+                if (alloc.amount <= 0) continue
+                if (alloc.amount > remaining) throw new Error('Allocation exceeds payment amount')
+
+                const invoice = await tx.invoice.findFirst({ where: { id: alloc.invoiceId, companyId, deletedAt: null } })
+                if (!invoice) throw new Error('Invoice not found')
+
+                await tx.invoicePaymentApplication.create({
+                    data: {
+                        workspaceId: payment.workspaceId,
+                        invoiceId: alloc.invoiceId,
+                        paymentId,
+                        amount: alloc.amount,
+                    },
+                })
+
+                const newBalance = Math.max(0, Number(invoice.balance) - Number(alloc.amount))
+                const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIAL'
+
+                await tx.invoice.update({
+                    where: { id: alloc.invoiceId },
+                    data: {
+                        balance: newBalance,
+                        status: newStatus as any,
+                        paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any,
+                    },
+                })
+
+                remaining -= alloc.amount
+            }
+
+            return { paymentId, allocations, remaining }
+        })
+    }
+
     async voidPayment(companyId: string, paymentId: string) {
         const payment = await this.prisma.paymentReceived.findFirst({ where: { id: paymentId, companyId, deletedAt: null } })
         if (!payment) return null

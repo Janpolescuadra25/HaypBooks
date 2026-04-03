@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { formatCurrency } from '@/lib/format'
 
 type PaymentRow = {
   id: string
@@ -11,7 +12,7 @@ type PaymentRow = {
   customer: string
   date: string
   method: string
-  amount: string
+  amount: number
   appliedTo: string
   status: 'Completed' | 'Pending' | 'Failed' | 'Reversed'
 }
@@ -28,8 +29,18 @@ export default function CustomerPaymentsPage() {
     setLoading(true)
     setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/payments`)
-      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/payments`)
+      const raw: any[] = Array.isArray(data) ? data : data?.items || data?.records || []
+      setItems(raw.map((r: any) => ({
+        id: r.id,
+        paymentNumber: r.paymentNumber || r.referenceNumber || r.id?.slice(0, 8) || '—',
+        customer: r.customerName || r.customer?.displayName || r.customer?.name || '—',
+        date: r.date || r.paymentDate || '',
+        method: r.paymentMethod || r.method || '—',
+        amount: r.amount ?? r.totalAmount ?? 0,
+        appliedTo: r.invoiceNumber || r.invoiceId?.slice(0, 8) || '—',
+        status: r.status || 'Completed',
+      })))
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to load data')
     } finally {
@@ -42,7 +53,6 @@ export default function CustomerPaymentsPage() {
   const [dateStart, setDateStart] = useState('')
   const [dateEnd, setDateEnd] = useState('')
   const [methodFilter, setMethodFilter] = useState('All')
-  const [helpOpen, setHelpOpen] = useState(false)
 
   // Data fetched from API (see fetchData above)
 
@@ -60,11 +70,13 @@ export default function CustomerPaymentsPage() {
       row.paymentNumber.toLowerCase().includes(q) ||
       row.customer.toLowerCase().includes(q) ||
       row.method.toLowerCase().includes(q) ||
-      row.amount.toLowerCase().includes(q) ||
+      String(row.amount).includes(q) ||
       row.appliedTo.toLowerCase().includes(q) ||
       row.status.toLowerCase().includes(q)
     )
   }, [items, search, dateStart, dateEnd, methodFilter])
+
+  const totalAmount = items.reduce((s, r) => s + (r.amount || 0), 0)
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -72,18 +84,25 @@ export default function CustomerPaymentsPage() {
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Customer Payments</h1>
-            <p className="text-sm text-slate-500 mt-1">Record and manage customer payments</p>
+            <p className="text-sm text-slate-500 mt-1">{filtered.length} payments</p>
           </div>
           <div className="flex items-center gap-2">
             <button className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">New Payment</button>
-            <button
-              onClick={() => setHelpOpen((cur) => !cur)}
-              type="button"
-              aria-label="Open documentation for Customer Payments"
-              className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold"
-            >
-              ?
-            </button>
+          </div>
+        </div>
+
+        <div className="px-6 pb-3 grid grid-cols-3 gap-3">
+          <div className="bg-emerald-50 rounded-lg p-3">
+            <p className="text-xs text-emerald-600/60">Total Payments</p>
+            <p className="text-xl font-bold text-emerald-900">{items.length}</p>
+          </div>
+          <div className="bg-blue-50 rounded-lg p-3">
+            <p className="text-xs text-blue-600/60">Amount Collected</p>
+            <p className="text-xl font-bold text-blue-900">{formatCurrency(totalAmount, currency)}</p>
+          </div>
+          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+            <p className="text-xs text-slate-500">Showing</p>
+            <p className="text-xl font-bold text-slate-700">{filtered.length}</p>
           </div>
         </div>
 
@@ -163,7 +182,7 @@ export default function CustomerPaymentsPage() {
                     <td className="px-4 py-3 text-slate-600">{row.customer}</td>
                     <td className="px-4 py-3 text-slate-600">{row.date}</td>
                     <td className="px-4 py-3 text-slate-600">{row.method}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.amount}</td>
+                    <td className="px-4 py-3 font-semibold tabular-nums text-emerald-800">{formatCurrency(row.amount, currency)}</td>
                     <td className="px-4 py-3 text-slate-600">{row.appliedTo}</td>
                     <td className={`px-4 py-3 text-sm font-semibold ${
                       row.status === 'Completed' ? 'text-emerald-700' :
@@ -178,25 +197,6 @@ export default function CustomerPaymentsPage() {
           </table>
         </div>
       </div>
-
-      {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Customer Payments Documentation</h2>
-              <button onClick={() => setHelpOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
-            </div>
-            <div className="p-4 text-sm text-slate-700 space-y-3">
-              <p>Record and track incoming customer payments with flexible methods.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Create payments manually and apply to outstanding invoices.</li>
-                <li>Filter and report by date ranges and payment methods.</li>
-                <li>Monitor status from pending to completed, plus failed/reversed flows.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

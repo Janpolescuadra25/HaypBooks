@@ -310,8 +310,12 @@ export class AccountingRepository {
                         data: { balance: { decrement: balanceDelta } },
                     })
                 }
-                // Mark original as VOIDED
-                await tx.journalEntry.update({ where: { id: jeId }, data: { postingStatus: 'VOIDED' } })
+                // Mark original as VOIDED and clear its entryNumber to free the unique slot
+                const originalEntryNumber = je.entryNumber
+                await tx.journalEntry.update({
+                    where: { id: jeId },
+                    data: { postingStatus: 'VOIDED', entryNumber: null },
+                })
 
                 // Create corrected entry with same entry number
                 const newLines = (data.lines ?? je.lines).map(l => ({
@@ -326,12 +330,13 @@ export class AccountingRepository {
                     data: {
                         workspaceId: je.workspaceId,
                         companyId,
-                        date: data.date ?? je.date,
+                        date: data.date ? new Date(data.date as any) : new Date(je.date),
                         description: data.description ?? je.description,
                         currency: data.currency ?? je.currency,
                         postingStatus: 'POSTED',
                         createdById: data.updatedById,
-                        entryNumber: je.entryNumber,
+                        entryNumber: originalEntryNumber,
+                        previousId: jeId,
                         lines: { create: newLines },
                     },
                     include: { lines: { include: { account: { select: { id: true, code: true, name: true } } } } },
@@ -383,7 +388,7 @@ export class AccountingRepository {
             return tx.journalEntry.update({
                 where: { id: jeId },
                 data: {
-                    date: data.date,
+                    date: data.date ? new Date(data.date as any) : undefined,
                     description: data.description,
                     currency: data.currency,
                     updatedById: data.updatedById,
@@ -518,6 +523,7 @@ export class AccountingRepository {
                     workspaceId: je.workspaceId,
                     companyId,
                     date: new Date(),
+                    entryNumber: `VOID-${je.entryNumber ?? jeId}`,
                     description: `VOID of ${je.entryNumber ?? jeId}: ${reason}`,
                     currency: je.currency,
                     postingStatus: 'POSTED',
