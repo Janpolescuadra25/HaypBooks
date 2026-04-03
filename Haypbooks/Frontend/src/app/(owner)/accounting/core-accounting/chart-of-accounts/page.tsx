@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   Plus, Upload, Download, Search, ChevronRight, ChevronDown,
   MoreHorizontal, Edit2, Eye, Trash2, PlusSquare,
-  CheckCircle2, X,
+  CheckCircle2, CheckSquare2, Square, BarChart3, X,
   RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
@@ -159,7 +159,7 @@ function RowMenu({ account, hasChildren, onEdit, onDeactivate, onReactivate, onA
 
 // ─── Account Row (recursive) ───────────────────────────────────────────────────
 function AccountRow({
-  account, depth, expanded, onToggle, onEdit, onDeactivate, onReactivate, onAddSubaccount, statusFilters, search, fmt,
+  account, depth, expanded, onToggle, onEdit, onDeactivate, onReactivate, onAddSubaccount, statusFilters, search, fmt, selectedIds, onToggleSelect,
 }: {
   account: Account
   depth: number
@@ -172,7 +172,10 @@ function AccountRow({
   statusFilters: { active: boolean; inactive: boolean }
   search: string
   fmt: (n: number) => string
+  selectedIds: Set<string>
+  onToggleSelect: (id: string) => void
 }) {
+  const isSelected = selectedIds.has(account.id)
   const hasChildren = !!(account.children?.length)
   const isExpanded = expanded.has(account.id)
 
@@ -185,7 +188,12 @@ function AccountRow({
 
   return (
     <>
-      <tr className={`border-b border-slate-100 hover:bg-emerald-50/40 transition-colors group ${!account.isActive ? 'opacity-50' : ''}`}>
+      <tr className={`border-b border-slate-100 hover:bg-emerald-50/40 transition-colors group ${!account.isActive ? 'opacity-50' : ''} ${isSelected ? 'bg-emerald-50/60' : ''}`}>
+        <td className="px-3 py-2.5 w-10" onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => onToggleSelect(account.id)} className="text-slate-300 hover:text-emerald-600 transition-colors">
+            {isSelected ? <CheckSquare2 size={15} className="text-emerald-600" /> : <Square size={15} />}
+          </button>
+        </td>
         <td className="px-3 py-2.5 w-10 border-r border-slate-100">
           {hasChildren ? (
             <button
@@ -230,8 +238,29 @@ function AccountRow({
             {account.isActive ? 'Active' : 'Inactive'}
           </span>
         </td>
-        <td className="px-3 py-2.5 w-[60px] text-center">
-          <RowMenu account={account} hasChildren={hasChildren} onEdit={onEdit} onDeactivate={onDeactivate} onReactivate={onReactivate} onAddSubaccount={onAddSubaccount} />
+        <td className="px-3 py-2.5 w-[100px] text-right" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-end gap-0.5">
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => onEdit(account)} title="Edit account" className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors">
+                <Edit2 size={13} />
+              </button>
+              {account.isHeader && (
+                <button onClick={() => onAddSubaccount(account)} title="Add sub-account" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                  <PlusSquare size={13} />
+                </button>
+              )}
+              {account.isActive ? (
+                <button onClick={() => onDeactivate(account)} title="Deactivate" disabled={hasChildren} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-30">
+                  <Trash2 size={13} />
+                </button>
+              ) : (
+                <button onClick={() => onReactivate(account)} title="Reactivate" className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors">
+                  <CheckCircle2 size={13} />
+                </button>
+              )}
+            </div>
+            <RowMenu account={account} hasChildren={hasChildren} onEdit={onEdit} onDeactivate={onDeactivate} onReactivate={onReactivate} onAddSubaccount={onAddSubaccount} />
+          </div>
         </td>
       </tr>
       {hasChildren && isExpanded && account.children!.map(child => (
@@ -248,6 +277,8 @@ function AccountRow({
           statusFilters={statusFilters}
           search={search}
           fmt={fmt}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </>
@@ -645,6 +676,15 @@ export default function ChartOfAccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [defaultParentId, setDefaultParentId] = useState<string | undefined>(undefined)
   const [importModal, setImportModal] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const toggleSelect = (id: string) =>
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleSelectAll = () =>
+    setSelectedIds(prev =>
+      prev.size === flatAccs.length && flatAccs.length > 0
+        ? new Set()
+        : new Set(flatAccs.map(a => a.id))
+    )
   const toast = useToast()
 
   // If company loading finishes with no company, stop loading
@@ -779,6 +819,17 @@ export default function ChartOfAccountsPage() {
   const openEdit = (acc: Account) => { setEditingAccount(acc); setDefaultParentId(undefined); setModalOpen(true) }
   const openAddSubaccount = (parent: Account) => { setEditingAccount(null); setDefaultParentId(parent.id); setModalOpen(true) }
 
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      const meta = e.metaKey || e.ctrlKey
+      if (meta && e.key === 'n' && !modalOpen && !importModal) { e.preventDefault(); openCreate() }
+      if (meta && e.key === 'f') { e.preventDefault(); document.querySelector<HTMLInputElement>('input[placeholder*="Search"]')?.focus() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [modalOpen, importModal])
+
   async function handleDeactivate(acc: Account) {
     if (!companyId) return
     if (!confirm(`Deactivate "${acc.name}"? This will hide it from transaction forms.`)) return
@@ -838,6 +889,35 @@ export default function ChartOfAccountsPage() {
 
   const expandAll = () => setExpanded(new Set(flatAccs.map(a => a.id)))
   const collapseAll = () => setExpanded(new Set())
+
+  const handleBulkExport = () => {
+    const selected = flatAccs.filter(a => selectedIds.has(a.id))
+    if (selected.length === 0) return
+    const header = ['Code', 'Name', 'Type', 'Normal Side', 'Balance', 'Status', 'Description']
+    const rows = selected.map(a => [
+      a.code, a.name, a.type, a.normalSide,
+      String(a.balance ?? 0), a.isActive ? 'Active' : 'Inactive', a.description ?? '',
+    ])
+    const csv = [header, ...rows]
+      .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'coa-selection.csv'; a.click()
+    URL.revokeObjectURL(url)
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkDeactivate = async () => {
+    if (selectedIds.size === 0 || !companyId) return
+    if (!confirm(`Deactivate ${selectedIds.size} account(s)? This cannot be undone.`)) return
+    const toDeactivate = flatAccs.filter(a => selectedIds.has(a.id) && a.isActive)
+    for (const acc of toDeactivate) {
+      try { await apiClient.delete(`/companies/${companyId}/accounting/accounts/${acc.id}`) } catch { /* skip */ }
+    }
+    setSelectedIds(new Set())
+    loadAccounts()
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -944,9 +1024,48 @@ export default function ChartOfAccountsPage() {
             </div>
           </div>
         )}
-
-
+        {/* ── Summary Cards ── */}
+        {!loading && flatAccs.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 px-6 pb-3">
+            {[
+              { label: 'Total Accounts', value: totalAccounts, bg: 'bg-slate-100', color: 'text-slate-600', icon: <BarChart3 size={14} /> },
+              { label: 'Active', value: activeAccounts, bg: 'bg-emerald-100', color: 'text-emerald-600', icon: <CheckCircle2 size={14} /> },
+              { label: 'Debit Totals', value: fmt(totalDebits), bg: 'bg-sky-100', color: 'text-sky-600', icon: <ArrowUp size={14} /> },
+              { label: 'Credit Totals', value: fmt(totalCredits), bg: 'bg-amber-100', color: 'text-amber-600', icon: <ArrowDown size={14} /> },
+            ].map((card, i) => (
+              <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${card.bg}`}>
+                  <span className={card.color}>{card.icon}</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-500">{card.label}</p>
+                  <p className="text-sm font-bold text-slate-900">{card.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* ── Bulk Actions Bar ── */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-emerald-700">{selectedIds.size} account{selectedIds.size > 1 ? 's' : ''} selected</span>
+              <div className="flex items-center gap-2">
+                <button onClick={handleBulkExport} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors">
+                  <Download size={13} /> Export Selected
+                </button>
+                <button onClick={handleBulkDeactivate} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors">
+                  <Trash2 size={13} /> Deactivate Selected
+                </button>
+                <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-500 hover:text-slate-700 ml-2">Clear</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Table ── */}
       <div className="flex-1 px-6 py-5">
@@ -954,6 +1073,11 @@ export default function ChartOfAccountsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="w-10 px-3 py-3">
+                  <button onClick={toggleSelectAll} title="Select all" className="text-slate-400 hover:text-emerald-600 transition-colors">
+                    {selectedIds.size === flatAccs.length && flatAccs.length > 0 ? <CheckSquare2 size={16} /> : <Square size={16} />}
+                  </button>
+                </th>
                 <th className="w-10 px-3 py-3 border-r border-slate-100" />
                 <th className="w-[90px] px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100 cursor-pointer" onClick={() => onSort('code') }>
                   Code
@@ -976,14 +1100,14 @@ export default function ChartOfAccountsPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={9} className="px-4 py-16 text-center">
                     <RefreshCw size={24} className="text-slate-300 mx-auto mb-2 animate-spin" />
                     <p className="text-sm text-slate-400">Loading accounts…</p>
                   </td>
                 </tr>
               ) : displayAccounts.length === 0 && flatAccs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={9} className="px-4 py-16 text-center">
                     <p className="text-sm font-semibold text-slate-500 mb-1">No accounts yet</p>
                     <p className="text-xs text-slate-400 mb-4">Set up your default Chart of Accounts template or create accounts manually</p>
                     <button
@@ -1001,7 +1125,7 @@ export default function ChartOfAccountsPage() {
                   accounts.length === 0 ? null : (
                     <React.Fragment key={type}>
                       <tr className="bg-slate-100">
-                        <td colSpan={8} className="px-3 py-2 text-sm font-semibold text-slate-700">{type}</td>
+                        <td colSpan={9} className="px-3 py-2 text-sm font-semibold text-slate-700">{type}</td>
                       </tr>
                       {accounts.map(account => (
                         <AccountRow
@@ -1017,6 +1141,8 @@ export default function ChartOfAccountsPage() {
                           statusFilters={statusFilters}
                           search={search}
                           fmt={fmt}
+                          selectedIds={selectedIds}
+                          onToggleSelect={toggleSelect}
                         />
                       ))}
                     </React.Fragment>
