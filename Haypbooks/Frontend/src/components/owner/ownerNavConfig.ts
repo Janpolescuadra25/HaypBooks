@@ -568,7 +568,7 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Issue Tracking', path: '/compliance/monitoring/issue-tracking' },
           { title: 'Fraud Detection', path: '/compliance/monitoring/fraud-detection' },
-          { title: 'Audit Log Analysis', path: '/compliance/monitoring/audit-log-analysis' },
+          { title: 'Audit Log', path: '/compliance/monitoring/audit-log-analysis' },
         ],
       },
     ],

@@ -29,36 +29,16 @@ export default function Page() {
 
   return (
     <OwnerPageTemplate
-      title="Audit Log Analysis"
+      title="Audit Log"
       section="Compliance"
       icon={<Shield size={20}/>}
       columns={columns}
-      data={data}
-      searchable
-      searchableFields={[]}
-      summaryCards={[
-        { label: 'Total Records', value: 8, icon: <List size={16}/>, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-        { label: 'Active', value: 6, icon: <CheckCircle size={16}/>, bg: 'bg-blue-100', iconColor: 'text-blue-600' },
-        { label: 'Total Value', value: 'PHP 528,500', icon: <DollarSign size={16}/>, bg: 'bg-amber-100', iconColor: 'text-amber-600' },
-        { label: 'This Month', value: 3, icon: <Calendar size={16}/>, bg: 'bg-purple-100', iconColor: 'text-purple-600' },
-      ]}
-      bulkActions={[
-        { label: 'Export Selected', icon: <Download size={13}/>, onClick: (ids) => {} },
-        { label: 'Delete Selected', icon: <Trash2 size={13}/>, onClick: (ids) => {}, variant: 'danger' },
-      ]}
-      filters={[
-        { key: 'date_from', label: 'Date Range', type: 'date-range' },
-      ]}
-      showCreate
-      createLabel="Create New"
-      onCreate={() => {}}
-      showExport
-      onRefresh={() => {}}
-      rowMenuItems={(row) => [
-        { label: 'View', icon: <Eye size={14}/>, onClick: () => {} },
-        { label: 'Edit', icon: <Edit2 size={14}/>, onClick: () => {} },
-        { label: 'Delete', icon: <Trash2 size={14}/>, onClick: () => {}, variant: 'danger' },
-      ]}
+      data={[]}
+      emptyTitle="Coming soon"
+      emptyDescription="Audit Log is under development and will be available soon."
+      searchable={false}
+      showCreate={false}
+      showExport={false}
     />
   )
 }
