@@ -132,8 +132,10 @@ export interface OwnerPageTemplateProps<T = any> {
   emptyAction?: { label: string; onClick: () => void }
   /** Row click handler */
   onRowClick?: (row: T) => void
-  /** Row menu items */
+  /** Row menu items (hidden in "..." dropdown) */
   rowMenuItems?: (row: T) => { label: string; icon?: React.ReactNode; onClick: () => void; variant?: 'default' | 'danger' }[]
+  /** Inline row action buttons — shown on hover beside the "..." menu */
+  rowInlineActions?: (row: T) => { icon: React.ReactNode; title: string; onClick: () => void; colorClass?: string }[]
   /** Selected row IDs */
   selectedIds?: string[]
   /** On selection change */
@@ -367,6 +369,7 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
   emptyAction,
   onRowClick,
   rowMenuItems,
+  rowInlineActions,
   selectedIds: controlledSelectedIds,
   onSelectionChange,
   pageSize: defaultPageSize = 25,
@@ -792,26 +795,26 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
                     </th>
                   ))}
                   {/* Actions column */}
-                  {rowMenuItems && <th className="w-10 px-3 py-3" />}
+                  {(rowMenuItems || rowInlineActions) && <th className="w-10 px-3 py-3" />}
                 </tr>
               </thead>
               <tbody>
                 {(dataLoading ?? loading) ? (
                   <tr>
-                    <td colSpan={visibleColumns.length + (rowMenuItems ? 2 : 1)} className="px-4 py-16 text-center">
+                    <td colSpan={visibleColumns.length + ((rowMenuItems || rowInlineActions) ? 2 : 1)} className="px-4 py-16 text-center">
                       <RefreshCw size={24} className="text-slate-300 mx-auto mb-2 animate-spin" />
                       <p className="text-sm text-slate-400">Loading...</p>
                     </td>
                   </tr>
                 ) : customEmpty && paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={visibleColumns.length + (rowMenuItems ? 2 : 1)}>
+                    <td colSpan={visibleColumns.length + ((rowMenuItems || rowInlineActions) ? 2 : 1)}>
                       {customEmpty}
                     </td>
                   </tr>
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={visibleColumns.length + (rowMenuItems ? 2 : 1)} className="px-4 py-16 text-center">
+                    <td colSpan={visibleColumns.length + ((rowMenuItems || rowInlineActions) ? 2 : 1)} className="px-4 py-16 text-center">
                       <div className="flex flex-col items-center">
                         <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-3">
                           <Search size={22} className="text-slate-300" />
@@ -834,6 +837,7 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
                 ) : (
                   paginated.map((row, idx) => {
                     const isSelected = selectedIds.includes(row[idField])
+                    const inlineActions = rowInlineActions ? rowInlineActions(row) : []
                     return (
                       <tr
                         key={row[idField] ?? idx}
@@ -857,9 +861,29 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
                             {renderCellValue(col, row, idx)}
                           </td>
                         ))}
-                        {rowMenuItems && (
+                        {(rowMenuItems || inlineActions.length > 0) && (
                           <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
-                            <RowActionsMenu items={rowMenuItems(row)} />
+                            <div className="flex items-center justify-end gap-0.5">
+                              {/* Inline action buttons — visible on row hover */}
+                              {inlineActions.length > 0 && (
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {inlineActions.map((action, i) => (
+                                    <button
+                                      key={i}
+                                      onClick={(e) => { e.stopPropagation(); action.onClick() }}
+                                      title={action.title}
+                                      className={`p-1.5 rounded-lg transition-colors ${
+                                        action.colorClass ?? 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      {action.icon}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Overflow menu */}
+                              {rowMenuItems && <RowActionsMenu items={rowMenuItems(row)} />}
+                            </div>
                           </td>
                         )}
                       </tr>
