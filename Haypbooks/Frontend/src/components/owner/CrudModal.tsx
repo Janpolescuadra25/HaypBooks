@@ -202,6 +202,7 @@ export default function CrudModal({
         <>
           {/* Backdrop */}
           <motion.div
+            data-testid="crud-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -217,6 +218,7 @@ export default function CrudModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
+              data-testid="crud-modal-container"
               className={`bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col pointer-events-auto`}
               onClick={e => e.stopPropagation()}
             >
@@ -253,7 +255,7 @@ export default function CrudModal({
               )}
 
               {/* ── Body ── */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div data-testid="crud-form" className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {visibleFields.map(field => (
                     <div
@@ -274,6 +276,15 @@ export default function CrudModal({
                         <input
                           type={field.type}
                           value={form[field.key] ?? ''}
+                          data-testid={
+                            field.key === 'displayName' || field.key === 'name'
+                              ? 'customer-name-input'
+                              : field.key === 'email'
+                                ? 'customer-email-input'
+                                : field.key === 'phone'
+                                  ? 'customer-phone-input'
+                                  : undefined
+                          }
                           onChange={e => handleChange(field.key, e.target.value)}
                           placeholder={field.placeholder ?? `Enter ${field.label.toLowerCase()}...`}
                           disabled={isView || field.disabled}
@@ -416,7 +427,7 @@ export default function CrudModal({
               {/* ── Footer ── */}
               <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between rounded-b-2xl">
                 {submitError && (
-                  <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <p data-testid="form-validation-errors" className="text-xs text-rose-500 flex items-center gap-1">
                     <AlertCircle size={12} /> {submitError}
                   </p>
                 )}
@@ -424,12 +435,14 @@ export default function CrudModal({
 
                 <div className="flex items-center gap-2">
                   <button
+                    data-testid="crud-cancel-button"
                     onClick={onClose}
                     className="px-4 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
+                    data-testid="crud-submit-button"
                     onClick={handleSubmitClick}
                     disabled={loading}
                     className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 ${variantStyles[config.variant]}`}
