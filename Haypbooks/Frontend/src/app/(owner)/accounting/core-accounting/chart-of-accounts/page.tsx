@@ -6,6 +6,7 @@ import {
   MoreHorizontal, Edit2, Eye, Trash2, PlusSquare,
   CheckCircle2, CheckSquare2, Square, BarChart3, X,
   RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal,
+  Wallet, Clock, AlertTriangle,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import apiClient from '@/lib/api-client'
@@ -30,6 +31,8 @@ interface Account {
   isHeader: boolean
   parentId: string | null
   description?: string
+  updatedAt?: string
+  createdAt?: string
   children?: Account[]
 }
 
@@ -71,6 +74,20 @@ const TYPE_CODE_RANGES: Record<AccountType, { min: number; max: number }> = {
 function formatRange(type: AccountType) {
   const range = TYPE_CODE_RANGES[type]
   return `${range.min}-${range.max}`
+}
+
+function getTypeRowStyle(type: string): string {
+  if (!type) return 'border-l-4 border-l-gray-300 bg-gray-50/30 hover:bg-gray-100/60'
+  switch (type.toUpperCase()) {
+    case 'ASSET':     return 'border-l-4 border-l-blue-500 bg-blue-50/30 hover:bg-blue-50/60'
+    case 'LIABILITY': return 'border-l-4 border-l-purple-500 bg-purple-50/30 hover:bg-purple-50/60'
+    case 'EQUITY':    return 'border-l-4 border-l-green-500 bg-green-50/30 hover:bg-green-50/60'
+    case 'REVENUE':   return 'border-l-4 border-l-teal-500 bg-teal-50/30 hover:bg-teal-50/60'
+    case 'EXPENSE':   return 'border-l-4 border-l-red-500 bg-red-50/30 hover:bg-red-50/60'
+    default:
+      if (type.startsWith('CONTRA_')) return 'border-l-4 border-l-orange-500 bg-orange-50/30 hover:bg-orange-50/60'
+      return 'border-l-4 border-l-gray-300 bg-gray-50/30 hover:bg-gray-100/60'
+  }
 }
 
 function useFmt() {
@@ -188,7 +205,7 @@ function AccountRow({
 
   return (
     <>
-      <tr className={`border-b border-slate-100 hover:bg-emerald-50/40 transition-colors group ${!account.isActive ? 'opacity-50' : ''} ${isSelected ? 'bg-emerald-50/60' : ''}`}>
+      <tr className={`border-b border-slate-100 transition-colors group ${getTypeRowStyle(account.type)} ${!account.isActive ? 'opacity-50' : ''} ${isSelected ? 'ring-1 ring-inset ring-emerald-400' : ''}`}>
         <td className="px-3 py-2.5 w-10" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => onToggleSelect(account.id)} className="text-slate-300 hover:text-emerald-600 transition-colors">
             {isSelected ? <CheckSquare2 size={15} className="text-emerald-600" /> : <Square size={15} />}
@@ -676,6 +693,7 @@ export default function ChartOfAccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [defaultParentId, setDefaultParentId] = useState<string | undefined>(undefined)
   const [importModal, setImportModal] = useState(false)
+  const [showInactiveBanner, setShowInactiveBanner] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -740,6 +758,19 @@ export default function ChartOfAccountsPage() {
   const activeAccounts = flatAccs.filter(a => a.isActive).length
   const totalDebits = flatAccs.filter(a => a.normalSide === 'Debit' && !a.isHeader).reduce((s, a) => s + (a.balance ?? 0), 0)
   const totalCredits = flatAccs.filter(a => a.normalSide === 'Credit' && !a.isHeader).reduce((s, a) => s + Math.abs(a.balance ?? 0), 0)
+  // Smart metrics
+  const activeCount = activeAccounts
+  const inactiveCount = totalAccounts - activeAccounts
+  const accountsWithBalances = flatAccs.filter(a => Math.abs(a.balance ?? 0) > 0.01).length
+  const categoryCount = new Set(flatAccs.map(a => a.type)).size
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const recentlyModifiedCount = flatAccs.filter(a => {
+    try {
+      const updated = new Date(a.updatedAt || a.createdAt || '')
+      return !isNaN(updated.getTime()) && updated > sevenDaysAgo
+    } catch { return false }
+  }).length
 
   const [page, setPage] = useState(1)
   const [sortConfig, setSortConfig] = useState<{ key: 'code' | 'name' | 'balance', direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' })
@@ -984,7 +1015,7 @@ export default function ChartOfAccountsPage() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={loadAccounts} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+              <button onClick={() => loadAccounts()} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                 <RefreshCw size={13} /> Refresh
               </button>
               <button onClick={() => setImportModal(true)} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
@@ -1024,27 +1055,93 @@ export default function ChartOfAccountsPage() {
             </div>
           </div>
         )}
-        {/* ── Summary Cards ── */}
+        {/* ── Smart Stats Cards ── */}
         {!loading && flatAccs.length > 0 && (
-          <div className="grid grid-cols-4 gap-2 px-6 pb-3">
-            {[
-              { label: 'Total Accounts', value: totalAccounts, bg: 'bg-slate-100', color: 'text-slate-600', icon: <BarChart3 size={14} /> },
-              { label: 'Active', value: activeAccounts, bg: 'bg-emerald-100', color: 'text-emerald-600', icon: <CheckCircle2 size={14} /> },
-              { label: 'Debit Totals', value: fmt(totalDebits), bg: 'bg-sky-100', color: 'text-sky-600', icon: <ArrowUp size={14} /> },
-              { label: 'Credit Totals', value: fmt(totalCredits), bg: 'bg-amber-100', color: 'text-amber-600', icon: <ArrowDown size={14} /> },
-            ].map((card, i) => (
-              <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${card.bg}`}>
-                  <span className={card.color}>{card.icon}</span>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-500">{card.label}</p>
-                  <p className="text-sm font-bold text-slate-900">{card.value}</p>
-                </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 pb-3">
+            {/* 1. Total Accounts */}
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Total Accounts</span>
+                <BarChart3 size={14} className="text-gray-400" />
               </div>
-            ))}
+              <div className="text-xl font-bold text-gray-900">{totalAccounts}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">Across {categoryCount} categories</div>
+            </div>
+            {/* 2. Active / Inactive */}
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Active</span>
+                <CheckCircle2 size={14} className="text-green-500" />
+              </div>
+              <div className="text-xl font-bold text-green-600">{activeCount}</div>
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                {inactiveCount > 0 ? (
+                  <>
+                    <span className="text-[10px] text-gray-500">{inactiveCount} inactive</span>
+                    <button
+                      onClick={() => {
+                        setStatusFilters({ active: false, inactive: true })
+                        setShowInactiveBanner(true)
+                      }}
+                      className="text-[10px] text-blue-600 hover:underline font-semibold"
+                    >
+                      View →
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-[10px] text-green-600 font-semibold">✓ All active</span>
+                )}
+              </div>
+            </div>
+            {/* 3. With Balances */}
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">With Balances</span>
+                <Wallet size={14} className="text-blue-400" />
+              </div>
+              <div className="text-xl font-bold text-blue-600">{accountsWithBalances}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">Of {totalAccounts} total</div>
+            </div>
+            {/* 4. Recently Edited */}
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Recently Edited</span>
+                <Clock size={14} className="text-purple-400" />
+              </div>
+              <div className="text-xl font-bold text-purple-600">{recentlyModifiedCount}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">Last 7 days</div>
+            </div>
           </div>
         )}
+        {/* ── Inactive Filter Banner ── */}
+        <AnimatePresence>
+          {showInactiveBanner && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden px-6 pb-2"
+            >
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={14} className="text-yellow-600 shrink-0" />
+                  <span className="text-xs text-yellow-800 font-medium">
+                    Showing {inactiveCount} inactive account{inactiveCount !== 1 ? 's' : ''} only
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowInactiveBanner(false)
+                    setStatusFilters({ active: true, inactive: false })
+                  }}
+                  className="text-xs text-yellow-700 hover:bg-yellow-100 rounded px-2 py-0.5 font-semibold transition-colors"
+                >
+                  ✕ Clear filter
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Bulk Actions Bar ── */}
