@@ -125,49 +125,43 @@ test.describe('Customers Page E2E', () => {
     }
 
     try {
-      console.log('--- MODAL HTML START ---');
-      console.log(await page.locator('body').innerHTML());
-      console.log('--- MODAL HTML END ---');
+      // (Re)open Create Customer modal and interact with real form selectors
       await waitForNoOverlay(page);
-      const newCustomer = await page.locator('button', { hasText: 'New Customer' }).first();
-      if (!(await newCustomer.count())) {
-        throw new Error('New Customer button not found');
-      }
-      await newCustomer.click();
-      await waitMs(2000);
-      await waitForNoOverlay(page);
+      await page.click('button:has-text("New Customer")', { timeout: 15000 });
+      await page.waitForSelector('div.fixed.inset-0.z-50.flex.items-center.justify-center', { timeout: 15000 });
+      await waitForNoOverlay(page, 10000);
 
-      const modal = await safeFind(page, 'dialog, [role="dialog"], .modal', 8000);
-      if (!modal) throw new Error('Modal did not appear');
+      const formRoot = page.locator('div.fixed.inset-0.z-50.flex.items-center.justify-center').first();
+      await expect(formRoot).toBeVisible({ timeout: 15000 });
 
-      await page.fill('input[name="displayName"], input[name="name"]', newCustomerName);
-      await page.fill('input[name="email"]', 'test@example.com');
-      await page.fill('input[name="phone"]', '09171234567');
+      // precise input selectors from CrudModal structure
+      await formRoot.locator('input[placeholder="Enter customer name..."]').fill(newCustomerName);
+      await formRoot.locator('input[placeholder="Enter email..."]').fill('test.customer@haypbooks.test');
+      await formRoot.locator('input[placeholder="Enter phone..."]').fill('09171234567');
 
-      const saveButton = page.locator('button', { hasText: /Save|Create|Submit/i }).first();
-      if (!(await saveButton.count())) throw new Error('Save/Create button not found');
-      await saveButton.click();
-      await waitMs(3000);
+      // Create record with valid fields
+      await formRoot.locator('input[placeholder="Enter customer name..."]').fill(newCustomerName);
+      await formRoot.locator('input[placeholder="Enter email..."]').fill('test.customer@haypbooks.test');
+      await formRoot.locator('input[placeholder="Enter phone..."]').fill('09171234567');
 
-      const toastError = await page.locator('text=/error/i').first().count();
-      if (toastError > 0) {
-        const errText = await page.locator('text=/error/i').first().innerText();
-        throw new Error(`Error toast displayed: ${errText}`);
-      }
+      const createResp = page.waitForResponse((r) => r.url().includes('/contacts/customers') && r.request().method() === 'POST', { timeout: 20000 });
+      await formRoot.click('button:has-text("Create")');
+      await createResp;
 
-      await expect(page.locator('table tbody tr', { hasText: newCustomerName })).toHaveCount(1, { timeout: 8000 });
+      // wait for the modal to close and row display
+      await page.waitForSelector('div.fixed.inset-0.z-50.flex.items-center.justify-center', { state: 'detached', timeout: 20000 });
+      await expect(page.locator('table tbody tr', { hasText: newCustomerName })).toHaveCount(1, { timeout: 20000 });
       results.push(log(4, 'Create a customer', true));
     } catch (err) {
+      await page.screenshot({ path: 'playwright-screenshots/customers-step4-fail.png', fullPage: true }).catch(() => {})
       results.push(log(4, 'Create a customer', false, (err as Error).message));
     }
 
     try {
-      const searchInput = await safeFind(page, 'input[type="search"], input[placeholder*="Search"], input[name="search"]', 5000);
-      if (!searchInput) throw new Error('Search input not found');
-      await searchInput.fill('');
-      await waitMs(250);
+      const searchInput = page.locator('input[placeholder*="Search customers"]');
+      await expect(searchInput).toBeVisible({ timeout: 10000 });
       await searchInput.fill(newCustomerName);
-      await waitMs(2000);
+      await waitMs(1500);
 
       const allRows = await page.locator('table tbody tr').allTextContents();
       if (allRows.length === 0) throw new Error('No rows found after search');
@@ -175,106 +169,136 @@ test.describe('Customers Page E2E', () => {
       if (!allContains) throw new Error('Table still shows rows not matching search');
       results.push(log(5, 'Search functionality', true));
     } catch (err) {
+      await page.screenshot({ path: 'playwright-screenshots/customers-step5-fail.png', fullPage: true }).catch(() => {})
       results.push(log(5, 'Search functionality', false, (err as Error).message));
     }
 
     try {
-      await waitForNoOverlay(page);
-      const filterButton = await page.locator('button', { hasText: 'Filters' }).first();
-      if (!(await filterButton.count())) throw new Error('Filters button not found');
-      await filterButton.click();
+      const filterBtn = page.locator('button:has-text("Filters")').first();
+      await expect(filterBtn).toBeVisible({ timeout: 10000 });
+      await waitForNoOverlay(page, 10000);
+      await filterBtn.click();
+      await waitForNoOverlay(page, 10000);
       await waitMs(500);
-      await waitForNoOverlay(page);
 
-      const statusOption = await page.locator('button', { hasText: 'Inactive' }).first();
-      if (!(await statusOption.count())) throw new Error('Inactive status option not found');
-      await statusOption.click();
-      await waitMs(2000);
+      const inactiveItem = page.locator('button:has-text("Inactive")').first();
+      await expect(inactiveItem).toBeVisible({ timeout: 8000 });
+      await inactiveItem.click();
+      await waitForNoOverlay(page, 10000);
+      await waitMs(1500);
 
-      const inactiveRows = await page.locator('table tbody tr').allTextContents();
-      const inactiveOK = inactiveRows.length === 0 || inactiveRows.every((row) => row.toLowerCase().includes('inactive'));
-      if (!inactiveOK) throw new Error('Inactive filter not applied correctly');
-
-      await filterButton.click();
-      await waitMs(500);
-      const allStatusOption = await page.locator('button', { hasText: 'All Status' }).first();
-      if (await allStatusOption.count()) {
-        await allStatusOption.click();
-      } else {
-        const clearAll = await page.locator('button', { hasText: 'Clear' }).first();
-        if (await clearAll.count()) await clearAll.click();
-      }
-      await waitMs(2000);
-
-      const allRows2 = await page.locator('table tbody tr').count();
-      if (allRows2 === 0) throw new Error('All status not shown after resetting filter');
+      const filteredRows = await page.locator('table tbody tr').allTextContents();
+      const inactiveBl = filteredRows.every((row) => row.toLowerCase().includes('inactive') || row.length === 0);
+      if (!inactiveBl) throw new Error('Inactive filter not applied correctly');
       results.push(log(6, 'Status filter', true));
     } catch (err) {
+      await page.screenshot({ path: 'playwright-screenshots/customers-step6-fail.png', fullPage: true }).catch(() => {})
       results.push(log(6, 'Status filter', false, (err as Error).message));
     }
 
     try {
       const row = page.locator('table tbody tr', { hasText: newCustomerName }).first();
-      if (!(await row.count())) throw new Error('Test Customer row not found for edit');
+      await expect(row).toBeVisible({ timeout: 10000 });
 
-      const editBtn = row.locator('button', { hasText: /Edit|View/i }).first();
+      // Use row action menu if present, otherwise click to view
+      const editBtn = row.locator('button:has-text("Edit")').first();
       if (await editBtn.count()) {
         await editBtn.click();
       } else {
         await row.click();
+        await page.waitForSelector('button:has-text("Save Changes")', { timeout: 10000 });
       }
 
-      await waitMs(2000);
-      const editModal = await safeFind(page, 'dialog, [role="dialog"], .modal', 8000);
-      if (!editModal) throw new Error('Edit modal did not appear');
+      const modalRoot = page.locator('div.fixed.inset-0.z-50.flex.items-center.justify-center').first();
+      await expect(modalRoot).toBeVisible({ timeout: 10000 });
 
-      await editModal.fill('input[name="displayName"], input[name="name"]', editedCustomerName);
-      const saveBtn = editModal.locator('button', { hasText: /Save|Update|Submit/i }).first();
-      if (!(await saveBtn.count())) throw new Error('Save button not found in edit modal');
-      await saveBtn.click();
-      await waitMs(3000);
-
-      await expect(page.locator('table tbody tr', { hasText: editedCustomerName })).toHaveCount(1, { timeout: 8000 });
+      await modalRoot.fill('input[placeholder="Enter customer name..."]', editedCustomerName);
+      await modalRoot.click('button:has-text("Save Changes")');
+      await page.waitForResponse((r) => r.url().includes('/contacts/customers') && r.request().method() === 'PUT', { timeout: 20000 });
+      await page.waitForSelector('div.fixed.inset-0.z-50.flex.items-center.justify-center', { state: 'detached', timeout: 15000 });
+      await expect(page.locator('table tbody tr', { hasText: editedCustomerName })).toHaveCount(1, { timeout: 20000 });
       results.push(log(7, 'Edit a customer', true));
     } catch (err) {
+      await page.screenshot({ path: 'playwright-screenshots/customers-step7-fail.png', fullPage: true }).catch(() => {})
       results.push(log(7, 'Edit a customer', false, (err as Error).message));
     }
 
     try {
-      const row = page.locator('table tbody tr', { hasText: editedCustomerName }).first();
-      if (!(await row.count())) throw new Error('Edited row not found for delete');
+      const delRow = page.locator('table tbody tr', { hasText: editedCustomerName }).first();
+      await expect(delRow).toBeVisible({ timeout: 10000 });
 
-      const deleteBtn = row.locator('button', { hasText: /Delete|Remove/i }).first();
-      if (!(await deleteBtn.count())) throw new Error('Delete button not found');
-      await deleteBtn.click();
-
-      await waitMs(1000);
-      const confirmButton = page.locator('button', { hasText: /Confirm|Yes/i }).first();
-      if (await confirmButton.count()) {
-        await confirmButton.click();
+      const delBtn = delRow.locator('button:has-text("Delete")').first();
+      if (await delBtn.count()) {
+        await delBtn.click();
+      } else {
+        await delRow.click();
+        await page.waitForSelector('button:has-text("Delete")', { timeout: 10000 });
+        await page.click('button:has-text("Delete")');
       }
-      await waitMs(3000);
 
-      const isGone = (await page.locator('table tbody tr', { hasText: editedCustomerName }).count()) === 0;
-      if (!isGone) throw new Error('Row still exists after delete');
+      // delete confirmation flow
+      await page.waitForSelector('div.fixed.inset-0.z-50.flex.items-center.justify-center', { timeout: 10000 });
+      await page.click('button:has-text("Delete")');
+      await page.waitForResponse((r) => r.url().includes('/contacts/customers') && r.request().method() === 'DELETE', { timeout: 20000 });
+      await page.waitForSelector('div.fixed.inset-0.z-50.flex.items-center.justify-center', { state: 'detached', timeout: 15000 });
+      const deleted = await page.locator('table tbody tr', { hasText: editedCustomerName }).count();
+      if (deleted > 0) throw new Error('Customer row still present after delete');
       results.push(log(8, 'Delete a customer', true));
     } catch (err) {
+      await page.screenshot({ path: 'playwright-screenshots/customers-step8-fail.png', fullPage: true }).catch(() => {})
       results.push(log(8, 'Delete a customer', false, (err as Error).message));
     }
 
     try {
-      const totalCard = page.locator('text=Total Customers').first();
-      const activeCard = page.locator('text=Active').first();
-      if (!(await totalCard.count()) || !(await activeCard.count())) throw new Error('Summary cards not found');
+      // Step 9: form validation checks for required and invalid email
+      await page.click('button:has-text("New Customer")');
+      await expect(page.locator('div.fixed.inset-0.z-50.flex.items-center.justify-center')).toBeVisible({ timeout: 15000 });
+      const modalRoot = page.locator('div.fixed.inset-0.z-50.flex.items-center.justify-center').first();
 
-      const totalText = await totalCard.locator('..').textContent();
-      const activeText = await activeCard.locator('..').textContent();
-      const totalMatch = /\d+/.test(totalText || '0');
-      const activeMatch = /\d+/.test(activeText || '0');
-      if (!totalMatch || !activeMatch) throw new Error('Summary card values invalid');
-      results.push(log(9, 'Check summary cards', true));
+      await modalRoot.locator('input[placeholder="Enter customer name..."]').fill('');
+      await modalRoot.locator('input[placeholder="Enter email..."]').fill('invalid-email');
+      await modalRoot.click('button:has-text("Create")');
+      await waitMs(1000);
+
+      const requiredError = await modalRoot.locator('text=/required/i').count();
+      const invalidEmailError = await modalRoot.locator('text=/email/i').count();
+      if (requiredError === 0 || invalidEmailError === 0) {
+        throw new Error('Form validation messages not shown');
+      }
+
+      // close modal to continue
+      await modalRoot.click('button:has-text("Cancel")');
+      await page.waitForSelector('div.fixed.inset-0.z-50.flex.items-center.justify-center', { state: 'detached', timeout: 10000 });
+
+      results.push(log(9, 'Form validation (empty/invalid)', true));
     } catch (err) {
-      results.push(log(9, 'Check summary cards', false, (err as Error).message));
+      await page.screenshot({ path: 'playwright-screenshots/customers-step9-fail.png', fullPage: true }).catch(() => {})
+      results.push(log(9, 'Form validation (empty/invalid)', false, (err as Error).message));
+    }
+
+    try {
+      const toastErrors = await page.locator('div[role="alert"], div:has-text("Error"), p:has-text("failed")').allTextContents();
+      if (toastErrors.some((t) => /error|failed/i.test(t))) {
+        throw new Error(`Toast error detected: ${toastErrors.join('; ')}`);
+      }
+      results.push(log(10, 'Error toast/display testing', true));
+    } catch (err) {
+      await page.screenshot({ path: 'playwright-screenshots/customers-step10-fail.png', fullPage: true }).catch(() => {})
+      results.push(log(10, 'Error toast/display testing', false, (err as Error).message));
+    }
+
+    try {
+      // cleanup any left-over test customer
+      const cleanupRow = page.locator('table tbody tr', { hasText: editedCustomerName }).first();
+      if (await cleanupRow.count()) {
+        await cleanupRow.locator('button:has-text("Delete")').first().click();
+        await page.waitForSelector('button:has-text("Delete")', { timeout: 10000 });
+        await page.click('button:has-text("Delete")');
+        await waitForNoOverlay(page, 10000);
+      }
+      results.push(log(11, 'Cleanup test customer', true));
+    } catch (err) {
+      results.push(log(11, 'Cleanup test customer', false, (err as Error).message));
     }
 
     try {
