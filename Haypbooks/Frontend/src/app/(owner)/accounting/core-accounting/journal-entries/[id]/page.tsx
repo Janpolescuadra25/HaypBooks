@@ -181,9 +181,8 @@ export default function EditJournalEntryPage() {
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 shrink-0 z-10">
-        <button onClick={safeBack} className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"><ArrowLeft size={18} /></button>
         <div>
-          <h1 className="text-lg font-bold text-emerald-900">Edit Journal Entry</h1>
+          <h1 className="text-lg font-bold text-emerald-900">Edit Journal Entry</h1
           <p className="text-xs text-emerald-500">Modify and save existing entry</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
