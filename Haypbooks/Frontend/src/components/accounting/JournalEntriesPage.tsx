@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, Eye, X, AlertCircle, Loader2,
-  FileText, Send, Ban, Pencil, Copy, Clock,
+  FileText, RefreshCw, Ban, Pencil, Copy, Clock,
   CheckCircle, XCircle, MoreVertical, Download,
   Printer, Trash2, Upload, Keyboard,
 } from 'lucide-react'
@@ -299,7 +299,7 @@ export default function JournalEntriesPage() {
             className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
             title="Refresh"
           >
-            <Send size={14} />
+            <RefreshCw size={14} />
           </button>
           <button
             onClick={() => router.push('/accounting/core-accounting/journal-entries/new')}
@@ -309,40 +309,6 @@ export default function JournalEntriesPage() {
           </button>
         </div>
       </div>
-
-      {/* Lightweight status bar */}
-      {totalEntries > 0 && (
-        <div className="mx-6 mb-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 px-4 py-3">
-          <div className="flex items-center flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-1.5 text-gray-700">
-              <span className="font-semibold">Total:</span>
-              <span className="font-bold text-gray-900">{totalEntries}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 rounded-full">
-              <span className="text-emerald-800 font-medium">Posted:</span>
-              <span className="font-bold text-emerald-900">{postedCount}</span>
-              {totalEntries > 0 && <span className="text-emerald-600 text-xs">({Math.round(postedCount / totalEntries * 100)}%)</span>}
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 rounded-full">
-              <span className="text-blue-800 font-medium">Draft:</span>
-              <span className="font-bold text-blue-900">{draftCount}</span>
-              {totalEntries > 0 && <span className="text-blue-600 text-xs">({Math.round(draftCount / totalEntries * 100)}%)</span>}
-            </div>
-            {voidedCount > 0 && (
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-red-50 rounded-full">
-                <span className="text-red-800 font-medium">Voided:</span>
-                <span className="font-bold text-red-900">{voidedCount}</span>
-              </div>
-            )}
-            {lastUpdated && (
-              <div className="flex items-center gap-1 text-xs text-gray-400 ml-auto">
-                <Clock size={12} />
-                <span>Last updated: {lastUpdated}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Status tab bar */}
       <div className="flex items-center gap-1 border-b border-slate-200 px-6 bg-white mx-6 rounded-t-lg">

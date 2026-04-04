@@ -12,6 +12,7 @@ import AccountSelect from '@/components/accounting/AccountSelect'
 
 interface JELine {
   accountId: string
+  customerId: string
   debit: string
   credit: string
   description: string
@@ -24,6 +25,12 @@ interface Account {
   type: string
 }
 
+interface Customer {
+  id: string
+  displayName?: string
+  contact?: { id: string; displayName: string }
+}
+
 export default function NewJournalEntryPage() {
   const router = useRouter()
   const { companyId, loading: companyLoading, error: companyError } = useCompanyId()
@@ -34,10 +41,11 @@ export default function NewJournalEntryPage() {
   const [memo, setMemo] = useState('')
   const [reference, setReference] = useState('')
   const [lines, setLines] = useState<JELine[]>([
-    { accountId: '', debit: '', credit: '', description: '' },
-    { accountId: '', debit: '', credit: '', description: '' },
+    { accountId: '', customerId: '', debit: '', credit: '', description: '' },
+    { accountId: '', customerId: '', debit: '', credit: '', description: '' },
   ])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -65,6 +73,11 @@ export default function NewJournalEntryPage() {
     apiClient
       .get(`/companies/${companyId}/accounting/accounts`)
       .then(({ data }) => setAccounts(Array.isArray(data) ? data : (data.accounts ?? [])))
+      .catch(() => {})
+
+    apiClient
+      .get(`/companies/${companyId}/contacts/customers`)
+      .then(({ data }) => setCustomers(Array.isArray(data) ? data : (data.items ?? data.customers ?? [])))
       .catch(() => {})
   }, [companyId])
 
@@ -216,6 +229,7 @@ export default function NewJournalEntryPage() {
                 <tr className="bg-gray-100 border-b border-gray-300">
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-[36%]">Account</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200">Description</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-36">Name</th>
                   <th className="text-right px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-36">Debit</th>
                   <th className="text-right px-4 py-2.5 font-semibold text-gray-700 border-r border-gray-200 w-36">Credit</th>
                   <th className="w-10"></th>
@@ -238,6 +252,22 @@ export default function NewJournalEntryPage() {
                         placeholder="Note"
                         className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                       />
+                    </td>
+                    <td className="px-3 py-1.5 border-r border-gray-100">
+                      <select
+                        value={line.customerId}
+                        onChange={e => updateLine(idx, 'customerId', e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      >
+                        <option value="">Select customer...</option>
+                        {customers.map(customer => {
+                          const display = customer.displayName || customer.contact?.displayName || 'Unnamed'
+                          const id = customer.id || customer.contact?.id || ''
+                          return (
+                            <option key={id} value={id}>{display}</option>
+                          )
+                        })}
+                      </select>
                     </td>
                     <td className="px-3 py-1.5 border-r border-gray-100">
                       <input
@@ -278,7 +308,7 @@ export default function NewJournalEntryPage() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-gray-300 bg-gray-50">
-                  <td colSpan={2} className="px-4 py-3">
+                  <td colSpan={3} className="px-4 py-3">
                     <button
                       onClick={addLine}
                       className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1 transition-colors"
@@ -296,7 +326,7 @@ export default function NewJournalEntryPage() {
                 </tr>
                 {!balanced && totalDebit > 0 && (
                   <tr className="bg-red-50">
-                    <td colSpan={5} className="px-4 py-2 text-xs text-red-600 font-medium">
+                    <td colSpan={6} className="px-4 py-2 text-xs text-red-600 font-medium">
                       Difference: {fmt(Math.abs(totalDebit - totalCredit))} — debits must equal credits
                     </td>
                   </tr>
