@@ -60,34 +60,6 @@ export class AccountingController {
         return this.svc.listCoaTemplates(req.user.userId, companyId)
     }
 
-    @Get('accounts/:accountId')
-    async getAccount(
-        @Req() req: any,
-        @Param('companyId') companyId: string,
-        @Param('accountId') accountId: string,
-    ) {
-        return this.svc.getAccount(req.user.userId, companyId, accountId)
-    }
-
-    @Put('accounts/:accountId')
-    async updateAccount(
-        @Req() req: any,
-        @Param('companyId') companyId: string,
-        @Param('accountId') accountId: string,
-        @Body() body: any,
-    ) {
-        return this.svc.updateAccount(req.user.userId, companyId, accountId, body)
-    }
-
-    @Delete('accounts/:accountId')
-    async deactivateAccount(
-        @Req() req: any,
-        @Param('companyId') companyId: string,
-        @Param('accountId') accountId: string,
-    ) {
-        return this.svc.deactivateAccount(req.user.userId, companyId, accountId)
-    }
-
     @Get('accounts/audit-log')
     @SkipThrottle()
     async getAccountAuditLog(
@@ -102,6 +74,15 @@ export class AccountingController {
             action,
             range,
         })
+    }
+
+    @Get('accounts/:accountId')
+    async getAccount(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('accountId') accountId: string,
+    ) {
+        return this.svc.getAccount(req.user.userId, companyId, accountId)
     }
 
     @Get('accounts/:accountId/ledger')
