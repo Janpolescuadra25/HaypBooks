@@ -2,6 +2,7 @@ import {
     Controller, Get, Post, Put, Delete, Patch, Body, Param, Query,
     UseGuards, Req, HttpCode, HttpStatus,
 } from '@nestjs/common'
+import { SkipThrottle } from '@nestjs/throttler'
 import { AccountingService } from './accounting.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
@@ -85,6 +86,22 @@ export class AccountingController {
         @Param('accountId') accountId: string,
     ) {
         return this.svc.deactivateAccount(req.user.userId, companyId, accountId)
+    }
+
+    @Get('accounts/audit-log')
+    @SkipThrottle()
+    async getAccountAuditLog(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query('accountId') accountId?: string,
+        @Query('action') action?: string,
+        @Query('range') range: string = '7d',
+    ) {
+        return this.svc.getAccountAuditLog(req.user.userId, companyId, {
+            accountId,
+            action,
+            range,
+        })
     }
 
     @Get('accounts/:accountId/ledger')

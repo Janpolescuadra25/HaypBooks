@@ -430,6 +430,26 @@ export class AccountingService {
 
         const account = await this.repo.createAccount({ companyId, ...resolved })
 
+        // Best-effort audit log for account creation
+        this.getWorkspaceId(companyId).then(workspaceId =>
+            this.prisma.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'CREATE',
+                    tableName: 'Account',
+                    recordId: account.id,
+                    lines: {
+                        create: [
+                            { fieldName: 'code', oldValue: null, newValue: account.code, changeType: 'CREATE' },
+                            { fieldName: 'name', oldValue: null, newValue: account.name, changeType: 'CREATE' },
+                        ],
+                    },
+                },
+            })
+        ).catch(() => {})
+
         // If an opening balance was provided, update it
         if (openingBalance !== 0) {
             await this.prisma.account.update({
@@ -476,7 +496,27 @@ export class AccountingService {
             if (existing) throw new BadRequestException(`Account code ${data.code} already exists`)
         }
 
-        return this.repo.updateAccount(companyId, accountId, data)
+        const updated = await this.repo.updateAccount(companyId, accountId, data)
+
+        // Best-effort audit log for account update — track changed fields
+        const trackFields = ['name', 'code', 'parentId', 'isActive', 'isHeader', 'currency', 'normalSide']
+        const auditLines: any[] = []
+        for (const field of trackFields) {
+            const oldVal = (account as any)[field]
+            const newVal = data[field]
+            if (newVal !== undefined && String(oldVal ?? '') !== String(newVal ?? '')) {
+                auditLines.push({ fieldName: field, oldValue: oldVal != null ? String(oldVal) : null, newValue: newVal != null ? String(newVal) : null, changeType: 'UPDATE' })
+            }
+        }
+        if (auditLines.length > 0) {
+            this.getWorkspaceId(companyId).then(workspaceId =>
+                this.prisma.auditLog.create({
+                    data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'Account', recordId: accountId, lines: { create: auditLines } },
+                })
+            ).catch(() => {})
+        }
+
+        return updated
     }
 
     private async assertNoParentCycle(accountId: string, newParentId: string) {
@@ -507,7 +547,77 @@ export class AccountingService {
         const hasActiveChildren = Array.isArray(account.children) && account.children.some((c: any) => c.isActive)
         if (hasActiveChildren) throw new BadRequestException('Cannot deactivate an account that has active child accounts')
 
-        return this.repo.softDeleteAccount(companyId, accountId, userId)
+        const result = await this.repo.softDeleteAccount(companyId, accountId, userId)
+
+        // Best-effort audit log for deactivation
+        this.getWorkspaceId(companyId).then(workspaceId =>
+            this.prisma.auditLog.create({
+                data: {
+                    workspaceId,
+                    companyId,
+                    userId,
+                    action: 'DEACTIVATE',
+                    tableName: 'Account',
+                    recordId: accountId,
+                    lines: { create: [{ fieldName: 'isActive', oldValue: 'true', newValue: 'false', changeType: 'UPDATE' }] },
+                },
+            })
+        ).catch(() => {})
+
+        return result
+    }
+
+    async getAccountAuditLog(
+        userId: string,
+        companyId: string,
+        opts: { accountId?: string; action?: string; range?: string },
+    ) {
+        await this.assertCompanyAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        // Compute date cutoff
+        const now = new Date()
+        let since = new Date(0)
+        switch (opts.range ?? '7d') {
+            case '24h': since = new Date(now.getTime() - 86_400_000); break
+            case '7d':  since = new Date(now.getTime() - 7  * 86_400_000); break
+            case '30d': since = new Date(now.getTime() - 30 * 86_400_000); break
+            case '90d': since = new Date(now.getTime() - 90 * 86_400_000); break
+            // 'all' — since stays at epoch
+        }
+
+        const where: any = {
+            workspaceId,
+            companyId,
+            tableName: 'Account',
+            createdAt: { gte: since },
+        }
+        if (opts.accountId) where.recordId = opts.accountId
+        if (opts.action && opts.action !== 'ALL') where.action = opts.action
+
+        const logs = await this.prisma.auditLog.findMany({
+            where,
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                lines: { orderBy: { id: 'asc' } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 100,
+        })
+
+        return logs.map(log => ({
+            id: log.id,
+            action: log.action,
+            tableName: log.tableName,
+            performedBy: (log.user as any)?.name || (log.user as any)?.email || 'System',
+            performedAt: log.createdAt,
+            lines: log.lines.map((l: any) => ({
+                fieldName: l.fieldName,
+                oldValue: l.oldValue,
+                newValue: l.newValue,
+                changeType: l.changeType,
+            })),
+        }))
     }
 
     async getAccountLedger(userId: string, companyId: string, accountId: string, opts: any) {
