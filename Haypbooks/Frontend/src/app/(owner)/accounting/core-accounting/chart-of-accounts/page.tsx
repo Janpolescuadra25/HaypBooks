@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import apiClient from '@/lib/api-client'
+import AccountAuditLog from '@/components/owner/AccountAuditLog'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -176,7 +177,7 @@ function RowMenu({ account, hasChildren, onEdit, onDeactivate, onReactivate, onA
 
 // ─── Account Row (recursive) ───────────────────────────────────────────────────
 function AccountRow({
-  account, depth, expanded, onToggle, onEdit, onDeactivate, onReactivate, onAddSubaccount, statusFilters, search, fmt, selectedIds, onToggleSelect,
+  account, depth, expanded, onToggle, onEdit, onDeactivate, onReactivate, onAddSubaccount, statusFilters, search, fmt, selectedIds, onToggleSelect, onOpenAuditLog,
 }: {
   account: Account
   depth: number
@@ -191,6 +192,7 @@ function AccountRow({
   fmt: (n: number) => string
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
+  onOpenAuditLog: (a: Account) => void
 }) {
   const isSelected = selectedIds.has(account.id)
   const hasChildren = !!(account.children?.length)
@@ -275,6 +277,13 @@ function AccountRow({
                   <CheckCircle2 size={13} />
                 </button>
               )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpenAuditLog(account) }}
+                title="View audit log"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+              >
+                <Clock size={13} />
+              </button>
             </div>
             <RowMenu account={account} hasChildren={hasChildren} onEdit={onEdit} onDeactivate={onDeactivate} onReactivate={onReactivate} onAddSubaccount={onAddSubaccount} />
           </div>
@@ -296,6 +305,7 @@ function AccountRow({
           fmt={fmt}
           selectedIds={selectedIds}
           onToggleSelect={onToggleSelect}
+          onOpenAuditLog={onOpenAuditLog}
         />
       ))}
     </>
@@ -694,6 +704,9 @@ export default function ChartOfAccountsPage() {
   const [defaultParentId, setDefaultParentId] = useState<string | undefined>(undefined)
   const [importModal, setImportModal] = useState(false)
   const [showInactiveBanner, setShowInactiveBanner] = useState(false)
+  const [showAuditLogDrawer, setShowAuditLogDrawer] = useState(false)
+  const [auditLogAccountId, setAuditLogAccountId] = useState<string | null>(null)
+  const [auditLogAccountName, setAuditLogAccountName] = useState<string>('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -1025,6 +1038,19 @@ export default function ChartOfAccountsPage() {
                 <Download size={13} /> Export
               </button>
               <button
+                onClick={() => { setAuditLogAccountId(null); setAuditLogAccountName(''); setShowAuditLogDrawer(true) }}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-purple-200 text-purple-700 bg-white hover:bg-purple-50 rounded-lg transition-colors"
+                title="View all account change history"
+              >
+                <Clock size={13} />
+                Audit Log
+                {recentlyModifiedCount > 0 && (
+                  <span className="ml-0.5 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-purple-100 text-purple-700">
+                    {recentlyModifiedCount > 9 ? '9+' : recentlyModifiedCount}
+                  </span>
+                )}
+              </button>
+              <button
                 onClick={openCreate}
                 disabled={!companyId || companyLoading}
                 title={!companyId ? 'Select or create a company first' : companyLoading ? 'Loading company...' : ''}
@@ -1240,6 +1266,7 @@ export default function ChartOfAccountsPage() {
                           fmt={fmt}
                           selectedIds={selectedIds}
                           onToggleSelect={toggleSelect}
+                          onOpenAuditLog={(a) => { setAuditLogAccountId(a.id); setAuditLogAccountName(a.name); setShowAuditLogDrawer(true) }}
                         />
                       ))}
                     </React.Fragment>
@@ -1277,6 +1304,14 @@ export default function ChartOfAccountsPage() {
       {importModal && companyId && (
         <ImportModal onClose={() => setImportModal(false)} onImported={loadAccounts} companyId={companyId} />
       )}
+      {/* ── Account Audit Log Drawer ── */}
+      <AccountAuditLog
+        open={showAuditLogDrawer}
+        onOpenChange={setShowAuditLogDrawer}
+        companyId={companyId || ''}
+        accountId={auditLogAccountId}
+        accountName={auditLogAccountName || undefined}
+      />
     </div>
   )
 }
