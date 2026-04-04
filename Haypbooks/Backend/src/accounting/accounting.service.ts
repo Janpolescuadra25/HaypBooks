@@ -230,7 +230,8 @@ export class AccountingService {
                         normalSide: acct.normalSide as any, isHeader: true,
                         liquidityType: resolveLiquidity(acct.typeKey, acct.liquidityType) as any,
                         specialType: 'NONE' as any, currency,
-                    },
+                        isFromTemplate: true,
+                    } as any,
                 })
                 codeToId.set(acct.code, created.id)
             } catch { /* skip duplicates */ }
@@ -252,7 +253,8 @@ export class AccountingService {
                         parentId: parentId ?? null,
                         liquidityType: resolveLiquidity(acct.typeKey, acct.liquidityType) as any,
                         specialType: 'NONE' as any, currency,
-                    },
+                        isFromTemplate: true,
+                    } as any,
                 })
                 codeToId.set(acct.code, created.id)
             } catch { /* skip duplicates */ }

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Account" ADD COLUMN IF NOT EXISTS "isFromTemplate" BOOLEAN NOT NULL DEFAULT false;

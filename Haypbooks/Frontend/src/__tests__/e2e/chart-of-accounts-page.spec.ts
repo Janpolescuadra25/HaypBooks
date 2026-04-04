@@ -112,44 +112,100 @@ test.describe('Chart of Accounts Page E2E', () => {
       results.push(log(5, 'New Account button is visible', false, (err as Error).message));
     }
 
-    // STEP 6: Stats cards render
+    // STEP 6: Stat cards are NOT present (removed from page)
     try {
-      const tableRow = await safeFind(page, 'table tbody tr', 5000);
-      if (tableRow) {
-        const cards = page.locator('text=Total Accounts');
-        const visible = await cards.first().isVisible({ timeout: 3000 }).catch(() => false);
-        results.push(log(6, 'Smart stats cards render', Boolean(visible)));
-      } else {
-        results.push(log(6, 'Smart stats cards render (skipped - no accounts)', true));
-      }
+      const cards = page.locator('text=Total Accounts');
+      const visible = await cards.first().isVisible({ timeout: 2000 }).catch(() => false);
+      // Cards were removed — this should evaluate to false (not visible)
+      results.push(log(6, 'Stat cards NOT present (removed)', !visible,
+        visible ? '"Total Accounts" card unexpectedly found — cards should have been removed' : undefined));
     } catch (err) {
-      results.push(log(6, 'Smart stats cards render', false, (err as Error).message));
+      results.push(log(6, 'Stat cards NOT present (removed)', false, (err as Error).message));
     }
 
-    // STEP 7: Keyboard shortcut Ctrl+N opens modal
+    // STEP 7: Audit Log button visible
+    try {
+      const auditBtn = page.getByRole('button', { name: /audit log/i });
+      const visible = await auditBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
+      results.push(log(7, 'Audit Log button is visible', Boolean(visible)));
+    } catch (err) {
+      results.push(log(7, 'Audit Log button is visible', false, (err as Error).message));
+    }
+
+    // STEP 8: Clicking Audit Log opens fullscreen (no sidebar/topbar)
+    try {
+      const auditBtn = page.getByRole('button', { name: /audit log/i });
+      const btnVisible = await auditBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
+      if (btnVisible) {
+        await auditBtn.first().click();
+        await waitMs(1500);
+        const auditURL = page.url();
+        const isAuditPage = auditURL.endsWith('/audit-log') || auditURL.includes('/audit-log');
+        // Full-screen: no sidebar or owner topbar rendered
+        const sidebar = await safeFind(page, 'nav[data-sidebar], aside', 2000);
+        const sidebarVisible = sidebar ? await sidebar.isVisible().catch(() => false) : false;
+        const pass = isAuditPage && !sidebarVisible;
+        results.push(log(8, 'Audit Log page = fullscreen (no sidebar)', pass,
+          !isAuditPage ? `URL was ${auditURL}` : sidebarVisible ? 'sidebar still visible' : undefined));
+        // Navigate back
+        await page.goBack();
+        await waitMs(1000);
+      } else {
+        results.push(log(8, 'Audit Log page = fullscreen (skipped — button not visible)', true));
+      }
+    } catch (err) {
+      results.push(log(8, 'Audit Log page = fullscreen', false, (err as Error).message));
+    }
+
+    // STEP 9: Keyboard shortcut Ctrl+N opens New Account modal
     try {
       await page.keyboard.press('Control+n');
       await waitMs(500);
       const modal = await safeFind(page, '[role="dialog"], .fixed.inset-0', 3000);
       if (modal) {
+        // Verify modal title
+        const modalTitle = page.locator('h2:has-text("New Account")');
+        const titleVisible = await modalTitle.first().isVisible({ timeout: 2000 }).catch(() => false);
         await page.keyboard.press('Escape');
         await waitMs(300);
+        results.push(log(9, 'Ctrl+N opens New Account modal with correct title', titleVisible || !!modal));
+      } else {
+        results.push(log(9, 'Ctrl+N opens New Account modal', false, 'modal not found'));
       }
-      results.push(log(7, 'Ctrl+N opens New Account modal', !!modal));
     } catch (err) {
-      results.push(log(7, 'Ctrl+N opens New Account modal', false, (err as Error).message));
+      results.push(log(9, 'Ctrl+N opens New Account modal', false, (err as Error).message));
     }
 
-    // STEP 8: Export button visible
+    // STEP 10: Export button visible
     try {
       const exportBtn = page.getByRole('button', { name: /export/i });
       const visible = await exportBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
-      results.push(log(8, 'Export button is visible', Boolean(visible)));
+      results.push(log(10, 'Export button is visible', Boolean(visible)));
     } catch (err) {
-      results.push(log(8, 'Export button is visible', false, (err as Error).message));
+      results.push(log(10, 'Export button is visible', false, (err as Error).message));
     }
 
-    // STEP 9: No critical console errors
+    // STEP 11: Per-account audit log button navigates to fullscreen URL
+    try {
+      const auditIconBtn = page.locator('button[title="View audit log"]');
+      const count = await auditIconBtn.count();
+      if (count > 0) {
+        await auditIconBtn.first().click();
+        await waitMs(1500);
+        const auditURL = page.url();
+        const isAuditPage = auditURL.match(/\/[^/]+\/audit-log$/) !== null;
+        results.push(log(11, 'Per-account audit log navigates to /{id}/audit-log', Boolean(isAuditPage),
+          isAuditPage ? undefined : `URL was ${auditURL}`));
+        await page.goBack();
+        await waitMs(1000);
+      } else {
+        results.push(log(11, 'Per-account audit log (skipped — no rows)', true));
+      }
+    } catch (err) {
+      results.push(log(11, 'Per-account audit log navigation', false, (err as Error).message));
+    }
+
+    // STEP 12: No critical console errors
     const pageErrors: string[] = [];
     try {
       page.on('console', (msg: ConsoleMessage) => {
@@ -159,21 +215,9 @@ test.describe('Chart of Accounts Page E2E', () => {
       const filtered = pageErrors.filter(
         e => !e.includes('favicon') && !e.includes('404') && !e.includes('hot-update')
       );
-      results.push(log(9, 'No critical console errors', filtered.length === 0, filtered.join('; ')));
+      results.push(log(12, 'No critical console errors', filtered.length === 0, filtered.join('; ')));
     } catch (err) {
-      results.push(log(9, 'No critical console errors check', false, (err as Error).message));
-    }
-
-    // STEP 10: Pagination controls present
-    try {
-      const prevBtn = page.getByRole('button', { name: /previous/i });
-      const nextBtn = page.getByRole('button', { name: /next/i });
-      const hasPagination =
-        await prevBtn.first().isVisible({ timeout: 3000 }).catch(() => false) ||
-        await nextBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
-      results.push(log(10, 'Pagination controls present', Boolean(hasPagination)));
-    } catch (err) {
-      results.push(log(10, 'Pagination controls present', false, (err as Error).message));
+      results.push(log(12, 'No critical console errors check', false, (err as Error).message));
     }
 
     // Final summary

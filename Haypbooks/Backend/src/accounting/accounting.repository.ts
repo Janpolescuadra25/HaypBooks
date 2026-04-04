@@ -70,6 +70,7 @@ export class AccountingRepository {
         specialType?: string
         cashFlowType?: string
         accountSubTypeId?: number
+        isFromTemplate?: boolean
     }) {
         return this.prisma.account.create({
             data: {
@@ -85,7 +86,8 @@ export class AccountingRepository {
                 specialType: data.specialType as any ?? 'NONE',
                 cashFlowType: data.cashFlowType ?? null,
                 accountSubTypeId: data.accountSubTypeId ?? null,
-            },
+                isFromTemplate: data.isFromTemplate ?? false,
+            } as any,
         })
     }
 
