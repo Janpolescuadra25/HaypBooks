@@ -964,7 +964,7 @@ export default function ChartOfAccountsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="flex flex-col min-h-full pb-8 bg-slate-50">
       {/* ── Sticky Header ── */}
       <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">

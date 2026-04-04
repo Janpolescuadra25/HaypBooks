@@ -16,7 +16,7 @@ export default function OwnerLayout({ children }: { children: ReactNode }) {
       {/* <OwnerSidebar /> */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* <TopNav /> */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 min-h-0 overflow-y-auto">{children}</main>
       </div>
     </div>
   )
