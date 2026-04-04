@@ -9,8 +9,9 @@ import {
   Wallet, Clock, AlertTriangle,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useRouter } from 'next/navigation'
 import apiClient from '@/lib/api-client'
-import AccountAuditLog from '@/components/owner/AccountAuditLog'
+
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -30,6 +31,7 @@ interface Account {
   balance: number
   isActive: boolean
   isHeader: boolean
+  isFromTemplate?: boolean
   parentId: string | null
   description?: string
   updatedAt?: string
@@ -704,9 +706,6 @@ export default function ChartOfAccountsPage() {
   const [defaultParentId, setDefaultParentId] = useState<string | undefined>(undefined)
   const [importModal, setImportModal] = useState(false)
   const [showInactiveBanner, setShowInactiveBanner] = useState(false)
-  const [showAuditLogDrawer, setShowAuditLogDrawer] = useState(false)
-  const [auditLogAccountId, setAuditLogAccountId] = useState<string | null>(null)
-  const [auditLogAccountName, setAuditLogAccountName] = useState<string>('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -717,6 +716,7 @@ export default function ChartOfAccountsPage() {
         : new Set(flatAccs.map(a => a.id))
     )
   const toast = useToast()
+  const router = useRouter()
 
   // If company loading finishes with no company, stop loading
   useEffect(() => {
@@ -769,21 +769,7 @@ export default function ChartOfAccountsPage() {
 
   const totalAccounts = flatAccs.length
   const activeAccounts = flatAccs.filter(a => a.isActive).length
-  const totalDebits = flatAccs.filter(a => a.normalSide === 'Debit' && !a.isHeader).reduce((s, a) => s + (a.balance ?? 0), 0)
-  const totalCredits = flatAccs.filter(a => a.normalSide === 'Credit' && !a.isHeader).reduce((s, a) => s + Math.abs(a.balance ?? 0), 0)
-  // Smart metrics
-  const activeCount = activeAccounts
   const inactiveCount = totalAccounts - activeAccounts
-  const accountsWithBalances = flatAccs.filter(a => Math.abs(a.balance ?? 0) > 0.01).length
-  const categoryCount = new Set(flatAccs.map(a => a.type)).size
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-  const recentlyModifiedCount = flatAccs.filter(a => {
-    try {
-      const updated = new Date(a.updatedAt || a.createdAt || '')
-      return !isNaN(updated.getTime()) && updated > sevenDaysAgo
-    } catch { return false }
-  }).length
 
   const [page, setPage] = useState(1)
   const [sortConfig, setSortConfig] = useState<{ key: 'code' | 'name' | 'balance', direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' })
@@ -1038,17 +1024,12 @@ export default function ChartOfAccountsPage() {
                 <Download size={13} /> Export
               </button>
               <button
-                onClick={() => { setAuditLogAccountId(null); setAuditLogAccountName(''); setShowAuditLogDrawer(true) }}
+                onClick={() => router.push('/accounting/core-accounting/chart-of-accounts/audit-log')}
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-purple-200 text-purple-700 bg-white hover:bg-purple-50 rounded-lg transition-colors"
                 title="View all account change history"
               >
                 <Clock size={13} />
                 Audit Log
-                {recentlyModifiedCount > 0 && (
-                  <span className="ml-0.5 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-purple-100 text-purple-700">
-                    {recentlyModifiedCount > 9 ? '9+' : recentlyModifiedCount}
-                  </span>
-                )}
               </button>
               <button
                 onClick={openCreate}
@@ -1078,64 +1059,6 @@ export default function ChartOfAccountsPage() {
                 </ul>
                 <p>Click the help button (?) in the header to come back here.</p>
               </div>
-            </div>
-          </div>
-        )}
-        {/* ── Smart Stats Cards ── */}
-        {!loading && flatAccs.length > 0 && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 pb-3">
-            {/* 1. Total Accounts */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Total Accounts</span>
-                <BarChart3 size={14} className="text-gray-400" />
-              </div>
-              <div className="text-xl font-bold text-gray-900">{totalAccounts}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">Across {categoryCount} categories</div>
-            </div>
-            {/* 2. Active / Inactive */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Active</span>
-                <CheckCircle2 size={14} className="text-green-500" />
-              </div>
-              <div className="text-xl font-bold text-green-600">{activeCount}</div>
-              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                {inactiveCount > 0 ? (
-                  <>
-                    <span className="text-[10px] text-gray-500">{inactiveCount} inactive</span>
-                    <button
-                      onClick={() => {
-                        setStatusFilters({ active: false, inactive: true })
-                        setShowInactiveBanner(true)
-                      }}
-                      className="text-[10px] text-blue-600 hover:underline font-semibold"
-                    >
-                      View →
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-[10px] text-green-600 font-semibold">✓ All active</span>
-                )}
-              </div>
-            </div>
-            {/* 3. With Balances */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">With Balances</span>
-                <Wallet size={14} className="text-blue-400" />
-              </div>
-              <div className="text-xl font-bold text-blue-600">{accountsWithBalances}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">Of {totalAccounts} total</div>
-            </div>
-            {/* 4. Recently Edited */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Recently Edited</span>
-                <Clock size={14} className="text-purple-400" />
-              </div>
-              <div className="text-xl font-bold text-purple-600">{recentlyModifiedCount}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">Last 7 days</div>
             </div>
           </div>
         )}
@@ -1266,7 +1189,7 @@ export default function ChartOfAccountsPage() {
                           fmt={fmt}
                           selectedIds={selectedIds}
                           onToggleSelect={toggleSelect}
-                          onOpenAuditLog={(a) => { setAuditLogAccountId(a.id); setAuditLogAccountName(a.name); setShowAuditLogDrawer(true) }}
+                          onOpenAuditLog={(a) => router.push(`/accounting/core-accounting/chart-of-accounts/${a.id}/audit-log`)}
                         />
                       ))}
                     </React.Fragment>
@@ -1304,14 +1227,7 @@ export default function ChartOfAccountsPage() {
       {importModal && companyId && (
         <ImportModal onClose={() => setImportModal(false)} onImported={loadAccounts} companyId={companyId} />
       )}
-      {/* ── Account Audit Log Drawer ── */}
-      <AccountAuditLog
-        open={showAuditLogDrawer}
-        onOpenChange={setShowAuditLogDrawer}
-        companyId={companyId || ''}
-        accountId={auditLogAccountId}
-        accountName={auditLogAccountName || undefined}
-      />
+
     </div>
   )
 }

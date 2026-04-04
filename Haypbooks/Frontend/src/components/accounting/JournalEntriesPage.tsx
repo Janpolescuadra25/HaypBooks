@@ -13,7 +13,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import JournalAuditLog from '@/components/accounting/JournalAuditLog'
+
 
 const fmtDate = (d: string) => {
   try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) } catch { return d }
@@ -136,8 +136,6 @@ export default function JournalEntriesPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null)
-  const [showAuditLog, setShowAuditLog] = useState(false)
-  const [auditLogEntryId, setAuditLogEntryId] = useState<string | null>(null)
 
   const fetchEntries = useCallback(async () => {
     if (!companyId) return
@@ -168,7 +166,6 @@ export default function JournalEntriesPage() {
       }
       if (e.key === 'Escape') {
         setViewEntry(null)
-        setShowAuditLog(false)
       }
     }
     window.addEventListener('keydown', handler)
@@ -249,9 +246,12 @@ export default function JournalEntriesPage() {
   }, [router])
 
   const openAuditLog = useCallback((entryId: string | null) => {
-    setAuditLogEntryId(entryId)
-    setShowAuditLog(true)
-  }, [])
+    if (entryId) {
+      router.push(`/accounting/core-accounting/journal-entries/${entryId}/activity`)
+    } else {
+      router.push('/accounting/core-accounting/journal-entries/audit-log')
+    }
+  }, [router])
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -512,13 +512,7 @@ export default function JournalEntriesPage() {
         )}
       </AnimatePresence>
 
-      {/* Audit Log Drawer */}
-      <JournalAuditLog
-        open={showAuditLog}
-        onOpenChange={setShowAuditLog}
-        companyId={companyId ?? ''}
-        entryId={auditLogEntryId}
-      />
+
     </div>
   )
 }

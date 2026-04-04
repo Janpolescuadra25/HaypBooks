@@ -5335,6 +5335,7 @@ model Account {
   currency           String      @default("USD")
   isActive           Boolean     @default(true)
   isSystem           Boolean     @default(false)
+  isFromTemplate     Boolean     @default(false)
   cashFlowType       String? // OPERATING, INVESTING, FINANCING
   cashFlowCategoryId String?
   normalSide         NormalSide? // optional override of the AccountType normalSide
