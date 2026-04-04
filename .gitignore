@@ -9,3 +9,7 @@ Credentials
 jest-output.json
 tsc-errors.txt
 validate_errors.txt
+
+# Prisma generated client
+Haypbooks/Backend/node_modules/.prisma/
+Haypbooks/Backend/node_modules/.prisma/client/
