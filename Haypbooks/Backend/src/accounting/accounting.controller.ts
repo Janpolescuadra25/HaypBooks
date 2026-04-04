@@ -97,6 +97,18 @@ export class AccountingController {
 
     // ─── Journal Entries ──────────────────────────────────────────────────────
 
+    @Get('journal-entries/audit-log')
+    @SkipThrottle()
+    async getJournalEntriesAuditLog(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query('entryId') entryId?: string,
+        @Query('action') action?: string,
+        @Query('range') range: string = '30d',
+    ) {
+        return this.svc.getJournalEntriesAuditLog(req.user.userId, companyId, { entryId, action, range })
+    }
+
     @Get('journal-entries')
     async listJournalEntries(
         @Req() req: any,
@@ -162,6 +174,16 @@ export class AccountingController {
         @Body() body: { reason?: string },
     ) {
         return this.svc.voidJournalEntry(req.user.userId, companyId, jeId, body.reason ?? 'Voided by user')
+    }
+
+    @Delete('journal-entries/:jeId')
+    @HttpCode(HttpStatus.OK)
+    async deleteJournalEntry(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('jeId') jeId: string,
+    ) {
+        return this.svc.deleteJournalEntry(req.user.userId, companyId, jeId)
     }
 
     // ─── Trial Balance ────────────────────────────────────────────────────────

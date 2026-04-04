@@ -558,6 +558,31 @@ export class AccountingRepository {
 
     // ─── Journal Entry Activity ────────────────────────────────────────────────
 
+    async deleteJournalEntry(companyId: string, jeId: string, userId: string) {
+        const je = await this.prisma.journalEntry.findFirst({
+            where: { id: jeId, companyId, deletedAt: null },
+        })
+        if (!je) return null
+        if (je.postingStatus !== 'DRAFT') throw new Error('Only DRAFT entries can be deleted')
+        const deleted = await this.prisma.journalEntry.update({
+            where: { id: jeId },
+            data: { deletedAt: new Date() },
+        })
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: je.workspaceId,
+                companyId,
+                userId,
+                action: 'DELETE',
+                tableName: 'JournalEntry',
+                recordId: jeId,
+                changes: {},
+                lines: { create: [{ fieldName: 'deletedAt', oldValue: null, newValue: new Date().toISOString(), changeType: 'DELETE' }] },
+            },
+        }).catch(() => {})
+        return deleted
+    }
+
     async findJournalEntryAuditLogs(companyId: string, jeId: string) {
         return this.prisma.auditLog.findMany({
             where: { companyId, tableName: 'JournalEntry', recordId: jeId },

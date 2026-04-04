@@ -644,6 +644,58 @@ export class AccountingService {
 
     // ─── Journal Entries ──────────────────────────────────────────────────────
 
+    async getJournalEntriesAuditLog(
+        userId: string,
+        companyId: string,
+        opts: { entryId?: string; action?: string; range?: string },
+    ) {
+        await this.assertCompanyAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        const now = new Date()
+        let since = new Date(0)
+        switch (opts.range ?? '30d') {
+            case '7d':  since = new Date(now.getTime() - 7  * 86_400_000); break
+            case '30d': since = new Date(now.getTime() - 30 * 86_400_000); break
+            case '90d': since = new Date(now.getTime() - 90 * 86_400_000); break
+            // 'all' — since stays at epoch
+        }
+
+        const where: any = {
+            workspaceId,
+            companyId,
+            tableName: 'JournalEntry',
+            createdAt: { gte: since },
+        }
+        if (opts.entryId) where.recordId = opts.entryId
+        if (opts.action && opts.action !== 'ALL') where.action = opts.action
+
+        const logs = await this.prisma.auditLog.findMany({
+            where,
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                lines: { orderBy: { id: 'asc' } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+        })
+
+        return logs.map(log => ({
+            id: log.id,
+            action: log.action,
+            tableName: log.tableName,
+            performedBy: (log.user as any)?.name || (log.user as any)?.email || 'System',
+            performedAt: log.createdAt,
+            lines: log.lines.map((l: any) => ({
+                fieldName: l.fieldName,
+                oldValue: l.oldValue,
+                newValue: l.newValue,
+                changeType: l.changeType,
+            })),
+        }))
+    }
+
+
     async listJournalEntries(userId: string, companyId: string, opts: any) {
         await this.assertCompanyAccess(userId, companyId)
         const entries = await this.repo.findJournalEntries(companyId, {
@@ -761,6 +813,18 @@ export class AccountingService {
             const result = await this.repo.voidJournalEntry(companyId, jeId, userId, reason)
             if (!result) throw new NotFoundException('Journal entry not found')
             return result
+        } catch (e: any) {
+            if (e.status === 404) throw e
+            throw new BadRequestException(e.message)
+        }
+    }
+
+    async deleteJournalEntry(userId: string, companyId: string, jeId: string) {
+        await this.assertCompanyAccess(userId, companyId)
+        try {
+            const result = await this.repo.deleteJournalEntry(companyId, jeId, userId)
+            if (!result) throw new NotFoundException('Journal entry not found')
+            return { success: true, id: jeId }
         } catch (e: any) {
             if (e.status === 404) throw e
             throw new BadRequestException(e.message)
