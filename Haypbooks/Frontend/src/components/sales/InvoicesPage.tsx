@@ -3,15 +3,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  Plus, Search, Eye, X, AlertCircle, Loader2, FileText, Send, Ban, DollarSign,
-  ReceiptText, Clock, CheckCircle2, TrendingUp
+  Plus, Search, Eye, X, AlertCircle, Loader2, FileText, Send, Ban,
+  ReceiptText, Clock, CheckCircle2, TrendingUp, MoreVertical, Copy,
+  Trash2, RefreshCw, ChevronDown, LayoutTemplate, Filter, SlidersHorizontal,
+  Download, CheckSquare, Square, AlertTriangle, DollarSign,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import InvoiceFormModal from './InvoiceFormModal'
+import InvoiceDetailPage from './InvoiceDetailPage'
+import TemplateGallery from './invoice-templates/TemplateGallery'
 
-interface Invoice {
+export interface Invoice {
   id: string
   invoiceNumber?: string
   customerId?: string
@@ -25,15 +30,13 @@ interface Invoice {
   memo?: string
 }
 
-interface InvoiceItem {
+export interface InvoiceItem {
   description: string
   quantity: number
   unitPrice: number
   amount: number
   accountId?: string
 }
-
-interface Customer { id: string; name: string }
 
 const statusStyles: Record<string, string> = {
   DRAFT: 'bg-gray-50 text-gray-700 border-gray-200',
@@ -42,6 +45,15 @@ const statusStyles: Record<string, string> = {
   PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   OVERDUE: 'bg-red-50 text-red-700 border-red-200',
   VOIDED: 'bg-gray-50 text-gray-500 border-gray-200',
+}
+
+const statusIcons: Record<string, React.ReactNode> = {
+  DRAFT: React.createElement(Clock, { size: 11 }),
+  SENT: React.createElement(Send, { size: 11 }),
+  PARTIALLY_PAID: React.createElement(DollarSign, { size: 11 }),
+  PAID: React.createElement(CheckCircle2, { size: 11 }),
+  OVERDUE: React.createElement(AlertTriangle, { size: 11 }),
+  VOIDED: React.createElement(Ban, { size: 11 }),
 }
 
 export default function InvoicesPage() {
@@ -54,6 +66,10 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [showForm, setShowForm] = useState(false)
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+  const [bulkLoading, setBulkLoading] = useState(false)
 
   const fetchInvoices = useCallback(async () => {
     if (!companyId) return
@@ -81,138 +97,232 @@ export default function InvoicesPage() {
     return list
   }, [invoices, search, statusFilter])
 
-  const handleSend = async (id: string) => {
-    if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`); fetchInvoices() }
-    catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to send') }
-  }
-
-  const handleVoid = async (id: string) => {
-    if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`); fetchInvoices() }
-    catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
-  }
-
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-  const fmtDate = (d: string) => {
-    try {
-      return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    } catch {
-      return d
-    }
-  }
-
-  if (cidLoading || (loading && invoices.length === 0)) {
-    return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /><span className="ml-2 text-emerald-700">Loading invoices…</span></div>
-  }
-  if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
-
-  const stats = {
+  const stats = useMemo(() => ({
     total: invoices.length,
     draft: invoices.filter(i => i.status === 'DRAFT').length,
     sent: invoices.filter(i => i.status === 'SENT').length,
     overdue: invoices.filter(i => i.status === 'OVERDUE').length,
+    paid: invoices.filter(i => i.status === 'PAID').length,
     totalAmount: invoices.reduce((s, i) => s + (i.total || 0), 0),
+    overdueAmount: invoices.filter(i => i.status === 'OVERDUE').reduce((s, i) => s + (i.amountDue || i.total || 0), 0),
+    outstandingAmount: invoices
+      .filter(i => ['SENT', 'PARTIALLY_PAID', 'OVERDUE'].includes(i.status))
+      .reduce((s, i) => s + (i.amountDue || i.total || 0), 0),
+    paidPct: invoices.length > 0 ? Math.round((invoices.filter(i => i.status === 'PAID').length / invoices.length) * 100) : 0,
+  }), [invoices])
+
+  const handleSend = async (id: string) => {
+    if (!companyId) return
+    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`); fetchInvoices() }
+    catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to send') }
+    setActionMenuId(null)
   }
+
+  const handleVoid = async (id: string) => {
+    if (!companyId || !confirm('Void this invoice?')) return
+    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`); fetchInvoices() }
+    catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
+    setActionMenuId(null)
+  }
+
+  const handleBulkAction = async (action: 'send' | 'void') => {
+    if (!companyId || selected.size === 0) return
+    if (!confirm(`${action === 'send' ? 'Send' : 'Void'} ${selected.size} invoice(s)?`)) return
+    setBulkLoading(true)
+    const ids = Array.from(selected)
+    await Promise.allSettled(ids.map(id =>
+      apiClient.post(`/companies/${companyId}/ar/invoices/${id}/${action}`)
+    ))
+    setSelected(new Set())
+    setBulkLoading(false)
+    fetchInvoices()
+  }
+
+  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleSelectAll = () => setSelected(p => p.size === filtered.length ? new Set() : new Set(filtered.map(i => i.id)))
+
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+  const fmtDate = (d: string) => {
+    try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+    catch { return d }
+  }
+
+  if (cidLoading || (loading && invoices.length === 0)) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+        <span className="ml-2 text-emerald-700">Loading invoices…</span>
+      </div>
+    )
+  }
+  if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Invoices</h1>
           <p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} of {invoices.length} invoices</p>
         </div>
-        <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
-          <Plus size={16} /> New Invoice
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setShowTemplates(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">
+            <LayoutTemplate size={15} /> Templates
+          </button>
+          <button onClick={fetchInvoices} disabled={loading}
+            className="p-2 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors" title="Refresh">
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+            <Plus size={16} /> New Invoice
+          </button>
+        </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><ReceiptText size={16} className="text-emerald-500" /><span className="text-xs text-emerald-600/60">Total</span></div>
-          <p className="text-2xl font-bold text-emerald-900">{stats.total}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><Clock size={16} className="text-gray-400" /><span className="text-xs text-gray-500">Draft</span></div>
-          <p className="text-2xl font-bold text-gray-700">{stats.draft}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><CheckCircle2 size={16} className="text-blue-500" /><span className="text-xs text-blue-600/60">Sent</span></div>
-          <p className="text-2xl font-bold text-blue-700">{stats.sent}</p>
-          {stats.overdue > 0 && <p className="text-xs text-red-500 mt-0.5">{stats.overdue} overdue</p>}
-        </div>
-        <div className="bg-white rounded-xl border border-emerald-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><TrendingUp size={16} className="text-emerald-500" /><span className="text-xs text-emerald-600/60">Total Amount</span></div>
-          <p className="text-lg font-bold text-emerald-900">{fmt(stats.totalAmount)}</p>
-        </div>
+        <StatCard icon={React.createElement(ReceiptText, { size: 16, className: 'text-emerald-500' })} label="Total Invoices" value={String(stats.total)} sub={`${stats.paidPct}% paid`} color="emerald" />
+        <StatCard icon={React.createElement(TrendingUp, { size: 16, className: 'text-emerald-500' })} label="Total Amount" value={fmt(stats.totalAmount)} sub="all time" color="emerald" />
+        <StatCard icon={React.createElement(Clock, { size: 16, className: 'text-amber-500' })} label="Outstanding" value={fmt(stats.outstandingAmount)} sub={`${stats.sent + stats.overdue} invoices`} color="amber" />
+        <StatCard icon={React.createElement(AlertTriangle, { size: 16, className: 'text-red-500' })} label="Overdue" value={fmt(stats.overdueAmount)} sub={`${stats.overdue} overdue`} color="red" />
       </div>
 
+      {/* Filters */}
       <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
           <input type="text" placeholder="Search invoices…" value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-          <option value="ALL">All Status</option>
-          <option value="DRAFT">Draft</option>
-          <option value="SENT">Sent</option>
-          <option value="PARTIALLY_PAID">Partially Paid</option>
-          <option value="PAID">Paid</option>
-          <option value="OVERDUE">Overdue</option>
-          <option value="VOIDED">Voided</option>
-        </select>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {['ALL', 'DRAFT', 'SENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'VOIDED'].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
+              {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
+              {s === 'OVERDUE' && stats.overdue > 0 && (
+                <span className="ml-1.5 bg-red-500 text-white rounded-full px-1.5 text-xs">{stats.overdue}</span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700">
-          <AlertCircle size={16} /> {error} <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button>
+          <AlertCircle size={15} /> {error}
+          <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button>
         </div>
       )}
 
+      {/* Bulk action bar */}
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
+            <CheckSquare size={16} />
+            <span className="text-sm font-semibold">{selected.size} selected</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <button onClick={() => handleBulkAction('send')} disabled={bulkLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
+                <Send size={12} /> Send All
+              </button>
+              <button onClick={() => handleBulkAction('void')} disabled={bulkLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
+                <Ban size={12} /> Void All
+              </button>
+              <button onClick={() => setSelected(new Set())}
+                className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Table */}
       <div className="bg-white rounded-xl border border-emerald-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-emerald-50/50 border-b border-emerald-100">
+              <th className="px-4 py-3 w-10">
+                <button onClick={toggleSelectAll} className="text-emerald-400 hover:text-emerald-600 transition-colors">
+                  {selected.size === filtered.length && filtered.length > 0
+                    ? React.createElement(CheckSquare, { size: 15 })
+                    : React.createElement(Square, { size: 15 })}
+                </button>
+              </th>
               <th className="text-left px-4 py-3 font-medium text-emerald-700">Invoice #</th>
               <th className="text-left px-4 py-3 font-medium text-emerald-700">Customer</th>
               <th className="text-left px-4 py-3 font-medium text-emerald-700 hidden md:table-cell">Date</th>
               <th className="text-left px-4 py-3 font-medium text-emerald-700 hidden lg:table-cell">Due Date</th>
               <th className="text-left px-4 py-3 font-medium text-emerald-700">Status</th>
               <th className="text-right px-4 py-3 font-medium text-emerald-700">Total</th>
-              <th className="text-right px-4 py-3 font-medium text-emerald-700 w-28">Actions</th>
+              <th className="w-12 px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-emerald-400">
-                <FileText size={24} className="mx-auto mb-2 opacity-50" />No invoices found.
+              <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <FileText size={32} className="mx-auto mb-3 text-emerald-200" />
+                <p className="text-sm text-emerald-400 font-medium">No invoices found</p>
+                <p className="text-xs text-emerald-300 mt-1">
+                  {search || statusFilter !== 'ALL' ? 'Try adjusting your filters' : 'Create your first invoice above'}
+                </p>
               </td></tr>
             ) : (
               filtered.map(inv => (
-                <tr key={inv.id} className="border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors">
-                  <td className="px-4 py-2.5 font-mono text-xs text-emerald-600">{inv.invoiceNumber ?? inv.id.slice(0, 8)}</td>
-                  <td className="px-4 py-2.5 font-medium text-emerald-900">{inv.customerName ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-emerald-600/70 hidden md:table-cell">{fmtDate(inv.date)}</td>
-                  <td className="px-4 py-2.5 text-emerald-600/70 hidden lg:table-cell">{fmtDate(inv.dueDate)}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[inv.status] ?? ''}`}>
-                      {inv.status.replace(/_/g, ' ')}
+                <tr key={inv.id} className={`border-t border-emerald-50 hover:bg-emerald-50/20 transition-colors ${selected.has(inv.id) ? 'bg-emerald-50/40' : ''}`}>
+                  <td className="px-4 py-3">
+                    <button onClick={() => toggleSelect(inv.id)} className="text-emerald-400 hover:text-emerald-600 transition-colors">
+                      {selected.has(inv.id)
+                        ? React.createElement(CheckSquare, { size: 15 })
+                        : React.createElement(Square, { size: 15 })}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => setViewInvoice(inv)}
+                      className="font-mono text-xs text-emerald-600 hover:text-emerald-800 hover:underline font-semibold">
+                      {inv.invoiceNumber ?? inv.id.slice(0, 8)}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-emerald-900 max-w-[160px] truncate">{inv.customerName ?? '—'}</td>
+                  <td className="px-4 py-3 text-emerald-600/70 hidden md:table-cell text-xs">{fmtDate(inv.date)}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-xs">
+                    <span className={inv.status === 'OVERDUE' ? 'text-red-600 font-semibold' : 'text-emerald-600/70'}>
+                      {fmtDate(inv.dueDate)}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(inv.total)}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => setViewInvoice(inv)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="View"><Eye size={14} /></button>
-                      {inv.status === 'DRAFT' && (
-                        <button onClick={() => handleSend(inv.id)} className="p-1 rounded hover:bg-blue-100 text-blue-500" title="Send"><Send size={14} /></button>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${statusStyles[inv.status] ?? ''}`}>
+                      {statusIcons[inv.status]} {inv.status.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800">{fmt(inv.total)}</td>
+                  <td className="px-4 py-3 relative">
+                    <button onClick={() => setActionMenuId(prev => prev === inv.id ? null : inv.id)}
+                      className="p-1.5 rounded-lg hover:bg-emerald-100 text-emerald-500 transition-colors">
+                      <MoreVertical size={14} />
+                    </button>
+                    <AnimatePresence>
+                      {actionMenuId === inv.id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                          className="absolute right-2 top-full z-20 bg-white border border-gray-100 rounded-xl shadow-lg py-1 w-44 mt-1">
+                          <MenuBtn icon={React.createElement(Eye, { size: 13 })} label="View Details" onClick={() => { setViewInvoice(inv); setActionMenuId(null) }} />
+                          {inv.status === 'DRAFT' && (
+                            <MenuBtn icon={React.createElement(Send, { size: 13 })} label="Send Invoice" onClick={() => handleSend(inv.id)} />
+                          )}
+                          {(inv.status === 'DRAFT' || inv.status === 'SENT') && (
+                            <MenuBtn icon={React.createElement(Ban, { size: 13 })} label="Void" onClick={() => handleVoid(inv.id)} danger />
+                          )}
+                        </motion.div>
                       )}
-                      {(inv.status === 'DRAFT' || inv.status === 'SENT') && (
-                        <button onClick={() => handleVoid(inv.id)} className="p-1 rounded hover:bg-red-100 text-red-400" title="Void"><Ban size={14} /></button>
-                      )}
-                    </div>
+                    </AnimatePresence>
                   </td>
                 </tr>
               ))
@@ -221,164 +331,53 @@ export default function InvoicesPage() {
         </table>
       </div>
 
+      {/* Modals */}
       <AnimatePresence>
-        {viewInvoice && <InvoiceDetailModal invoice={viewInvoice} onClose={() => setViewInvoice(null)} />}
-        {showForm && <InvoiceFormModal companyId={companyId!} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); fetchInvoices() }} />}
+        {showTemplates && (
+          <TemplateGallery modal onClose={() => setShowTemplates(false)} />
+        )}
+        {showForm && companyId && (
+          <InvoiceFormModal
+            companyId={companyId}
+            onClose={() => setShowForm(false)}
+            onSaved={() => { setShowForm(false); fetchInvoices() }}
+          />
+        )}
+        {viewInvoice && companyId && (
+          <InvoiceDetailPage
+            invoice={viewInvoice}
+            companyId={companyId}
+            onClose={() => setViewInvoice(null)}
+            onRefresh={fetchInvoices}
+          />
+        )}
       </AnimatePresence>
+
+      {actionMenuId && <div className="fixed inset-0 z-10" onClick={() => setActionMenuId(null)} />}
     </div>
   )
 }
 
-function InvoiceDetailModal({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
-  const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+function StatCard({ icon, label, value, sub, color }: {
+  icon: React.ReactNode; label: string; value: string; sub: string; color: 'emerald' | 'amber' | 'red'
+}) {
+  const borderMap = { emerald: 'border-emerald-100', amber: 'border-amber-100', red: 'border-red-100' }
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-        onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-        <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-emerald-900">Invoice #{invoice.invoiceNumber ?? invoice.id.slice(0, 8)}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
-        </div>
-        <div className="p-6 space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-emerald-600/60">Customer:</span> <span className="font-medium text-emerald-900">{invoice.customerName ?? '—'}</span></div>
-            <div><span className="text-emerald-600/60">Status:</span> <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[invoice.status]}`}>{invoice.status}</span></div>
-            <div><span className="text-emerald-600/60">Date:</span> {invoice.date}</div>
-            <div><span className="text-emerald-600/60">Due:</span> {invoice.dueDate}</div>
-          </div>
-          {invoice.items && invoice.items.length > 0 && (
-            <table className="w-full text-sm mt-4">
-              <thead><tr className="border-b border-emerald-100"><th className="text-left py-2">Description</th><th className="text-right py-2">Qty</th><th className="text-right py-2">Price</th><th className="text-right py-2">Amount</th></tr></thead>
-              <tbody>
-                {invoice.items.map((item, i) => (
-                  <tr key={i} className="border-t border-emerald-50"><td className="py-1.5">{item.description}</td><td className="py-1.5 text-right">{item.quantity}</td><td className="py-1.5 text-right">{fmt(item.unitPrice)}</td><td className="py-1.5 text-right font-semibold">{fmt(item.amount)}</td></tr>
-                ))}
-              </tbody>
-              <tfoot><tr className="border-t-2 border-emerald-200 font-bold"><td colSpan={3} className="py-2">Total</td><td className="py-2 text-right">{fmt(invoice.total)}</td></tr></tfoot>
-            </table>
-          )}
-          {(!invoice.items || invoice.items.length === 0) && (
-            <div className="text-center py-4">
-              <p className="text-2xl font-bold text-emerald-800">{fmt(invoice.total)}</p>
-              <p className="text-xs text-emerald-500 mt-1">Amount Due: {fmt(invoice.amountDue ?? invoice.total)}</p>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
+    <div className={`bg-white rounded-xl border ${borderMap[color]} p-4`}>
+      <div className="flex items-center gap-2 mb-1.5">{icon}<span className="text-xs text-gray-500">{label}</span></div>
+      <p className="text-xl font-bold text-gray-900 tabular-nums">{value}</p>
+      <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+    </div>
   )
 }
 
-function InvoiceFormModal({ companyId, onClose, onSaved }: { companyId: string; onClose: () => void; onSaved: () => void }) {
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [customerId, setCustomerId] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [dueDate, setDueDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]
-  })
-  const [memo, setMemo] = useState('')
-  const [items, setItems] = useState([{ description: '', quantity: 1, unitPrice: 0 }])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    apiClient.get(`/companies/${companyId}/contacts/customers`).then(({ data }) => setCustomers(Array.isArray(data) ? data : data.items ?? data.customers ?? [])).catch(() => {})
-  }, [companyId])
-
-  const addItem = () => setItems(p => [...p, { description: '', quantity: 1, unitPrice: 0 }])
-  const removeItem = (i: number) => setItems(p => p.filter((_, idx) => idx !== i))
-  const updateItem = (i: number, f: string, v: any) => setItems(p => p.map((item, idx) => idx === i ? { ...item, [f]: v } : item))
-
-  const total = items.reduce((s, it) => s + (Number(it.quantity) * Number(it.unitPrice)), 0)
-  const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-
-  const handleSave = async () => {
-    if (!customerId) { setError('Select a customer.'); return }
-    const validItems = items.filter(it => it.description.trim())
-    if (validItems.length === 0) { setError('Add at least one item.'); return }
-    setSaving(true); setError('')
-    try {
-      await apiClient.post(`/companies/${companyId}/ar/invoices`, {
-        customerId, date, dueDate, memo,
-        items: validItems.map(it => ({ description: it.description, quantity: Number(it.quantity), unitPrice: Number(it.unitPrice), amount: Number(it.quantity) * Number(it.unitPrice) })),
-      })
-      onSaved()
-    } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to create invoice') }
-    finally { setSaving(false) }
-  }
-
+function MenuBtn({ icon, label, onClick, danger = false }: {
+  icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean
+}) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-        onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-bold text-emerald-900">New Invoice</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
-        </div>
-        <div className="p-6 space-y-4">
-          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2"><AlertCircle size={14} /> {error}</div>}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Customer *</label>
-              <select value={customerId} onChange={e => setCustomerId(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                <option value="">Select…</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Date</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">Due Date</label>
-              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-emerald-700 mb-1">Memo</label>
-            <input value={memo} onChange={e => setMemo(e.target.value)} placeholder="Optional"
-              className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div className="border border-emerald-100 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-emerald-50/50"><th className="text-left px-3 py-2 text-emerald-700">Description</th><th className="text-right px-3 py-2 text-emerald-700 w-20">Qty</th><th className="text-right px-3 py-2 text-emerald-700 w-28">Price</th><th className="text-right px-3 py-2 text-emerald-700 w-28">Amount</th><th className="w-8"></th></tr></thead>
-              <tbody>
-                {items.map((it, i) => (
-                  <tr key={i} className="border-t border-emerald-50">
-                    <td className="px-3 py-1.5"><input value={it.description} onChange={e => updateItem(i, 'description', e.target.value)} className="w-full px-2 py-1.5 text-sm border border-emerald-100 rounded" placeholder="Item description" /></td>
-                    <td className="px-3 py-1.5"><input type="number" min="1" value={it.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="w-full px-2 py-1.5 text-sm text-right border border-emerald-100 rounded" /></td>
-                    <td className="px-3 py-1.5"><input type="number" min="0" step="0.01" value={it.unitPrice} onChange={e => updateItem(i, 'unitPrice', e.target.value)} className="w-full px-2 py-1.5 text-sm text-right border border-emerald-100 rounded" /></td>
-                    <td className="px-3 py-1.5 text-right font-semibold text-emerald-800">{fmt(Number(it.quantity) * Number(it.unitPrice))}</td>
-                    <td className="px-1">{items.length > 1 && <button onClick={() => removeItem(i)} className="p-1 rounded hover:bg-red-100 text-red-400"><X size={14} /></button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-emerald-200">
-                  <td className="px-3 py-2"><button onClick={addItem} className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1"><Plus size={12} /> Add Item</button></td>
-                  <td colSpan={2} className="px-3 py-2 text-right font-bold text-emerald-700">Total:</td>
-                  <td className="px-3 py-2 text-right font-bold text-emerald-800">{fmt(total)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-        <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2 sticky bottom-0 bg-white">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving}
-            className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-1.5">
-            {saving && <Loader2 size={14} className="animate-spin" />} Create Invoice
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
+    <button onClick={onClick}
+      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`}>
+      {icon} {label}
+    </button>
   )
 }
