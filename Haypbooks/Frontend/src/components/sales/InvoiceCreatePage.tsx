@@ -18,6 +18,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/invoice-templates/templateStorage'
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
+import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
 
 interface CustomerAddress { line1?: string; city?: string; state?: string; zip?: string; country?: string }
 interface Customer {
@@ -47,6 +48,7 @@ interface CatalogItem {
   type: string
   sku: string | null
   salesPrice: number | null
+  taxRate?: number
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9)
@@ -107,6 +109,17 @@ export default function InvoiceCreatePage() {
   // Catalog (products & services for line item picker)
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
   const [activeCatalogRow, setActiveCatalogRow] = useState<string | null>(null)
+  const [recentlyUsedItems, setRecentlyUsedItems] = useState<string[]>([])
+
+  // Quick-add customer
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+
+  // Bill To editable fields
+  const [billContact, setBillContact] = useState('')
+  const [billCompany, setBillCompany] = useState('')
+
+  // View tabs
+  const [activeCreateTab, setActiveCreateTab] = useState<'edit' | 'email' | 'payor' | 'print'>('edit')
 
   // State
   const [saving, setSaving] = useState(false)
@@ -129,6 +142,7 @@ export default function InvoiceCreatePage() {
           type: i.type,
           sku: i.sku ?? null,
           salesPrice: i.salesPrice != null ? Number(i.salesPrice) : null,
+          taxRate: i.taxRate != null ? Number(i.taxRate) : undefined,
         })))
       })
       .catch(() => {})
@@ -165,6 +179,8 @@ export default function InvoiceCreatePage() {
     if (!customerId) return
     const c = customers.find(x => x.contactId === customerId)
     if (!c) return
+    setBillContact(c.name)
+    setBillCompany('')
     if (c.email) setCustomerEmail(c.email)
     if (c.phone) setCustomerPhone(c.phone)
     if (c.paymentTerms) setPaymentTerms(c.paymentTerms)
@@ -219,7 +235,9 @@ export default function InvoiceCreatePage() {
       itemId: cat.id,
       description: cat.name,
       unitPrice: cat.salesPrice ?? it.unitPrice,
+      taxRate: cat.taxRate ?? it.taxRate,
     } : it))
+    setRecentlyUsedItems(p => [cat.id, ...p.filter(id => id !== cat.id)].slice(0, 5))
     setActiveCatalogRow(null)
   }
 
@@ -236,6 +254,8 @@ export default function InvoiceCreatePage() {
         memo,
         internalNotes,
         poNumber,
+        billAddress: { contactName: billContact, company: billCompany, ...billAddress },
+        shipAddress: shipSameAsBill ? undefined : shipAddress,
         items: validItems.map(it => ({
           description: it.description,
           quantity: Number(it.quantity),
@@ -307,6 +327,29 @@ export default function InvoiceCreatePage() {
             </button>
           </div>
         </div>
+
+        {/* View Tabs */}
+        <div className="border-t border-gray-100 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="flex items-center">
+              {([
+                { tab: 'edit' as const, label: 'Edit', icon: <FileText size={12} /> },
+                { tab: 'email' as const, label: 'Email Preview', icon: <Mail size={12} /> },
+                { tab: 'payor' as const, label: 'Payor View', icon: <Link2 size={12} /> },
+                { tab: 'print' as const, label: 'Print / PDF', icon: <Printer size={12} /> },
+              ]).map(({ tab, label, icon }) => (
+                <button key={tab} onClick={() => setActiveCreateTab(tab)}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+                    activeCreateTab === tab
+                      ? 'border-emerald-600 text-emerald-700'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
+                  }`}>
+                  {icon} {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ─── Main Content ─── */}
@@ -321,99 +364,136 @@ export default function InvoiceCreatePage() {
           </motion.div>
         )}
 
-        {/* Document Card */}
+        {/* Document Card — Edit Tab */}
+        {activeCreateTab === 'edit' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-          {/* ── Row 1: Bill To + Invoice Details ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border-b border-gray-100">
-            {/* Bill To */}
-            <div className="p-6 lg:border-r border-gray-100">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Bill To</h3>
-              {selectedCustomer ? (
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-bold text-gray-900 text-base">{selectedCustomer.name}</p>
+          {/* ── Section 1: Customer Selector ── */}
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Customer</h3>
+              {selectedCustomer && (
+                <button
+                  onClick={() => { setCustomerId(''); setCustomerSearch(''); setBillContact(''); setBillCompany('') }}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1">
+                  <X size={12} /> Clear
+                </button>
+              )}
+            </div>
+            {selectedCustomer ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                    <span className="text-sm font-bold text-emerald-700">{selectedCustomer.name[0]?.toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{selectedCustomer.name}</p>
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                       {(customerEmail || selectedCustomer.email) && (
-                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
-                          <Mail size={11} className="text-gray-300" />
+                        <p className="text-xs text-gray-400 flex items-center gap-1">
+                          <Mail size={10} className="text-gray-300" />
                           {customerEmail || selectedCustomer.email}
                         </p>
                       )}
                       {customerPhone && (
                         <p className="text-xs text-gray-400 flex items-center gap-1">
-                          <Phone size={11} className="text-gray-300" />
+                          <Phone size={10} className="text-gray-300" />
                           {customerPhone}
                         </p>
                       )}
-                      {(billAddress.line1 || billAddress.city) && (
-                        <div className="mt-1.5 p-2 bg-gray-50 rounded-lg text-xs text-gray-500 space-y-0.5">
-                          {billAddress.line1 && <p>{billAddress.line1}</p>}
-                          {billAddress.city && <p>{[billAddress.city, billAddress.state, billAddress.zip].filter(Boolean).join(', ')}</p>}
-                        </div>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">Balance: {fmt(selectedCustomer.balance)}</p>
+                      <span className="text-xs text-emerald-600 font-medium">Balance: {fmt(selectedCustomer.balance)}</span>
                     </div>
-                    <button
-                      onClick={() => { setCustomerId(''); setCustomerSearch('') }}
-                      className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded">
-                      <X size={14} />
-                    </button>
                   </div>
-                  <button
-                    onClick={() => { setShowCustomerDD(true); setTimeout(() => customerSearchRef.current?.focus(), 50) }}
-                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
-                    Change customer
-                  </button>
                 </div>
-              ) : (
+                <button
+                  onClick={() => { setShowCustomerDD(true); setTimeout(() => customerSearchRef.current?.focus(), 50) }}
+                  className="text-xs text-emerald-600 hover:text-emerald-700 font-medium border border-emerald-200 hover:border-emerald-400 px-3 py-1.5 rounded-lg transition-colors">
+                  Change
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
                 <div className="relative">
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      ref={customerSearchRef}
-                      value={customerSearch}
-                      onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDD(true) }}
-                      onFocus={() => setShowCustomerDD(true)}
-                      placeholder="Search by name, email, phone…"
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border-2 border-dashed border-gray-200 hover:border-emerald-300 focus:border-emerald-400 rounded-xl focus:outline-none transition-colors bg-gray-50/50"/>
-                  </div>
-                  <AnimatePresence>
-                    {showCustomerDD && (
-                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className="absolute z-30 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                        {!customerSearch && (
-                          <p className="px-3 pt-2.5 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Recent</p>
-                        )}
-                        <div className="max-h-52 overflow-y-auto">
-                          {filteredCustomers.length === 0 ? (
-                            <p className="px-3 py-4 text-xs text-gray-400 text-center">No customers found</p>
-                          ) : filteredCustomers.map(c => (
-                            <button key={c.contactId}
-                              onClick={() => { setCustomerId(c.contactId); setCustomerSearch(''); setShowCustomerDD(false) }}
-                              className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-emerald-50 text-left transition-colors">
-                              <div>
-                                <p className="text-sm font-semibold text-gray-800">{c.name}</p>
-                                {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs font-medium text-emerald-600 tabular-nums">{fmt(c.balance)}</p>
-                                {customerId === c.contactId && <Check size={12} className="text-emerald-500 ml-auto" />}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                        <div className="border-t border-gray-100 p-2">
-                          <button onClick={() => { setShowCustomerDD(false) }}
-                            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-                            <Plus size={13} /> New Customer
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    ref={customerSearchRef}
+                    value={customerSearch}
+                    onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDD(true) }}
+                    onFocus={() => setShowCustomerDD(true)}
+                    placeholder="Search customers by name, email or phone…"
+                    className="w-full pl-9 pr-3 py-2.5 text-sm border-2 border-dashed border-gray-200 hover:border-emerald-300 focus:border-emerald-400 rounded-xl focus:outline-none transition-colors bg-gray-50/50" />
                 </div>
-              )}
+                <AnimatePresence>
+                  {showCustomerDD && (
+                    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="absolute z-30 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                      {!customerSearch && (
+                        <p className="px-3 pt-2.5 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Recent</p>
+                      )}
+                      <div className="max-h-52 overflow-y-auto">
+                        {filteredCustomers.length === 0 ? (
+                          <p className="px-3 py-4 text-xs text-gray-400 text-center">No customers found</p>
+                        ) : filteredCustomers.map(c => (
+                          <button key={c.contactId}
+                            onClick={() => { setCustomerId(c.contactId); setCustomerSearch(''); setShowCustomerDD(false) }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-emerald-50 text-left transition-colors">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">{c.name}</p>
+                              {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-medium text-emerald-600 tabular-nums">{fmt(c.balance)}</p>
+                              {customerId === c.contactId && <Check size={12} className="text-emerald-500 ml-auto" />}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="border-t border-gray-100 p-2">
+                        <button onClick={() => { setShowCustomerDD(false); setShowQuickAddModal(true) }}
+                          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                          <Plus size={13} /> New Customer
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          {/* ── Section 2: Bill To + Ship To ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border-b border-gray-100">
+            {/* Bill To — editable address */}
+            <div className="p-6 lg:border-r border-gray-100">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Bill To</h3>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" value={billContact} onChange={e => setBillContact(e.target.value)}
+                    placeholder="Contact name"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  <input type="text" value={billCompany} onChange={e => setBillCompany(e.target.value)}
+                    placeholder="Company (optional)"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                </div>
+                <input type="text" value={billAddress.line1}
+                  onChange={e => setBillAddress(p => ({ ...p, line1: e.target.value }))}
+                  placeholder="Street address"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                <div className="grid grid-cols-3 gap-2">
+                  <input type="text" value={billAddress.city}
+                    onChange={e => setBillAddress(p => ({ ...p, city: e.target.value }))}
+                    placeholder="City"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  <input type="text" value={billAddress.state}
+                    onChange={e => setBillAddress(p => ({ ...p, state: e.target.value }))}
+                    placeholder="State"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  <input type="text" value={billAddress.zip}
+                    onChange={e => setBillAddress(p => ({ ...p, zip: e.target.value }))}
+                    placeholder="ZIP"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                </div>
+              </div>
             </div>
 
             {/* Ship To */}
@@ -537,35 +617,63 @@ export default function InvoiceCreatePage() {
                             className="w-full text-sm text-slate-800 bg-transparent border-0 outline-none focus:ring-0 placeholder:text-gray-300" />
                           {activeCatalogRow === it.id && catalogItems.length > 0 && (() => {
                             const q = it.description.toLowerCase()
-                            const matches = catalogItems.filter(c =>
+                            const allMatches = catalogItems.filter(c =>
                               !q || c.name.toLowerCase().includes(q) || (c.sku ?? '').toLowerCase().includes(q)
-                            ).slice(0, 8)
-                            if (matches.length === 0) return null
+                            )
+                            const recentItems = !q
+                              ? recentlyUsedItems.map(id => catalogItems.find(c => c.id === id)).filter(Boolean) as CatalogItem[]
+                              : []
+                            const products = allMatches.filter(c => c.type !== 'SERVICE').slice(0, 6)
+                            const services = allMatches.filter(c => c.type === 'SERVICE').slice(0, 6)
+                            if (allMatches.length === 0 && recentItems.length === 0) return null
+
+                            const CatalogRow = ({ cat, keyPfx }: { cat: CatalogItem; keyPfx?: string }) => (
+                              <button
+                                key={`${keyPfx ?? ''}${cat.id}`}
+                                type="button"
+                                onMouseDown={() => pickCatalogItem(it.id, cat)}
+                                className="flex items-center justify-between w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 transition-colors border-b border-slate-50 last:border-0">
+                                <div>
+                                  <span className="font-medium text-slate-800">{cat.name}</span>
+                                  {cat.sku && <span className="ml-1.5 text-xs text-slate-400 font-mono">{cat.sku}</span>}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
+                                    cat.type === 'SERVICE' ? 'bg-purple-50 text-purple-600' :
+                                    cat.type === 'INVENTORY' ? 'bg-emerald-50 text-emerald-600' :
+                                    'bg-blue-50 text-blue-600'
+                                  }`}>{cat.type === 'SERVICE' ? 'Service' : cat.type === 'INVENTORY' ? 'Inventory' : 'Product'}</span>
+                                  {cat.salesPrice != null && (
+                                    <span className="text-xs text-slate-500 tabular-nums">{fmt(cat.salesPrice)}</span>
+                                  )}
+                                </div>
+                              </button>
+                            )
+
                             return (
-                              <div className="absolute left-0 top-full mt-1 z-40 w-72 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                                {matches.map(cat => (
-                                  <button
-                                    key={cat.id}
-                                    type="button"
-                                    onMouseDown={() => pickCatalogItem(it.id, cat)}
-                                    className="flex items-center justify-between w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 transition-colors border-b border-slate-50 last:border-0"
-                                  >
-                                    <div>
-                                      <span className="font-medium text-slate-800">{cat.name}</span>
-                                      {cat.sku && <span className="ml-1.5 text-xs text-slate-400 font-mono">{cat.sku}</span>}
+                              <div className="absolute left-0 top-full mt-1 z-40 w-80 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-72 overflow-y-auto">
+                                {recentItems.length > 0 && (
+                                  <>
+                                    <div className="px-3 pt-2.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                                      <Clock size={10} /> Recently Used
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
-                                        cat.type === 'SERVICE' ? 'bg-purple-50 text-purple-600' :
-                                        cat.type === 'INVENTORY' ? 'bg-emerald-50 text-emerald-600' :
-                                        'bg-blue-50 text-blue-600'
-                                      }`}>{cat.type === 'SERVICE' ? 'Service' : cat.type === 'INVENTORY' ? 'Inventory' : 'Product'}</span>
-                                      {cat.salesPrice != null && (
-                                        <span className="text-xs text-slate-500 tabular-nums">{fmt(cat.salesPrice)}</span>
-                                      )}
-                                    </div>
-                                  </button>
-                                ))}
+                                    {recentItems.map(cat => <CatalogRow key={`r-${cat.id}`} cat={cat} keyPfx="r-" />)}
+                                    {(products.length > 0 || services.length > 0) && <div className="border-t border-gray-100" />}
+                                  </>
+                                )}
+                                {products.length > 0 && (
+                                  <>
+                                    <div className="px-3 pt-2.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide">📦 Products</div>
+                                    {products.map(cat => <CatalogRow key={cat.id} cat={cat} />)}
+                                    {services.length > 0 && <div className="border-t border-gray-100" />}
+                                  </>
+                                )}
+                                {services.length > 0 && (
+                                  <>
+                                    <div className="px-3 pt-2.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide">💼 Services</div>
+                                    {services.map(cat => <CatalogRow key={cat.id} cat={cat} />)}
+                                  </>
+                                )}
                               </div>
                             )
                           })()}
@@ -690,6 +798,244 @@ export default function InvoiceCreatePage() {
             </div>
           </div>
         </div>
+        )} {/* end edit tab */}
+
+        {/* ── Email Preview Tab ── */}
+        {activeCreateTab === 'email' && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
+              <Mail size={15} className="text-emerald-600" />
+              <h3 className="text-sm font-bold text-gray-700">Email Preview</h3>
+              <span className="text-xs text-gray-400 ml-auto">Live preview — how the email will appear to the customer</span>
+            </div>
+            <div className="p-8">
+              <div className="max-w-2xl mx-auto border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                {/* Email header */}
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 text-sm space-y-1">
+                  <p className="text-gray-500"><span className="font-medium text-gray-700">From:</span> billing@yourcompany.com</p>
+                  <p className="text-gray-500"><span className="font-medium text-gray-700">To:</span> {customerEmail || selectedCustomer?.email || <span className="italic text-gray-300">No customer selected</span>}</p>
+                  <p className="text-gray-500"><span className="font-medium text-gray-700">Subject:</span> Invoice from your company — Due {dueDate}</p>
+                </div>
+                {/* Email body */}
+                <div className="p-8 space-y-6">
+                  <p className="text-sm text-gray-700 leading-relaxed">{memo || 'Thank you for your business!'}</p>
+                  {/* Invoice summary */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-emerald-600 px-4 py-3 flex items-center justify-between text-white">
+                      <span className="font-bold text-sm">Invoice</span>
+                      <span className="font-bold text-sm">Due {dueDate}</span>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {items.filter(it => it.description.trim()).length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-400 italic">No line items yet</div>
+                      ) : items.filter(it => it.description.trim()).map(it => (
+                        <div key={it.id} className="px-4 py-2.5 flex items-center justify-between text-sm">
+                          <span className="text-gray-700">{it.description} <span className="text-gray-400">× {it.quantity}</span></span>
+                          <span className="font-medium tabular-nums text-gray-800">{fmt(it.quantity * it.unitPrice)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-4 py-3 bg-gray-50 flex items-center justify-between border-t border-gray-200">
+                      <span className="text-sm font-bold text-gray-700">Total Due</span>
+                      <span className="text-base font-bold text-emerald-700 tabular-nums">{fmt(total)}</span>
+                    </div>
+                  </div>
+                  {/* CTA */}
+                  <div className="text-center">
+                    <div className="inline-block bg-emerald-600 text-white text-sm font-semibold px-8 py-3 rounded-xl shadow-sm cursor-default">
+                      View Invoice &amp; Pay Online
+                    </div>
+                  </div>
+                  {billContact && (
+                    <div className="text-center text-xs text-gray-400 pt-2">
+                      Billed to {billContact}{billAddress.city ? `, ${billAddress.city}` : ''}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Payor View Tab ── */}
+        {activeCreateTab === 'payor' && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
+              <Link2 size={15} className="text-emerald-600" />
+              <h3 className="text-sm font-bold text-gray-700">Payor View</h3>
+              <span className="text-xs text-gray-400 ml-auto">How the customer sees the invoice online</span>
+            </div>
+            <div className="p-8">
+              <div className="max-w-3xl mx-auto">
+                {/* Invoice header */}
+                <div className="flex items-start justify-between mb-8">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">INVOICE</h1>
+                    <p className="text-gray-400 mt-1 font-mono text-sm">#DRAFT</p>
+                    <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">Draft</span>
+                  </div>
+                  <div className="text-right text-sm text-gray-600 space-y-1">
+                    <p><span className="font-medium">Invoice Date:</span> {date}</p>
+                    <p><span className="font-medium">Due Date:</span> {dueDate}</p>
+                    {poNumber && <p><span className="font-medium">PO #:</span> {poNumber}</p>}
+                    <p><span className="font-medium">Terms:</span> {paymentTerms}</p>
+                  </div>
+                </div>
+                {/* Addresses */}
+                <div className="grid grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Bill To</h4>
+                    {selectedCustomer ? (
+                      <div className="text-sm text-gray-700 space-y-0.5">
+                        <p className="font-semibold text-gray-900">{billContact || selectedCustomer.name}</p>
+                        {billCompany && <p className="text-gray-500">{billCompany}</p>}
+                        {billAddress.line1 && <p>{billAddress.line1}</p>}
+                        {billAddress.city && <p>{[billAddress.city, billAddress.state, billAddress.zip].filter(Boolean).join(', ')}</p>}
+                        {(customerEmail || selectedCustomer.email) && <p className="text-gray-400">{customerEmail || selectedCustomer.email}</p>}
+                      </div>
+                    ) : <p className="text-sm text-gray-400 italic">No customer selected</p>}
+                  </div>
+                  {!shipSameAsBill && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Ship To</h4>
+                      <div className="text-sm text-gray-700 space-y-0.5">
+                        {shipAddress.line1 && <p>{shipAddress.line1}</p>}
+                        {shipAddress.city && <p>{[shipAddress.city, shipAddress.state, shipAddress.zip].filter(Boolean).join(', ')}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Line Items */}
+                <table className="w-full mb-6 text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-gray-900">
+                      <th className="text-left py-2.5 font-bold text-gray-900">Description</th>
+                      <th className="text-right py-2.5 font-bold text-gray-900 w-16">Qty</th>
+                      <th className="text-right py-2.5 font-bold text-gray-900 w-28">Rate</th>
+                      <th className="text-right py-2.5 font-bold text-gray-900 w-28">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.filter(it => it.description.trim()).length === 0 ? (
+                      <tr><td colSpan={4} className="py-6 text-center text-gray-400 italic">No line items added yet</td></tr>
+                    ) : items.filter(it => it.description.trim()).map(it => (
+                      <tr key={it.id} className="border-b border-gray-100">
+                        <td className="py-2.5 text-gray-700">{it.description}</td>
+                        <td className="py-2.5 text-right text-gray-600 tabular-nums">{it.quantity}</td>
+                        <td className="py-2.5 text-right text-gray-600 tabular-nums">{fmt(it.unitPrice)}</td>
+                        <td className="py-2.5 text-right font-medium text-gray-800 tabular-nums">{fmt(it.quantity * it.unitPrice)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {/* Totals */}
+                <div className="flex justify-end mb-8">
+                  <div className="w-72 space-y-2 text-sm">
+                    <div className="flex justify-between text-gray-600"><span>Subtotal</span><span className="tabular-nums">{fmt(subtotal)}</span></div>
+                    {discountAmt > 0 && <div className="flex justify-between text-red-500"><span>Discount</span><span className="tabular-nums">-{fmt(discountAmt)}</span></div>}
+                    {template.defaults.taxTreatment !== 'none' && <div className="flex justify-between text-gray-600"><span>Tax</span><span className="tabular-nums">{fmt(taxTotal)}</span></div>}
+                    <div className="flex justify-between font-bold text-base text-gray-900 border-t-2 border-gray-900 pt-2 mt-2">
+                      <span>Total Due</span>
+                      <span className="text-emerald-700 tabular-nums">{fmt(total)}</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Pay button */}
+                <div className="text-center">
+                  <div className="inline-block bg-emerald-600 text-white text-sm font-semibold px-10 py-3 rounded-xl shadow cursor-default">
+                    Pay Now — {fmt(total)}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Secure payment via credit card, ACH, or bank transfer</p>
+                </div>
+                {memo && <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-100"><p className="text-sm text-gray-600">{memo}</p></div>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Print Tab ── */}
+        {activeCreateTab === 'print' && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Printer size={15} className="text-emerald-600" />
+                <h3 className="text-sm font-bold text-gray-700">Print Preview</h3>
+              </div>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors">
+                <Printer size={12} /> Print
+              </button>
+            </div>
+            <div className="p-8 print:p-0">
+              <div className="max-w-3xl mx-auto bg-white print:shadow-none">
+                {/* Print header */}
+                <div className="flex items-start justify-between mb-10 pb-6 border-b-2 border-gray-900">
+                  <div>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">INVOICE</h1>
+                    <p className="text-gray-500 mt-1 font-mono">#DRAFT</p>
+                  </div>
+                  <div className="text-right text-sm text-gray-600 space-y-1">
+                    <p><span className="font-semibold">Date:</span> {date}</p>
+                    <p><span className="font-semibold">Due:</span> {dueDate}</p>
+                    {poNumber && <p><span className="font-semibold">PO #:</span> {poNumber}</p>}
+                  </div>
+                </div>
+                {/* Addresses */}
+                <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Bill To</h4>
+                    {selectedCustomer ? (
+                      <div className="text-sm text-gray-700 space-y-0.5">
+                        <p className="font-semibold text-gray-900 text-base">{billContact || selectedCustomer.name}</p>
+                        {billCompany && <p>{billCompany}</p>}
+                        {billAddress.line1 && <p>{billAddress.line1}</p>}
+                        {billAddress.city && <p>{[billAddress.city, billAddress.state, billAddress.zip].filter(Boolean).join(', ')}</p>}
+                        {(customerEmail || selectedCustomer.email) && <p className="text-gray-400">{customerEmail || selectedCustomer.email}</p>}
+                      </div>
+                    ) : <p className="text-sm text-gray-400 italic">No customer selected</p>}
+                  </div>
+                </div>
+                {/* Items table */}
+                <table className="w-full mb-8 text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-gray-900">
+                      <th className="text-left py-3 font-black text-gray-900 text-xs uppercase tracking-wide">Description</th>
+                      <th className="text-right py-3 font-black text-gray-900 text-xs uppercase tracking-wide w-16">Qty</th>
+                      <th className="text-right py-3 font-black text-gray-900 text-xs uppercase tracking-wide w-28">Unit Price</th>
+                      <th className="text-right py-3 font-black text-gray-900 text-xs uppercase tracking-wide w-28">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.filter(it => it.description.trim()).length === 0 ? (
+                      <tr><td colSpan={4} className="py-8 text-center text-gray-400 italic">No line items</td></tr>
+                    ) : items.filter(it => it.description.trim()).map(it => (
+                      <tr key={it.id} className="border-b border-gray-100">
+                        <td className="py-3 text-gray-700">{it.description}</td>
+                        <td className="py-3 text-right text-gray-600 tabular-nums">{it.quantity}</td>
+                        <td className="py-3 text-right text-gray-600 tabular-nums">{fmt(it.unitPrice)}</td>
+                        <td className="py-3 text-right font-semibold text-gray-800 tabular-nums">{fmt(it.quantity * it.unitPrice)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {/* Totals */}
+                <div className="flex justify-end">
+                  <div className="w-72 space-y-2 text-sm border-t-2 border-gray-900 pt-4">
+                    <div className="flex justify-between text-gray-600"><span>Subtotal</span><span className="tabular-nums">{fmt(subtotal)}</span></div>
+                    {discountAmt > 0 && <div className="flex justify-between text-red-500"><span>Discount</span><span className="tabular-nums">-{fmt(discountAmt)}</span></div>}
+                    {template.defaults.taxTreatment !== 'none' && <div className="flex justify-between text-gray-600"><span>Tax</span><span className="tabular-nums">{fmt(taxTotal)}</span></div>}
+                    <div className="flex justify-between font-black text-base text-gray-900 border-t-2 border-gray-900 pt-3 mt-2">
+                      <span>TOTAL DUE</span><span className="tabular-nums">{fmt(total)}</span>
+                    </div>
+                  </div>
+                </div>
+                {memo && <div className="mt-10 pt-6 border-t border-gray-200"><p className="text-sm text-gray-500">{memo}</p></div>}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ─── Sticky Footer Bar ─── */}
@@ -824,6 +1170,26 @@ export default function InvoiceCreatePage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Quick Add Customer Modal */}
+      {showQuickAddModal && (
+        <QuickAddCustomerModal
+          companyId={companyId!}
+          onClose={() => setShowQuickAddModal(false)}
+          onCreated={c => {
+            setCustomers(p => [...p, c])
+            setCustomerId(c.contactId)
+            setBillContact(c.name)
+            if (c.billingAddress) setBillAddress({
+              line1: c.billingAddress.line1 ?? '',
+              city: c.billingAddress.city ?? '',
+              state: c.billingAddress.state ?? '',
+              zip: c.billingAddress.zip ?? '',
+            })
+            setShowQuickAddModal(false)
+          }}
+        />
+      )}
 
       {/* Dismiss overlays */}
       {showCustomerDD && (
