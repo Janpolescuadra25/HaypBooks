@@ -319,7 +319,7 @@ export default function InvoicesPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100 whitespace-nowrap">{fmt(inv.total)}</td>
-                  <td className="px-4 py-2.5 relative">
+                  <td className="px-4 py-2.5 relative overflow-visible">
                     <button onClick={() => setActionMenuId(prev => prev === inv.id ? null : inv.id)}
                       className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                       <MoreVertical size={14} />
@@ -330,7 +330,7 @@ export default function InvoicesPage() {
                           initial={{ opacity: 0, scale: 0.95, y: -4 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                          className="absolute right-2 top-full z-20 bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52 mt-1">
+                          className="absolute right-2 top-full z-50 bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52 mt-1">
                           <div className="px-3 py-1.5 border-b border-gray-100">
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">More Actions</p>
                           </div>
