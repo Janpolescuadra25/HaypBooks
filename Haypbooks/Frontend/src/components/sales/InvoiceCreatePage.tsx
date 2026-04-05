@@ -8,7 +8,8 @@ import {
   ArrowLeft, Plus, Trash2, Loader2, AlertCircle, ChevronDown,
   Save, Send, LayoutTemplate, Search, Check, X, ChevronRight,
   FileText, Paperclip, Clock, RefreshCw, Printer, Download,
-  MoreHorizontal, Info,
+  MoreHorizontal, Info, MapPin, Link2, Copy, Ban, History,
+  Mail, Phone,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -18,7 +19,18 @@ import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
 
-interface Customer { contactId: string; name: string; email: string; balance: number }
+interface CustomerAddress { line1?: string; city?: string; state?: string; zip?: string; country?: string }
+interface Customer {
+  contactId: string
+  name: string
+  email: string
+  phone: string
+  balance: number
+  billingAddress?: CustomerAddress
+  shippingAddress?: CustomerAddress
+  paymentTerms?: string
+  taxRate?: number
+}
 
 interface LineItem {
   id: string
@@ -71,12 +83,25 @@ export default function InvoiceCreatePage() {
   const [makeRecurring, setMakeRecurring] = useState(false)
   const [scheduleSend, setScheduleSend] = useState(false)
   const [applyLateFee, setApplyLateFee] = useState(false)
+  const [enablePartialPayments, setEnablePartialPayments] = useState(false)
+  const [requirePO, setRequirePO] = useState(false)
+  const [enableDeposit, setEnableDeposit] = useState(false)
+
+  // Address & contact auto-fill
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [paymentTerms, setPaymentTerms] = useState('Net 30')
+  const [billAddress, setBillAddress] = useState({ line1: '', city: '', state: '', zip: '' })
+  const [shipSameAsBill, setShipSameAsBill] = useState(true)
+  const [shipAddress, setShipAddress] = useState({ line1: '', city: '', state: '', zip: '' })
 
   // State
   const [saving, setSaving] = useState(false)
   const [saveAction, setSaveAction] = useState<'draft' | 'send'>('draft')
   const [error, setError] = useState('')
   const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const [showSaveDraftMenu, setShowSaveDraftMenu] = useState(false)
+  const [showSendMenu, setShowSendMenu] = useState(false)
 
   // Fetch customers and update memo when template changes
   useEffect(() => {
@@ -88,7 +113,12 @@ export default function InvoiceCreatePage() {
           contactId: c.contactId ?? c.id,
           name: c.name ?? c.displayName ?? '',
           email: c.email ?? '',
+          phone: c.phone ?? c.phoneNumber ?? '',
           balance: Number(c.balance ?? 0),
+          billingAddress: c.billingAddress ?? c.address,
+          shippingAddress: c.shippingAddress,
+          paymentTerms: c.paymentTerms ?? c.terms,
+          taxRate: c.taxRate != null ? Number(c.taxRate) : undefined,
         })))
       })
       .catch(() => {})
@@ -98,6 +128,28 @@ export default function InvoiceCreatePage() {
     setMemo(template.defaultMessage)
     setItems(p => p.map(it => ({ ...it, taxRate: template.defaults.defaultTaxRate })))
   }, [template])
+
+  // Auto-fill from selected customer
+  useEffect(() => {
+    if (!customerId) return
+    const c = customers.find(x => x.contactId === customerId)
+    if (!c) return
+    if (c.email) setCustomerEmail(c.email)
+    if (c.phone) setCustomerPhone(c.phone)
+    if (c.paymentTerms) setPaymentTerms(c.paymentTerms)
+    if (c.billingAddress) setBillAddress({
+      line1: c.billingAddress.line1 ?? '',
+      city: c.billingAddress.city ?? '',
+      state: c.billingAddress.state ?? '',
+      zip: c.billingAddress.zip ?? '',
+    })
+    if (c.shippingAddress) setShipAddress({
+      line1: c.shippingAddress.line1 ?? '',
+      city: c.shippingAddress.city ?? '',
+      state: c.shippingAddress.state ?? '',
+      zip: c.shippingAddress.zip ?? '',
+    })
+  }, [customerId, customers])
 
   const selectedCustomer = customers.find(c => c.contactId === customerId)
   const recentCustomers = customers.slice(0, 5)
@@ -188,18 +240,61 @@ export default function InvoiceCreatePage() {
           </div>
           <div className="flex items-center gap-2">
             {saving && <Loader2 size={14} className="animate-spin text-emerald-500" />}
-            <button
-              onClick={() => handleSave('draft')}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-50">
-              <Save size={13} /> Save Draft
-            </button>
-            <button
-              onClick={() => handleSave('send')}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">
-              <Send size={13} /> Send Invoice
-            </button>
+            {/* Save Draft split-button */}
+            <div className="relative flex">
+              <button onClick={() => handleSave('draft')} disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-emerald-200 border-r-0 text-emerald-700 rounded-l-lg hover:bg-emerald-50 transition-colors disabled:opacity-50">
+                <Save size={13} /> Save Draft
+              </button>
+              <button onClick={() => setShowSaveDraftMenu(p => !p)}
+                className="px-1.5 py-1.5 text-xs border border-emerald-200 text-emerald-700 rounded-r-lg hover:bg-emerald-50 transition-colors">
+                <ChevronDown size={12} />
+              </button>
+              <AnimatePresence>
+                {showSaveDraftMenu && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-52 z-50">
+                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Continue Editing</button>
+                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Close</button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button onClick={() => setShowSaveDraftMenu(false)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save as Template</button>
+                    <button onClick={() => setShowSaveDraftMenu(false)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Create Similar</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {/* Send Invoice split-button */}
+            <div className="relative flex">
+              <button onClick={() => handleSave('send')} disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-l-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">
+                <Send size={13} /> Send Invoice
+              </button>
+              <button onClick={() => setShowSendMenu(p => !p)}
+                className="px-1.5 py-1.5 text-xs bg-emerald-700 text-white rounded-r-lg hover:bg-emerald-800 transition-colors border-l border-emerald-500">
+                <ChevronDown size={12} />
+              </button>
+              <AnimatePresence>
+                {showSendMenu && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-56 z-50">
+                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send Now</button>
+                    <button onClick={() => { setScheduleSend(true); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Schedule Send</button>
+                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Payment Link</button>
+                    <button onClick={() => setShowSendMenu(false)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Preview Before Sending</button>
+                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Reminder</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
@@ -256,7 +351,24 @@ export default function InvoiceCreatePage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-bold text-gray-900 text-base">{selectedCustomer.name}</p>
-                      {selectedCustomer.email && <p className="text-sm text-gray-500">{selectedCustomer.email}</p>}
+                      {(customerEmail || selectedCustomer.email) && (
+                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
+                          <Mail size={11} className="text-gray-300" />
+                          {customerEmail || selectedCustomer.email}
+                        </p>
+                      )}
+                      {customerPhone && (
+                        <p className="text-xs text-gray-400 flex items-center gap-1">
+                          <Phone size={11} className="text-gray-300" />
+                          {customerPhone}
+                        </p>
+                      )}
+                      {(billAddress.line1 || billAddress.city) && (
+                        <div className="mt-1.5 p-2 bg-gray-50 rounded-lg text-xs text-gray-500 space-y-0.5">
+                          {billAddress.line1 && <p>{billAddress.line1}</p>}
+                          {billAddress.city && <p>{[billAddress.city, billAddress.state, billAddress.zip].filter(Boolean).join(', ')}</p>}
+                        </div>
+                      )}
                       <p className="text-xs text-gray-400 mt-1">Balance: {fmt(selectedCustomer.balance)}</p>
                     </div>
                     <button
@@ -321,28 +433,82 @@ export default function InvoiceCreatePage() {
               )}
             </div>
 
-            {/* Invoice Details */}
+            {/* Ship To */}
             <div className="p-6">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Invoice Details</h3>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Invoice Date</label>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Ship To</h3>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <div
+                    className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-colors ${shipSameAsBill ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 hover:border-emerald-400'}`}
+                    onClick={() => setShipSameAsBill(p => !p)}>
+                    {shipSameAsBill && <Check size={9} className="text-white" strokeWidth={3} />}
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Due Date</label>
-                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
-                  </div>
+                  <span className="text-xs text-gray-500">Same as billing</span>
+                </label>
+              </div>
+              {shipSameAsBill ? (
+                <div className="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-center">
+                  <MapPin size={16} className="mx-auto mb-1.5 text-gray-300" />
+                  <p className="text-xs text-gray-400">Using billing address</p>
+                  {(billAddress.line1 || billAddress.city) && (
+                    <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+                      {billAddress.line1 && <p>{billAddress.line1}</p>}
+                      {billAddress.city && <p>{[billAddress.city, billAddress.state, billAddress.zip].filter(Boolean).join(', ')}</p>}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">PO / Reference Number</label>
-                  <input type="text" value={poNumber} onChange={e => setPoNumber(e.target.value)}
-                    placeholder="Optional"
+              ) : (
+                <div className="space-y-2">
+                  <input type="text" value={shipAddress.line1}
+                    onChange={e => setShipAddress(p => ({ ...p, line1: e.target.value }))}
+                    placeholder="Street address"
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  <div className="grid grid-cols-3 gap-2">
+                    <input type="text" value={shipAddress.city}
+                      onChange={e => setShipAddress(p => ({ ...p, city: e.target.value }))}
+                      placeholder="City"
+                      className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                    <input type="text" value={shipAddress.state}
+                      onChange={e => setShipAddress(p => ({ ...p, state: e.target.value }))}
+                      placeholder="State"
+                      className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                    <input type="text" value={shipAddress.zip}
+                      onChange={e => setShipAddress(p => ({ ...p, zip: e.target.value }))}
+                      placeholder="ZIP"
+                      className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  </div>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Row 1b: Invoice Details ── */}
+          <div className="border-b border-gray-100 px-6 py-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Invoice Date</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Due Date</label>
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Payment Terms</label>
+                <select value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white">
+                  {['Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 60', 'Net 90'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">PO / Reference #</label>
+                <input type="text" value={poNumber} onChange={e => setPoNumber(e.target.value)}
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
               </div>
             </div>
           </div>
@@ -520,6 +686,36 @@ export default function InvoiceCreatePage() {
                   <p className="text-xs text-gray-400">Automatically charge overdue interest</p>
                 </div>
               </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${enablePartialPayments ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
+                  onClick={() => setEnablePartialPayments(p => !p)}>
+                  {enablePartialPayments && <Check size={10} className="text-white" strokeWidth={3} />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Enable partial payments</p>
+                  <p className="text-xs text-gray-400">Allow customer to pay in installments</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${requirePO ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
+                  onClick={() => setRequirePO(p => !p)}>
+                  {requirePO && <Check size={10} className="text-white" strokeWidth={3} />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Require PO number</p>
+                  <p className="text-xs text-gray-400">Customer must provide PO before payment</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${enableDeposit ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
+                  onClick={() => setEnableDeposit(p => !p)}>
+                  {enableDeposit && <Check size={10} className="text-white" strokeWidth={3} />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Enable deposit required</p>
+                  <p className="text-xs text-gray-400">Collect a deposit before beginning work</p>
+                </div>
+              </label>
 
               <div className="pt-1">
                 <button className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors border border-dashed border-gray-200 hover:border-emerald-300 px-3 py-2 rounded-xl w-full justify-center">
@@ -567,10 +763,9 @@ export default function InvoiceCreatePage() {
                     className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-48">
                     {[
                       { icon: <FileText size={13} />, label: 'Preview as PDF' },
-                      { icon: <Printer size={13} />, label: 'Print' },
+                      { icon: <Printer size={13} />, label: 'Print Invoice' },
                       { icon: <Download size={13} />, label: 'Download PDF' },
-                      { icon: <RefreshCw size={13} />, label: 'Copy Invoice' },
-                      { icon: <Clock size={13} />, label: 'Schedule Send' },
+                      { icon: <FileText size={13} />, label: 'Print Packing Slip' },
                     ].map(({ icon, label }) => (
                       <button key={label}
                         onClick={() => { setShowMoreMenu(false) }}
@@ -578,6 +773,27 @@ export default function InvoiceCreatePage() {
                         <span className="text-gray-400">{icon}</span> {label}
                       </button>
                     ))}
+                    <div className="border-t border-gray-100 my-1" />
+                    {[
+                      { icon: <Link2 size={13} />, label: 'Share Link' },
+                      { icon: <Copy size={13} />, label: 'Duplicate Invoice' },
+                      { icon: <RefreshCw size={13} />, label: 'Convert to Credit Note' },
+                    ].map(({ icon, label }) => (
+                      <button key={label}
+                        onClick={() => { setShowMoreMenu(false) }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors">
+                        <span className="text-gray-400">{icon}</span> {label}
+                      </button>
+                    ))}
+                    <div className="border-t border-gray-100 my-1" />
+                    <button onClick={() => setShowMoreMenu(false)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors">
+                      <Ban size={13} className="text-red-400" /> Void Invoice
+                    </button>
+                    <button onClick={() => setShowMoreMenu(false)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors">
+                      <History size={13} className="text-gray-400" /> History / Audit Log
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -602,6 +818,12 @@ export default function InvoiceCreatePage() {
       )}
       {showMoreMenu && (
         <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
+      )}
+      {showSaveDraftMenu && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowSaveDraftMenu(false)} />
+      )}
+      {showSendMenu && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowSendMenu(false)} />
       )}
     </div>
   )
