@@ -239,64 +239,6 @@ export default function InvoiceCreatePage() {
             <span className="text-sm font-mono font-bold text-gray-400 tracking-wider">INVOICE #NEW</span>
             <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full border border-gray-200">Draft</span>
           </div>
-          <div className="flex items-center gap-2">
-            {saving && <Loader2 size={14} className="animate-spin text-emerald-500" />}
-            {/* Save Draft split-button */}
-            <div className="relative flex">
-              <button onClick={() => handleSave('draft')} disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-emerald-200 border-r-0 text-emerald-700 rounded-l-lg hover:bg-emerald-50 transition-colors disabled:opacity-50">
-                <Save size={13} /> Save Draft
-              </button>
-              <button onClick={() => setShowSaveDraftMenu(p => !p)}
-                className="px-1.5 py-1.5 text-xs border border-emerald-200 text-emerald-700 rounded-r-lg hover:bg-emerald-50 transition-colors">
-                <ChevronDown size={12} />
-              </button>
-              <AnimatePresence>
-                {showSaveDraftMenu && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-52 z-50">
-                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Continue Editing</button>
-                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Close</button>
-                    <div className="border-t border-gray-100 my-1" />
-                    <button onClick={() => setShowSaveDraftMenu(false)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save as Template</button>
-                    <button onClick={() => setShowSaveDraftMenu(false)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Create Similar</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            {/* Send Invoice split-button */}
-            <div className="relative flex">
-              <button onClick={() => handleSave('send')} disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-l-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">
-                <Send size={13} /> Send Invoice
-              </button>
-              <button onClick={() => setShowSendMenu(p => !p)}
-                className="px-1.5 py-1.5 text-xs bg-emerald-700 text-white rounded-r-lg hover:bg-emerald-800 transition-colors border-l border-emerald-500">
-                <ChevronDown size={12} />
-              </button>
-              <AnimatePresence>
-                {showSendMenu && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-56 z-50">
-                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send Now</button>
-                    <button onClick={() => { setScheduleSend(true); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Schedule Send</button>
-                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Payment Link</button>
-                    <button onClick={() => setShowSendMenu(false)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Preview Before Sending</button>
-                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Reminder</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
         </div>
 
         {/* Template selector bar */}
