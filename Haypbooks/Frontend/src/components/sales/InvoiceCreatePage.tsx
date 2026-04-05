@@ -34,10 +34,19 @@ interface Customer {
 
 interface LineItem {
   id: string
+  itemId?: string
   description: string
   quantity: number
   unitPrice: number
   taxRate: number
+}
+
+interface CatalogItem {
+  id: string
+  name: string
+  type: string
+  sku: string | null
+  salesPrice: number | null
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9)
@@ -95,6 +104,10 @@ export default function InvoiceCreatePage() {
   const [shipSameAsBill, setShipSameAsBill] = useState(true)
   const [shipAddress, setShipAddress] = useState({ line1: '', city: '', state: '', zip: '' })
 
+  // Catalog (products & services for line item picker)
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
+  const [activeCatalogRow, setActiveCatalogRow] = useState<string | null>(null)
+
   // State
   const [saving, setSaving] = useState(false)
   const [saveAction, setSaveAction] = useState<'draft' | 'send'>('draft')
@@ -103,6 +116,23 @@ export default function InvoiceCreatePage() {
   const [showSaveDraftMenu, setShowSaveDraftMenu] = useState(false)
   const [showSendMenu, setShowSendMenu] = useState(false)
   const [showSettingsMenu, setShowSettingsMenu] = useState(false)
+
+  // Fetch catalog items (products & services)
+  useEffect(() => {
+    if (!companyId) return
+    apiClient.get(`/companies/${companyId}/inventory/items?limit=200`)
+      .then(({ data }) => {
+        const list: any[] = Array.isArray(data) ? data : data.items ?? []
+        setCatalogItems(list.map(i => ({
+          id: i.id,
+          name: i.name,
+          type: i.type,
+          sku: i.sku ?? null,
+          salesPrice: i.salesPrice != null ? Number(i.salesPrice) : null,
+        })))
+      })
+      .catch(() => {})
+  }, [companyId])
 
   // Fetch customers and update memo when template changes
   useEffect(() => {
@@ -182,6 +212,16 @@ export default function InvoiceCreatePage() {
   const removeItem = (id: string) => setItems(p => p.filter(it => it.id !== id))
   const updateItem = (id: string, f: keyof Omit<LineItem, 'id'>, v: string | number) =>
     setItems(p => p.map(it => it.id === id ? { ...it, [f]: v } : it))
+
+  const pickCatalogItem = (rowId: string, cat: CatalogItem) => {
+    setItems(p => p.map(it => it.id === rowId ? {
+      ...it,
+      itemId: cat.id,
+      description: cat.name,
+      unitPrice: cat.salesPrice ?? it.unitPrice,
+    } : it))
+    setActiveCatalogRow(null)
+  }
 
   const handleSave = async (action: 'draft' | 'send') => {
     if (!customerId) { setError('Please select a customer.'); return }
@@ -487,12 +527,48 @@ export default function InvoiceCreatePage() {
                     return (
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                         <td className="px-4 py-2 text-gray-400 text-xs border-r border-gray-100 text-center">{i + 1}</td>
-                        <td className="px-4 py-2 border-r border-gray-100">
+                        <td className="px-4 py-2 border-r border-gray-100 relative">
                           <input
                             value={it.description}
-                            onChange={e => updateItem(it.id, 'description', e.target.value)}
-                            placeholder="Item or service description"
+                            onChange={e => { updateItem(it.id, 'description', e.target.value); setActiveCatalogRow(it.id) }}
+                            onFocus={() => setActiveCatalogRow(it.id)}
+                            onBlur={() => setTimeout(() => setActiveCatalogRow(null), 150)}
+                            placeholder="Type or select a product / service…"
                             className="w-full text-sm text-slate-800 bg-transparent border-0 outline-none focus:ring-0 placeholder:text-gray-300" />
+                          {activeCatalogRow === it.id && catalogItems.length > 0 && (() => {
+                            const q = it.description.toLowerCase()
+                            const matches = catalogItems.filter(c =>
+                              !q || c.name.toLowerCase().includes(q) || (c.sku ?? '').toLowerCase().includes(q)
+                            ).slice(0, 8)
+                            if (matches.length === 0) return null
+                            return (
+                              <div className="absolute left-0 top-full mt-1 z-40 w-72 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                                {matches.map(cat => (
+                                  <button
+                                    key={cat.id}
+                                    type="button"
+                                    onMouseDown={() => pickCatalogItem(it.id, cat)}
+                                    className="flex items-center justify-between w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 transition-colors border-b border-slate-50 last:border-0"
+                                  >
+                                    <div>
+                                      <span className="font-medium text-slate-800">{cat.name}</span>
+                                      {cat.sku && <span className="ml-1.5 text-xs text-slate-400 font-mono">{cat.sku}</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
+                                        cat.type === 'SERVICE' ? 'bg-purple-50 text-purple-600' :
+                                        cat.type === 'INVENTORY' ? 'bg-emerald-50 text-emerald-600' :
+                                        'bg-blue-50 text-blue-600'
+                                      }`}>{cat.type === 'SERVICE' ? 'Service' : cat.type === 'INVENTORY' ? 'Inventory' : 'Product'}</span>
+                                      {cat.salesPrice != null && (
+                                        <span className="text-xs text-slate-500 tabular-nums">{fmt(cat.salesPrice)}</span>
+                                      )}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100">
                           <input
