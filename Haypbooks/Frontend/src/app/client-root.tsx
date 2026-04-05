@@ -98,7 +98,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
   // in one place and tests / runtime logic stay consistent.
   const isPublic = pathname === '/' || PUBLIC_PATH_PREFIXES.some(p => p !== '/' && pathname.startsWith(p))
   const isPractice = pathname.startsWith('/practice-hub')
-  const isFullScreen = pathname.includes('/journal-entries/') || pathname.endsWith('/audit-log')
+  const isFullScreen = pathname.includes('/journal-entries/') || pathname.endsWith('/audit-log') || pathname.includes('/invoices/new')
 
   return (
     <>
