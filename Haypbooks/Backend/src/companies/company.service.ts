@@ -196,30 +196,48 @@ export class CompanyService {
 
   // ─── Settings ─────────────────────────────────────────────────────────────
 
+  private readonly SETTINGS_DEFAULTS = {
+    defaultTaxTreatment: 'exclusive',
+    defaultTaxRate: 12,
+    defaultPaymentTerms: 'net-30',
+    dateFormat: 'MMM DD, YYYY',
+    numberFormat: '1,234.56',
+    decimalPlaces: 2,
+    lateFeeEnabled: false,
+    lateFeeType: 'percentage',
+    lateFeeRate: 5,
+    lateFeeGracePeriod: 7,
+    lateFeeMaxCap: null,
+    reminderEnabled: false,
+    reminderDaysBefore: 3,
+    reminderDaysAfter: 7,
+    reminderRepeatDays: 7,
+  }
+
   async getSettings(userId: string, companyId: string) {
     const company = await this.repo.findByIdForUser(userId, companyId)
     if (!company) throw new NotFoundException('Company not found')
-    const settings = await this.prisma.companySettings.findUnique({ where: { companyId } }).catch(() => null)
-    return settings || { companyId }
+    // Auto-create with defaults on first access (findOrCreate)
+    return this.prisma.companySettings.upsert({
+      where: { companyId },
+      create: { companyId, ...this.SETTINGS_DEFAULTS },
+      update: {},
+    })
   }
 
   async updateSettings(userId: string, companyId: string, data: any) {
     const company = await this.repo.findByIdForUser(userId, companyId)
     if (!company) throw new NotFoundException('Company not found')
+    // Strip any read-only or unknown fields
+    const {
+      id, companyId: _cid, createdAt, updatedAt,
+      baseCurrency, company: _company,
+      ...safeData
+    } = data as any
     return this.prisma.companySettings.upsert({
       where: { companyId },
-      create: { companyId, ...data },
-      update: { ...data },
-    }).catch(async () => {
-      // If CompanySettings model doesn't exist yet, fall back to updating the Company record directly
-      const allowed: any = {}
-      if (data.address) allowed.address = data.address
-      if (data.logoUrl) allowed.logoUrl = data.logoUrl
-      if (data.invoicePrefix) allowed.invoicePrefix = data.invoicePrefix
-      if (data.paymentTerms) allowed.paymentTerms = data.paymentTerms
-      if (data.currency) allowed.currency = data.currency
-      if (data.fiscalStart) allowed.fiscalYearStart = data.fiscalStart
-      return this.prisma.company.update({ where: { id: companyId }, data: allowed as any })
+      create: { companyId, ...this.SETTINGS_DEFAULTS, ...safeData },
+      update: safeData,
     })
   }
 
