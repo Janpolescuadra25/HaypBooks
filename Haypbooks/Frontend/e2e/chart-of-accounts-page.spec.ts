@@ -2,7 +2,8 @@ import { test, expect, Page, ConsoleMessage } from '@playwright/test';
 
 test.describe('Chart of Accounts Page E2E', () => {
   const baseURL = 'http://localhost:3000';
-  const targetPath = '/(owner)/accounting/core-accounting/chart-of-accounts';
+  // Route groups like (owner) are filesystem-only in Next.js App Router — NOT part of the URL
+  const targetPath = '/accounting/core-accounting/chart-of-accounts';
   const targetURL = `${baseURL}${targetPath}`;
 
   const log = (step: number, desc: string, pass: boolean, detail?: string) => {
