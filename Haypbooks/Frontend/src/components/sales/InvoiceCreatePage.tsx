@@ -9,7 +9,7 @@ import {
   Save, Send, LayoutTemplate, Search, Check, X, ChevronRight,
   FileText, Paperclip, Clock, RefreshCw, Printer, Download,
   MoreHorizontal, Info, MapPin, Link2, Copy, Ban, History,
-  Mail, Phone,
+  Mail, Phone, Settings,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -102,6 +102,7 @@ export default function InvoiceCreatePage() {
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showSaveDraftMenu, setShowSaveDraftMenu] = useState(false)
   const [showSendMenu, setShowSendMenu] = useState(false)
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
 
   // Fetch customers and update memo when template changes
   useEffect(() => {
@@ -653,75 +654,21 @@ export default function InvoiceCreatePage() {
               </div>
             </div>
 
-            {/* Right: Checkboxes + Attachments */}
-            <div className="p-6 space-y-3">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Settings</h3>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${makeRecurring ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
-                  onClick={() => setMakeRecurring(p => !p)}>
-                  {makeRecurring && <Check size={10} className="text-white" strokeWidth={3} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Save as recurring template</p>
-                  <p className="text-xs text-gray-400">Auto-generate this invoice on a schedule</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${scheduleSend ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
-                  onClick={() => setScheduleSend(p => !p)}>
-                  {scheduleSend && <Check size={10} className="text-white" strokeWidth={3} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Schedule send for later</p>
-                  <p className="text-xs text-gray-400">Pick a specific date and time to send</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${applyLateFee ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
-                  onClick={() => setApplyLateFee(p => !p)}>
-                  {applyLateFee && <Check size={10} className="text-white" strokeWidth={3} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Apply late fee after due date</p>
-                  <p className="text-xs text-gray-400">Automatically charge overdue interest</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${enablePartialPayments ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
-                  onClick={() => setEnablePartialPayments(p => !p)}>
-                  {enablePartialPayments && <Check size={10} className="text-white" strokeWidth={3} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Enable partial payments</p>
-                  <p className="text-xs text-gray-400">Allow customer to pay in installments</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${requirePO ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
-                  onClick={() => setRequirePO(p => !p)}>
-                  {requirePO && <Check size={10} className="text-white" strokeWidth={3} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Require PO number</p>
-                  <p className="text-xs text-gray-400">Customer must provide PO before payment</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${enableDeposit ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'}`}
-                  onClick={() => setEnableDeposit(p => !p)}>
-                  {enableDeposit && <Check size={10} className="text-white" strokeWidth={3} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Enable deposit required</p>
-                  <p className="text-xs text-gray-400">Collect a deposit before beginning work</p>
-                </div>
-              </label>
-
-              <div className="pt-1">
-                <button className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors border border-dashed border-gray-200 hover:border-emerald-300 px-3 py-2 rounded-xl w-full justify-center">
-                  <Paperclip size={13} /> Add Attachment
-                </button>
+            {/* Right: Attachments (Settings moved to ⚙️ gear in footer) */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Attachments</h3>
               </div>
+              <button className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors border border-dashed border-gray-200 hover:border-emerald-300 px-3 py-2 rounded-xl w-full justify-center">
+                <Paperclip size={13} /> Add Attachment
+              </button>
+              <p className="text-xs text-gray-400 text-center">
+                Invoice settings (recurring, fees, etc.) are in the{' '}
+                <button onClick={() => setShowSettingsMenu(true)}
+                  className="text-emerald-600 hover:underline font-medium inline-flex items-center gap-0.5">
+                  <Settings size={11} /> gear menu
+                </button>{' '}in the footer.
+              </p>
             </div>
           </div>
         </div>
@@ -736,64 +683,112 @@ export default function InvoiceCreatePage() {
             Cancel
           </button>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleSave('draft')}
-              disabled={saving && saveAction === 'draft'}
-              className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50">
-              {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Save Draft
-            </button>
-            <button
-              onClick={() => handleSave('send')}
-              disabled={saving && saveAction === 'send'}
-              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm">
-              {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              Send to Customer
-            </button>
-            {/* More actions dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowMoreMenu(p => !p)}
-                className="flex items-center gap-1 px-3 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors">
-                More <ChevronDown size={13} />
+            {/* Save Draft split-button */}
+            <div className="relative flex">
+              <button onClick={() => handleSave('draft')} disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 border-r-0 text-emerald-700 rounded-l-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50">
+                {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Save Draft
+              </button>
+              <button onClick={() => setShowSaveDraftMenu(p => !p)}
+                className="px-2 py-2 border border-emerald-200 text-emerald-700 rounded-r-xl hover:bg-emerald-50 transition-colors">
+                <ChevronDown size={12} />
               </button>
               <AnimatePresence>
-                {showMoreMenu && (
+                {showSaveDraftMenu && (
                   <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
-                    className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-48">
-                    {[
-                      { icon: <FileText size={13} />, label: 'Preview as PDF' },
-                      { icon: <Printer size={13} />, label: 'Print Invoice' },
-                      { icon: <Download size={13} />, label: 'Download PDF' },
-                      { icon: <FileText size={13} />, label: 'Print Packing Slip' },
-                    ].map(({ icon, label }) => (
-                      <button key={label}
-                        onClick={() => { setShowMoreMenu(false) }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors">
-                        <span className="text-gray-400">{icon}</span> {label}
-                      </button>
-                    ))}
+                    className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-52 z-50">
+                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Continue Editing</button>
+                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Close</button>
                     <div className="border-t border-gray-100 my-1" />
-                    {[
-                      { icon: <Link2 size={13} />, label: 'Share Link' },
-                      { icon: <Copy size={13} />, label: 'Duplicate Invoice' },
-                      { icon: <RefreshCw size={13} />, label: 'Convert to Credit Note' },
-                    ].map(({ icon, label }) => (
-                      <button key={label}
-                        onClick={() => { setShowMoreMenu(false) }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors">
-                        <span className="text-gray-400">{icon}</span> {label}
+                    <button onClick={() => setShowSaveDraftMenu(false)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save as Template</button>
+                    <button onClick={() => setShowSaveDraftMenu(false)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Create Similar</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {/* Send Invoice split-button */}
+            <div className="relative flex">
+              <button onClick={() => handleSave('send')} disabled={saving}
+                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-l-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm border-r border-emerald-500">
+                {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                Send Invoice
+              </button>
+              <button onClick={() => setShowSendMenu(p => !p)}
+                className="px-2 py-2 bg-emerald-700 text-white rounded-r-xl hover:bg-emerald-800 transition-colors shadow-sm">
+                <ChevronDown size={12} />
+              </button>
+              <AnimatePresence>
+                {showSendMenu && (
+                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                    className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-56 z-50">
+                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send Now (email immediately)</button>
+                    <button onClick={() => { setScheduleSend(true); setShowSettingsMenu(true); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Schedule Send</button>
+                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Payment Link</button>
+                    <button onClick={() => setShowSendMenu(false)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Preview Before Sending</button>
+                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Reminder</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {/* ⚙️ Settings gear */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSettingsMenu(p => !p)}
+                title="Invoice Settings"
+                className={`p-2 rounded-xl border transition-colors ${
+                  Object.values({ makeRecurring, scheduleSend, applyLateFee, enablePartialPayments, requirePO, enableDeposit }).some(Boolean)
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
+                    : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}>
+                <Settings size={16} />
+              </button>
+              <AnimatePresence>
+                {showSettingsMenu && (
+                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                    className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-2xl shadow-xl py-3 w-72 z-50">
+                    <div className="px-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                      <Settings size={13} className="text-emerald-600" />
+                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Invoice Settings</p>
+                    </div>
+                    <div className="px-4 pt-3 space-y-3">
+                      {([
+                        { state: makeRecurring, set: setMakeRecurring, label: 'Save as recurring template', sub: 'Auto-generate this invoice on a schedule' },
+                        { state: scheduleSend, set: setScheduleSend, label: 'Schedule send for later', sub: 'Pick a specific date and time to send' },
+                        { state: applyLateFee, set: setApplyLateFee, label: 'Apply late fee after due date', sub: 'Automatically charge overdue interest' },
+                        { state: enablePartialPayments, set: setEnablePartialPayments, label: 'Enable partial payments', sub: 'Allow customer to pay in installments' },
+                        { state: requirePO, set: setRequirePO, label: 'Require PO number', sub: 'Customer must provide PO before payment' },
+                        { state: enableDeposit, set: setEnableDeposit, label: 'Enable deposit required', sub: 'Collect a deposit before beginning work' },
+                      ] as const).map(({ state, set, label, sub }) => (
+                        <button key={label} onClick={() => (set as (fn: (p: boolean) => boolean) => void)(p => !p)}
+                          className="w-full flex items-start gap-3 text-left group">
+                          <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            state ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300 group-hover:border-emerald-400'
+                          }`}>
+                            {state && <Check size={10} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">{label}</p>
+                            <p className="text-xs text-gray-400">{sub}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="px-4 pt-3 border-t border-gray-100 mt-3">
+                      <button onClick={() => setShowSettingsMenu(false)}
+                        className="w-full py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors">
+                        Done
                       </button>
-                    ))}
-                    <div className="border-t border-gray-100 my-1" />
-                    <button onClick={() => setShowMoreMenu(false)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors">
-                      <Ban size={13} className="text-red-400" /> Void Invoice
-                    </button>
-                    <button onClick={() => setShowMoreMenu(false)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors">
-                      <History size={13} className="text-gray-400" /> History / Audit Log
-                    </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -824,6 +819,9 @@ export default function InvoiceCreatePage() {
       )}
       {showSendMenu && (
         <div className="fixed inset-0 z-40" onClick={() => setShowSendMenu(false)} />
+      )}
+      {showSettingsMenu && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
       )}
     </div>
   )
