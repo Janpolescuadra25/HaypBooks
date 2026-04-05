@@ -16,6 +16,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import InvoiceDetailPage from './InvoiceDetailPage'
 import TemplateGallery from './invoice-templates/TemplateGallery'
+import EmailPreviewModal from './EmailPreviewModal'
 
 export interface Invoice {
   id: string
@@ -72,6 +73,7 @@ export default function InvoicesPage() {
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [toast, setToast] = useState('')
+  const [emailPreviewInvoice, setEmailPreviewInvoice] = useState<Invoice | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -337,7 +339,7 @@ export default function InvoicesPage() {
                             <MenuBtn icon={<Send size={13} />} label="Send Reminder" onClick={() => { handleSend(inv.id); showToast('Reminder sent') }} />
                           )}
                           {inv.status === 'DRAFT' && (
-                            <MenuBtn icon={<Send size={13} />} label="Send Invoice" onClick={() => handleSend(inv.id)} />
+                            <MenuBtn icon={<Send size={13} />} label="Send Invoice" onClick={() => { setEmailPreviewInvoice(inv); setActionMenuId(null) }} />
                           )}
                           {(inv.status === 'SENT' || inv.status === 'PARTIALLY_PAID' || inv.status === 'OVERDUE') && (
                             <MenuBtn icon={<CreditCard size={13} />} label="Receive Payment" onClick={() => { setViewInvoice(inv); setActionMenuId(null) }} />
@@ -384,6 +386,14 @@ export default function InvoicesPage() {
             companyId={companyId}
             onClose={() => setViewInvoice(null)}
             onRefresh={fetchInvoices}
+          />
+        )}
+        {emailPreviewInvoice && companyId && (
+          <EmailPreviewModal
+            invoice={emailPreviewInvoice}
+            companyId={companyId}
+            onClose={() => setEmailPreviewInvoice(null)}
+            onSent={() => { setEmailPreviewInvoice(null); fetchInvoices() }}
           />
         )}
       </AnimatePresence>

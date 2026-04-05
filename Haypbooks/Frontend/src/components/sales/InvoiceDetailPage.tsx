@@ -11,6 +11,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import type { Invoice } from './InvoicesPage'
+import EmailPreviewModal from './EmailPreviewModal'
 
 interface Payment {
   id: string
@@ -45,6 +46,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const [voiding, setVoiding] = useState(false)
   const [error, setError] = useState('')
   const [confirmVoid, setConfirmVoid] = useState(false)
+  const [showEmailPreview, setShowEmailPreview] = useState(false)
 
   const fmt = useCallback((n: number) => formatCurrency(n ?? 0, currency), [currency])
 
@@ -258,9 +260,9 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                   </button>
                 )}
                 {(invoice.status === 'DRAFT' || invoice.status === 'SENT') && (
-                  <button onClick={handleSend} disabled={sending}
+                  <button onClick={() => setShowEmailPreview(true)} disabled={sending}
                     className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
-                    {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    <Send size={14} />
                     {invoice.status === 'SENT' ? 'Resend' : 'Send Invoice'}
                   </button>
                 )}
@@ -297,6 +299,18 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Email Preview Modal */}
+      <AnimatePresence>
+        {showEmailPreview && (
+          <EmailPreviewModal
+            invoice={invoice}
+            companyId={companyId}
+            onClose={() => setShowEmailPreview(false)}
+            onSent={() => { setInvoice(p => ({ ...p, status: 'SENT' })); onRefresh() }}
+          />
         )}
       </AnimatePresence>
     </>
