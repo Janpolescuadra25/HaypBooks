@@ -2,7 +2,8 @@ import { test, expect, Page, ConsoleMessage } from '@playwright/test';
 
 test.describe('Customers Page E2E', () => {
   const baseURL = 'http://localhost:3000';
-  const targetPath = '/(owner)/sales/customers/customers';
+  // Route groups like (owner) are filesystem-only in Next.js App Router — NOT part of the URL
+  const targetPath = '/sales/customers/customers';
   const targetURL = `${baseURL}${targetPath}`;
   const newCustomerName = 'Test Customer';
   const editedCustomerName = 'Test Customer Edited';

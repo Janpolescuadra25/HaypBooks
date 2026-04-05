@@ -1,8 +1,9 @@
-import { test, expect, Page, ConsoleMessage } from '@playwright/test';
+import { test, expect, Page, ConsoleMessage, APIRequestContext } from '@playwright/test';
 
 test.describe('Invoices Page E2E', () => {
   const baseURL = 'http://localhost:3000';
-  const targetPath = '/(owner)/sales/billing/invoices';
+  // Route groups like (owner) are filesystem-only in Next.js App Router — NOT part of the URL
+  const targetPath = '/sales/billing/invoices';
   const targetURL = `${baseURL}${targetPath}`;
 
   const log = (step: number, desc: string, pass: boolean, detail?: string) => {
@@ -23,6 +24,50 @@ test.describe('Invoices Page E2E', () => {
     }
   }
 
+  // ── Auth setup ─────────────────────────────────────────────────────────────
+  // Each test gets its own user+company so tests can run in parallel workers.
+  let testCompanyId: string | undefined;
+
+  async function loginAndSetupCompany(page: Page, request: APIRequestContext) {
+    const ts = Date.now();
+    const email = `e2e-inv-${ts}@haypbooks.test`;
+    const password = 'E2eInv!23';
+
+    // Create a verified test user (requires ALLOW_TEST_ENDPOINTS on the backend)
+    try {
+      await request.post('http://127.0.0.1:4000/api/test/create-user', {
+        data: { email, password, name: 'E2E Invoice', isEmailVerified: true },
+      });
+    } catch { /* endpoint may be unavailable — skip */ }
+
+    // UI login so the browser context gets the auth cookie
+    await page.goto('/login');
+    await page.waitForSelector('input[type="email"]', { timeout: 15000 }).catch(() => {});
+    await page.fill('input[type="email"]', email).catch(() => {});
+    await page.fill('input[type="password"]', password).catch(() => {});
+    await page.locator('button', { hasText: /Sign [Ii]n|Log [Ii]n/ }).first().click().catch(() => {});
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 }).catch(() => {});
+
+    // Set onboarding cookies so middleware lets the user into the owner hub
+    await page.context().addCookies([
+      { name: 'onboardingComplete', value: 'true', domain: 'localhost', path: '/' },
+      { name: 'ownerOnboardingComplete', value: 'true', domain: 'localhost', path: '/' },
+    ]);
+
+    // Create a test company and capture its id
+    const companyResp = await request.post('http://127.0.0.1:4000/api/test/create-company', {
+      data: { email, name: 'E2E Invoice Co' },
+    }).then((r) => r.json()).catch(() => null);
+    testCompanyId = companyResp?.company?.id ?? companyResp?.id ?? undefined;
+  }
+
+  /** Returns the URL to navigate to, appending ?company= when we have an id */
+  const navURL = () => (testCompanyId ? `${targetURL}?company=${testCompanyId}` : targetURL);
+
+  test.beforeEach(async ({ page, request }) => {
+    await loginAndSetupCompany(page, request);
+  });
+
   test('full invoices page flow', async ({ page }) => {
     const results: Array<{ step: number; pass: boolean; detail?: string }> = [];
 
@@ -30,12 +75,12 @@ test.describe('Invoices Page E2E', () => {
     // STEP 1: Navigate to the Invoices page
     // ──────────────────────────────────────────────────────────────────────────
     try {
-      await page.goto(targetURL, { waitUntil: 'load', timeout: 30000 });
+      await page.goto(navURL(), { waitUntil: 'load', timeout: 30000 });
       await waitMs(2000);
 
       const h1 = page.locator('h1', { hasText: /Invoices/i });
       const table = page.locator('table');
-      const login = page.locator('text=login', { exact: false });
+      const login = page.getByText('login', { exact: false });
 
       const ready = await Promise.race([
         h1.first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
@@ -117,9 +162,10 @@ test.describe('Invoices Page E2E', () => {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // STEP 6: Status filter pills (ALL / DRAFT / SENT / PAID / OVERDUE / VOIDED)
+    // STEP 6: Status filter pills (All / DRAFT / SENT / PARTIALLY PAID / PAID / OVERDUE / VOIDED)
     // ──────────────────────────────────────────────────────────────────────────
-    const statusPills = ['ALL', 'DRAFT', 'SENT', 'PAID', 'OVERDUE', 'VOIDED'];
+    // Component renders text: "All", "DRAFT", "SENT", "PARTIALLY PAID", "PAID", "OVERDUE", "VOIDED"
+    const statusPills = ['All', 'DRAFT', 'SENT', 'PAID', 'OVERDUE', 'VOIDED'];
     try {
       let pillsFound = 0;
       for (const pill of statusPills) {
@@ -145,12 +191,14 @@ test.describe('Invoices Page E2E', () => {
     // ──────────────────────────────────────────────────────────────────────────
     try {
       await waitMs(1000);
-      const tableRows = await page.locator('table tbody tr').count();
-      if (tableRows === 0) {
-        results.push(log(7, 'Row action menu (no rows to test — skipped)', true));
+      // Use .filter to only count real data rows (rows with buttons), not empty-state rows
+      const dataRows = page.locator('table tbody tr').filter({ has: page.locator('button') });
+      const dataRowCount = await dataRows.count();
+      if (dataRowCount === 0) {
+        results.push(log(7, 'Row action menu (no data rows to test — skipped)', true));
       } else {
-        // Find the ⋮ trigger button (MoreVertical icon)
-        const menuBtn = page.locator('table tbody tr').first().locator('button').last();
+        // Find the ⋮ trigger button (MoreVertical icon) in the first real data row
+        const menuBtn = dataRows.first().locator('button').last();
         if (!(await menuBtn.count())) throw new Error('⋮ button not found in first row');
 
         await menuBtn.click();
@@ -180,12 +228,14 @@ test.describe('Invoices Page E2E', () => {
     let hasOpenModal = false;
     try {
       await waitMs(500);
-      const tableRows = await page.locator('table tbody tr').count();
-      if (tableRows === 0) {
-        results.push(log(8, 'Invoice detail modal open/close (no rows to test — skipped)', true));
+      // Use .filter to only count real data rows (rows with buttons), not empty-state rows
+      const dataRows8 = page.locator('table tbody tr').filter({ has: page.locator('button') });
+      const dataRowCount8 = await dataRows8.count();
+      if (dataRowCount8 === 0) {
+        results.push(log(8, 'Invoice detail modal open/close (no data rows to test — skipped)', true));
       } else {
-        // Click the invoice number link in the first row
-        const invLink = page.locator('table tbody tr').first().locator('button').first();
+        // Click the invoice number link in the first real data row
+        const invLink = dataRows8.first().locator('button').first();
         await invLink.click();
         await waitMs(1500);
 
@@ -363,9 +413,11 @@ test.describe('Invoices Page E2E', () => {
     // ──────────────────────────────────────────────────────────────────────────
     try {
       await waitMs(500);
-      const tableRows = await page.locator('table tbody tr').count();
-      if (tableRows === 0) {
-        results.push(log(15, 'Bulk select (no rows — skipped)', true));
+      // Use .filter to only count real data rows (rows with buttons), not empty-state rows
+      const dataRows15 = page.locator('table tbody tr').filter({ has: page.locator('button') });
+      const dataRowCount15 = await dataRows15.count();
+      if (dataRowCount15 === 0) {
+        results.push(log(15, 'Bulk select (no data rows — skipped)', true));
       } else {
         // The select-all button is in table thead first column
         const selectAllBtn = page.locator('table thead th').first().locator('button').first();
@@ -392,12 +444,14 @@ test.describe('Invoices Page E2E', () => {
     // STEP 16: Bulk action bar — Send All and Void All buttons visible when rows selected
     // ──────────────────────────────────────────────────────────────────────────
     try {
-      const tableRows = await page.locator('table tbody tr').count();
-      if (tableRows === 0) {
-        results.push(log(16, 'Bulk action buttons visible (no rows — skipped)', true));
+      // Use .filter to only count real data rows (rows with buttons), not empty-state rows
+      const dataRows16 = page.locator('table tbody tr').filter({ has: page.locator('button') });
+      const dataRowCount16 = await dataRows16.count();
+      if (dataRowCount16 === 0) {
+        results.push(log(16, 'Bulk action buttons visible (no data rows — skipped)', true));
       } else {
-        // Select single row
-        const firstRowCheck = page.locator('table tbody tr').first().locator('button').first();
+        // Select single row from a real data row
+        const firstRowCheck = dataRows16.first().locator('button').first();
         if (await firstRowCheck.count()) {
           await firstRowCheck.click();
           await waitMs(600);
@@ -541,17 +595,17 @@ test.describe('Invoices Page E2E', () => {
   // SEPARATE TEST: Invoice detail panel tabs (Edit / Email / Payor / Print)
   // ────────────────────────────────────────────────────────────────────────────
   test('invoice detail panel view tabs', async ({ page }) => {
-    await page.goto(targetURL, { waitUntil: 'load', timeout: 30000 });
+    await page.goto(navURL(), { waitUntil: 'load', timeout: 30000 });
     await waitMs(2500);
 
-    const tableRows = await page.locator('table tbody tr').count();
-    if (tableRows === 0) {
-      console.log('⏭️  No invoice rows found — skipping detail panel tab tests');
+    const dataRowsDetail = page.locator('table tbody tr').filter({ has: page.locator('button') });
+    if ((await dataRowsDetail.count()) === 0) {
+      console.log('⏭️  No data rows found — skipping detail panel tab tests');
       return;
     }
 
     // Open detail panel
-    const invLink = page.locator('table tbody tr').first().locator('button').first();
+    const invLink = dataRowsDetail.first().locator('button').first();
     await invLink.click();
     await waitMs(1500);
 
@@ -583,16 +637,16 @@ test.describe('Invoices Page E2E', () => {
   // SEPARATE TEST: Row action menu is a proper floating dropdown
   // ────────────────────────────────────────────────────────────────────────────
   test('row action menu is a floating dropdown not inline text', async ({ page }) => {
-    await page.goto(targetURL, { waitUntil: 'load', timeout: 30000 });
+    await page.goto(navURL(), { waitUntil: 'load', timeout: 30000 });
     await waitMs(2500);
 
-    const tableRows = await page.locator('table tbody tr').count();
-    if (tableRows === 0) {
-      console.log('⏭️  No rows — skipping action menu test');
+    const dataRowsMenu = page.locator('table tbody tr').filter({ has: page.locator('button') });
+    if ((await dataRowsMenu.count()) === 0) {
+      console.log('⏭️  No data rows — skipping action menu test');
       return;
     }
 
-    const menuBtn = page.locator('table tbody tr').first().locator('button').last();
+    const menuBtn = dataRowsMenu.first().locator('button').last();
     await menuBtn.click();
     await waitMs(800);
 
