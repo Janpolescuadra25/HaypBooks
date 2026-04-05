@@ -6,6 +6,7 @@ import {
   X, Send, Ban, Clock, CheckCircle2, AlertTriangle,
   FileText, User, Calendar, CreditCard, Loader2, AlertCircle,
   MoreVertical, Printer, Download, ChevronRight,
+  Mail, Eye, Globe, ChevronDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -47,6 +48,14 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const [error, setError] = useState('')
   const [confirmVoid, setConfirmVoid] = useState(false)
   const [showEmailPreview, setShowEmailPreview] = useState(false)
+  type ActiveDetailTab = 'edit' | 'email' | 'payor' | 'print'
+  const [activeTab, setActiveTab] = useState<ActiveDetailTab>('edit')
+  const [emailTone, setEmailTone] = useState('professional')
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailBody, setEmailBody] = useState('')
+  const [sendCopy, setSendCopy] = useState(false)
+  const [showToneMenu, setShowToneMenu] = useState(false)
+  const [payorTemplate, setPayorTemplate] = useState<'modern' | 'classic' | 'minimal'>('modern')
 
   const fmt = useCallback((n: number) => formatCurrency(n ?? 0, currency), [currency])
 
@@ -65,6 +74,45 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       .catch(() => setPayments([]))
       .finally(() => setLoadingPayments(false))
   }, [invoice.id, companyId])
+
+  // Rebuild email subject+body when invoice details or tone changes
+  useEffect(() => {
+    const num = invoice.invoiceNumber ?? `INV-${invoice.id?.slice(-6).toUpperCase()}`
+    const due = invoice.dueDate
+      ? new Date(invoice.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : ''
+    const dueLong = invoice.dueDate
+      ? new Date(invoice.dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : 'on receipt'
+    const customer = invoice.customerName ?? 'Customer'
+    const amt = `{amount}`
+    setEmailSubject(`Invoice ${num} \u2014 Due ${due}`)
+    if (emailTone === 'brief') {
+      setEmailBody(`Hi ${customer},\n\nYour invoice ${num} is ready.\n\nAmount due: ${amt}\nDue: ${dueLong}\n\nThank you.`)
+    } else if (emailTone === 'friendly') {
+      setEmailBody(`Hi ${customer}! \uD83D\uDC4B\n\nHere\u2019s your invoice ${num} for ${amt}, due ${dueLong}.\n\nThank you for your business! We truly appreciate it.\n\nWarm regards`)
+    } else {
+      setEmailBody(`Dear ${customer},\n\nThank you for choosing our services. Please find your invoice details below:\n\n  Invoice #:   ${num}\n  Amount Due:  ${amt}\n  Due Date:    ${dueLong}\n\nIf you have any questions, please don\u2019t hesitate to reach out.\n\nBest regards`)
+    }
+  }, [invoice.id, invoice.invoiceNumber, invoice.customerName, invoice.dueDate, emailTone])
+
+  const handleSendEmail = async (scheduledAt?: string) => {
+    setSending(true); setError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/send`, {
+        subject: emailSubject,
+        body: emailBody.replace('{amount}', formatCurrency(invoice.total ?? 0, currency)),
+        ...(scheduledAt ? { scheduledAt } : {}),
+      })
+      setInvoice(p => ({ ...p, status: 'SENT' }))
+      onRefresh()
+      setActiveTab('edit')
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to send invoice')
+    } finally {
+      setSending(false)
+    }
+  }
 
   const handleSend = async () => {
     if (invoice.status !== 'DRAFT' && invoice.status !== 'SENT') return
@@ -102,7 +150,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
         <motion.div initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 10 }}
           onClick={e => e.stopPropagation()}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+          className={`bg-white rounded-2xl shadow-2xl w-full ${activeTab === 'email' ? 'max-w-4xl' : 'max-w-2xl'} max-h-[92vh] flex flex-col overflow-hidden`}>
 
           {/* Header */}
           <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-emerald-50/60 to-white">
@@ -125,6 +173,27 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"><X size={18} /></button>
           </div>
 
+          {/* View Tabs */}
+          <div className="flex border-b border-gray-200 bg-white px-4 flex-shrink-0">
+            {([
+              { id: 'edit',  label: 'Edit',       Icon: FileText },
+              { id: 'email', label: 'Email',      Icon: Mail },
+              { id: 'payor', label: 'Payor View', Icon: Eye },
+              { id: 'print', label: 'Print / PDF', Icon: Printer },
+            ] as Array<{ id: ActiveDetailTab; label: string; Icon: React.ElementType }>).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === id
+                    ? 'border-emerald-500 text-emerald-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}>
+                <Icon size={12} /> {label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex-1 overflow-y-auto">
             {error && (
               <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-lg p-2.5 text-sm text-red-700 flex items-center gap-2">
@@ -132,7 +201,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
               </div>
             )}
 
-            <div className="px-6 py-5 space-y-5">
+            {activeTab === 'edit' && <div className="px-6 py-5 space-y-5">
               {/* Meta Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
@@ -243,15 +312,211 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                   </div>
                 )}
               </div>
-            </div>
+            </div>} {/* end edit tab */}
+
+            {/* ── Email Tab ─────────────────────────────────────── */}
+            {activeTab === 'email' && (
+              <div className="flex h-full min-h-[420px]">
+                {/* Compose panel */}
+                <div className="w-1/2 border-r border-gray-200 p-5 space-y-4 overflow-y-auto">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">To</p>
+                    <p className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">{invoice.customerName ?? '—'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Subject</p>
+                    <input value={emailSubject} onChange={e => setEmailSubject(e.target.value)}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-400 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tone</p>
+                    <div className="flex gap-2">
+                      {(['professional', 'friendly', 'brief'] as const).map(t => (
+                        <button key={t} onClick={() => setEmailTone(t)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                            emailTone === t ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}>{t}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Message</p>
+                    <textarea value={emailBody.replace('{amount}', formatCurrency(invoice.total ?? 0, currency))}
+                      onChange={e => setEmailBody(e.target.value)} rows={8}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-400 outline-none resize-none font-mono leading-relaxed" />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={sendCopy} onChange={e => setSendCopy(e.target.checked)} className="rounded accent-emerald-600" />
+                    <span className="text-xs text-gray-600">Send me a copy</span>
+                  </label>
+                </div>
+                {/* Live preview panel */}
+                <div className="w-1/2 p-5 bg-gray-50 overflow-y-auto">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Preview</p>
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-5 py-4 text-white">
+                      <p className="text-xs opacity-75 mb-0.5">Invoice</p>
+                      <p className="font-bold text-lg">{invoice.invoiceNumber ?? `INV-${invoice.id?.slice(-6).toUpperCase()}`}</p>
+                      <p className="text-xs opacity-80 mt-1">Due {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '—'}</p>
+                    </div>
+                    <div className="px-5 py-3">
+                      <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">
+                        {emailBody.replace('{amount}', formatCurrency(invoice.total ?? 0, currency)).slice(0, 200)}
+                        {emailBody.length > 200 ? '…' : ''}
+                      </p>
+                    </div>
+                    <div className="px-5 pb-4">
+                      <div className="bg-gray-50 rounded-lg p-3 text-xs">
+                        <div className="flex justify-between font-bold text-emerald-800">
+                          <span>Amount Due</span>
+                          <span>{fmt(invoice.amountDue ?? invoice.total ?? 0)}</span>
+                        </div>
+                      </div>
+                      <button className="mt-3 w-full bg-emerald-600 text-white text-xs font-semibold py-2 rounded-lg">View &amp; Pay Invoice</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Payor View Tab ────────────────────────────────── */}
+            {activeTab === 'payor' && (
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <p className="text-xs font-semibold text-gray-500">Template:</p>
+                  {(['modern', 'classic', 'minimal'] as const).map(t => (
+                    <button key={t} onClick={() => setPayorTemplate(t)}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                        payorTemplate === t ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}>{t}</button>
+                  ))}
+                </div>
+                <div className={`border rounded-2xl overflow-hidden ${payorTemplate === 'minimal' ? 'border-gray-200' : 'border-emerald-100'}`}>
+                  <div className={`px-6 py-5 ${
+                    payorTemplate === 'modern' ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white' :
+                    payorTemplate === 'classic' ? 'bg-emerald-50 border-b border-emerald-100' : 'bg-white border-b border-gray-100'
+                  }`}>
+                    <p className={`text-xs font-semibold mb-1 ${payorTemplate === 'modern' ? 'opacity-75' : 'text-gray-400'}`}>Invoice</p>
+                    <p className={`text-xl font-bold ${payorTemplate === 'modern' ? '' : 'text-gray-900'}`}>
+                      {invoice.invoiceNumber ?? `INV-${invoice.id?.slice(-6).toUpperCase()}`}
+                    </p>
+                    <div className={`flex gap-4 mt-1 text-xs ${payorTemplate === 'modern' ? 'opacity-80' : 'text-gray-500'}`}>
+                      <span>Issued: {invoice.date ? new Date(invoice.date).toLocaleDateString() : '—'}</span>
+                      <span>Due: {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '—'}</span>
+                    </div>
+                  </div>
+                  <div className="px-6 py-4 bg-white">
+                    <p className="text-xs font-semibold text-gray-400 mb-1">Bill To</p>
+                    <p className="text-sm font-semibold text-gray-800">{invoice.customerName ?? '—'}</p>
+                  </div>
+                  {items.length > 0 && (
+                    <div className="px-6 pb-4 bg-white">
+                      <table className="w-full text-sm">
+                        <thead><tr className="border-b border-gray-100">
+                          <th className="text-left py-2 text-xs font-semibold text-gray-500">Item</th>
+                          <th className="text-right py-2 text-xs font-semibold text-gray-500 w-16">Qty</th>
+                          <th className="text-right py-2 text-xs font-semibold text-gray-500 w-24">Amount</th>
+                        </tr></thead>
+                        <tbody>
+                          {items.map((it: any, i: number) => (
+                            <tr key={i} className="border-b border-gray-50">
+                              <td className="py-2 text-gray-700">{it.description}</td>
+                              <td className="py-2 text-right text-gray-600">{it.quantity}</td>
+                              <td className="py-2 text-right font-semibold text-gray-800">{fmt(it.amount ?? it.quantity * it.unitPrice)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-3 pt-2 border-t border-gray-100">
+                        <div className="text-sm font-bold text-gray-900 flex gap-8">
+                          <span>Total Due</span>
+                          <span className="tabular-nums">{fmt(invoice.amountDue ?? invoice.total ?? 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                    <button className="w-full bg-emerald-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-emerald-700 transition-colors">
+                      Pay {fmt(invoice.amountDue ?? invoice.total ?? 0)}
+                    </button>
+                    <p className="text-center text-xs text-gray-400 mt-2">Secure payment powered by Haypbooks</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Print / PDF Tab ───────────────────────────────── */}
+            {activeTab === 'print' && (
+              <div className="px-6 py-5">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs text-gray-500">Print-ready layout — use Ctrl+P or click Print below</p>
+                  <button onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+                    <Printer size={13} /> Print
+                  </button>
+                </div>
+                <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                  <div className="px-8 pt-8 pb-4 border-b border-gray-100">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-2xl font-bold text-gray-900">INVOICE</p>
+                        <p className="text-sm text-gray-500 mt-1">{invoice.invoiceNumber ?? `INV-${invoice.id?.slice(-6).toUpperCase()}`}</p>
+                      </div>
+                      <div className="text-right text-sm text-gray-600">
+                        <p>Date: {invoice.date ? new Date(invoice.date).toLocaleDateString() : '—'}</p>
+                        <p>Due: {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-8 py-4 border-b border-gray-100">
+                    <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Bill To</p>
+                    <p className="font-semibold text-gray-900">{invoice.customerName ?? '—'}</p>
+                  </div>
+                  {items.length > 0 && (
+                    <div className="px-8 py-4">
+                      <table className="w-full text-sm">
+                        <thead><tr className="border-b-2 border-gray-200">
+                          <th className="text-left py-2 text-xs font-bold text-gray-600 uppercase">Description</th>
+                          <th className="text-right py-2 text-xs font-bold text-gray-600 uppercase w-16">Qty</th>
+                          <th className="text-right py-2 text-xs font-bold text-gray-600 uppercase w-28">Unit Price</th>
+                          <th className="text-right py-2 text-xs font-bold text-gray-600 uppercase w-28">Amount</th>
+                        </tr></thead>
+                        <tbody>
+                          {items.map((it: any, i: number) => (
+                            <tr key={i} className="border-b border-gray-100">
+                              <td className="py-2 text-gray-800">{it.description}</td>
+                              <td className="py-2 text-right text-gray-600">{it.quantity}</td>
+                              <td className="py-2 text-right text-gray-600">{fmt(it.unitPrice)}</td>
+                              <td className="py-2 text-right font-semibold text-gray-800">{fmt(it.amount ?? it.quantity * it.unitPrice)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-3 pt-2 border-t border-gray-100">
+                        <div className="text-sm font-bold text-gray-900 flex gap-8">
+                          <span>Total Due</span>
+                          <span className="tabular-nums">{fmt(invoice.amountDue ?? invoice.total ?? 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {invoice.memo && (
+                    <div className="px-8 py-4 border-t border-gray-100">
+                      <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Notes</p>
+                      <p className="text-sm text-gray-700">{invoice.memo}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Footer */}
+          {/* Footer — tab-aware actions */}
           <div className="px-6 py-3.5 border-t border-emerald-100 flex items-center justify-between gap-3 flex-shrink-0 bg-gray-50/50">
             <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium">
               Close
             </button>
-            {(invoice.status as string) !== 'VOIDED' && invoice.status !== 'PAID' && (
+            {activeTab === 'edit' && (invoice.status as string) !== 'VOIDED' && invoice.status !== 'PAID' && (
               <div className="flex items-center gap-2">
                 {(invoice.status as string) !== 'VOIDED' && (
                   <button onClick={() => setConfirmVoid(true)}
@@ -260,13 +525,32 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                   </button>
                 )}
                 {(invoice.status === 'DRAFT' || invoice.status === 'SENT') && (
-                  <button onClick={() => setShowEmailPreview(true)} disabled={sending}
-                    className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
-                    <Send size={14} />
+                  <button onClick={() => setActiveTab('email')}
+                    className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+                    <Mail size={14} />
                     {invoice.status === 'SENT' ? 'Resend' : 'Send Invoice'}
                   </button>
                 )}
               </div>
+            )}
+            {activeTab === 'email' && (
+              <div className="flex items-center gap-2">
+                <button onClick={() => setActiveTab('edit')}
+                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium">
+                  Cancel
+                </button>
+                <button onClick={() => handleSendEmail()} disabled={sending}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
+                  {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  Send Now
+                </button>
+              </div>
+            )}
+            {activeTab === 'print' && (
+              <button onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+                <Printer size={14} /> Print Invoice
+              </button>
             )}
           </div>
         </motion.div>
