@@ -74,6 +74,7 @@ export default function InvoicesPage() {
   const [bulkLoading, setBulkLoading] = useState(false)
   const [toast, setToast] = useState('')
   const [emailPreviewInvoice, setEmailPreviewInvoice] = useState<Invoice | null>(null)
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -319,54 +320,16 @@ export default function InvoicesPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100 whitespace-nowrap">{fmt(inv.total)}</td>
-                  <td className="px-4 py-2.5 relative overflow-visible">
-                    <button onClick={() => setActionMenuId(prev => prev === inv.id ? null : inv.id)}
+                  <td className="px-4 py-2.5">
+                    <button
+                      onClick={(e) => {
+                        const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                        if (actionMenuId === inv.id) { setActionMenuId(null); setMenuPos(null) }
+                        else { setActionMenuId(inv.id); setMenuPos({ x: rect.right, y: rect.bottom }) }
+                      }}
                       className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                       <MoreVertical size={14} />
                     </button>
-                    <AnimatePresence>
-                      {actionMenuId === inv.id && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                          className="absolute right-2 top-full z-50 bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52 mt-1">
-                          <div className="px-3 py-1.5 border-b border-gray-100">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">More Actions</p>
-                          </div>
-                          <MenuBtn icon={<Eye size={13} />} label="View / Edit" onClick={() => { setViewInvoice(inv); setActionMenuId(null) }} />
-                          {(inv.status === 'SENT' || inv.status === 'OVERDUE') && (
-                            <MenuBtn icon={<Send size={13} />} label="Send Reminder" onClick={() => { handleSend(inv.id); showToast('Reminder sent') }} />
-                          )}
-                          {inv.status === 'DRAFT' && (
-                            <MenuBtn icon={<Send size={13} />} label="Send Invoice" onClick={() => { setEmailPreviewInvoice(inv); setActionMenuId(null) }} />
-                          )}
-                          {(inv.status === 'SENT' || inv.status === 'PARTIALLY_PAID' || inv.status === 'OVERDUE') && (
-                            <MenuBtn icon={<CreditCard size={13} />} label="Receive Payment" onClick={() => { setViewInvoice(inv); setActionMenuId(null) }} />
-                          )}
-                          <div className="border-t border-gray-100 mt-1 pt-1">
-                            <MenuBtn icon={<Printer size={13} />} label="Print Invoice" onClick={() => { window.print(); setActionMenuId(null) }} />
-                            <MenuBtn icon={<Download size={13} />} label="Download PDF" onClick={() => { showToast('PDF export coming soon'); setActionMenuId(null) }} />
-                            <MenuBtn icon={<FileText size={13} />} label="Print Packing Slip" onClick={() => { showToast('Packing slip coming soon'); setActionMenuId(null) }} />
-                          </div>
-                          <div className="border-t border-gray-100 mt-1 pt-1">
-                            <MenuBtn icon={<Share2 size={13} />} label="Share Link" onClick={() => {
-                              navigator.clipboard?.writeText(`${window.location.origin}/invoices/${inv.id}`).catch(() => {})
-                              showToast('Link copied!')
-                              setActionMenuId(null)
-                            }} />
-                            <MenuBtn icon={<Copy size={13} />} label="Duplicate" onClick={() => { showToast('Duplicate coming soon'); setActionMenuId(null) }} />
-                            <MenuBtn icon={<FileText size={13} />} label="Credit Note" onClick={() => { showToast('Credit note coming soon'); setActionMenuId(null) }} />
-                          </div>
-                          <div className="border-t border-gray-100 mt-1 pt-1">
-                            {(inv.status === 'DRAFT' || inv.status === 'SENT') && (
-                              <MenuBtn icon={<Ban size={13} />} label="Void" onClick={() => handleVoid(inv.id)} danger />
-                            )}
-                            <MenuBtn icon={<History size={13} />} label="History / Audit Log" onClick={() => { setViewInvoice(inv); setActionMenuId(null) }} />
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </td>
                 </tr>
               ))
@@ -398,7 +361,57 @@ export default function InvoicesPage() {
         )}
       </AnimatePresence>
 
-      {actionMenuId && <div className="fixed inset-0 z-10" onClick={() => setActionMenuId(null)} />}
+      {/* Action Menu — fixed-position portal to escape overflow-x-auto clipping */}
+      <AnimatePresence>
+        {actionMenuId && menuPos && (() => {
+          const inv = invoices.find(i => i.id === actionMenuId)
+          if (!inv) return null
+          return (
+            <motion.div
+              key={`action-menu-${actionMenuId}`}
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              style={{ position: 'fixed', top: menuPos.y + 4, left: Math.max(4, menuPos.x - 208), zIndex: 9999 }}
+              className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
+              <div className="px-3 py-1.5 border-b border-gray-100">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">More Actions</p>
+              </div>
+              <MenuBtn icon={<Eye size={13} />} label="View / Edit" onClick={() => { setViewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
+              {(inv.status === 'SENT' || inv.status === 'OVERDUE') && (
+                <MenuBtn icon={<Send size={13} />} label="Send Reminder" onClick={() => { handleSend(inv.id); showToast('Reminder sent'); setMenuPos(null) }} />
+              )}
+              {inv.status === 'DRAFT' && (
+                <MenuBtn icon={<Send size={13} />} label="Send Invoice" onClick={() => { setEmailPreviewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
+              )}
+              {(inv.status === 'SENT' || inv.status === 'PARTIALLY_PAID' || inv.status === 'OVERDUE') && (
+                <MenuBtn icon={<CreditCard size={13} />} label="Receive Payment" onClick={() => { setViewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
+              )}
+              <div className="border-t border-gray-100 mt-1 pt-1">
+                <MenuBtn icon={<Printer size={13} />} label="Print Invoice" onClick={() => { window.print(); setActionMenuId(null); setMenuPos(null) }} />
+                <MenuBtn icon={<Download size={13} />} label="Download PDF" onClick={() => { showToast('PDF export coming soon'); setActionMenuId(null); setMenuPos(null) }} />
+                <MenuBtn icon={<FileText size={13} />} label="Print Packing Slip" onClick={() => { showToast('Packing slip coming soon'); setActionMenuId(null); setMenuPos(null) }} />
+              </div>
+              <div className="border-t border-gray-100 mt-1 pt-1">
+                <MenuBtn icon={<Share2 size={13} />} label="Share Link" onClick={() => {
+                  navigator.clipboard?.writeText(`${window.location.origin}/invoices/${inv.id}`).catch(() => {})
+                  showToast('Link copied!')
+                  setActionMenuId(null); setMenuPos(null)
+                }} />
+                <MenuBtn icon={<Copy size={13} />} label="Duplicate" onClick={() => { showToast('Duplicate coming soon'); setActionMenuId(null); setMenuPos(null) }} />
+                <MenuBtn icon={<FileText size={13} />} label="Credit Note" onClick={() => { showToast('Credit note coming soon'); setActionMenuId(null); setMenuPos(null) }} />
+              </div>
+              <div className="border-t border-gray-100 mt-1 pt-1">
+                {(inv.status === 'DRAFT' || inv.status === 'SENT') && (
+                  <MenuBtn icon={<Ban size={13} />} label="Void" onClick={() => { handleVoid(inv.id); setMenuPos(null) }} danger />
+                )}
+                <MenuBtn icon={<History size={13} />} label="History / Audit Log" onClick={() => { setViewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
+              </div>
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
+      {actionMenuId && <div className="fixed inset-0 z-[9998]" onClick={() => { setActionMenuId(null); setMenuPos(null) }} />}
     </div>
   )
 }
