@@ -1828,6 +1828,7 @@ model Company {
   taxIncentiveExpiry    DateTime?
   taxIncentiveDetails   Json? // Additional incentive programme details
   campaigns             Campaign[]
+  emailTemplates        EmailTemplate[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
@@ -12786,4 +12787,25 @@ model ClientPortalSettings {
   updatedAt       DateTime @updatedAt
 
   practice Practice @relation(fields: [practiceId], references: [id])
+}
+// ─── Email Templates ──────────────────────────────────────────────────────────
+// Saved email templates per company for use in invoice/quote send flows.
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  subject     String
+  body        String   @db.Text
+  tone        String   @default("professional") // professional | friendly | brief | custom
+  cc          String?  @db.Text                 // comma-separated CC addresses
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, isDefault])
+  @@map("email_templates")
 }

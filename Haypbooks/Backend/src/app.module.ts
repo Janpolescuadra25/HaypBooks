@@ -74,6 +74,8 @@ const RepositoriesModule = PrismaRepositoriesModule
     (require('./practice-hub/practice-hub.module').PracticeHubModule),
     // New Practice API endpoints for the /api/practice namespace
     (require('./practice/practice.module').PracticeModule),
+    // Email Templates (saved send templates per company)
+    (require('./email-templates/email-templates.module').EmailTemplatesModule),
   ],
   controllers: [TestController, HealthController, OwnerController],
   providers: [
