@@ -13,7 +13,7 @@ import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from './invoice-templates/TemplateGallery'
 
-interface Customer { id: string; name: string; email?: string }
+interface Customer { id: string; name: string; email: string }
 interface LineItem { description: string; quantity: number; unitPrice: number; taxRate: number }
 
 interface Props {
@@ -52,8 +52,12 @@ export default function InvoiceFormModal({ companyId, onClose, onSaved }: Props)
   const customerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    apiClient.get(`/companies/${companyId}/contacts/customers`)
-      .then(({ data }) => setCustomers(Array.isArray(data) ? data : data.items ?? data.customers ?? []))
+    apiClient.get(`/companies/${companyId}/customers`)
+      .then(({ data }) => {
+        const raw: Array<{ contactId?: string; id?: string; name: string; email?: string }> =
+          Array.isArray(data) ? data : data.items ?? data.customers ?? []
+        setCustomers(raw.map(c => ({ id: c.contactId ?? c.id ?? '', name: c.name, email: c.email ?? '' })))
+      })
       .catch(() => {})
   }, [companyId])
 
