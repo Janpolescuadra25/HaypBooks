@@ -6,13 +6,14 @@ import {
   X, Send, Ban, Clock, CheckCircle2, AlertTriangle,
   FileText, User, Calendar, CreditCard, Loader2, AlertCircle,
   MoreVertical, Printer, Download, ChevronRight,
-  Mail, Eye, Globe, ChevronDown,
+  Mail, Eye, Globe, ChevronDown, BookOpen, Settings2,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import type { Invoice } from './InvoicesPage'
 import EmailPreviewModal from './EmailPreviewModal'
+import TemplateManagerModal, { type EmailTemplate } from './TemplateManagerModal'
 
 interface Payment {
   id: string
@@ -56,6 +57,10 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const [sendCopy, setSendCopy] = useState(false)
   const [showToneMenu, setShowToneMenu] = useState(false)
   const [payorTemplate, setPayorTemplate] = useState<'modern' | 'classic' | 'minimal'>('modern')
+  // Email template state
+  const [emailTemplates, setEmailTemplates]         = useState<EmailTemplate[]>([])
+  const [showTemplateMenu, setShowTemplateMenu]     = useState(false)
+  const [showTemplateManager, setShowTemplateManager] = useState(false)
 
   const fmt = useCallback((n: number) => formatCurrency(n ?? 0, currency), [currency])
 
@@ -95,6 +100,14 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       setEmailBody(`Dear ${customer},\n\nThank you for choosing our services. Please find your invoice details below:\n\n  Invoice #:   ${num}\n  Amount Due:  ${amt}\n  Due Date:    ${dueLong}\n\nIf you have any questions, please don\u2019t hesitate to reach out.\n\nBest regards`)
     }
   }, [invoice.id, invoice.invoiceNumber, invoice.customerName, invoice.dueDate, emailTone])
+
+  // Load email templates when email tab becomes active
+  useEffect(() => {
+    if (activeTab !== 'email') return
+    apiClient.get<EmailTemplate[]>(`/companies/${companyId}/email-templates`)
+      .then(res => setEmailTemplates(res.data ?? []))
+      .catch(() => {/* non-fatal */})
+  }, [activeTab, companyId])
 
   const handleSendEmail = async (scheduledAt?: string) => {
     setSending(true); setError('')
@@ -322,6 +335,55 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">To</p>
                     <p className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">{invoice.customerName ?? '—'}</p>
+                  </div>
+
+                  {/* Template picker */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        {emailTemplates.length > 0 ? 'Load Template' : 'Templates'}
+                      </p>
+                      <button type="button" onClick={() => setShowTemplateManager(true)}
+                        className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                        <Settings2 size={10} /> Manage
+                      </button>
+                    </div>
+                    {emailTemplates.length > 0 ? (
+                      <div className="relative">
+                        <button type="button" onClick={() => setShowTemplateMenu(p => !p)}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:border-emerald-300 transition-colors">
+                          <span className="flex items-center gap-2 text-gray-500 text-xs">
+                            <BookOpen size={12} className="text-gray-400" /> Choose a saved template…
+                          </span>
+                          <ChevronDown size={12} className="text-gray-400" />
+                        </button>
+                        <AnimatePresence>
+                          {showTemplateMenu && (
+                            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                              className="absolute top-full left-0 right-0 mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-44 overflow-y-auto">
+                              {emailTemplates.map(tpl => (
+                                <button key={tpl.id} type="button"
+                                  onClick={() => {
+                                    setEmailSubject(tpl.subject)
+                                    setEmailBody(tpl.body)
+                                    setEmailTone(tpl.tone)
+                                    setShowTemplateMenu(false)
+                                  }}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-emerald-50 transition-colors">
+                                  <p className="text-xs font-semibold text-gray-800">{tpl.name}</p>
+                                  <p className="text-xs text-gray-500 truncate">{tpl.subject}</p>
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        {showTemplateMenu && (
+                          <div className="fixed inset-0 z-[25]" onClick={() => setShowTemplateMenu(false)} />
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400">No saved templates. Click Manage to create one.</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Subject</p>
@@ -594,6 +656,17 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
             companyId={companyId}
             onClose={() => setShowEmailPreview(false)}
             onSent={() => { setInvoice(p => ({ ...p, status: 'SENT' })); onRefresh() }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Template Manager Modal */}
+      <AnimatePresence>
+        {showTemplateManager && (
+          <TemplateManagerModal
+            companyId={companyId}
+            onClose={() => setShowTemplateManager(false)}
+            onTemplatesChange={setEmailTemplates}
           />
         )}
       </AnimatePresence>

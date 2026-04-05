@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'motion/react'
 import {
   X, Send, Clock, Download, Link2, Loader2, AlertCircle,
   Mail, User, FileText, Building2, ChevronDown, Check,
-  Calendar, CreditCard, CheckCircle2,
+  Calendar, CreditCard, CheckCircle2, BookOpen, Settings2,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import type { Invoice } from './InvoicesPage'
+import TemplateManagerModal, { type EmailTemplate } from './TemplateManagerModal'
 
 // ─── Tone / Template options ─────────────────────────────────────────────────
 const TONES = [
@@ -76,6 +77,11 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
   const [linkCopied, setLinkCopied]   = useState(false)
   const [toneMenu, setToneMenu]       = useState(false)
 
+  // ── Email templates ───────────────────────────────────────────────────────
+  const [templates, setTemplates]         = useState<EmailTemplate[]>([])
+  const [templateMenu, setTemplateMenu]   = useState(false)
+  const [showTemplateManager, setShowTemplateManager] = useState(false)
+
   // Regenerate body when tone changes
   useEffect(() => {
     setBody(buildBody(invoice, companyName, tone).replace('{amount}', amountStr))
@@ -85,6 +91,13 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
   useEffect(() => {
     setSubject(buildSubject(invoice, companyName))
   }, [invoice, companyName])
+
+  // Load saved email templates
+  useEffect(() => {
+    apiClient.get<EmailTemplate[]>(`/companies/${companyId}/email-templates`)
+      .then(res => setTemplates(res.data ?? []))
+      .catch(() => {/* non-fatal */})
+  }, [companyId])
 
   const handleSendNow = async () => {
     setSending(true); setError('')
@@ -122,6 +135,7 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
   const balanceDue = invoice.amountDue ?? invoice.total ?? 0
 
   return (
+    <>
     <div className="fixed inset-0 z-[60] flex items-stretch bg-black/50 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
@@ -195,6 +209,53 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
                   <span>{invoice.customerName ?? 'Customer'}</span>
                 </div>
               </div>
+
+              {/* Load saved template */}
+              {templates.length > 0 && (
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Load Template</label>
+                    <button type="button" onClick={() => setShowTemplateManager(true)}
+                      className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                      <Settings2 size={10} /> Manage
+                    </button>
+                  </div>
+                  <button type="button" onClick={() => setTemplateMenu(p => !p)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white hover:border-emerald-300 transition-colors">
+                    <span className="flex items-center gap-2 text-slate-600"><BookOpen size={13} className="text-slate-400" /> Choose a saved template…</span>
+                    <ChevronDown size={13} className="text-slate-400" />
+                  </button>
+                  <AnimatePresence>
+                    {templateMenu && (
+                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                        className="absolute top-full left-0 right-0 mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-lg py-1 max-h-48 overflow-y-auto">
+                        {templates.map(tpl => (
+                          <button key={tpl.id} type="button"
+                            onClick={() => {
+                              setSubject(tpl.subject)
+                              setBody(tpl.body.replace('{amount}', amountStr))
+                              setTone(tpl.tone)
+                              setTemplateMenu(false)
+                            }}
+                            className="w-full text-left px-3 py-2.5 hover:bg-emerald-50 transition-colors">
+                            <p className="text-sm font-semibold text-slate-800">{tpl.name}</p>
+                            <p className="text-xs text-slate-500 truncate">{tpl.subject}</p>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+              {templates.length === 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400">No saved templates</span>
+                  <button type="button" onClick={() => setShowTemplateManager(true)}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                    <Settings2 size={10} /> Manage Templates
+                  </button>
+                </div>
+              )}
 
               {/* Subject */}
               <div>
@@ -432,6 +493,23 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
         </div>
       </motion.div>
     </div>
+
+    {/* Template Manager modal (nested portal) */}
+    <AnimatePresence>
+      {showTemplateManager && (
+        <TemplateManagerModal
+          companyId={companyId}
+          onClose={() => setShowTemplateManager(false)}
+          onTemplatesChange={setTemplates}
+        />
+      )}
+    </AnimatePresence>
+
+    {/* Dismiss template dropdown on outside click */}
+    {templateMenu && (
+      <div className="fixed inset-0 z-[25]" onClick={() => setTemplateMenu(false)} />
+    )}
+  </>
   )
 }
 
