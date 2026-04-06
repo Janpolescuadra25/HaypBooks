@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { BankingRepository } from './banking.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { SubLedgerService } from '../shared/sub-ledger.service'
 
 @Injectable()
 export class BankingService {
-    constructor(private readonly repo: BankingRepository, private readonly prisma: PrismaService) { }
+    constructor(
+      private readonly repo: BankingRepository,
+      private readonly prisma: PrismaService,
+      private readonly subLedger: SubLedgerService,
+    ) { }
 
     private async getWorkspaceId(companyId: string) {
         const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { workspaceId: true } })
@@ -309,6 +314,8 @@ export class BankingService {
         await this.assertAccess(userId, companyId)
         const result = await this.repo.postDeposit(companyId, depositId)
         if (!result) throw new NotFoundException('Deposit not found')
+
+        await this.subLedger.postBankDepositToGL(depositId, userId)
         return result
     }
 

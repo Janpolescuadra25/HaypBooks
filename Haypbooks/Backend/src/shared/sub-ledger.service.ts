@@ -386,4 +386,51 @@ export class SubLedgerService {
       this.logger.error(`[SubLedger] Failed to post bill payment ${billPaymentId}: ${err?.message}`)
     }
   }
+
+  // ─── Banking: Bank Deposit Posted (DR: Cash/Bank CR: Undeposited Funds) ──
+
+  async postBankDepositToGL(depositId: string, postedById?: string): Promise<void> {
+    try {
+      const deposit = await this.prisma.bankDeposit.findUnique({ where: { id: depositId } })
+      if (!deposit) return
+      if ((deposit as any).journalEntryId) return
+
+      const cashAccountId = await this.resolveAccount(
+        deposit.companyId,
+        (deposit as any).bankAccountId,
+        '1010',
+      )
+      const undepositedFundsId = await this.findAccountByCode(deposit.companyId, '1050')
+
+      if (!cashAccountId || !undepositedFundsId) {
+        this.logger.warn(`[SubLedger] Cannot post bank deposit ${depositId}: required accounts not found`)
+        return
+      }
+
+      const amount = Number((deposit as any).amount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(deposit.companyId, 'BD')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: deposit.workspaceId,
+          companyId: deposit.companyId,
+          date: (deposit as any).depositDate ?? (deposit as any).date ?? new Date(),
+          description: `Bank Deposit ${(deposit as any).referenceNumber ?? depositId}`,
+          currency: (deposit as any).currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: cashAccountId, debit: amount, credit: 0, memo: 'Bank deposit' },
+            { accountId: undepositedFundsId, debit: 0, credit: amount, memo: 'Undeposited funds' },
+          ],
+        })
+
+        if (je) {
+          await tx.bankDeposit.update({ where: { id: depositId }, data: { journalEntryId: je.id } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post bank deposit ${depositId}: ${err?.message}`)
+    }
+  }
 }
