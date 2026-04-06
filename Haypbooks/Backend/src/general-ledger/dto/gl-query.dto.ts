@@ -49,4 +49,9 @@ export class GlQueryDto {
     @Min(1)
     @Max(200)
     limit?: number = 50
+
+    /** Filter entries by transaction source type. MANUAL_JOURNAL = only hand-keyed entries. */
+    @IsOptional()
+    @IsIn(['ALL', 'MANUAL_JOURNAL', 'INVOICE', 'BILL', 'PAYMENT', 'BILL_PAYMENT', 'BANK_DEPOSIT', 'REFUND'])
+    sourceType?: string
 }

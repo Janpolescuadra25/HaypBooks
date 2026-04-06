@@ -156,7 +156,27 @@ export class AccountingRepository {
         to?: Date
         limit?: number
         offset?: number
+        sourceType?: string
     }) {
+        const sourceFilter: Record<string, any> = {}
+        if (opts.sourceType && opts.sourceType !== 'ALL') {
+            const st = opts.sourceType
+            if (st === 'INVOICE') sourceFilter['invoices'] = { some: {} }
+            else if (st === 'BILL') sourceFilter['bills'] = { some: {} }
+            else if (st === 'PAYMENT') sourceFilter['paymentsReceived'] = { some: {} }
+            else if (st === 'BILL_PAYMENT') sourceFilter['billPayments'] = { some: {} }
+            else if (st === 'BANK_DEPOSIT') sourceFilter['bankDeposits'] = { some: {} }
+            else if (st === 'MANUAL_JOURNAL') {
+                sourceFilter['invoices'] = { none: {} }
+                sourceFilter['bills'] = { none: {} }
+                sourceFilter['paymentsReceived'] = { none: {} }
+                sourceFilter['billPayments'] = { none: {} }
+                sourceFilter['bankDeposits'] = { none: {} }
+                sourceFilter['customerRefunds'] = { none: {} }
+                sourceFilter['vendorRefunds'] = { none: {} }
+            }
+        }
+
         return this.prisma.journalEntry.findMany({
             where: {
                 companyId,
@@ -168,6 +188,7 @@ export class AccountingRepository {
                         ...(opts.to ? { lte: opts.to } : {}),
                     },
                 } : {}),
+                ...sourceFilter,
             },
             include: {
                 lines: {

@@ -141,7 +141,9 @@ export default function JournalEntriesPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/accounting/journal-entries`)
+      const { data } = await apiClient.get(`/companies/${companyId}/accounting/journal-entries`, {
+        params: { sourceType: 'MANUAL_JOURNAL' },
+      })
       setEntries(Array.isArray(data) ? data : data.journalEntries ?? data.entries ?? [])
       setError('')
     } catch (e: any) {

@@ -706,6 +706,7 @@ export class AccountingService {
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
+            sourceType: opts.sourceType,
         })
 
         // Force totals from raw lines to avoid old aggregation mismatch.
