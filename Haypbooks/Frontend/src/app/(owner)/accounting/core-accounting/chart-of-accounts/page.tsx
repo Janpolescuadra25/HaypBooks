@@ -684,67 +684,6 @@ function ImportModal({ onClose, onImported, companyId }: { onClose: () => void; 
   )
 }
 
-// ─── Load Defaults Modal ───────────────────────────────────────────────────────
-const INDUSTRIES = [
-  { value: '', label: '— General / Default —' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'saas', label: 'SaaS / Technology' },
-  { value: 'construction', label: 'Construction' },
-  { value: 'restaurant', label: 'Restaurant / Food Service' },
-  { value: 'professional_services', label: 'Professional Services' },
-  { value: 'manufacturing', label: 'Manufacturing' },
-  { value: 'nonprofit', label: 'Non-Profit' },
-  { value: 'real_estate', label: 'Real Estate' },
-]
-
-function LoadDefaultsModal({ onClose, onLoaded, seeding }: { onClose: () => void; onLoaded: (industry: string) => void; seeding: boolean }) {
-  const [industry, setIndustry] = useState('')
-  return (
-    <AnimatePresence>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-        onClick={onClose}>
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-          <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-            <h2 className="text-lg font-bold text-slate-900">Load Default Chart of Accounts</h2>
-            <p className="text-xs text-slate-500 mt-1">This will add all standard accounts to your chart. Existing accounts will not be changed.</p>
-          </div>
-          <div className="px-6 py-5 space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Industry Template</label>
-              <select
-                value={industry}
-                onChange={e => setIndustry(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
-              >
-                {INDUSTRIES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
-              </select>
-              <p className="text-xs text-slate-400 mt-1">Adds industry-specific accounts on top of the standard 88-account template.</p>
-            </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 flex items-start gap-2">
-              <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800">Existing accounts are preserved. Missing standard accounts will be created.</p>
-            </div>
-          </div>
-          <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-            <button
-              onClick={() => onLoaded(industry)}
-              disabled={seeding}
-              className="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50 flex items-center gap-2"
-            >
-              <RefreshCw size={13} className={seeding ? 'animate-spin' : ''} />
-              {seeding ? 'Loading…' : 'Load Default Accounts'}
-            </button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  )
-}
-
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function ChartOfAccountsPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
@@ -754,7 +693,6 @@ export default function ChartOfAccountsPage() {
   const [treeAccounts, setTreeAccounts] = useState<Account[]>([])
   const [flatAccs, setFlatAccs] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
-  const [seeding, setSeeding] = useState(false)
 
   const [search, setSearch] = useState('')
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
@@ -767,7 +705,6 @@ export default function ChartOfAccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [defaultParentId, setDefaultParentId] = useState<string | undefined>(undefined)
   const [importModal, setImportModal] = useState(false)
-  const [seedModal, setSeedModal] = useState(false)
   const [showInactiveBanner, setShowInactiveBanner] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const toggleSelect = (id: string) =>
@@ -948,20 +885,6 @@ export default function ChartOfAccountsPage() {
     } catch { /* ignore */ }
   }
 
-  async function handleSeedDefault(force = false, industry?: string) {
-    if (!companyId) return
-    setSeeding(true)
-    try {
-      await apiClient.post(`/companies/${companyId}/accounting/accounts/seed-default`, { force, industry })
-      await loadAccounts(true)
-      if (force) toast.success('Default Chart of Accounts loaded successfully.')
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? 'Seeding failed. Please try again.')
-    } finally {
-      setSeeding(false)
-    }
-  }
-
   const handleExport = () => {
     const header = ['Code', 'Name', 'Type', 'Normal Side', 'Balance', 'Status', 'Parent Code', 'Description']
     const codeMap = new Map(flatAccs.map(a => [a.id, a.code]))
@@ -1096,15 +1019,6 @@ export default function ChartOfAccountsPage() {
                 Audit Log
               </button>
               <button
-                onClick={() => setSeedModal(true)}
-                disabled={seeding || !companyId}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-blue-200 text-blue-700 bg-white hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-                title="Load default chart of accounts template"
-              >
-                <RefreshCw size={13} className={seeding ? 'animate-spin' : ''} />
-                Load Defaults
-              </button>
-              <button
                 onClick={openCreate}
                 disabled={!companyId || companyLoading}
                 title={!companyId ? 'Select or create a company first' : companyLoading ? 'Loading company...' : ''}
@@ -1159,34 +1073,6 @@ export default function ChartOfAccountsPage() {
                   className="text-xs text-yellow-700 hover:bg-yellow-100 rounded px-2 py-0.5 font-semibold transition-colors"
                 >
                   ✕ Clear filter
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {/* ── Sparse COA Warning Banner ── */}
-        <AnimatePresence>
-          {!loading && totalAccounts > 0 && totalAccounts < 20 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden px-6 pb-2"
-            >
-              <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={14} className="text-blue-600 shrink-0" />
-                  <span className="text-xs text-blue-800 font-medium">
-                    Only {totalAccounts} account{totalAccounts !== 1 ? 's' : ''} found — your Chart of Accounts may be incomplete.
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSeedModal(true)}
-                  disabled={seeding}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw size={11} className={seeding ? 'animate-spin' : ''} />
-                  Load Defaults
                 </button>
               </div>
             </motion.div>
@@ -1256,15 +1142,7 @@ export default function ChartOfAccountsPage() {
                 <tr>
                   <td colSpan={9} className="px-4 py-16 text-center">
                     <p className="text-sm font-semibold text-slate-500 mb-1">No accounts yet</p>
-                    <p className="text-xs text-slate-400 mb-4">Set up your default Chart of Accounts template or create accounts manually</p>
-                    <button
-                      onClick={() => setSeedModal(true)}
-                      disabled={seeding}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow shadow-emerald-600/25 transition-all disabled:opacity-50"
-                    >
-                      <RefreshCw size={14} className={seeding ? 'animate-spin' : ''} />
-                      {seeding ? 'Setting up…' : 'Set Up Default COA Template'}
-                    </button>
+                    <p className="text-xs text-slate-400 mb-4">Use the <strong>+ New Account</strong> button above to add accounts, or import from CSV.</p>
                   </td>
                 </tr>
               ) : (
@@ -1328,18 +1206,6 @@ export default function ChartOfAccountsPage() {
       {importModal && companyId && (
         <ImportModal onClose={() => setImportModal(false)} onImported={loadAccounts} companyId={companyId} />
       )}
-      {/* ── Load Defaults Modal ── */}
-      {seedModal && (
-        <LoadDefaultsModal
-          onClose={() => setSeedModal(false)}
-          seeding={seeding}
-          onLoaded={async (industry) => {
-            setSeedModal(false)
-            await handleSeedDefault(true, industry || undefined)
-          }}
-        />
-      )}
-
     </div>
   )
 }
