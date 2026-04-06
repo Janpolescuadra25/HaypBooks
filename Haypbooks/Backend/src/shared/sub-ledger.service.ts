@@ -433,4 +433,96 @@ export class SubLedgerService {
       this.logger.error(`[SubLedger] Failed to post bank deposit ${depositId}: ${err?.message}`)
     }
   }
+
+  // ─── AR: Customer Refund (DR: Revenue CR: AR - reverses invoice) ───────────
+
+  async postCustomerRefundToGL(refundId: string, postedById?: string): Promise<void> {
+    try {
+      const refund = await this.prisma.customerRefund.findUnique({
+        where: { id: refundId },
+        include: { invoice: true },
+      })
+      if (!refund) return
+      if ((refund as any).journalEntryId) return
+
+      const arAccountId = await this.findAccountByCode(refund.companyId, '1100')
+      const revenueAccountId = await this.findAccountByCode(refund.companyId, '4010')
+
+      if (!arAccountId || !revenueAccountId) {
+        this.logger.warn(`[SubLedger] Cannot post customer refund ${refundId}`)
+        return
+      }
+
+      const amount = Number((refund as any).amount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(refund.companyId, 'CRF')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: refund.workspaceId,
+          companyId: refund.companyId,
+          date: (refund as any).refundDate ?? new Date(),
+          description: `Customer Refund ${(refund as any).referenceNumber ?? refundId}`,
+          currency: (refund as any).currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: revenueAccountId, debit: amount, credit: 0, memo: 'Revenue reversal (refund)' },
+            { accountId: arAccountId, debit: 0, credit: amount, memo: 'AR reduction (refund)' },
+          ],
+        })
+
+        if (je) {
+          await tx.customerRefund.update({ where: { id: refundId }, data: { journalEntryId: je.id } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post customer refund ${refundId}: ${err?.message}`)
+    }
+  }
+
+  // ─── AP: Vendor Refund (DR: AP CR: Expense - reverses bill) ────────────────
+
+  async postVendorRefundToGL(refundId: string, postedById?: string): Promise<void> {
+    try {
+      const refund = await this.prisma.vendorRefund.findUnique({
+        where: { id: refundId },
+        include: { bill: true },
+      })
+      if (!refund) return
+      if ((refund as any).journalEntryId) return
+
+      const apAccountId = await this.findAccountByCode(refund.companyId, '2010')
+      const expenseAccountId = await this.findAccountByCode(refund.companyId, '5010')
+
+      if (!apAccountId || !expenseAccountId) {
+        this.logger.warn(`[SubLedger] Cannot post vendor refund ${refundId}`)
+        return
+      }
+
+      const amount = Number((refund as any).amount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(refund.companyId, 'VRF')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: refund.workspaceId,
+          companyId: refund.companyId,
+          date: (refund as any).refundDate ?? new Date(),
+          description: `Vendor Refund ${(refund as any).referenceNumber ?? refundId}`,
+          currency: (refund as any).currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: apAccountId, debit: amount, credit: 0, memo: 'AP reduction (vendor refund)' },
+            { accountId: expenseAccountId, debit: 0, credit: amount, memo: 'Expense reversal (vendor refund)' },
+          ],
+        })
+
+        if (je) {
+          await tx.vendorRefund.update({ where: { id: refundId }, data: { journalEntryId: je.id } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post vendor refund ${refundId}: ${err?.message}`)
+    }
+  }
 }
