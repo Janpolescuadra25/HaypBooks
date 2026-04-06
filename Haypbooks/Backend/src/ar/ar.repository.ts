@@ -329,28 +329,22 @@ export class ArRepository {
             const total = Number(invoice.totalAmount)
 
             // Create & post JE: Dr Accounts Receivable, Cr Revenue
-            try {
-                const jeId = await createAndPostJE(tx, {
-                    workspaceId: invoice.workspaceId,
-                    companyId,
-                    date: invoice.date ?? new Date(),
-                    description: `Invoice ${invoiceNumber}`,
-                    createdById: invoice.createdById ?? 'system',
-                    lines: [
-                        { accountId: arAcct.id,  debit: total, credit: 0, description: `AR – ${invoiceNumber}` },
-                        { accountId: revAcct.id, debit: 0, credit: total, description: `Revenue – ${invoiceNumber}` },
-                    ],
-                })
+            const jeId = await createAndPostJE(tx, {
+                workspaceId: invoice.workspaceId,
+                companyId,
+                date: invoice.date ?? new Date(),
+                description: `Invoice ${invoiceNumber}`,
+                createdById: invoice.createdById ?? 'system',
+                lines: [
+                    { accountId: arAcct.id,  debit: total, credit: 0, description: `AR – ${invoiceNumber}` },
+                    { accountId: revAcct.id, debit: 0, credit: total, description: `Revenue – ${invoiceNumber}` },
+                ],
+            })
 
-                return tx.invoice.update({
-                    where: { id: invoiceId },
-                    data: { status: 'SENT', invoiceNumber, journalEntryId: jeId, postingStatus: 'POSTED' },
-                })
-            } catch (err: any) {
-                console.error('[AR_REPO] sendInvoice transaction failed:', err?.message ?? err)
-                console.error(err)
-                throw err
-            }
+            return tx.invoice.update({
+                where: { id: invoiceId },
+                data: { status: 'SENT', invoiceNumber, journalEntryId: jeId, postingStatus: 'POSTED' },
+            })
         })
     }
 
