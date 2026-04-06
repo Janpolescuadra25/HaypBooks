@@ -189,11 +189,22 @@ export class GeneralLedgerRepository {
 
         const where = buildCleanWhere(companyId, opts)
 
+        const dir = opts.sortDir ?? 'desc'
+        const sortMap: Record<string, any[]> = {
+            date:        [{ journal: { date: dir } }, { id: 'asc' }],
+            entryNumber: [{ journal: { entryNumber: dir } }, { journal: { date: 'desc' } }],
+            accountName: [{ account: { name: dir } }, { journal: { date: 'desc' } }],
+            sourceType:  [{ account: { name: dir } }, { journal: { date: 'desc' } }], // proxy: no direct field
+            debit:       [{ debit: dir }, { journal: { date: 'desc' } }],
+            credit:      [{ credit: dir }, { journal: { date: 'desc' } }],
+        }
+        const orderBy: any[] = opts.sortBy ? (sortMap[opts.sortBy] ?? sortMap['date']) : sortMap['date']
+
         const [rows, total] = await this.prisma.$transaction([
             this.prisma.journalEntryLine.findMany({
                 where,
                 include: JOURNAL_INCLUDE,
-                orderBy: [{ journal: { date: 'asc' } }, { id: 'asc' }],
+                orderBy,
                 take: limit,
                 skip,
             }),

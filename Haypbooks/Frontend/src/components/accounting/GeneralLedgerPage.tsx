@@ -176,6 +176,11 @@ export default function GeneralLedgerPage() {
       if (accountId) params.accountId = accountId
       if (sourceType !== 'ALL') params.sourceType = sourceType
       if (search.trim()) params.search = search.trim()
+      // Send sort params so backend orders the full dataset, not just the current page
+      if (sortField !== 'sourceType') { // sourceType is a computed field — keep as client-side only
+        params.sortBy = sortField
+        params.sortDir = sortDir
+      }
       const { data } = await apiClient.get(`/companies/${companyId}/general-ledger`, { params })
       setGlData(data)
       setError('')
@@ -184,10 +189,10 @@ export default function GeneralLedgerPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, from, to, page, accountId, sourceType, search])
+  }, [companyId, from, to, page, accountId, sourceType, search, sortField, sortDir])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
-  useEffect(() => { setPage(1) }, [from, to, accountId, sourceType, search])
+  useEffect(() => { setPage(1) }, [from, to, accountId, sourceType, search, sortField, sortDir])
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
