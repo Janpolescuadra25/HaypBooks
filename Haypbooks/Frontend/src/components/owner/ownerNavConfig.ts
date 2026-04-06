@@ -341,6 +341,7 @@ export const navigationData: NavSection[] = [
         title: 'Transactions',
         items: [
           { title: 'Journal Entries', path: '/accounting/core-accounting/journal-entries' },
+          { title: 'General Ledger', path: '/accounting/core-accounting/general-ledger' },
           { title: 'Adjusting Entries', path: '/accounting/core-accounting/adjusting-entries' },
           { title: 'Recurring Journals', path: '/accounting/core-accounting/recurring-journals' },
         ],
