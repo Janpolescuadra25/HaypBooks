@@ -45,6 +45,8 @@ export interface TemplateDefaults {
   dateFormat: DateFormat
 }
 
+export type LogoSize = 'small' | 'medium' | 'large'
+
 export interface InvoiceTemplate {
   id: string
   name: string
@@ -61,12 +63,19 @@ export interface InvoiceTemplate {
   borderStyle: BorderStyle
   logoPosition: LogoPosition
 
+  // Logo upload (base64 for now; migrate to URL later)
+  logoBase64?: string
+  logoSize?: LogoSize
+  logoShowOnPrint?: boolean
+  logoShowOnEmail?: boolean
+  logoShowOnPayor?: boolean
+
   // Defaults
   defaults: TemplateDefaults
   sections: TemplateSections
 
-  // Custom text
-  defaultMessage: string
+  // Custom text (print/PDF only — email message is per-invoice)
+  defaultMessage: string    // print footer thank-you / short note
   defaultTerms?: string
   footerText?: string
 

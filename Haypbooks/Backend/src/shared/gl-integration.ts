@@ -15,6 +15,26 @@ const NORMAL_SIDE_BY_TYPE: Record<number, 'DEBIT' | 'CREDIT'> = {
     5: 'CREDIT',  // EQUITY
 }
 
+const ACCOUNT_TYPE_NAMES: Record<number, string> = {
+    1: 'ASSET',
+    2: 'EXPENSE',
+    3: 'INCOME',
+    4: 'LIABILITY',
+    5: 'EQUITY',
+}
+
+async function ensureAccountType(tx: any, typeId: number) {
+    await tx.accountType.upsert({
+        where: { id: typeId },
+        update: {},
+        create: {
+            id: typeId,
+            name: ACCOUNT_TYPE_NAMES[typeId] ?? `TYPE_${typeId}`,
+            normalSide: NORMAL_SIDE_BY_TYPE[typeId] ?? 'DEBIT',
+        },
+    })
+}
+
 /** Well-known system account definitions */
 export const SYSTEM_ACCOUNTS = {
     CASH:                 { code: '1000', name: 'Cash',                typeId: 1 },
@@ -41,6 +61,7 @@ export async function resolveAccount(
         select: { id: true, typeId: true, normalSide: true },
     })
     if (!acct) {
+        await ensureAccountType(tx, def.typeId)
         acct = await tx.account.create({
             data: {
                 companyId,

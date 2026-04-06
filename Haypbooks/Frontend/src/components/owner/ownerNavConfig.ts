@@ -682,7 +682,7 @@ export const navigationData: NavSection[] = [
       {
         title: 'Preferences',
         items: [
-          { title: 'Accounting Preferences', path: '/settings/accounting-preferences/default-accounts' },
+          { title: 'Accounting Preferences', path: '/settings/accounting-preferences' },
           { title: 'Numbering Sequences', path: '/settings/entity-management/numbering-sequences' },
           { title: 'Custom Fields', path: '/settings/customization/custom-fields' },
         ],
