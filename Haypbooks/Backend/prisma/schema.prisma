@@ -9481,6 +9481,28 @@ model CompanySettings {
   accountingMethod     String   @default("ACCRUAL")
   birFilingReminder    Boolean  @default(true)
   vatRegistered        Boolean  @default(false)
+
+  // ── Invoice / Accounting Defaults ────────────────────────────────────────
+  defaultTaxTreatment  String   @default("exclusive")   // 'inclusive' | 'exclusive' | 'none'
+  defaultTaxRate       Float    @default(12)
+  defaultPaymentTerms  String   @default("net-30")
+  dateFormat           String   @default("MMM DD, YYYY")
+  numberFormat         String   @default("1,234.56")
+  decimalPlaces        Int      @default(2)
+
+  // ── Late Fee Defaults ─────────────────────────────────────────────────────
+  lateFeeEnabled       Boolean  @default(false)
+  lateFeeType          String   @default("percentage")  // 'percentage' | 'flat'
+  lateFeeRate          Float    @default(5)
+  lateFeeGracePeriod   Int      @default(7)             // days after due date
+  lateFeeMaxCap        Float?                           // null = no cap
+
+  // ── Reminder Defaults ─────────────────────────────────────────────────────
+  reminderEnabled      Boolean  @default(false)
+  reminderDaysBefore   Int      @default(3)
+  reminderDaysAfter    Int      @default(7)
+  reminderRepeatDays   Int      @default(7)
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
