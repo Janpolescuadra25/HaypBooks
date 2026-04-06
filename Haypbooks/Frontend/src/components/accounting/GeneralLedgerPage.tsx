@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Loader2, AlertCircle, X, ChevronLeft, ChevronRight,
   Download, Search, RefreshCw, CheckCircle2, ExternalLink,
-  TrendingUp, TrendingDown, Activity,
+  Activity, ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -130,6 +130,18 @@ export default function GeneralLedgerPage() {
   const [to, setTo] = useState(new Date().toISOString().split('T')[0])
   const [page, setPage] = useState(1)
 
+  // ── Sort state ────────────────────────────────────────────────────────────
+  type SortField = 'date' | 'entryNumber' | 'sourceType' | 'accountName' | 'debit' | 'credit'
+  const [sortField, setSortField] = useState<SortField>('date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (field: SortField) => {
+    setSortField(prev => {
+      if (prev === field) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); return field }
+      setSortDir('asc'); return field
+    })
+  }
+
   // ── Data state ─────────────────────────────────────────────────────────────
   const [glData, setGlData] = useState<GlResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -230,8 +242,26 @@ export default function GeneralLedgerPage() {
   const account = glData?.account
   const totalDebits = glData?.totalDebits ?? entries.reduce((s, e) => s + (e.debit ?? 0), 0)
   const totalCredits = glData?.totalCredits ?? entries.reduce((s, e) => s + (e.credit ?? 0), 0)
-  const isBalanced = Math.abs(totalDebits - totalCredits) < 0.005
+  const netBalance = totalDebits - totalCredits
+  const isBalanced = Math.abs(netBalance) < 0.005
   const showRunningBalance = !!accountId && entries.some(e => e.runningBalance !== undefined)
+
+  const sortedEntries = useMemo(() => {
+    const arr = [...entries]
+    const mod = sortDir === 'asc' ? 1 : -1
+    arr.sort((a, b) => {
+      switch (sortField) {
+        case 'date':        return mod * (new Date(a.date).getTime() - new Date(b.date).getTime())
+        case 'entryNumber': return mod * (a.entryNumber ?? '').localeCompare(b.entryNumber ?? '')
+        case 'sourceType':  return mod * a.sourceType.localeCompare(b.sourceType)
+        case 'accountName': return mod * a.accountName.localeCompare(b.accountName)
+        case 'debit':       return mod * ((a.debit ?? 0) - (b.debit ?? 0))
+        case 'credit':      return mod * ((a.credit ?? 0) - (b.credit ?? 0))
+        default:            return 0
+      }
+    })
+    return arr
+  }, [entries, sortField, sortDir])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -262,29 +292,24 @@ export default function GeneralLedgerPage() {
         </div>
       </div>
 
-      {/* ── Summary Insights Panel ── */}
-      {!loading && (glData || entries.length > 0) && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-white rounded-xl border border-slate-200 px-4 py-3">
-            <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5"><TrendingUp size={12} className="text-emerald-500" />Total Debits</p>
-            <p className="text-lg font-bold text-emerald-800 tabular-nums mt-0.5">{fmt(totalDebits)}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 px-4 py-3">
-            <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5"><TrendingDown size={12} className="text-blue-500" />Total Credits</p>
-            <p className="text-lg font-bold text-blue-800 tabular-nums mt-0.5">{fmt(totalCredits)}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 px-4 py-3">
-            <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5"><Activity size={12} className="text-violet-500" />Transactions</p>
-            <p className="text-lg font-bold text-slate-800 tabular-nums mt-0.5">{pagination?.total ?? entries.length}</p>
-          </div>
-          <div className={`rounded-xl border px-4 py-3 ${isBalanced ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-            <p className={`text-xs font-medium flex items-center gap-1.5 ${isBalanced ? 'text-emerald-600' : 'text-amber-700'}`}>
-              <CheckCircle2 size={12} />Balanced?
-            </p>
-            <p className={`text-lg font-bold tabular-nums mt-0.5 ${isBalanced ? 'text-emerald-800' : 'text-amber-800'}`}>
-              {isBalanced ? '✓ Yes' : '✗ Off by ' + fmt(Math.abs(totalDebits - totalCredits))}
-            </p>
-          </div>
+      {/* ── Inline Summary Bar ── */}
+      {!loading && glData && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2 bg-white rounded-lg border border-slate-200 text-sm">
+          <span className="text-slate-400 text-xs font-medium uppercase tracking-wide">Summary</span>
+          <span className="text-slate-500 text-xs">Debits: <span className="font-semibold text-emerald-700 tabular-nums">{fmt(totalDebits)}</span></span>
+          <span className="text-slate-300 text-xs select-none hidden sm:inline">|</span>
+          <span className="text-slate-500 text-xs">Credits: <span className="font-semibold text-blue-700 tabular-nums">{fmt(totalCredits)}</span></span>
+          <span className="text-slate-300 text-xs select-none hidden sm:inline">|</span>
+          <span className="text-slate-500 text-xs">Net: <span className={`font-semibold tabular-nums ${netBalance >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(Math.abs(netBalance))} {netBalance >= 0 ? 'Dr' : 'Cr'}</span></span>
+          <span className="text-slate-300 text-xs select-none hidden sm:inline">|</span>
+          <span className="text-slate-500 text-xs">Entries: <span className="font-semibold text-slate-700 tabular-nums">{pagination?.total ?? entries.length}</span></span>
+          <span className="text-slate-300 text-xs select-none hidden sm:inline">|</span>
+          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+            isBalanced ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+          }`}>
+            <CheckCircle2 size={11} />
+            {isBalanced ? 'Balanced' : `Off by ${fmt(Math.abs(netBalance))}`}
+          </span>
         </div>
       )}
 
@@ -419,13 +444,30 @@ export default function GeneralLedgerPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Entry #</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Account</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Description</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Debit</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Credit</th>
+                  {([
+                    { field: 'date'        as SortField, label: 'Date',        align: 'left',  cls: '' },
+                    { field: 'entryNumber' as SortField, label: 'Entry #',     align: 'left',  cls: '' },
+                    { field: 'sourceType'  as SortField, label: 'Type',        align: 'left',  cls: '' },
+                    { field: 'accountName' as SortField, label: 'Account',     align: 'left',  cls: 'hidden lg:table-cell' },
+                    { field: null,                       label: 'Description', align: 'left',  cls: 'hidden md:table-cell' },
+                    { field: 'debit'       as SortField, label: 'Debit',       align: 'right', cls: '' },
+                    { field: 'credit'      as SortField, label: 'Credit',      align: 'right', cls: '' },
+                  ] as { field: SortField | null; label: string; align: string; cls: string }[]).map(col => (
+                    <th
+                      key={col.label}
+                      className={`px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.cls} ${col.field ? 'cursor-pointer select-none hover:text-slate-800 hover:bg-slate-100 transition-colors' : ''}`}
+                      onClick={col.field ? () => handleSort(col.field!) : undefined}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {col.label}
+                        {col.field && (
+                          sortField === col.field
+                            ? sortDir === 'asc' ? <ArrowUp size={11} className="text-emerald-600" /> : <ArrowDown size={11} className="text-emerald-600" />
+                            : <ArrowUpDown size={11} className="text-slate-300" />
+                        )}
+                      </span>
+                    </th>
+                  ))}
                   {showRunningBalance && (
                     <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Balance</th>
                   )}
@@ -442,7 +484,7 @@ export default function GeneralLedgerPage() {
                     </td>
                   </tr>
                 ) : (
-                  entries.map((e, i) => {
+                  sortedEntries.map((e, i) => {
                     const badge = SOURCE_BADGE[e.sourceType] ?? SOURCE_BADGE.ALL
                     const sourceRoute = getSourceRoute(e.sourceType, e.sourceId)
                     return (
