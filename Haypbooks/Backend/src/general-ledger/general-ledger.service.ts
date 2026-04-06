@@ -134,7 +134,15 @@ export class GeneralLedgerService {
             }
         }
 
-        return { entries, pagination }
+        // Always compute period-level totals (not just the current page)
+        const summary = await this.repo.findGlSummary(companyId, opts)
+
+        return {
+            entries,
+            pagination,
+            totalDebits: summary.totalDebits ?? 0,
+            totalCredits: summary.totalCredits ?? 0,
+        }
     }
 
     // ─── GL Summary ───────────────────────────────────────────────────────────
