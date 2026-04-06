@@ -65,7 +65,7 @@ export class SubLedgerService {
       return null
     }
 
-    return tx.journalEntry.create({
+    const created = await tx.journalEntry.create({
       data: {
         workspaceId: data.workspaceId,
         companyId: data.companyId,
@@ -87,6 +87,22 @@ export class SubLedgerService {
         },
       },
     })
+
+    // Update account balances for each line (same logic as postJournalEntry)
+    for (const line of data.lines) {
+      const acct = await tx.account.findUnique({ where: { id: line.accountId } })
+      if (!acct) continue
+      const normalSide = (acct.normalSide as string) ?? 'DEBIT'
+      const balanceDelta = normalSide === 'DEBIT'
+        ? line.debit - line.credit
+        : line.credit - line.debit
+      await tx.account.update({
+        where: { id: line.accountId },
+        data: { balance: { increment: balanceDelta } },
+      })
+    }
+
+    return created
   }
 
   // ─── AR: Invoice Posted (DR: AR  CR: Revenue + Output VAT) ───────────────

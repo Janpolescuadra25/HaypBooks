@@ -141,7 +141,7 @@ function RowMenu({ account, hasChildren, onEdit, onDeactivate, onReactivate, onA
               <Edit2 size={13} className="text-slate-400" /> Edit Account
             </button>
             <a
-              href={`/accounting/core-accounting/general-ledger?accountId=${account.id}`}
+              href={`/accounting/core-accounting/general-ledger?accountId=${account.id}&accountName=${encodeURIComponent(account.name)}&accountCode=${encodeURIComponent(account.code ?? '')}`}
               onClick={() => setOpen(false)}
               className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50"
             >
