@@ -54,4 +54,14 @@ export class GlQueryDto {
     @IsOptional()
     @IsIn(['ALL', 'MANUAL_JOURNAL', 'INVOICE', 'BILL', 'PAYMENT', 'BILL_PAYMENT', 'BANK_DEPOSIT', 'REFUND'])
     sourceType?: string
+
+    /** Column to sort by. Defaults to date. */
+    @IsOptional()
+    @IsIn(['date', 'entryNumber', 'sourceType', 'accountName', 'debit', 'credit'])
+    sortBy?: 'date' | 'entryNumber' | 'sourceType' | 'accountName' | 'debit' | 'credit'
+
+    /** Sort direction. Defaults to desc. */
+    @IsOptional()
+    @IsIn(['asc', 'desc'])
+    sortDir?: 'asc' | 'desc'
 }
