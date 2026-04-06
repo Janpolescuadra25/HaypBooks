@@ -1,7 +1,9 @@
 'use client'
 
 import { useMemo, useState, useCallback, useEffect } from 'react'
+import { Loader2, X, ArrowRightLeft } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import { formatCurrency } from '@/lib/format'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 
@@ -54,6 +56,66 @@ export default function BankTransactionsPage() {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // ── Transfer Funds state ──────────────────────────────────────────────────
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; accountNumber?: string; balance?: number }[]>([])
+  const [transferForm, setTransferForm] = useState({
+    fromBankAccountId: '',
+    toBankAccountId: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    memo: '',
+  })
+  const [transferLoading, setTransferLoading] = useState(false)
+  const [transferError, setTransferError] = useState('')
+  const [toast, setToast] = useState('')
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+
+  const fetchBankAccounts = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/banking/accounts`)
+      setBankAccounts(Array.isArray(data) ? data : data.accounts ?? [])
+    } catch { }
+  }, [companyId])
+
+  const handleOpenTransfer = () => {
+    fetchBankAccounts()
+    setTransferForm({ fromBankAccountId: '', toBankAccountId: '', amount: '', date: new Date().toISOString().split('T')[0], memo: '' })
+    setTransferError('')
+    setShowTransferModal(true)
+  }
+
+  const handleTransfer = async () => {
+    const amt = parseFloat(transferForm.amount)
+    if (!transferForm.fromBankAccountId || !transferForm.toBankAccountId || isNaN(amt) || amt <= 0) {
+      setTransferError('Please fill in all required fields with a valid amount.')
+      return
+    }
+    if (transferForm.fromBankAccountId === transferForm.toBankAccountId) {
+      setTransferError('Source and destination accounts must be different.')
+      return
+    }
+    setTransferLoading(true)
+    setTransferError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/banking/transfers`, {
+        fromBankAccountId: transferForm.fromBankAccountId,
+        toBankAccountId: transferForm.toBankAccountId,
+        amount: amt,
+        date: transferForm.date,
+        memo: transferForm.memo || undefined,
+      })
+      showToast('Funds transferred successfully')
+      setShowTransferModal(false)
+    } catch (e: any) {
+      setTransferError(e?.response?.data?.message ?? 'Transfer failed. Please try again.')
+    } finally {
+      setTransferLoading(false)
+    }
+  }
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
@@ -113,6 +175,13 @@ export default function BankTransactionsPage() {
             <button className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 9l6 6M15 9l-6 6" strokeLinecap="round"/></svg>
               Reconcile
+            </button>
+            <button
+              onClick={handleOpenTransfer}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              Transfer Funds
             </button>
             <button className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
@@ -247,5 +316,135 @@ export default function BankTransactionsPage() {
         </div>
       </div>
     </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
+          {toast}
+        </div>
+      )}
+
+      {/* ── Transfer Funds Modal ── */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-40 bg-black/30 flex items-center justify-center p-4" onClick={() => setShowTransferModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="w-5 h-5 text-emerald-600" />
+                <h2 className="font-bold text-slate-900">Transfer Funds</h2>
+              </div>
+              <button onClick={() => setShowTransferModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* From */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">From Account <span className="text-red-500">*</span></label>
+                <select
+                  value={transferForm.fromBankAccountId}
+                  onChange={e => setTransferForm(f => ({ ...f, fromBankAccountId: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                >
+                  <option value="">Select source account…</option>
+                  {bankAccounts.map(a => (
+                    <option key={a.id} value={a.id} disabled={a.id === transferForm.toBankAccountId}>
+                      {a.name}{a.accountNumber ? ` — ${a.accountNumber}` : ''}
+                      {a.balance !== undefined ? ` (${fmt(a.balance)})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* To */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">To Account <span className="text-red-500">*</span></label>
+                <select
+                  value={transferForm.toBankAccountId}
+                  onChange={e => setTransferForm(f => ({ ...f, toBankAccountId: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                >
+                  <option value="">Select destination account…</option>
+                  {bankAccounts.map(a => (
+                    <option key={a.id} value={a.id} disabled={a.id === transferForm.fromBankAccountId}>
+                      {a.name}{a.accountNumber ? ` — ${a.accountNumber}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Amount & Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Amount <span className="text-red-500">*</span></label>
+                  <input
+                    type="number" min="0.01" step="0.01"
+                    value={transferForm.amount}
+                    onChange={e => setTransferForm(f => ({ ...f, amount: e.target.value }))}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+                  <input
+                    type="date" value={transferForm.date}
+                    onChange={e => setTransferForm(f => ({ ...f, date: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  />
+                </div>
+              </div>
+
+              {/* Memo */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Memo</label>
+                <input
+                  type="text" value={transferForm.memo}
+                  onChange={e => setTransferForm(f => ({ ...f, memo: e.target.value }))}
+                  placeholder="Optional description"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                />
+              </div>
+
+              {/* Preview */}
+              {transferForm.fromBankAccountId && transferForm.toBankAccountId && transferForm.amount && (
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
+                  <p className="font-semibold text-slate-700 mb-1">Journal Entry Preview</p>
+                  <div className="flex justify-between">
+                    <span>DR — {bankAccounts.find(a => a.id === transferForm.toBankAccountId)?.name ?? 'To Account'}</span>
+                    <span className="font-mono font-semibold text-emerald-700">{fmt(parseFloat(transferForm.amount) || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>CR — {bankAccounts.find(a => a.id === transferForm.fromBankAccountId)?.name ?? 'From Account'}</span>
+                    <span className="font-mono font-semibold text-blue-700">{fmt(parseFloat(transferForm.amount) || 0)}</span>
+                  </div>
+                </div>
+              )}
+
+              {transferError && (
+                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{transferError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 px-6 py-4 border-t border-slate-100">
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTransfer}
+                disabled={transferLoading || !transferForm.fromBankAccountId || !transferForm.toBankAccountId || !transferForm.amount}
+                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {transferLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+                {transferLoading ? 'Transferring…' : 'Transfer Funds'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
   )
 }
