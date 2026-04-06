@@ -108,7 +108,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
         <main id="main" className="h-full overflow-y-auto">{children}</main>
       ) : isPractice || isFullScreen ? (
         // all practice-hub routes and full-screen pages render without any header/sidebar
-        <main id="main" className="w-full h-full">{children}</main>
+        <main id="main" className="w-full h-full overflow-y-auto">{children}</main>
       ) : (
         /* Owner accounting app — full layout: green topbar + collapsible sidebar */
         <>

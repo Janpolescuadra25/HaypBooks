@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, X, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -69,9 +69,15 @@ const SOURCE_BADGE: Record<SourceType, { label: string; cls: string }> = {
 
 export default function GeneralLedgerPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [accountId, setAccountId] = useState('')
+  const [accountId, setAccountId] = useState(() => searchParams?.get('accountId') ?? '')
+  const [accountFilterLabel, setAccountFilterLabel] = useState(() => {
+    const name = searchParams?.get('accountName')
+    const code = searchParams?.get('accountCode')
+    return name ? `${code ? code + ' — ' : ''}${name}` : ''
+  })
   const [sourceType, setSourceType] = useState<SourceType>('ALL')
   const [glData, setGlData] = useState<GlResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -144,7 +150,19 @@ export default function GeneralLedgerPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">General Ledger</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">Full double-entry transaction log</p>
+          {accountFilterLabel ? (
+            <p className="text-sm text-emerald-700 mt-0.5 flex items-center gap-2">
+              Transactions for <span className="font-semibold">{accountFilterLabel}</span>
+              <button
+                onClick={() => { setAccountId(''); setAccountFilterLabel('') }}
+                className="text-xs text-slate-400 hover:text-slate-600 underline"
+              >
+                Clear filter
+              </button>
+            </p>
+          ) : (
+            <p className="text-sm text-emerald-600/70 mt-0.5">Full double-entry transaction log</p>
+          )}
         </div>
         <button
           onClick={() => router.push('/accounting/core-accounting/journal-entries/new')}
@@ -177,7 +195,7 @@ export default function GeneralLedgerPage() {
           <label className="block text-xs font-medium text-emerald-700 mb-1">Account (optional)</label>
           <select
             value={accountId}
-            onChange={e => setAccountId(e.target.value)}
+            onChange={e => { setAccountId(e.target.value); setAccountFilterLabel('') }}
             className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           >
             <option value="">All Accounts</option>
