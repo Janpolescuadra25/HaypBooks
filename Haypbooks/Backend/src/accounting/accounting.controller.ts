@@ -46,10 +46,11 @@ export class AccountingController {
     async seedDefaultAccounts(
         @Req() req: any,
         @Param('companyId') companyId: string,
+        @Body() body: { force?: boolean; industry?: string } = {},
     ) {
         await this.svc.assertCompanyAccessPublic(req.user.userId, companyId)
         await this.svc.assertCompanyOwner(req.user.userId, companyId)
-        return this.svc.seedDefaultAccounts(companyId)
+        return this.svc.seedDefaultAccounts(companyId, undefined, { force: body.force, industry: body.industry })
     }
 
     @Get('coa-templates')

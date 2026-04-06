@@ -281,7 +281,7 @@ export class OnboardingService {
             }
 
             const step5Data = steps?.coa || {}
-            if (step5Data?.choice === 'template' && createdCompanyId) {
+            if (createdCompanyId) {
               await this.accountingService.seedDefaultAccounts(createdCompanyId, tx)
               this.logger.log('[ONBOARDING-COMPLETE] ✅ COA seeded for company: ' + createdCompanyId)
             }
