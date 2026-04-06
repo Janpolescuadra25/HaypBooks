@@ -11,13 +11,5 @@ export const dynamic = 'force-dynamic'
 // import TopNav from '@/components/layout/top-nav'
 
 export default function OwnerLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* <OwnerSidebar /> */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* <TopNav /> */}
-        <main className="flex-1 min-h-0 overflow-y-auto">{children}</main>
-      </div>
-    </div>
-  )
+  return <>{children}</>
 }
