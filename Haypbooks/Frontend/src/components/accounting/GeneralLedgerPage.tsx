@@ -222,10 +222,28 @@ export default function GeneralLedgerPage() {
     URL.revokeObjectURL(url)
   }
 
-  // ── Derived values ────────────────────────────────────────────────────────
+  // ── Derived values (hooks MUST come before any early returns) ────────────
   const fmtDate = (d: string) => {
     try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return d }
   }
+
+  // sortedEntries must be declared here (before early returns) to satisfy Rules of Hooks
+  const sortedEntries = useMemo(() => {
+    const arr = [...(glData?.entries ?? [])]
+    const mod = sortDir === 'asc' ? 1 : -1
+    arr.sort((a, b) => {
+      switch (sortField) {
+        case 'date':        return mod * (new Date(a.date).getTime() - new Date(b.date).getTime())
+        case 'entryNumber': return mod * (a.entryNumber ?? '').localeCompare(b.entryNumber ?? '')
+        case 'sourceType':  return mod * a.sourceType.localeCompare(b.sourceType)
+        case 'accountName': return mod * a.accountName.localeCompare(b.accountName)
+        case 'debit':       return mod * ((a.debit ?? 0) - (b.debit ?? 0))
+        case 'credit':      return mod * ((a.credit ?? 0) - (b.credit ?? 0))
+        default:            return 0
+      }
+    })
+    return arr
+  }, [glData?.entries, sortField, sortDir])
 
   if (cidLoading) {
     return (
@@ -245,23 +263,6 @@ export default function GeneralLedgerPage() {
   const netBalance = totalDebits - totalCredits
   const isBalanced = Math.abs(netBalance) < 0.005
   const showRunningBalance = !!accountId && entries.some(e => e.runningBalance !== undefined)
-
-  const sortedEntries = useMemo(() => {
-    const arr = [...entries]
-    const mod = sortDir === 'asc' ? 1 : -1
-    arr.sort((a, b) => {
-      switch (sortField) {
-        case 'date':        return mod * (new Date(a.date).getTime() - new Date(b.date).getTime())
-        case 'entryNumber': return mod * (a.entryNumber ?? '').localeCompare(b.entryNumber ?? '')
-        case 'sourceType':  return mod * a.sourceType.localeCompare(b.sourceType)
-        case 'accountName': return mod * a.accountName.localeCompare(b.accountName)
-        case 'debit':       return mod * ((a.debit ?? 0) - (b.debit ?? 0))
-        case 'credit':      return mod * ((a.credit ?? 0) - (b.credit ?? 0))
-        default:            return 0
-      }
-    })
-    return arr
-  }, [entries, sortField, sortDir])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
