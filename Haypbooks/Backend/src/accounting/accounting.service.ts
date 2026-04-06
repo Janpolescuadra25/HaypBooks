@@ -171,12 +171,15 @@ export class AccountingService {
         return owner
     }
 
-    async seedDefaultAccounts(companyId: string, prismaClient?: PrismaService | import('@prisma/client').Prisma.TransactionClient): Promise<{ message: string }> {
+    async seedDefaultAccounts(companyId: string, prismaClient?: PrismaService | import('@prisma/client').Prisma.TransactionClient, options?: { force?: boolean; industry?: string }): Promise<{ message: string }> {
         const db = prismaClient ?? this.prisma
+        const force = options?.force ?? false
 
-        const existingAccounts = await db.account.count({ where: { companyId } })
-        if (existingAccounts > 0) {
-            return { message: 'Default Chart of Accounts already seeded' }
+        if (!force) {
+            const existingAccounts = await db.account.count({ where: { companyId } })
+            if (existingAccounts > 0) {
+                return { message: 'Default Chart of Accounts already seeded' }
+            }
         }
 
         const accountTypeCount = await db.accountType.count()
@@ -195,7 +198,7 @@ export class AccountingService {
 
         const company = await db.company.findUnique({ where: { id: companyId } })
         const currency = company?.currency ?? 'USD'
-        const industry = company?.industry ?? null
+        const industry = options?.industry ?? company?.industry ?? null
 
         // Get AccountType map
         const types = await db.accountType.findMany()
