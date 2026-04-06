@@ -24,7 +24,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`h-full ${inter.variable}`}>
-      <body className="min-h-screen h-full text-slate-900 antialiased selection:bg-sky-200/60 selection:text-slate-900">
+      <body className="h-full overflow-hidden text-slate-900 antialiased selection:bg-sky-200/60 selection:text-slate-900">
         <ClientRoot>
           <ToastProvider>
             {children}

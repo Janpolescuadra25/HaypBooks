@@ -11,6 +11,13 @@ const JOURNAL_INCLUDE = {
             description: true,
             postingStatus: true,
             createdBy: { select: { name: true, email: true } },
+            invoices: { select: { id: true }, take: 1 },
+            bills: { select: { id: true }, take: 1 },
+            paymentsReceived: { select: { id: true }, take: 1 },
+            billPayments: { select: { id: true }, take: 1 },
+            bankDeposits: { select: { id: true }, take: 1 },
+            customerRefunds: { select: { id: true }, take: 1 },
+            vendorRefunds: { select: { id: true }, take: 1 },
         },
     },
     account: {
@@ -130,6 +137,42 @@ function buildCleanWhere(companyId: string, opts: GlQueryDto) {
         lineFilter['journal'] = journalFilter
     } else {
         lineFilter['journal'] = journalFilter
+    }
+
+    // sourceType filter: derive from related-record presence on the JournalEntry
+    if (opts.sourceType && opts.sourceType !== 'ALL') {
+        const st = opts.sourceType
+        const existing = lineFilter['journal'] ?? {}
+        if (st === 'INVOICE') {
+            lineFilter['journal'] = { ...existing, invoices: { some: {} } }
+        } else if (st === 'BILL') {
+            lineFilter['journal'] = { ...existing, bills: { some: {} } }
+        } else if (st === 'PAYMENT') {
+            lineFilter['journal'] = { ...existing, paymentsReceived: { some: {} } }
+        } else if (st === 'BILL_PAYMENT') {
+            lineFilter['journal'] = { ...existing, billPayments: { some: {} } }
+        } else if (st === 'BANK_DEPOSIT') {
+            lineFilter['journal'] = { ...existing, bankDeposits: { some: {} } }
+        } else if (st === 'REFUND') {
+            lineFilter['journal'] = {
+                ...existing,
+                OR: [
+                    { customerRefunds: { some: {} } },
+                    { vendorRefunds: { some: {} } },
+                ],
+            }
+        } else if (st === 'MANUAL_JOURNAL') {
+            lineFilter['journal'] = {
+                ...existing,
+                invoices: { none: {} },
+                bills: { none: {} },
+                paymentsReceived: { none: {} },
+                billPayments: { none: {} },
+                bankDeposits: { none: {} },
+                customerRefunds: { none: {} },
+                vendorRefunds: { none: {} },
+            }
+        }
     }
 
     return lineFilter

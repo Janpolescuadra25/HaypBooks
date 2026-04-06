@@ -105,7 +105,7 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
       {process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_MOCK_API === 'true' && <MockInit />}
       {/* Early return only for public pages (login, signup, etc.) */}
       {isPublic ? (
-        <main id="main">{children}</main>
+        <main id="main" className="h-full overflow-y-auto">{children}</main>
       ) : isPractice || isFullScreen ? (
         // all practice-hub routes and full-screen pages render without any header/sidebar
         <main id="main" className="w-full h-full">{children}</main>

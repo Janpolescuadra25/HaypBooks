@@ -36,22 +36,45 @@ export class GeneralLedgerService {
         const totalPages = Math.ceil(total / limit)
 
         // Map raw rows to response shape
-        const entries = rows.map((line: any) => ({
-            id: line.id,
-            date: line.journal.date,
-            entryNumber: line.journal.entryNumber ?? null,
-            entryDescription: line.journal.description ?? null,
-            description: line.description ?? null,
-            accountId: line.accountId,
-            accountCode: line.account.code,
-            accountName: line.account.name,
-            accountCategory: line.account.type?.category ?? null,
-            debit: Number(line.debit),
-            credit: Number(line.credit),
-            postedBy: line.journal.createdBy
-                ? { name: line.journal.createdBy.name, email: line.journal.createdBy.email }
-                : null,
-        }))
+        const entries = rows.map((line: any) => {
+            const j = line.journal
+            const sourceType =
+                j.invoices?.length > 0 ? 'INVOICE'
+                : j.bills?.length > 0 ? 'BILL'
+                : j.paymentsReceived?.length > 0 ? 'PAYMENT'
+                : j.billPayments?.length > 0 ? 'BILL_PAYMENT'
+                : j.bankDeposits?.length > 0 ? 'BANK_DEPOSIT'
+                : (j.customerRefunds?.length > 0 || j.vendorRefunds?.length > 0) ? 'REFUND'
+                : 'MANUAL_JOURNAL'
+            const sourceId =
+                j.invoices?.[0]?.id
+                ?? j.bills?.[0]?.id
+                ?? j.paymentsReceived?.[0]?.id
+                ?? j.billPayments?.[0]?.id
+                ?? j.bankDeposits?.[0]?.id
+                ?? j.customerRefunds?.[0]?.id
+                ?? j.vendorRefunds?.[0]?.id
+                ?? null
+
+            return {
+                id: line.id,
+                date: j.date,
+                entryNumber: j.entryNumber ?? null,
+                entryDescription: j.description ?? null,
+                description: line.description ?? null,
+                accountId: line.accountId,
+                accountCode: line.account.code,
+                accountName: line.account.name,
+                accountCategory: line.account.type?.category ?? null,
+                debit: Number(line.debit),
+                credit: Number(line.credit),
+                sourceType,
+                sourceId,
+                postedBy: j.createdBy
+                    ? { name: j.createdBy.name, email: j.createdBy.email }
+                    : null,
+            }
+        })
 
         const pagination = { page, limit, total, totalPages }
 
