@@ -8,6 +8,9 @@ const VendorsPage = dynamic(() => import('@/components/expenses/VendorsPage'), {
 const BillsPage = dynamic(() => import('@/components/expenses/BillsPage'), { ssr: false })
 const BillPaymentsPage = dynamic(() => import('@/components/expenses/BillPaymentsPage'), { ssr: false })
 const ApAgingPage = dynamic(() => import('@/components/expenses/ApAgingPage'), { ssr: false })
+const PurchaseOrdersPage = dynamic(() => import('@/components/expenses/PurchaseOrdersPage'), { ssr: false })
+const ExpenseCapturePage = dynamic(() => import('@/components/expenses/ExpenseCapturePage'), { ssr: false })
+const VendorCreditsPage = dynamic(() => import('@/components/expenses/VendorCreditsPage'), { ssr: false })
 
 type Props = { params: { slug?: string[] } }
 
@@ -29,9 +32,16 @@ function resolveComponent(slug: string[] | undefined) {
   const key = slug?.join('/') ?? ''
   switch (key) {
     case 'vendors/vendors': return <VendorsPage />
+    case 'vendors/purchase-orders': return <PurchaseOrdersPage />
     case 'payables/bills': return <BillsPage />
     case 'payables/bill-payments': return <BillPaymentsPage />
     case 'payables/ap-aging': return <ApAgingPage />
+    case 'payables/vendor-credits': return <VendorCreditsPage />
+    case 'expense-capture/expenses': return <ExpenseCapturePage initialTab="expenses" />
+    case 'expense-capture/receipts': return <ExpenseCapturePage initialTab="receipts" />
+    case 'expense-capture/mileage': return <ExpenseCapturePage initialTab="mileage" />
+    case 'expense-capture/per-diem':
+    case 'expense-capture/reimbursements': return <ExpenseCapturePage initialTab="reimbursements" />
     default: return null
   }
 }
