@@ -88,9 +88,7 @@ export const navigationData: NavSection[] = [
           {
             title: 'Transactions',
             items: [
-              { title: 'Bank Feeds (For Review)', path: '/banking-cash/transactions/bank-feeds' },
-              { title: 'Bank Register', path: '/banking-cash/transactions/bank-register' },
-              { title: 'Transfers', path: '/banking-cash/transactions/transfers' },
+              { title: 'Bank Transactions', path: '/banking-cash/transactions/bank-transactions' },
               { title: 'Deposits', path: '/banking-cash/transactions/deposits' },
             ],
           },

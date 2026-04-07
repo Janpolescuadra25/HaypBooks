@@ -25,9 +25,10 @@ type Props = { params: { slug?: string[] } }
 function resolveLabel(slug: string[] | undefined): string {
   const path = (slug ?? []).join('/')
   const labels: Record<string, string> = {
-    'transactions/bank-feeds': 'Bank Feeds',
-    'transactions/bank-register': 'Bank Register',
-    'transactions/transfers': 'Transfers',
+    'transactions/bank-transactions': 'Bank Transactions',
+    'transactions/bank-feeds': 'Bank Transactions',
+    'transactions/bank-register': 'Bank Transactions',
+    'transactions/transfers': 'Bank Transactions',
     'transactions/deposits': 'Bank Deposits',
     'transactions/undeposited': 'Undeposited Funds',
     'reconciliation/reconcile': 'Reconcile',
@@ -53,6 +54,7 @@ function resolveLabel(slug: string[] | undefined): string {
 function resolveComponent(slug: string[] | undefined) {
   const path = (slug ?? []).join('/')
   switch (path) {
+    case 'transactions/bank-transactions':
     case 'transactions/bank-feeds':
     case 'transactions/bank-register':
     case 'transactions/transfers':
