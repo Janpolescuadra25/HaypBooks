@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { Fragment, useMemo, useState, useCallback, useEffect } from 'react'
 import { Loader2, X, ArrowRightLeft } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -136,6 +136,7 @@ export default function BankTransactionsPage() {
   const [account, setAccount] = useState('All')
   const [type, setType] = useState<TxType | 'All'>('All')
   const [status, setStatus] = useState<TxStatus | 'All'>('All')
+  const [view, setView] = useState<'transactions' | 'register'>('transactions')
 
   const filtered = useMemo(() => {
     let list = DATA
@@ -153,6 +154,13 @@ export default function BankTransactionsPage() {
     return list
   }, [search, account, type, status])
 
+  const sortedFiltered = useMemo(() => {
+    if (view === 'register') {
+      return [...filtered].sort((a, b) => a.account.localeCompare(b.account) || b.date.localeCompare(a.date))
+    }
+    return filtered
+  }, [filtered, view])
+
   const totalCredits = filtered.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0)
   const totalDebits = filtered.filter(t => t.type === 'Debit').reduce((s, t) => s + t.amount, 0)
   const netFlow = totalCredits - totalDebits
@@ -164,8 +172,8 @@ export default function BankTransactionsPage() {
         <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking & Cash / Transactions</p>
-            <h1 className="text-2xl font-bold text-slate-900">Bank Transactions</h1>
-            <p className="text-sm text-slate-500 mt-0.5">All bank movements across your connected accounts</p>
+            <h1 className="text-2xl font-bold text-slate-900">{view === 'register' ? 'Bank Register' : 'Bank Transactions'}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">{view === 'register' ? 'Running balance by account' : 'All bank movements across your connected accounts'}</p>
           </div>
           <div className="flex items-center gap-2">
             <button className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
@@ -238,19 +246,39 @@ export default function BankTransactionsPage() {
               <option value="Pending">Pending</option>
               <option value="Voided">Voided</option>
             </select>
-            <span className="text-xs text-slate-400 ml-auto">{filtered.length} records</span>
+            <div className="flex items-center ml-auto gap-3">
+              <span className="text-xs text-slate-400">{filtered.length} records</span>
+              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs font-medium">
+                <button
+                  onClick={() => setView('transactions')}
+                  className={`px-3 py-1.5 transition-colors ${
+                    view === 'transactions' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  All Transactions
+                </button>
+                <button
+                  onClick={() => setView('register')}
+                  className={`px-3 py-1.5 transition-colors border-l border-slate-200 ${
+                    view === 'register' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  Bank Register
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full min-w-[1000px] text-left">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                   <th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all" className="rounded border-slate-300 accent-emerald-600" /></th>
-                  <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                  <th className="px-4 py-3">Reference / Description</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Account</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Category</th>
+                  <th className="px-4 py-3 w-28 whitespace-nowrap">Date</th>
+                  <th className="px-4 py-3 min-w-[280px]">Reference / Description</th>
+                  <th className="px-4 py-3 w-44 whitespace-nowrap">Account</th>
+                  <th className="px-4 py-3 w-40 whitespace-nowrap">Category</th>
                   <th className="px-4 py-3 text-right whitespace-nowrap">Debit</th>
                   <th className="px-4 py-3 text-right whitespace-nowrap">Credit</th>
                   <th className="px-4 py-3 text-right whitespace-nowrap">Balance</th>
@@ -259,15 +287,21 @@ export default function BankTransactionsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(tx => (
-                  <tr key={tx.id} className="hover:bg-slate-50 transition-colors group">
+                {sortedFiltered.map((tx, idx) => (
+                  <Fragment key={tx.id}>
+                    {view === 'register' && (idx === 0 || sortedFiltered[idx - 1].account !== tx.account) && (
+                      <tr className="bg-slate-100 border-t-2 border-slate-200">
+                        <td colSpan={10} className="px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">{tx.account}</td>
+                      </tr>
+                    )}
+                    <tr className="hover:bg-slate-50 transition-colors group">
                     <td className="px-4 py-3.5"><input type="checkbox" aria-label="Select transaction" className="rounded border-slate-300 accent-emerald-600" /></td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{tx.date}</td>
-                    <td className="px-4 py-3.5 max-w-xs">
-                      <div className="text-sm font-medium text-slate-800 truncate">{tx.description}</div>
+                    <td className="px-4 py-3.5">
+                      <div className="text-sm font-medium text-slate-800">{tx.description}</div>
                       <div className="text-[11px] text-slate-400 font-mono">{tx.reference}{tx.bankRef && ` · ${tx.bankRef}`}</div>
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap max-w-[160px] truncate">{tx.account.split(' - ')[0]}</td>
+                    <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap">{tx.account.split(' - ')[0]}</td>
                     <td className="px-4 py-3.5">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">{tx.category}</span>
                     </td>
@@ -293,11 +327,12 @@ export default function BankTransactionsPage() {
                       </div>
                     </td>
                   </tr>
+                  </Fragment>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="bg-slate-50 border-t-2 border-slate-200 text-sm font-bold">
-                  <td colSpan={5} className="px-4 py-3 text-xs text-slate-500 uppercase">Totals ({filtered.length})</td>
+                  <td colSpan={5} className="px-4 py-3 text-xs text-slate-500 uppercase">Totals ({sortedFiltered.length})</td>
                   <td className="px-4 py-3 text-right font-mono text-rose-600">{fmt(totalDebits)}</td>
                   <td className="px-4 py-3 text-right font-mono text-emerald-700">{fmt(totalCredits)}</td>
                   <td className="px-4 py-3 text-right font-mono text-slate-800">{fmt(netFlow >= 0 ? netFlow : Math.abs(netFlow))}</td>
@@ -307,7 +342,7 @@ export default function BankTransactionsPage() {
             </table>
           </div>
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-            <span className="text-xs text-slate-500">Showing {filtered.length} transactions</span>
+            <span className="text-xs text-slate-500">Showing {sortedFiltered.length} transactions</span>
             <div className="flex items-center gap-1">
               {[1,2,3].map(n => <button key={n} className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${n===1?'bg-emerald-600 text-white':'text-slate-500 hover:bg-slate-100'}`}>{n}</button>)}
               <button className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors text-lg">›</button>
