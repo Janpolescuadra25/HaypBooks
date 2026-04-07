@@ -219,18 +219,18 @@ export default function BankTransactionsPage() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search transactions…"
                 className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 transition-colors" />
             </div>
-            <select value={account} onChange={e => setAccount(e.target.value)}
+            <select aria-label="Filter by account" value={account} onChange={e => setAccount(e.target.value)}
               className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer max-w-[220px]">
               <option value="All">All Accounts</option>
               {ACCOUNTS.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
-            <select value={type} onChange={e => setType(e.target.value as any)}
+            <select aria-label="Filter by type" value={type} onChange={e => setType(e.target.value as any)}
               className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer">
               <option value="All">All Types</option>
               <option value="Credit">Credit</option>
               <option value="Debit">Debit</option>
             </select>
-            <select value={status} onChange={e => setStatus(e.target.value as any)}
+            <select aria-label="Filter by status" value={status} onChange={e => setStatus(e.target.value as any)}
               className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer">
               <option value="All">All Statuses</option>
               <option value="Cleared">Cleared</option>
@@ -246,7 +246,7 @@ export default function BankTransactionsPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                  <th className="px-4 py-3 w-10"><input type="checkbox" className="rounded border-slate-300 accent-emerald-600" /></th>
+                  <th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all" className="rounded border-slate-300 accent-emerald-600" /></th>
                   <th className="px-4 py-3 whitespace-nowrap">Date</th>
                   <th className="px-4 py-3">Reference / Description</th>
                   <th className="px-4 py-3 whitespace-nowrap">Account</th>
@@ -261,7 +261,7 @@ export default function BankTransactionsPage() {
               <tbody className="divide-y divide-slate-100">
                 {filtered.map(tx => (
                   <tr key={tx.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-4 py-3.5"><input type="checkbox" className="rounded border-slate-300 accent-emerald-600" /></td>
+                    <td className="px-4 py-3.5"><input type="checkbox" aria-label="Select transaction" className="rounded border-slate-300 accent-emerald-600" /></td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{tx.date}</td>
                     <td className="px-4 py-3.5 max-w-xs">
                       <div className="text-sm font-medium text-slate-800 truncate">{tx.description}</div>
@@ -287,7 +287,7 @@ export default function BankTransactionsPage() {
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button className="px-2 py-1 text-xs border border-slate-200 rounded text-slate-600 hover:bg-slate-100 transition-colors">View</button>
-                        <button className="p-1 text-slate-400 hover:text-slate-600 transition-colors">
+                        <button title="More options" className="p-1 text-slate-400 hover:text-slate-600 transition-colors">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
                         </button>
                       </div>
@@ -315,7 +315,6 @@ export default function BankTransactionsPage() {
           </div>
         </div>
       </div>
-    </div>
 
       {/* Toast */}
       {toast && (
@@ -333,7 +332,7 @@ export default function BankTransactionsPage() {
                 <ArrowRightLeft className="w-5 h-5 text-emerald-600" />
                 <h2 className="font-bold text-slate-900">Transfer Funds</h2>
               </div>
-              <button onClick={() => setShowTransferModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              <button title="Close" onClick={() => setShowTransferModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -342,8 +341,7 @@ export default function BankTransactionsPage() {
               {/* From */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">From Account <span className="text-red-500">*</span></label>
-                <select
-                  value={transferForm.fromBankAccountId}
+                <select                  aria-label="From Account"                  value={transferForm.fromBankAccountId}
                   onChange={e => setTransferForm(f => ({ ...f, fromBankAccountId: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                 >
@@ -360,8 +358,7 @@ export default function BankTransactionsPage() {
               {/* To */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">To Account <span className="text-red-500">*</span></label>
-                <select
-                  value={transferForm.toBankAccountId}
+                <select                  aria-label="To Account"                  value={transferForm.toBankAccountId}
                   onChange={e => setTransferForm(f => ({ ...f, toBankAccountId: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                 >
@@ -390,6 +387,7 @@ export default function BankTransactionsPage() {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
                   <input
                     type="date" value={transferForm.date}
+                    aria-label="Transfer Date"
                     onChange={e => setTransferForm(f => ({ ...f, date: e.target.value }))}
                     className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                   />
@@ -446,5 +444,6 @@ export default function BankTransactionsPage() {
           </div>
         </div>
       )}
+    </div>
   )
 }
