@@ -31,7 +31,7 @@ const SETUP_PHASES: SetupPhase[] = [
       { id: 'fiscal', title: 'Currency & Fiscal Year', description: 'Set fiscal settings', path: '/onboarding', required: true },
       { id: 'coa', title: 'Chart of Accounts', description: 'Choose COA template or import', path: '/accounting/core-accounting/chart-of-accounts', required: true },
       { id: 'coa_seed', title: 'Seed Default Accounts', description: 'Initialize standard chart of accounts', path: '/home/setup-center', required: true },
-      { id: 'bank', title: 'First Bank Account', description: 'Configure first bank account', path: '/banking/accounts', required: true },
+      { id: 'bank', title: 'First Bank Account', description: 'Configure first bank account', path: '/banking-cash/accounts/bank-accounts', required: true },
       { id: 'tax', title: 'Tax Registration', description: 'Capture tax IDs', path: '/settings/tax', required: true },
       { id: 'review', title: 'Review & Confirm', description: 'Finalize quick setup', path: '/onboarding/review', required: true },
     ],
@@ -61,10 +61,10 @@ const SETUP_PHASES: SetupPhase[] = [
     id: 'phase_4',
     title: 'Setup Center - Banking Setup',
     tasks: [
-      { id: 'bank_feeds', title: 'Connect Bank Feeds', description: 'Enable bank connection and reconciliation', path: '/banking/connections', required: true },
-      { id: 'transaction_rules', title: 'Transaction Rules', description: 'Set auto-categorization rules for bank records', path: '/banking/rules' },
-      { id: 'bank_reconciliation', title: 'Bank Reconciliation', description: 'Reconcile bank balances and transactions', path: '/banking/reconciliation' },
-      { id: 'payouts', title: 'Payout Accounts', description: 'Configure disbursement accounts', path: '/banking/payouts' },
+      { id: 'bank_feeds', title: 'Connect Bank Feeds', description: 'Enable bank connection and reconciliation', path: '/banking-cash/bank-connections/connected-banks', required: true },
+      { id: 'transaction_rules', title: 'Transaction Rules', description: 'Set auto-categorization rules for bank records', path: '/banking-cash/transactions/transaction-rules' },
+      { id: 'bank_reconciliation', title: 'Bank Reconciliation', description: 'Reconcile bank balances and transactions', path: '/banking-cash/reconciliation/reconcile' },
+      { id: 'payouts', title: 'Payout Accounts', description: 'Configure disbursement accounts', path: '/banking-cash/payments/payment-runs' },
     ],
   },
   {
