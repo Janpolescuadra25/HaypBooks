@@ -39,13 +39,24 @@ function RecursiveNavItem({
   depth?: number
 }) {
   const isGroup = !item.path && !!item.items
-  const isActive = !!item.path && activePath === item.path
+
+  // Active if path matches exactly OR if we're anywhere within the same subsection
+  // (e.g. highlight 'Transactions' when on any tab under /operations/cash-banking/transactions/)
+  const pathPrefix = item.path ? item.path.split('/').slice(0, -1).join('/') : ''
+  const isActive = !!item.path && (
+    activePath === item.path ||
+    (pathPrefix.length > 1 && activePath.startsWith(pathPrefix + '/'))
+  )
 
   const [isOpen, setIsOpen] = useState(() => {
     if (!item.items) return false
     const hasActive = (items: NavItem[]): boolean =>
       items.some((i) => {
-        if (i.path && activePath === i.path) return true
+        if (i.path) {
+          if (activePath === i.path) return true
+          const prefix = i.path.split('/').slice(0, -1).join('/')
+          if (prefix.length > 1 && activePath.startsWith(prefix + '/')) return true
+        }
         if (i.items) return hasActive(i.items)
         return false
       })

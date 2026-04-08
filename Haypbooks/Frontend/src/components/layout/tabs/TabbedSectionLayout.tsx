@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { OPERATIONS_NAV } from '@/config/operations-navigation'
-import { SectionTabBar } from './SectionTabBar'
 import { ContentTabBar } from './ContentTabBar'
 
 interface TabbedSectionLayoutProps {
@@ -46,13 +45,6 @@ export function TabbedSectionLayout({ sectionKey, children, actions }: TabbedSec
     activeSubsection?.tabs.find((t) => t.id === tabSlug) ?? activeSubsection?.tabs[0]
 
   // ── Navigation handlers ─────────────────────────────────────────────────
-  function handleSubsectionNavigate(subsectionId: string) {
-    const sub = section!.subsections.find((s) => s.id === subsectionId)
-    if (sub?.tabs[0]) {
-      router.push(sub.tabs[0].path)
-    }
-  }
-
   function handleTabNavigate(tabId: string) {
     const tab = activeSubsection?.tabs.find((t) => t.id === tabId)
     if (tab) {
@@ -76,14 +68,7 @@ export function TabbedSectionLayout({ sectionKey, children, actions }: TabbedSec
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
 
-      {/* ── Primary tab bar (subsections) ─────────────────────────────────── */}
-      <SectionTabBar
-        subsections={section.subsections}
-        activeId={activeSubsection?.id ?? ''}
-        onNavigate={handleSubsectionNavigate}
-      />
-
-      {/* ── Secondary tab bar (leaf tabs) ─────────────────────────────────── */}
+      {/* ── Content tab bar (leaf tabs within current subsection) ──────────── */}
       {activeSubsection && (
         <ContentTabBar
           tabs={activeSubsection.tabs}
