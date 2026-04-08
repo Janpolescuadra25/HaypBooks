@@ -86,7 +86,7 @@ export const navigationData: NavSection[] = [
       { title: 'Cash & Banking',           path: '/operations/cash-banking/transactions/bank-transactions' },
       { title: 'Sales (Order-to-Cash)',     path: '/operations/sales/customers/customers' },
       { title: 'Expenses (Procure-to-Pay)', path: '/operations/expenses/purchasing/vendors' },
-      { title: 'Inventory',                 path: '/inventory/setup/inventory-items' },
+      { title: 'Inventory',                 path: '/operations/inventory/items/inventory-items' },
       { title: 'Projects',                  path: '/projects/project-setup/projects' },
       { title: 'Time',                      path: '/time/entry/time-entries' },
     ],
