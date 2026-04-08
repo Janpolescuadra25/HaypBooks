@@ -111,6 +111,60 @@ All 20 tabs wired to real components — 0 placeholders needed (all components e
 
 ---
 
+## Phase 3 Progress — ✅ COMPLETE
+
+**Commit:** `feat: implement tab-based navigation for Expenses section (Phase 3)`
+
+### Expenses (Procure-to-Pay) — 14 Tab Pages Created
+
+URL base: `/operations/expenses/<subsection>/<tab>`  
+Layout: `app/(owner)/operations/expenses/layout.tsx` wraps `TabbedSectionLayout sectionKey="expenses"`
+
+| Subsection | Tab | Status |
+|------------|-----|--------|
+| Purchasing | Vendors | ✅ Real — `VendorsPage` |
+| Purchasing | Purchase Requests | ✅ Placeholder |
+| Purchasing | Purchase Orders | ✅ Real — `PurchaseOrdersPage` |
+| Purchasing | RFQ | ✅ Placeholder (confirmed missing) |
+| Purchasing | Approvals | ✅ Placeholder |
+| Bills & Payments | Bills | ✅ Real — `BillsPage` |
+| Bills & Payments | Recurring Bills | ✅ Placeholder |
+| Bills & Payments | Bill Payments | ✅ Real — `BillPaymentsPage` |
+| Bills & Payments | Payment Runs | ✅ Placeholder |
+| Bills & Payments | Vendor Credits | ✅ Real — `VendorCreditsPage` |
+| Bills & Payments | A/P Aging | ✅ Real — `ApAgingPage` |
+| Expense Capture | Expenses | ✅ Real — `ExpenseCapturePage` (initialTab="expenses") |
+| Expense Capture | Receipts | ✅ Real — `ExpenseCapturePage` (initialTab="receipts") |
+| Expense Capture | Mileage | ✅ Real — `ExpenseCapturePage` (initialTab="mileage") |
+| Expense Capture | Per Diem | ✅ Placeholder |
+| Expense Capture | Reimbursements | ✅ Real — `ExpenseCapturePage` (initialTab="reimbursements") |
+
+**Note:** `ExpenseCapturePage` is a multi-tab component that handles Expenses, Receipts, Mileage, and Reimbursements — wired 4 times with `initialTab` prop.
+
+- **Real components:** 10/14 (71%)
+- **Placeholders:** 4/14 (Purchase Requests, RFQ, Approvals, Recurring Bills, Payment Runs, Per Diem → 6 placeholders, 8 real including ExpenseCapturePage multi-use)
+
+Wait — correct count:
+- Direct real components: VendorsPage, PurchaseOrdersPage, BillsPage, BillPaymentsPage, VendorCreditsPage, ApAgingPage = **6**
+- Real via ExpenseCapturePage: expenses, receipts, mileage, reimbursements = **4**
+- Placeholders: Purchase Requests, RFQ, Approvals, Recurring Bills, Payment Runs, Per Diem = **6** (but the table only shows 14 tabs in the nav config, so 8 real + 6 placeholders)
+
+### Phase 3 Config Changes
+
+- `operations-navigation.ts`: All 16 expenses paths updated from `/expenses/...` → `/operations/expenses/...`
+- `ownerNavConfig.ts`: Expenses sidebar link updated to `/operations/expenses/purchasing/vendors`
+
+### Cumulative Progress
+
+| Section | Tabs | Real | Placeholders |
+|---------|------|------|-------------|
+| Cash & Banking (Phase 1) | 16 | 4 | 12 |
+| Sales — Order-to-Cash (Phase 2) | 20 | 20 | 0 |
+| Expenses — Procure-to-Pay (Phase 3) | 14 | 8 | 6 |
+| **Total** | **50** | **32** | **18** |
+
+---
+
 ## Phase 1 — Core Infrastructure (Original Plan)
 
 **Goal:** Build the tab components and wire up navigation so every section is reachable, even if most tabs show a placeholder.
