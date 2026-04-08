@@ -5,8 +5,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import { OPERATIONS_NAV } from '@/config/operations-navigation'
 import { SectionTabBar } from './SectionTabBar'
 import { ContentTabBar } from './ContentTabBar'
-import { SectionBreadcrumb } from './SectionBreadcrumb'
-import type { BreadcrumbItem } from './SectionBreadcrumb'
 
 interface TabbedSectionLayoutProps {
   /** Matches OperationsSection.id e.g. 'cash-banking', 'sales', 'expenses' */
@@ -62,21 +60,6 @@ export function TabbedSectionLayout({ sectionKey, children, actions }: TabbedSec
     }
   }
 
-  // ── Breadcrumb ──────────────────────────────────────────────────────────
-  const breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Operations', path: section.subsections[0]?.tabs[0]?.path ?? '#' },
-    { label: section.label, path: section.subsections[0]?.tabs[0]?.path ?? '#' },
-  ]
-  if (activeSubsection) {
-    breadcrumbItems.push({
-      label: activeSubsection.label,
-      path: activeSubsection.tabs[0]?.path ?? '#',
-    })
-  }
-  if (activeTab) {
-    breadcrumbItems.push({ label: activeTab.label, path: activeTab.path })
-  }
-
   return (
     <div className="flex flex-col min-h-full bg-white">
       {/* ── Section header ────────────────────────────────────────────────── */}
@@ -92,9 +75,6 @@ export function TabbedSectionLayout({ sectionKey, children, actions }: TabbedSec
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
-
-      {/* ── Breadcrumb ────────────────────────────────────────────────────── */}
-      <SectionBreadcrumb items={breadcrumbItems} />
 
       {/* ── Primary tab bar (subsections) ─────────────────────────────────── */}
       <SectionTabBar
