@@ -81,17 +81,63 @@ export const navigationData: NavSection[] = [
   {
     title: 'OPERATIONS',
     icon: BarChart3,
-    // ── Simplified: 6 flat section links (tab details handled by TabbedSectionLayout) ──
+    // ── Nested 2-level structure: sections → subsections ──────────────────────
     items: [
-      { title: 'Cash & Banking',           path: '/operations/cash-banking/transactions/bank-transactions' },
-      { title: 'Sales (Order-to-Cash)',     path: '/operations/sales/customers/customers' },
-      { title: 'Expenses (Procure-to-Pay)', path: '/operations/expenses/purchasing/vendors' },
-      { title: 'Inventory',                 path: '/operations/inventory/items/inventory-items' },
-      { title: 'Projects',                  path: '/projects/project-setup/projects' },
-      { title: 'Time',                      path: '/time/entry/time-entries' },
+      {
+        title: 'Cash & Banking',
+        items: [
+          { title: 'Transactions',    path: '/operations/cash-banking/transactions/bank-transactions' },
+          { title: 'Reconciliation',  path: '/operations/cash-banking/reconciliation/reconciliation-hub' },
+          { title: 'Accounts',        path: '/operations/cash-banking/accounts/bank-accounts' },
+          { title: 'Management',      path: '/operations/cash-banking/management/transaction-rules' },
+          { title: 'Cash Management', path: '/operations/cash-banking/cash-management/cash-position' },
+        ],
+      },
+      {
+        title: 'Sales (Order-to-Cash)',
+        items: [
+          { title: 'Customers',   path: '/operations/sales/customers/customers' },
+          { title: 'Sales',       path: '/operations/sales/sales/products-services' },
+          { title: 'Billing',     path: '/operations/sales/billing/invoices' },
+          { title: 'Collections', path: '/operations/sales/collections/customer-payments' },
+          { title: 'Revenue',     path: '/operations/sales/revenue/credit-notes' },
+        ],
+      },
+      {
+        title: 'Expenses (Procure-to-Pay)',
+        items: [
+          { title: 'Purchasing',      path: '/operations/expenses/purchasing/vendors' },
+          { title: 'Bills & Payments', path: '/operations/expenses/bills-payments/bills' },
+          { title: 'Expense Capture', path: '/operations/expenses/expense-capture/expenses' },
+        ],
+      },
+      {
+        title: 'Inventory',
+        items: [
+          { title: 'Items',      path: '/operations/inventory/items/inventory-items' },
+          { title: 'Operations', path: '/operations/inventory/operations/item-receipts' },
+          { title: 'Warehousing', path: '/operations/inventory/warehousing/warehouses' },
+          { title: 'Control',    path: '/operations/inventory/control/cycle-counts' },
+          { title: 'Valuation',  path: '/operations/inventory/valuation/inventory-valuation' },
+        ],
+      },
+      {
+        title: 'Projects',
+        items: [
+          { title: 'Setup',      path: '/operations/projects/setup/projects' },
+          { title: 'Execution',  path: '/operations/projects/execution/project-tasks' },
+          { title: 'Billing',    path: '/operations/projects/billing/project-billing' },
+          { title: 'Financials', path: '/operations/projects/financials/project-profitability' },
+        ],
+      },
+      {
+        title: 'Time',
+        items: [
+          { title: 'Entry',  path: '/operations/time/entry/time-entries' },
+          { title: 'Review', path: '/operations/time/review/billable-time-review' },
+        ],
+      },
     ],
-    // ── OLD groups config (preserved for reference during migration) ──────────────────
-    // groups: [
   },
   {
     title: 'ACCOUNTING',
