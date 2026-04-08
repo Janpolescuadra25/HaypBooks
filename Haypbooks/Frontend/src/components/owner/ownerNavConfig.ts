@@ -84,7 +84,7 @@ export const navigationData: NavSection[] = [
     // ── Simplified: 6 flat section links (tab details handled by TabbedSectionLayout) ──
     items: [
       { title: 'Cash & Banking',           path: '/operations/cash-banking/transactions/bank-transactions' },
-      { title: 'Sales (Order-to-Cash)',     path: '/sales/customers/customers' },
+      { title: 'Sales (Order-to-Cash)',     path: '/operations/sales/customers/customers' },
       { title: 'Expenses (Procure-to-Pay)', path: '/expenses/vendors/vendors' },
       { title: 'Inventory',                 path: '/inventory/setup/inventory-items' },
       { title: 'Projects',                  path: '/projects/project-setup/projects' },

@@ -70,6 +70,47 @@ Layout: `app/(owner)/operations/cash-banking/layout.tsx` wraps `TabbedSectionLay
 
 ---
 
+## Phase 2 Progress — ✅ COMPLETE
+
+**Commit:** `feat: implement tab-based navigation for Sales section (Phase 2)`
+
+### Sales (Order-to-Cash) — 20 Tab Pages Created
+
+URL base: `/operations/sales/<subsection>/<tab>`  
+Layout: `app/(owner)/operations/sales/layout.tsx` wraps `TabbedSectionLayout sectionKey="sales"`
+
+| Subsection | Tab | Status |
+|------------|-----|--------|
+| Customers | Customers | ✅ Real — `CustomersPage` |
+| Customers | Customer Groups | ✅ Real — `CustomerGroupsPage` |
+| Customers | Price Lists | ✅ Real — `PriceListsPage` |
+| Customers | Customer Portal | ✅ Real — `CustomerPortalPage` |
+| Sales | Products & Services | ✅ Real — `ProductsServicesPage` |
+| Sales | Quotes | ✅ Real — `QuotesEstimatesPage` |
+| Sales | Sales Orders | ✅ Real — `SalesOrdersPage` |
+| Billing | Invoices | ✅ Real — `InvoicesPage` |
+| Billing | Recurring Invoices | ✅ Real — `RecurringInvoicesPage` |
+| Billing | Subscriptions | ✅ Real — `SubscriptionsPage` |
+| Billing | Payment Links | ✅ Real — `PaymentLinksPage` |
+| Collections | Customer Payments | ✅ Real — `CustomerPaymentsPage` |
+| Collections | A/R Aging | ✅ Real — `ArAgingPage` |
+| Collections | Collections Center | ✅ Real — `CollectionsCenterPage` |
+| Collections | Dunning | ✅ Real — `DunningManagementPage` |
+| Collections | Write-Offs | ✅ Real — `WriteOffsPage` |
+| Collections | Refunds | ✅ Real — `RefundsPage` |
+| Revenue | Credit Notes | ✅ Real — `CreditNotesPage` |
+| Revenue | Revenue Recognition | ✅ Real — `RevenueRecognitionPage` |
+| Revenue | Deferred Revenue | ✅ Real — `DeferredRevenuePage` |
+
+All 20 tabs wired to real components — 0 placeholders needed (all components existed in `src/components/sales/`).
+
+### Phase 2 Config Changes
+
+- `operations-navigation.ts`: All 20 sales paths updated from `/sales/...` → `/operations/sales/...`
+- `ownerNavConfig.ts`: Sales sidebar link updated to `/operations/sales/customers/customers`
+
+---
+
 ## Phase 1 — Core Infrastructure (Original Plan)
 
 **Goal:** Build the tab components and wire up navigation so every section is reachable, even if most tabs show a placeholder.
