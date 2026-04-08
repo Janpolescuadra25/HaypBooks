@@ -55,6 +55,9 @@
       ],
       "@/test-utils/*": [
         "src/test-utils/*"
+      ],
+      "@/config/*": [
+        "src/config/*"
       ]
     },
     "plugins": [
