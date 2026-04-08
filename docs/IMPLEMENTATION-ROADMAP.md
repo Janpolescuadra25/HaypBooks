@@ -5,7 +5,72 @@ Starting point: 68 tabs with exact routes, 11 via catch-all, 9 path mismatches, 
 
 ---
 
-## Phase 1 — Core Infrastructure ("The Scaffolding")
+## Phase 1 Progress — ✅ COMPLETE
+
+**Date completed:** April 9, 2026  
+**Commit:** `feat: implement tab-based navigation for Cash & Banking section (Phase 1)`
+
+### Components Built
+
+| Component | File | Status |
+|-----------|------|--------|
+| `SectionTabBar` | `components/layout/tabs/SectionTabBar.tsx` | ✅ Done |
+| `ContentTabBar` | `components/layout/tabs/ContentTabBar.tsx` | ✅ Done |
+| `SectionBreadcrumb` | `components/layout/tabs/SectionBreadcrumb.tsx` | ✅ Done |
+| `TabbedSectionLayout` | `components/layout/tabs/TabbedSectionLayout.tsx` | ✅ Done |
+| `TabPlaceholder` | `components/layout/tabs/TabPlaceholder.tsx` | ✅ Done |
+
+All components in `src/components/layout/tabs/`. All read from `src/config/operations-navigation.ts`.
+
+### Sidebar Restructured
+
+`ownerNavConfig.ts` OPERATIONS section: **117 nested items → 6 flat links**.  
+Old groups config preserved as comments for reference.
+
+### Cash & Banking — 17 Tab Pages Created
+
+URL base: `/operations/cash-banking/<subsection>/<tab>`  
+Layout: `app/(owner)/operations/cash-banking/layout.tsx` wraps `TabbedSectionLayout sectionKey="cash-banking"`
+
+| Subsection | Tab | Status |
+|------------|-----|--------|
+| Transactions | Bank Transactions | ✅ Real — `BankTransactionsPage` component |
+| Transactions | Deposits | ✅ Real — `DepositsCrudPage` component |
+| Reconciliation | Reconciliation Hub | ✅ Placeholder |
+| Reconciliation | Reconcile | ✅ Real — `BankReconciliationPage` component |
+| Reconciliation | History | ✅ Placeholder |
+| Reconciliation | Statement Archive | ✅ Placeholder |
+| Accounts | Bank Accounts | ✅ Real — `BankAccountsCrudPage` component |
+| Accounts | Credit Cards | ✅ Placeholder |
+| Accounts | Petty Cash | ✅ Placeholder |
+| Accounts | Clearing Accounts | ✅ Placeholder |
+| Management | Transaction Rules | ✅ Placeholder |
+| Management | Recurring Transactions | ✅ Placeholder |
+| Management | App Transactions | ✅ Placeholder |
+| Cash Management | Cash Position | ✅ Placeholder |
+| Cash Management | Cash Flow Projection | ✅ Placeholder |
+| Cash Management | Short-Term Forecast | ✅ Placeholder |
+
+### Testing Results
+
+- TypeScript (new files only): **0 errors**
+- Added `@/config/*` path alias to `tsconfig.json`
+- Added `.no-scrollbar` utility to `globals.css`
+- Mobile horizontal scroll: built into all tab bars via `overflow-x-auto no-scrollbar`
+- Keyboard navigation: ArrowLeft/ArrowRight/Home/End on both tab bars
+- Accessibility: `role="tablist"`, `role="tab"`, `aria-selected`, `aria-current="page"`
+- Framer Motion: `layoutId="section-tab-underline"` animated underline, AnimatePresence on ContentTabBar
+
+### Architecture Notes
+
+- URL pattern: `/operations/cash-banking/<subsectionId>/<tabId>` (new, clean)
+- Subsection/tab IDs parsed directly from URL segments — no need to pass as props
+- Layout.tsx at section level wraps ALL child routes automatically
+- Old `/banking-cash/...` routes still exist (backward compatible) — will redirect later
+
+---
+
+## Phase 1 — Core Infrastructure (Original Plan)
 
 **Goal:** Build the tab components and wire up navigation so every section is reachable, even if most tabs show a placeholder.
 

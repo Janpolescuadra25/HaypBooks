@@ -1428,3 +1428,7 @@ td.tabular-nums, th.tabular-nums { text-align: right; white-space: nowrap; }
 .rail-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #34d399; /* emerald-400 — light on hover */
 }
+
+/* ── Tab bars: hide scrollbars while keeping horizontal scroll ── */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
