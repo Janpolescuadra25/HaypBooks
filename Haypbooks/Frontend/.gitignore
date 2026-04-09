@@ -6,13 +6,41 @@ out
 .DS_Store
 *.log
 
+# Environment files
+.env
+.env.local
+.env*.local
+
 # Local e2e fixtures (sensitive test credentials)
 e2e/fixtures/tmp_acct.json
 
 # Playwright / test artifacts
 test-results/
+e2e-results/
+playwright-screenshots/
+artifacts/
 
 # Playwright report artifacts
 playwright-report/
 playwright-report/**
+
+# Build output logs
+*.out.txt
+build*.out.txt
+combined.txt
+inspect.out.txt
+headers.txt
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Temp / scratch files
+tmp/
+temp/
+temp-*.js
+temp_*.js
+fix.js
+fix_mock.js
+response.json
+audit_results.txt
 
