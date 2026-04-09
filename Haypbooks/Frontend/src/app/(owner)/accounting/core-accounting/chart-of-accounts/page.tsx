@@ -20,6 +20,7 @@ import { useToast } from '@/components/ToastProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense'
+  | 'Contra Asset' | 'Contra Revenue' | 'Contra Expense' | 'Temporary Equity'
 type NormalSide = 'Debit' | 'Credit'
 
 interface Account {
@@ -59,19 +60,27 @@ function flattenAccounts(accounts: Account[], result: Account[] = []): Account[]
 }
 
 const TYPE_COLORS: Record<AccountType, string> = {
-  Asset:     'bg-sky-100 text-sky-700',
-  Liability: 'bg-rose-100 text-rose-700',
-  Equity:    'bg-violet-100 text-violet-700',
-  Revenue:   'bg-emerald-100 text-emerald-700',
-  Expense:   'bg-amber-100 text-amber-700',
+  Asset:             'bg-sky-100 text-sky-700',
+  Liability:         'bg-rose-100 text-rose-700',
+  Equity:            'bg-violet-100 text-violet-700',
+  Revenue:           'bg-emerald-100 text-emerald-700',
+  Expense:           'bg-amber-100 text-amber-700',
+  'Contra Asset':    'bg-orange-100 text-orange-700',
+  'Contra Revenue':  'bg-orange-100 text-orange-700',
+  'Contra Expense':  'bg-orange-100 text-orange-700',
+  'Temporary Equity':'bg-pink-100 text-pink-700',
 }
 
 const TYPE_CODE_RANGES: Record<AccountType, { min: number; max: number }> = {
-  Asset: { min: 1000, max: 1999 },
-  Liability: { min: 2000, max: 2999 },
-  Equity: { min: 3000, max: 3999 },
-  Revenue: { min: 4000, max: 4999 },
-  Expense: { min: 5000, max: 5999 },
+  Asset:             { min: 1000, max: 1999 },
+  Liability:         { min: 2000, max: 2999 },
+  Equity:            { min: 3000, max: 3999 },
+  Revenue:           { min: 4000, max: 4999 },
+  Expense:           { min: 5000, max: 5999 },
+  'Contra Asset':    { min: 1000, max: 1999 },
+  'Contra Revenue':  { min: 4000, max: 4999 },
+  'Contra Expense':  { min: 5000, max: 5999 },
+  'Temporary Equity':{ min: 3000, max: 3999 },
 }
 
 function formatRange(type: AccountType) {
@@ -316,11 +325,15 @@ function AccountRow({
 
 // ─── Create / Edit Modal ───────────────────────────────────────────────────────
 const AUTO_NORMAL_SIDE: Record<AccountType, NormalSide> = {
-  Asset: 'Debit',
-  Expense: 'Debit',
-  Liability: 'Credit',
-  Equity: 'Credit',
-  Revenue: 'Credit',
+  Asset:             'Debit',
+  Expense:           'Debit',
+  Liability:         'Credit',
+  Equity:            'Credit',
+  Revenue:           'Credit',
+  'Contra Asset':    'Credit',
+  'Contra Revenue':  'Debit',
+  'Contra Expense':  'Credit',
+  'Temporary Equity':'Credit',
 }
 
 function AccountModal({
@@ -487,7 +500,8 @@ function AccountModal({
                 disabled={!!parentType || hasTransactions}
                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
               >
-                {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] as AccountType[]).map(t => (
+                {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense',
+                   'Contra Asset', 'Contra Revenue', 'Contra Expense', 'Temporary Equity'] as AccountType[]).map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
@@ -697,7 +711,10 @@ export default function ChartOfAccountsPage() {
   const [search, setSearch] = useState('')
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [statusFilters, setStatusFilters] = useState({ active: true, inactive: false })
-  const [typeFilters, setTypeFilters] = useState<Record<AccountType, boolean>>({ Asset: true, Liability: true, Equity: true, Revenue: true, Expense: true })
+  const [typeFilters, setTypeFilters] = useState<Record<AccountType, boolean>>({
+    Asset: true, Liability: true, Equity: true, Revenue: true, Expense: true,
+    'Contra Asset': true, 'Contra Revenue': true, 'Contra Expense': true, 'Temporary Equity': true,
+  })
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [modalOpen, setModalOpen] = useState(false)
   const [docOpen, setDocOpen] = useState(false)
@@ -707,6 +724,7 @@ export default function ChartOfAccountsPage() {
   const [importModal, setImportModal] = useState(false)
   const [showInactiveBanner, setShowInactiveBanner] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [loadError, setLoadError] = useState<string | null>(null)
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleSelectAll = () =>
@@ -749,6 +767,7 @@ export default function ChartOfAccountsPage() {
   const loadAccounts = useCallback(async (bustCache = false) => {
     if (!companyId) return
     setLoading(true)
+    setLoadError(null)
     try {
       const url = `/companies/${companyId}/accounting/accounts?includeInactive=true${bustCache ? `&_t=${Date.now()}` : ''}`
       const { data } = await apiClient.get(url)
@@ -758,8 +777,8 @@ export default function ChartOfAccountsPage() {
       setTreeAccounts(tree)
       // Auto-expand top-level accounts
       setExpanded(new Set(tree.map(a => a.id)))
-    } catch {
-      // silently handle
+    } catch (e: any) {
+      setLoadError(e?.response?.data?.message ?? 'Failed to load accounts. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -783,56 +802,48 @@ export default function ChartOfAccountsPage() {
   }
 
   const displayAccounts = useMemo(() => {
-    return treeAccounts.filter(a => typeFilters[a.type])
+    return treeAccounts.filter(a => typeFilters[a.type as AccountType])
   }, [typeFilters, treeAccounts])
 
-  const flatDisplayAccounts = useMemo(() => {
-    const flattened = flattenAccounts(displayAccounts)
-    const sorted = [...flattened].sort((a, b) => {
+  // Sort root-level accounts only; children stay attached (hierarchy preserved)
+  const sortedRootAccounts = useMemo(() => {
+    return [...displayAccounts].sort((a, b) => {
       let aValue: string | number = ''
       let bValue: string | number = ''
       if (sortConfig.key === 'code') {
-        aValue = a.code
-        bValue = b.code
+        aValue = a.code; bValue = b.code
       } else if (sortConfig.key === 'name') {
-        aValue = a.name
-        bValue = b.name
+        aValue = a.name; bValue = b.name
       } else {
-        aValue = a.balance ?? 0
-        bValue = b.balance ?? 0
+        aValue = a.balance ?? 0; bValue = b.balance ?? 0
       }
-      let cmp = 0
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        cmp = aValue - bValue
-      } else {
-        cmp = String(aValue).localeCompare(String(bValue))
-      }
+      const cmp = typeof aValue === 'number' && typeof bValue === 'number'
+        ? aValue - bValue
+        : String(aValue).localeCompare(String(bValue))
       return sortConfig.direction === 'asc' ? cmp : -cmp
     })
-    return sorted
   }, [displayAccounts, sortConfig])
 
-  const totalPages = Math.max(1, Math.ceil(flatDisplayAccounts.length / pageSize))
+  // Flat count for footer display (total including children)
+  const flatDisplayCount = useMemo(() => flattenAccounts(displayAccounts).length, [displayAccounts])
+
+  const totalPages = Math.max(1, Math.ceil(sortedRootAccounts.length / pageSize))
 
   useEffect(() => {
     setPage(1)
-  }, [typeFilters, flatDisplayAccounts.length, sortConfig])
-
-  const paginatedAccounts = useMemo(() => {
-    const start = (page - 1) * pageSize
-    const end = start + pageSize
-    return flatDisplayAccounts.slice(start, end).map(a => ({ ...a, children: [] }))
-  }, [flatDisplayAccounts, page])
+  }, [typeFilters, sortedRootAccounts.length, sortConfig])
 
   const groupedPaginatedAccounts = useMemo(() => {
-    const groups: Record<AccountType, Account[]> = {
-      Asset: [], Liability: [], Equity: [], Revenue: [], Expense: [],
-    }
-    for (const acc of paginatedAccounts) {
-      if (groups[acc.type]) groups[acc.type].push(acc)
+    const start = (page - 1) * pageSize
+    const paginatedRoots = sortedRootAccounts.slice(start, start + pageSize)
+    const groups: Record<string, Account[]> = {}
+    for (const acc of paginatedRoots) {
+      const key = acc.type ?? 'Other'
+      if (!groups[key]) groups[key] = []
+      groups[key].push(acc)  // children intact — depth renders correctly
     }
     return groups
-  }, [paginatedAccounts])
+  }, [sortedRootAccounts, page])
 
   const toggle = (id: string) =>
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -984,7 +995,8 @@ export default function ChartOfAccountsPage() {
                     ))}
 
                     <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-3 mb-2">Types</div>
-                    {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] as AccountType[]).map(type => (
+                    {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense',
+                       'Contra Asset', 'Contra Revenue', 'Contra Expense', 'Temporary Equity'] as AccountType[]).map(type => (
                       <label key={type} className="flex items-center justify-between gap-2 px-2 py-1 rounded hover:bg-slate-50 text-sm">
                         <span>{type}</span>
                         <input
@@ -1100,6 +1112,20 @@ export default function ChartOfAccountsPage() {
         )}
       </AnimatePresence>
 
+      {/* ── Load Error Banner ── */}
+      {loadError && (
+        <div className="mx-6 mt-4 flex items-center gap-3 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
+          <AlertTriangle size={15} className="shrink-0 text-rose-500" />
+          <span className="flex-1">{loadError}</span>
+          <button
+            onClick={() => { setLoadError(null); loadAccounts(true) }}
+            className="flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+          >
+            <RefreshCw size={11} /> Retry
+          </button>
+        </div>
+      )}
+
       {/* ── Table ── */}
       <div className="flex-1 px-6 py-5">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -1181,7 +1207,7 @@ export default function ChartOfAccountsPage() {
           <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <p className="text-xs text-slate-400">{flatAccs.length} accounts total · {activeAccounts} active</p>
             <div className="flex items-center gap-3">
-              <p className="text-xs text-slate-400">Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, flatDisplayAccounts.length)} of {flatDisplayAccounts.length} accounts</p>
+              <p className="text-xs text-slate-400">Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, sortedRootAccounts.length)} of {sortedRootAccounts.length} top-level accounts ({flatDisplayCount} total with sub-accounts)</p>
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 text-xs rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-50">Previous</button>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 text-xs rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-50">Next</button>
             </div>

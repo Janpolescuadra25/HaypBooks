@@ -41,7 +41,7 @@ test.describe('Chart of Accounts Page E2E', () => {
       await page.fill('input[type="email"]', email);
       await page.fill('input[type="password"]', password);
       await page.locator('button:has-text("Sign in"), button:has-text("Sign In")').first().click();
-      await page.waitForURL((url) => !url.includes('/login'), { timeout: 15000 }).catch(() => {});
+      await page.waitForURL((url) => !url.toString().includes('/login'), { timeout: 15000 }).catch(() => {});
       await waitMs(500);
 
       await page.context().addCookies([

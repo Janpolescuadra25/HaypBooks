@@ -96,6 +96,26 @@ export class AccountingController {
         return this.svc.getAccountLedger(req.user.userId, companyId, accountId, query)
     }
 
+    @Put('accounts/:accountId')
+    async updateAccount(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('accountId') accountId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updateAccount(req.user.userId, companyId, accountId, body)
+    }
+
+    @Delete('accounts/:accountId')
+    @HttpCode(HttpStatus.OK)
+    async deactivateAccount(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('accountId') accountId: string,
+    ) {
+        return this.svc.deactivateAccount(req.user.userId, companyId, accountId)
+    }
+
     // ─── Journal Entries ──────────────────────────────────────────────────────
 
     @Get('journal-entries/audit-log')
