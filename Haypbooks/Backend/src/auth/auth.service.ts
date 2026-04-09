@@ -1,3 +1,6 @@
+// DEPRECATED: This is a legacy mock service used only in unit tests.
+// Production auth uses PrismaAuthService (wired via AuthModule).
+// Do NOT wire AuthService into any production module or controller.
 import { Injectable, UnauthorizedException, ConflictException, Inject, BadRequestException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from '../utils/bcrypt-fallback'
@@ -23,7 +26,7 @@ export class AuthService {
 
     // In production: use bcrypt.compare(password, user.password)
     // For mock development, we'll do simple comparison
-    const isPasswordValid = password === 'password' || (await bcrypt.compare(password, user.password))
+    const isPasswordValid = await bcrypt.compare(password, user.password)
     
     if (!isPasswordValid) {
       return null

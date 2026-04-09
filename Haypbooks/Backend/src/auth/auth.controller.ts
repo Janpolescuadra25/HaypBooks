@@ -148,7 +148,7 @@ export class AuthController {
       try {
         // Always start email OTP and normalize returned shape (Prisma returns `otpCode`)
         const emailOtp = await this.authService.startOtp(email, undefined, 10, 'VERIFY_EMAIL')
-        if (process.env.NODE_ENV !== 'production') devOtpEmail = (emailOtp as any).otpCode || (emailOtp as any).otp
+        if (process.env.DEV_SHOW_OTP === 'true') devOtpEmail = (emailOtp as any).otpCode || (emailOtp as any).otp
         try {
           const html = this.mailService.buildVerifyEmailOtpHtml(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
           const text = this.mailService.buildVerifyEmailOtpText(name || email, (emailOtp as any).otpCode || (emailOtp as any).otp)
@@ -160,7 +160,7 @@ export class AuthController {
         // If a phone number exists, also start phone OTP (keep phone OTP creation for dev/test compatibility)
         if (phone) {
           const phoneOtp = await this.authService.startOtpByPhone(phone, undefined, 10, 'MFA')
-          if (process.env.NODE_ENV !== 'production') devOtpPhone = (phoneOtp as any).otpCode || (phoneOtp as any).otp
+          if (process.env.DEV_SHOW_OTP === 'true') devOtpPhone = (phoneOtp as any).otpCode || (phoneOtp as any).otp
         }
       } catch (e) {
         // ignore
@@ -178,6 +178,7 @@ export class AuthController {
     }
   }
   @Post('complete-signup')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   async completeSignup(@Body() body: { signupToken: string; code: string; method?: 'email' | 'phone' }, @Res({ passthrough: true }) res: Response) {
     const { signupToken, code, method } = body
@@ -368,8 +369,8 @@ export class AuthController {
         this.logger.warn('Failed to send verification email: ' + (e?.message || e))
       }
 
-      if (process.env.NODE_ENV !== 'production') {
-        // In dev, return OTP in response for testing but do NOT set a cookie or expose it in pages
+      if (process.env.DEV_SHOW_OTP === 'true') {
+        // Only return OTP in response when explicitly opted in (never in production/staging)
         return { success: true, otp: created.otpCode }
       }
     } catch (e) {
