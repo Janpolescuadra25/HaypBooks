@@ -379,13 +379,11 @@ export default function InvoiceCreatePage() {
     ? subtotal * (Number(discountValue) / 100)
     : Number(discountValue)
   const taxable = subtotal - discountAmt
-  const taxAmt = template.defaults.taxTreatment !== 'none'
-    ? items.reduce((s, it) => s + (it.quantity * it.unitPrice * it.taxRate / 100), 0) * (1 - Number(discountValue) / (discountType === 'pct' ? 100 : Math.max(subtotal, 1)) * (discountType === 'pct' ? 1 : 0))
-    : 0
   const taxTotal = template.defaults.taxTreatment !== 'none'
-    ? (subtotal - (discountType === 'pct' ? subtotal * Number(discountValue) / 100 : Number(discountValue))) *
-      (items.reduce((s, it) => s + it.taxRate * it.unitPrice * it.quantity, 0) /
-       Math.max(subtotal, 0.001) / 100)
+    ? items.reduce((sum, it) => {
+        const lineTotal = it.quantity * it.unitPrice
+        return sum + (lineTotal * (it.taxRate || 0) / 100)
+      }, 0)
     : 0
   const total = template.defaults.taxTreatment === 'inclusive'
     ? subtotal - discountAmt
@@ -421,6 +419,8 @@ export default function InvoiceCreatePage() {
         memo,
         internalNotes,
         poNumber,
+        discountType,
+        discountValue: Number(discountValue),
         billAddress: { contactName: billContact, company: billCompany, ...billAddress },
         shipAddress: shipSameAsBill ? undefined : shipAddress,
         items: validItems.map(it => ({

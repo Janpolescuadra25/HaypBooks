@@ -25,7 +25,7 @@ export interface Invoice {
   customerName?: string
   date: string
   dueDate: string
-  status: 'DRAFT' | 'SENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'VOIDED'
+  status: 'DRAFT' | 'SENT' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'VOID'
   total: number
   amountDue?: number
   items?: InvoiceItem[]
@@ -43,19 +43,19 @@ export interface InvoiceItem {
 const statusStyles: Record<string, string> = {
   DRAFT: 'bg-gray-50 text-gray-700 border-gray-200',
   SENT: 'bg-blue-50 text-blue-700 border-blue-200',
-  PARTIALLY_PAID: 'bg-amber-50 text-amber-700 border-amber-200',
+  PARTIAL: 'bg-amber-50 text-amber-700 border-amber-200',
   PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   OVERDUE: 'bg-red-50 text-red-700 border-red-200',
-  VOIDED: 'bg-gray-50 text-gray-500 border-gray-200',
+  VOID: 'bg-gray-50 text-gray-500 border-gray-200',
 }
 
 const statusIcons: Record<string, React.ReactNode> = {
   DRAFT: React.createElement(Clock, { size: 11 }),
   SENT: React.createElement(Send, { size: 11 }),
-  PARTIALLY_PAID: React.createElement(DollarSign, { size: 11 }),
+  PARTIAL: React.createElement(DollarSign, { size: 11 }),
   PAID: React.createElement(CheckCircle2, { size: 11 }),
   OVERDUE: React.createElement(AlertTriangle, { size: 11 }),
-  VOIDED: React.createElement(Ban, { size: 11 }),
+  VOID: React.createElement(Ban, { size: 11 }),
 }
 
 export default function InvoicesPage() {
@@ -113,7 +113,7 @@ export default function InvoicesPage() {
     totalAmount: invoices.reduce((s, i) => s + (i.total || 0), 0),
     overdueAmount: invoices.filter(i => i.status === 'OVERDUE').reduce((s, i) => s + (i.amountDue || i.total || 0), 0),
     outstandingAmount: invoices
-      .filter(i => ['SENT', 'PARTIALLY_PAID', 'OVERDUE'].includes(i.status))
+      .filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status))
       .reduce((s, i) => s + (i.amountDue || i.total || 0), 0),
     paidPct: invoices.length > 0 ? Math.round((invoices.filter(i => i.status === 'PAID').length / invoices.length) * 100) : 0,
   }), [invoices])
@@ -204,7 +204,7 @@ export default function InvoicesPage() {
             className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
-          {['ALL', 'DRAFT', 'SENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'VOIDED'].map(s => (
+          {['ALL', 'DRAFT', 'SENT', 'PARTIAL', 'PAID', 'OVERDUE', 'VOID'].map(s => (
             <button key={s} onClick={() => setStatusFilter(s)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
               {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
@@ -384,7 +384,7 @@ export default function InvoicesPage() {
               {inv.status === 'DRAFT' && (
                 <MenuBtn icon={<Send size={13} />} label="Send Invoice" onClick={() => { setEmailPreviewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
               )}
-              {(inv.status === 'SENT' || inv.status === 'PARTIALLY_PAID' || inv.status === 'OVERDUE') && (
+              {(inv.status === 'SENT' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE') && (
                 <MenuBtn icon={<CreditCard size={13} />} label="Receive Payment" onClick={() => { setViewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
               )}
               <div className="border-t border-gray-100 mt-1 pt-1">

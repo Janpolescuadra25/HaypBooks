@@ -211,7 +211,7 @@ export class ArService {
         return result
     }
 
-    async sendInvoice(userId: string, companyId: string, invoiceId: string) {
+    async sendInvoice(userId: string, companyId: string, invoiceId: string, opts?: { subject?: string; body?: string; scheduledAt?: string }) {
         await this.assertAccess(userId, companyId)
         const result = await this.repo.sendInvoice(companyId, invoiceId)
         if (!result) throw new NotFoundException('Invoice not found')
