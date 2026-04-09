@@ -12,7 +12,11 @@ async function main() {
     console.log('🌱 Seeding Super Admin Account...')
 
     // Create the default super admin password hash
-    const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'SuperSecretPassword123!'
+    const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD
+    if (!defaultPassword) {
+        console.error('FATAL: ADMIN_DEFAULT_PASSWORD env var is not set. Refusing to seed admin.')
+        process.exit(1)
+    }
     const passwordHash = await bcrypt.hash(defaultPassword, 10)
 
     // Desired founder email (can be overridden via env var)
