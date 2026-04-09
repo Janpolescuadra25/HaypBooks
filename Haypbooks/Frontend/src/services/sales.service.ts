@@ -49,5 +49,5 @@ export const salesService = {
 export const arService = {
   // ─── Accounts Receivable ──────────────────────────────────────────────
   listArAging: (companyId: string, query?: any) =>
-    apiClient.get(`/companies/${companyId}/ar/aging`, { params: query }),
+    apiClient.get(`/companies/${companyId}/ar/reports/aging`, { params: query }),
 }
