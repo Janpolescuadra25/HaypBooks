@@ -440,7 +440,6 @@ export class SubLedgerService {
     try {
       const refund = await this.prisma.customerRefund.findUnique({
         where: { id: refundId },
-        include: { invoice: true },
       })
       if (!refund) return
       if ((refund as any).journalEntryId) return
@@ -486,7 +485,6 @@ export class SubLedgerService {
     try {
       const refund = await this.prisma.vendorRefund.findUnique({
         where: { id: refundId },
-        include: { bill: true },
       })
       if (!refund) return
       if ((refund as any).journalEntryId) return
