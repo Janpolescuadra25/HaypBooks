@@ -10,6 +10,25 @@ jest-output.json
 tsc-errors.txt
 validate_errors.txt
 
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Build / output artifacts
+*.out.txt
+*.tsbuildinfo
+
+# Temp scratch directories
+tmp/
+temp/
+
+# Playwright / e2e artifacts
+playwright-report/
+playwright-screenshots/
+e2e-results/
+artifacts/
+
 # Prisma generated client
 Haypbooks/Backend/node_modules/.prisma/
 Haypbooks/Backend/node_modules/.prisma/client/

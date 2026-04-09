@@ -1,1 +1,0 @@
-const fs = require('fs'); const txt = fs.readFileSync('c:/Users/HomePC/Desktop/Haypbooksv9/Haypbooks/Frontend/src/__tests__/practice-hub.test.tsx', 'utf8'); fs.writeFileSync('c:/Users/HomePC/Desktop/Haypbooksv9/Haypbooks/Frontend/src/__tests__/practice-hub.test.tsx', txt.replace(/useRouter:\\s+jest\\.fn\\(\\(\\)\\s*=>/g, 'useRouter: () =>'));
