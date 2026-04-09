@@ -25,6 +25,8 @@ import {
   Brain,
   Flag,
   Settings,
+  Briefcase,
+  FileCheck,
 } from 'lucide-react'
 
 
@@ -68,6 +70,7 @@ export interface NavSection {
 export const navigationData: NavSection[] = [
   {
     title: 'HOME',
+    label: 'HOME',
     icon: Home,
     items: [
       { title: 'Dashboard', path: '/home/dashboard' },
@@ -80,45 +83,46 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'OPERATIONS',
-    icon: BarChart3,
+    label: 'OPS',
+    icon: Briefcase,
     // ── Nested 2-level structure: sections → subsections ──────────────────────
-    items: [
+    groups: [
       {
         title: 'Cash & Banking',
         items: [
-          { title: 'Transactions',    path: '/operations/cash-banking/transactions/bank-transactions' },
-          { title: 'Reconciliation',  path: '/operations/cash-banking/reconciliation/reconciliation-hub' },
-          { title: 'Accounts',        path: '/operations/cash-banking/accounts/bank-accounts' },
-          { title: 'Management',      path: '/operations/cash-banking/management/transaction-rules' },
-          { title: 'Cash Management', path: '/operations/cash-banking/cash-management/cash-position' },
+          { title: 'Bank Transactions', path: '/operations/cash-banking/transactions/bank-transactions' },
+          { title: 'Reconciliation',    path: '/operations/cash-banking/reconciliation/reconciliation-hub' },
+          { title: 'Accounts',          path: '/operations/cash-banking/accounts/bank-accounts' },
+          { title: 'Management',        path: '/operations/cash-banking/management/transaction-rules' },
+          { title: 'Cash Management',   path: '/operations/cash-banking/cash-management/cash-position' },
         ],
       },
       {
         title: 'Sales (Order-to-Cash)',
         items: [
-          { title: 'Customers',   path: '/operations/sales/customers/customers' },
-          { title: 'Sales',       path: '/operations/sales/sales/products-services' },
-          { title: 'Billing',     path: '/operations/sales/billing/invoices' },
-          { title: 'Collections', path: '/operations/sales/collections/customer-payments' },
-          { title: 'Revenue',     path: '/operations/sales/revenue/credit-notes' },
+          { title: 'Customers',           path: '/operations/sales/customers/customers' },
+          { title: 'Products & Services', path: '/operations/sales/sales/products-services' },
+          { title: 'Billing',             path: '/operations/sales/billing/invoices' },
+          { title: 'Collections',         path: '/operations/sales/collections/customer-payments' },
+          { title: 'Credit Notes',        path: '/operations/sales/revenue/credit-notes' },
         ],
       },
       {
         title: 'Expenses (Procure-to-Pay)',
         items: [
-          { title: 'Purchasing',      path: '/operations/expenses/purchasing/vendors' },
-          { title: 'Bills & Payments', path: '/operations/expenses/bills-payments/bills' },
-          { title: 'Expense Capture', path: '/operations/expenses/expense-capture/expenses' },
+          { title: 'Purchasing',        path: '/operations/expenses/purchasing/vendors' },
+          { title: 'Bills & Payments',  path: '/operations/expenses/bills-payments/bills' },
+          { title: 'Expense Capture',   path: '/operations/expenses/expense-capture/expenses' },
         ],
       },
       {
         title: 'Inventory',
         items: [
-          { title: 'Items',      path: '/operations/inventory/items/inventory-items' },
-          { title: 'Operations', path: '/operations/inventory/operations/item-receipts' },
+          { title: 'Items',       path: '/operations/inventory/items/inventory-items' },
+          { title: 'Operations',  path: '/operations/inventory/operations/item-receipts' },
           { title: 'Warehousing', path: '/operations/inventory/warehousing/warehouses' },
-          { title: 'Control',    path: '/operations/inventory/control/cycle-counts' },
-          { title: 'Valuation',  path: '/operations/inventory/valuation/inventory-valuation' },
+          { title: 'Control',     path: '/operations/inventory/control/cycle-counts' },
+          { title: 'Valuation',   path: '/operations/inventory/valuation/inventory-valuation' },
         ],
       },
       {
@@ -141,6 +145,7 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'ACCOUNTING',
+    label: 'ACCT',
     icon: ShieldCheck,
     groups: [
       {
@@ -250,15 +255,17 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'TAXES',
+    label: 'TAX',
     icon: Receipt,
     groups: [
       {
         title: 'Tax Center',
         items: [
-          { title: 'Tax Dashboard', path: '/taxes/tax-center/tax-dashboard' },
-          { title: 'Tax Liabilities', path: '/taxes/tax-center/tax-liabilities' },
+          { title: 'Tax Dashboard',    path: '/taxes/tax-center/tax-dashboard' },
+          { title: 'Tax Liabilities',  path: '/taxes/tax-center/tax-liabilities' },
           { title: 'Filing & Payments', path: '/taxes/tax-center/filing-payments' },
-          { title: 'Tax Calendar', path: '/taxes/tax-center/tax-calendar' },
+          { title: 'Tax Calendar',     path: '/taxes/tax-center/tax-calendar' },
+          { title: 'Filing Calendar',  path: '/taxes/tax-center/filing-calendar' },
         ],
       },
       {
@@ -284,6 +291,7 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'REPORTING',
+    label: 'REPORTS',
     icon: BarChart3,
     groups: [
       {
@@ -299,7 +307,7 @@ export const navigationData: NavSection[] = [
         title: 'Accountant Reports',
         items: [
           { title: 'Trial Balance', path: '/reporting/reports-center/accountant-reports/trial-balance' },
-          { title: 'General Ledger', path: '/reporting/reports-center/accountant-reports/general-ledger' },
+          { title: 'General Ledger Report', path: '/reporting/reports-center/accountant-reports/general-ledger' },
           { title: 'Journal Report', path: '/reporting/reports-center/accountant-reports/journal-report' },
           { title: 'Audit Trail', path: '/reporting/reports-center/accountant-reports/audit-trail' },
         ],
@@ -318,7 +326,7 @@ export const navigationData: NavSection[] = [
       {
         title: 'Analytics',
         items: [
-          { title: 'Executive Dashboard', path: '/reporting/analytics/analytics-dashboards' },
+          { title: 'Executive Dashboard', path: '/reporting/analytics/executive-dashboard' },
           { title: 'KPI Dashboard', path: '/reporting/analytics/analytics-dashboards' },
           { title: 'Revenue Trends', path: '/reporting/analytics/revenue-trends' },
           { title: 'Cash Position', path: '/reporting/analytics/cash-position' },
@@ -329,7 +337,7 @@ export const navigationData: NavSection[] = [
         title: 'Custom Reports',
         items: [
           { title: 'Report Builder', path: '/reporting/custom-reports/report-builder' },
-          { title: 'Saved Reports', path: '/reporting/custom-reports/scheduled-reports' },
+          { title: 'Saved Reports', path: '/reporting/custom-reports/saved-reports' },
           { title: 'Report Templates', path: '/reporting/custom-reports/report-templates' },
           { title: 'Scheduled Reports', path: '/reporting/custom-reports/scheduled-reports' },
         ],
@@ -348,7 +356,6 @@ export const navigationData: NavSection[] = [
           { title: 'My Approvals', path: '/tasks-approvals/my-work/my-approvals' },
           { title: 'My Exceptions', path: '/tasks-approvals/my-work/my-exceptions' },
           { title: 'Overdue Items', path: '/tasks-approvals/my-work/overdue-items' },
-          { title: 'Notifications', path: '/tasks-approvals/my-work/notifications' },
           { title: 'Calendar', path: '/tasks-approvals/my-work/calendar' },
         ],
       },
@@ -366,7 +373,8 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'COMPLIANCE',
-    icon: ShieldCheck,
+    label: 'COMPLIANCE',
+    icon: FileCheck,
     groups: [
       {
         title: 'Controls',
@@ -381,13 +389,14 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Issue Tracking', path: '/compliance/monitoring/issue-tracking' },
           { title: 'Fraud Detection', path: '/compliance/monitoring/fraud-detection' },
-          { title: 'Audit Log', path: '/compliance/monitoring/audit-log-analysis' },
+          { title: 'Compliance Audit Log', path: '/compliance/monitoring/audit-log-analysis' },
         ],
       },
     ],
   },
   {
     title: 'COLLABORATION',
+    label: 'TEAM',
     icon: UserCog,
     groups: [
       {
@@ -411,6 +420,7 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'AUTOMATION',
+    label: 'AUTO',
     icon: Zap,
     groups: [
       {
@@ -442,6 +452,7 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'APPS',
+    label: 'APPS',
     icon: FolderKanban,
     groups: [
       {
@@ -464,6 +475,7 @@ export const navigationData: NavSection[] = [
   },
   {
     title: 'SETTINGS',
+    label: 'SETTINGS',
     icon: Settings,
     groups: [
       {
@@ -480,7 +492,6 @@ export const navigationData: NavSection[] = [
           { title: 'Legal Entities', path: '/organization/entity-structure/legal-entities' },
           { title: 'Intercompany Transactions', path: '/organization/entity-structure/intercompany' },
           { title: 'Consolidation', path: '/organization/entity-structure/consolidation' },
-          { title: 'Filing Calendar', path: '/organization/governance/filing-calendar' },
           { title: 'Locations & Divisions', path: '/organization/operational-structure/locations-divisions' },
         ],
       },
@@ -503,7 +514,7 @@ export const navigationData: NavSection[] = [
       {
         title: 'System',
         items: [
-          { title: 'Audit Log', path: '/settings/data-privacy/audit-log' },
+          { title: 'System Audit Log', path: '/settings/data-privacy/audit-log' },
           { title: 'Data Backup', path: '/settings/data-privacy/data-backup' },
           { title: 'Import Data', path: '/apps-integrations/imports/import-data' },
           { title: 'Export Data', path: '/apps-integrations/data-tools/export-data' },
