@@ -15,6 +15,13 @@ temp/
 temp-*.js
 temp_*.js
 
+# Destructive one-off DB scripts (NEVER commit these to prod branches)
+nuke_schema.js
+drop_rls.js
+
 # Test / build artifacts
 test-results/
 artifacts/
+out_jest.txt
+jest-results.json
+migrate-error.txt
