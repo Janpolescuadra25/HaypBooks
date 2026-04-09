@@ -33,6 +33,12 @@ process.on('SIGINT', () => {
 })
 
 async function bootstrap() {
+  // Fail fast if required secrets are missing — prevents starting with an insecure config
+  if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.')
+    process.exit(1)
+  }
+
   const app = await NestFactory.create(AppModule)
   const isProduction = process.env.NODE_ENV === 'production'
 

@@ -20,7 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         return token
       },
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+      secretOrKey: process.env.JWT_SECRET,
     })
   }
 
