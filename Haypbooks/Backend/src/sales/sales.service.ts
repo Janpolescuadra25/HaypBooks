@@ -32,4 +32,28 @@ export class SalesService {
   async voidPayment(userId: string, companyId: string, paymentId: string) {
     return this.arService.voidPayment(userId, companyId, paymentId)
   }
+
+  async getCustomer(userId: string, companyId: string, contactId: string) {
+    return this.arService.getCustomer(userId, companyId, contactId)
+  }
+
+  async updateCustomer(userId: string, companyId: string, contactId: string, data: any) {
+    return this.arService.updateCustomer(userId, companyId, contactId, data)
+  }
+
+  async deleteCustomer(userId: string, companyId: string, contactId: string) {
+    return this.arService.deleteCustomer(userId, companyId, contactId)
+  }
+
+  async getInvoice(userId: string, companyId: string, invoiceId: string) {
+    return this.arService.getInvoice(userId, companyId, invoiceId)
+  }
+
+  async updateInvoice(userId: string, companyId: string, invoiceId: string, data: any) {
+    return this.arService.updateInvoice(userId, companyId, invoiceId, data)
+  }
+
+  async getPayment(userId: string, companyId: string, paymentId: string) {
+    return this.arService.getPayment(userId, companyId, paymentId)
+  }
 }

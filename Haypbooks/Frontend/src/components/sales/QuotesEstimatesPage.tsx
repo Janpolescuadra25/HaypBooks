@@ -27,7 +27,7 @@ export default function QuotesEstimatesPage() {
     setLoading(true)
     setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/invoices?status=estimate`)
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/quotes`)
       setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to load data')
@@ -35,6 +35,16 @@ export default function QuotesEstimatesPage() {
       setLoading(false)
     }
   }, [companyId])
+
+  const convertToInvoice = useCallback(async (quoteId: string) => {
+    if (!companyId) return
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/quotes/${quoteId}/convert`)
+      fetchData()
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to convert quote to invoice')
+    }
+  }, [companyId, fetchData])
 
   useEffect(() => { fetchData() }, [fetchData])
   const [search, setSearch] = useState('')
@@ -92,26 +102,27 @@ export default function QuotesEstimatesPage() {
                 <th className="text-left px-4 py-3">Expiry Date</th>
                 <th className="text-left px-4 py-3">Amount</th>
                 <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                     <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
                     Loading...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center">
+                  <td colSpan={7} className="px-4 py-10 text-center">
                     <p className="text-rose-500 font-medium">{error}</p>
                     <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No quotes or estimates found.</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No quotes or estimates found.</td>
                 </tr>
               ) : (
                 filtered.map((row) => (
@@ -127,6 +138,16 @@ export default function QuotesEstimatesPage() {
                       row.status === 'Expired' ? 'text-rose-700' :
                       'text-amber-700'
                     }`}>{row.status}</td>
+                    <td className="px-4 py-3">
+                      {row.status !== 'CONVERTED' && row.status !== 'EXPIRED' && row.status !== 'REJECTED' && (
+                        <button
+                          onClick={() => convertToInvoice(row.id)}
+                          className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
+                        >
+                          Convert to Invoice
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}

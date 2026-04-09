@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Req, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { SalesService } from './sales.service'
@@ -18,6 +18,21 @@ export class SalesController {
     return this.salesService.createCustomer(req.user.userId, companyId, body)
   }
 
+  @Get('customers/:contactId')
+  async getCustomer(@Req() req: any, @Param('companyId') companyId: string, @Param('contactId') contactId: string) {
+    return this.salesService.getCustomer(req.user.userId, companyId, contactId)
+  }
+
+  @Put('customers/:contactId')
+  async updateCustomer(@Req() req: any, @Param('companyId') companyId: string, @Param('contactId') contactId: string, @Body() body: any) {
+    return this.salesService.updateCustomer(req.user.userId, companyId, contactId, body)
+  }
+
+  @Delete('customers/:contactId')
+  async deleteCustomer(@Req() req: any, @Param('companyId') companyId: string, @Param('contactId') contactId: string) {
+    return this.salesService.deleteCustomer(req.user.userId, companyId, contactId)
+  }
+
   // ─── Invoices (Sales facade) ────────────────────────────────────────────
 
   @Get('invoices')
@@ -30,6 +45,16 @@ export class SalesController {
     return this.salesService.createInvoice(req.user.userId, companyId, body)
   }
 
+  @Get('invoices/:invoiceId')
+  async getInvoice(@Req() req: any, @Param('companyId') companyId: string, @Param('invoiceId') invoiceId: string) {
+    return this.salesService.getInvoice(req.user.userId, companyId, invoiceId)
+  }
+
+  @Put('invoices/:invoiceId')
+  async updateInvoice(@Req() req: any, @Param('companyId') companyId: string, @Param('invoiceId') invoiceId: string, @Body() body: any) {
+    return this.salesService.updateInvoice(req.user.userId, companyId, invoiceId, body)
+  }
+
   // ─── Payments (Sales facade) ─────────────────────────────────────────────
 
   @Get('payments')
@@ -40,6 +65,11 @@ export class SalesController {
   @Post('payments')
   async recordPayment(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
     return this.salesService.recordPayment(req.user.userId, companyId, body)
+  }
+
+  @Get('payments/:paymentId')
+  async getPayment(@Req() req: any, @Param('companyId') companyId: string, @Param('paymentId') paymentId: string) {
+    return this.salesService.getPayment(req.user.userId, companyId, paymentId)
   }
 
   @Post('payments/:paymentId/void')
