@@ -136,22 +136,28 @@ export default function JournalEntriesPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [page, setPage] = useState(1)
+  const pageSize = 25
 
   const fetchEntries = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/accounting/journal-entries`, {
-        params: { sourceType: 'MANUAL_JOURNAL' },
-      })
+      const params: Record<string, string> = { sourceType: 'MANUAL_JOURNAL' }
+      if (dateFrom) params.from = dateFrom
+      if (dateTo) params.to = dateTo
+      const { data } = await apiClient.get(`/companies/${companyId}/accounting/journal-entries`, { params })
       setEntries(Array.isArray(data) ? data : data.journalEntries ?? data.entries ?? [])
       setError('')
+      setPage(1)
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to load journal entries')
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, dateFrom, dateTo])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
 
@@ -187,6 +193,15 @@ export default function JournalEntriesPage() {
     }
     return list
   }, [entries, search, statusFilter])
+
+  const paginatedFiltered = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, page, pageSize])
+  const totalPages = Math.ceil(filtered.length / pageSize)
+
+  // Reset to page 1 when search or status filter changes
+  useEffect(() => { setPage(1) }, [search, statusFilter])
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const totalEntries = entries.length
@@ -349,6 +364,32 @@ export default function JournalEntriesPage() {
         </div>
       </div>
 
+      {/* Date range filter */}
+      <div className="px-6 py-2 bg-white mx-6 border-x border-b border-gray-200 flex items-center gap-3 flex-wrap">
+        <span className="text-xs font-medium text-gray-500">Date:</span>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={e => setDateFrom(e.target.value)}
+          className="px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+        />
+        <span className="text-xs text-gray-400">to</span>
+        <input
+          type="date"
+          value={dateTo}
+          onChange={e => setDateTo(e.target.value)}
+          className="px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+        />
+        {(dateFrom || dateTo) && (
+          <button
+            onClick={() => { setDateFrom(''); setDateTo('') }}
+            className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
+          >
+            <X size={11} /> Clear
+          </button>
+        )}
+      </div>
+
       {error && (
         <div className="mx-6 mb-3 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700">
           <AlertCircle size={16} /> {error}
@@ -413,7 +454,7 @@ export default function JournalEntriesPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map(entry => {
+              paginatedFiltered.map(entry => {
                 const debit = entry.lines?.reduce((s, l) => s + Number(l.debit ?? 0), 0) ?? 0
                 const credit = entry.lines?.reduce((s, l) => s + Number(l.credit ?? 0), 0) ?? 0
                 const balanced = Math.abs(debit - credit) <= 0.005
@@ -503,6 +544,32 @@ export default function JournalEntriesPage() {
             <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono font-bold">Ctrl+N</kbd><span>New Entry</span>
             <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono font-bold">Ctrl+F</kbd><span>Search</span>
             <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono font-bold">Esc</kbd><span>Close</span>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {filtered.length > pageSize && (
+          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <span>
+              Showing {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+                className="px-3 py-1 rounded border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <span className="font-medium">{page} / {totalPages}</span>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1 rounded border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

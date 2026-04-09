@@ -245,6 +245,37 @@ export class AccountingRepository {
             throw new Error(`Journal entry is not balanced: debits ${totalDebits} ≠ credits ${totalCredits}`)
         }
 
+        // Guard: inactive accounts
+        const createLineIds = data.lines.map(l => l.accountId).filter(Boolean)
+        if (createLineIds.length > 0) {
+            const createAccounts = await this.prisma.account.findMany({
+                where: { id: { in: createLineIds } },
+                select: { id: true, code: true, name: true, isActive: true },
+            })
+            const inactiveOnCreate = createAccounts.filter(a => !a.isActive)
+            if (inactiveOnCreate.length > 0) {
+                throw new Error(`Cannot use inactive account(s): ${inactiveOnCreate.map(a => `${a.code} ${a.name}`).join(', ')}`)
+            }
+        }
+
+        // Guard: closed accounting period
+        const closedOnCreate = await this.prisma.accountingPeriod.findFirst({
+            where: {
+                workspaceId: data.workspaceId,
+                startDate: { lte: data.date },
+                endDate: { gte: data.date },
+                closedAt: { not: null },
+            },
+        })
+        if (closedOnCreate) {
+            throw new Error(
+                `Cannot create entry in closed period (${closedOnCreate.startDate.toISOString().split('T')[0]} ` +
+                `to ${closedOnCreate.endDate.toISOString().split('T')[0]}, ` +
+                `closed on ${closedOnCreate.closedAt!.toISOString().split('T')[0]}). ` +
+                `Please contact your accountant.`
+            )
+        }
+
         const created = await this.prisma.journalEntry.create({
             data: {
                 workspaceId: data.workspaceId,
@@ -466,8 +497,52 @@ export class AccountingRepository {
         if (je.postingStatus === 'POSTED') throw new Error('Journal entry is already posted')
         if (je.postingStatus === 'VOIDED') throw new Error('Cannot post a voided journal entry')
 
-        // Generate entry number if missing
-        const entryNumber = je.entryNumber ?? `JE-${Date.now()}`
+        // Guard: inactive accounts
+        const postLineIds = je.lines.map(l => l.accountId)
+        if (postLineIds.length > 0) {
+            const postAccounts = await this.prisma.account.findMany({
+                where: { id: { in: postLineIds } },
+                select: { id: true, code: true, name: true, isActive: true },
+            })
+            const inactiveAccts = postAccounts.filter(a => !a.isActive)
+            if (inactiveAccts.length > 0) {
+                throw new Error(`Cannot post to inactive account(s): ${inactiveAccts.map(a => `${a.code} ${a.name}`).join(', ')}`)
+            }
+        }
+
+        // Guard: closed accounting period
+        const closedPeriod = await this.prisma.accountingPeriod.findFirst({
+            where: {
+                workspaceId: je.workspaceId,
+                startDate: { lte: je.date },
+                endDate: { gte: je.date },
+                closedAt: { not: null },
+            },
+        })
+        if (closedPeriod) {
+            throw new Error(
+                `Cannot post to closed period (${closedPeriod.startDate.toISOString().split('T')[0]} ` +
+                `to ${closedPeriod.endDate.toISOString().split('T')[0]}, ` +
+                `closed on ${closedPeriod.closedAt!.toISOString().split('T')[0]}). ` +
+                `Please contact your accountant.`
+            )
+        }
+
+        // Generate sequential entry number if missing
+        let entryNumber = je.entryNumber
+        if (!entryNumber) {
+            const lastEntry = await this.prisma.journalEntry.findFirst({
+                where: { companyId, entryNumber: { startsWith: 'JE-' } },
+                orderBy: { entryNumber: 'desc' },
+                select: { entryNumber: true },
+            })
+            let nextNum = 1
+            if (lastEntry?.entryNumber) {
+                const match = lastEntry.entryNumber.match(/^JE-(\d+)$/)
+                if (match) nextNum = parseInt(match[1], 10) + 1
+            }
+            entryNumber = `JE-${String(nextNum).padStart(4, '0')}`
+        }
 
         const posted = await this.prisma.$transaction(async (tx) => {
             // Update balances on each account

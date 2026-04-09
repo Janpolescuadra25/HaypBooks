@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, X, AlertCircle, Loader2, Check } from 'lucide-react'
+import { ArrowLeft, Plus, X, AlertCircle, Loader2, Check, Info } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -48,6 +48,7 @@ export default function NewJournalEntryPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [copyBanner, setCopyBanner] = useState(false)
 
   const safeBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 2) {
@@ -68,6 +69,35 @@ export default function NewJournalEntryPage() {
     )
   }
 
+  // Read copy-as-new params from URL on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('copy') !== '1') return
+    const desc = urlParams.get('desc')
+    const linesRaw = urlParams.get('lines')
+    if (desc) setMemo(decodeURIComponent(desc))
+    if (linesRaw) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(linesRaw))
+        if (Array.isArray(parsed) && parsed.length >= 2) {
+          setLines(parsed.map((l: any) => ({
+            accountId: l.accountId ?? '',
+            customerId: '',
+            debit: l.debit ? String(l.debit) : '',
+            credit: l.credit ? String(l.credit) : '',
+            description: l.description ?? '',
+          })))
+        }
+      } catch {}
+    }
+    setDate(new Date().toISOString().split('T')[0])
+    setReference('')
+    setCopyBanner(true)
+    const timer = setTimeout(() => setCopyBanner(false), 4000)
+    return () => clearTimeout(timer)
+  }, [])
+
   useEffect(() => {
     if (!companyId) return
     apiClient
@@ -82,7 +112,7 @@ export default function NewJournalEntryPage() {
   }, [companyId])
 
   const addLine = () =>
-    setLines(prev => [...prev, { accountId: '', debit: 0, credit: 0, description: '' }])
+    setLines(prev => [...prev, { accountId: '', customerId: '', debit: '', credit: '', description: '' }])
 
   const removeLine = (idx: number) =>
     setLines(prev => prev.filter((_, i) => i !== idx))
@@ -173,6 +203,17 @@ export default function NewJournalEntryPage() {
 
       <div className="flex-1 overflow-y-auto">
       <div className="px-8 py-6 space-y-5">
+        {/* Copy-as-new banner */}
+        {copyBanner && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700 flex items-center gap-2">
+            <Info size={15} className="shrink-0" />
+            Copied from existing entry — review and save as a new entry.
+            <button onClick={() => setCopyBanner(false)} className="ml-auto">
+              <X size={13} />
+            </button>
+          </div>
+        )}
+
         {/* Error banner */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-center gap-2">
