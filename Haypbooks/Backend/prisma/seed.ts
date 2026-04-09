@@ -23,10 +23,12 @@ async function hasColumn(table: string, column: string) {
 }
 
 async function main() {
+  // ⚠️  LOCAL DEV ONLY — never run this seed against a production database.
   console.log('Seeding database...')
 
   // Demo user (raw upsert to remain compatible while Prisma client is being regenerated)
-  const passwordHash = await bcrypt.hash('password', 10)
+  // Password is a strong placeholder for local dev only — NOT for production use.
+  const passwordHash = await bcrypt.hash('Dev@Seed#2026!Local', 10)
   const demoUserId = require('crypto').randomUUID()
   await prisma.$executeRaw`INSERT INTO public."User" ("id","email","name","passwordhash","isemailverified","createdAt","updatedAt") VALUES (${ demoUserId }, ${ 'demo@haypbooks.test' }, ${ 'Demo User' }, ${ passwordHash }, ${ true }, now(), now()) ON CONFLICT ("email") DO UPDATE SET "name" = EXCLUDED."name", "passwordhash" = EXCLUDED."passwordhash", "isemailverified" = EXCLUDED."isemailverified";`
   const users = await prisma.$queryRaw<any[]>`SELECT id, email, name, "isemailverified" as "isEmailVerified", "createdAt", "updatedAt" FROM public."User" WHERE email = ${ 'demo@haypbooks.test' } LIMIT 1;`
