@@ -1,4 +1,4 @@
-import { Injectable, Inject, UnauthorizedException, ConflictException, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common'
+import { Injectable, Inject, Logger, UnauthorizedException, ConflictException, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common'
 import { randomUUID } from 'crypto'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from '../utils/bcrypt-fallback'
@@ -11,6 +11,7 @@ import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
 export class PrismaAuthService {
+  private readonly logger = new Logger(PrismaAuthService.name)
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(SESSION_REPOSITORY) private readonly sessionRepo: ISessionRepository,
@@ -204,14 +205,24 @@ export class PrismaAuthService {
     const refreshToken = this.jwtService.sign({ sub: user.id, nonce: randomUUID(), family: tokenFamily }, { expiresIn: '7d' })
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
+    let sessionSaved = false
     try {
       await this.sessionRepo.create({
         userId: user.id, refreshToken, expiresAt, ipAddress, userAgent, lastUsedAt: new Date(),
         deviceName: this.parseDeviceName(userAgent), tokenFamily,
       } as any)
+      sessionSaved = true
     } catch (e) {
-      // ignore failures creating session to avoid blocking verification flow
-      console.error('Failed to create session for user', e?.message || e)
+      // Session DB write failed — the access token will still work for its 2h lifetime,
+      // but the refresh token will be unusable. Log a clear warning so this is visible.
+      this.logger?.error?.(`[createSessionForUser] CRITICAL: failed to persist session for userId=${userId}. Refresh will fail after token expiry. Error: ${e?.message || e}`)
+      console.error('[createSessionForUser] failed to persist session, refresh token is invalid:', e?.message || e)
+    }
+
+    if (!sessionSaved) {
+      // Return null so the caller knows the session could not be persisted.
+      // The controller already wraps tokens in try/catch so this is safe.
+      return null
     }
 
     const userResponse = {
