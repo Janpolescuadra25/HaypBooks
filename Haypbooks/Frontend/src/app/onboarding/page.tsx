@@ -313,6 +313,7 @@ export default function OnboardingPage() {
             headers: { 'Content-Type': 'application/json' },
           })
           resJson = await r.json().catch(() => null)
+          if (!r.ok) throw Object.assign(new Error('Onboarding complete failed'), { response: { status: r.status } })
         } else {
           const r = await apiClient.post('/api/onboarding/complete', { type: 'full', hub: 'OWNER' })
           resJson = r.data || null
@@ -320,8 +321,16 @@ export default function OnboardingPage() {
         const name = resJson?.company?.name || formData.businessName || formData.legalName
         if (name) push({ type: 'success', message: `Your company ${name} was created` })
         setIsDone(true)
-      } catch {
-        setIsDone(true)
+      } catch (err: any) {
+        // Don't silently show success when the backend call failed — the onboardingComplete
+        // cookie will NOT be set, so navigating to the dashboard would loop back to /login.
+        const status = err?.response?.status
+        if (status === 401 || status === 403) {
+          push({ type: 'error', message: 'Your session expired while completing setup. Please sign in again.' })
+        } else {
+          push({ type: 'error', message: 'Failed to complete setup. Please try again.' })
+        }
+        // Keep the user on the review step so they can retry
       } finally {
         setCompleting(false)
       }
