@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { format } from 'date-fns'
 import { motion } from 'motion/react'
 import {
   TrendingUp, TrendingDown,
@@ -11,6 +13,7 @@ import {
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useUser } from '@/hooks/use-user'
 import { formatCurrency } from '@/lib/format'
 
 interface KpiData {
@@ -32,7 +35,15 @@ interface CashData {
 export default function OwnerDashboard() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const { user } = useUser()
   const fmt = (n: number) => formatCurrency(n, currency)
+
+  const greeting = (() => {
+    const h = new Date().getHours()
+    const timeGreet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+    const name = user?.firstName ?? user?.name?.split(' ')[0] ?? null
+    return name ? `${timeGreet}, ${name}` : 'Welcome back'
+  })()
 
   const [kpis, setKpis] = useState<KpiData | null>(null)
   const [cash, setCash] = useState<CashData | null>(null)
@@ -69,6 +80,7 @@ export default function OwnerDashboard() {
     <div className="p-4 space-y-6">
       <header className="flex items-center justify-between">
         <div>
+          <p className="text-sm text-emerald-700/60 font-medium mb-0.5">{greeting}</p>
           <h1 className="text-2xl font-bold text-emerald-950 tracking-tight">Dashboard</h1>
           <p className="text-xs text-emerald-600/70 mt-0.5 font-medium">Your business at a glance.</p>
         </div>
@@ -129,6 +141,7 @@ export default function OwnerDashboard() {
             isPositive={(kpis?.revenue ?? 0) >= 0}
             icon={DollarSign}
             subtitle="YTD revenue"
+            href="/reporting/reports-center/financial-statements/profit-and-loss"
           />
           <StatCard
             title="Net Income"
@@ -136,6 +149,7 @@ export default function OwnerDashboard() {
             isPositive={(kpis?.netIncome ?? 0) >= 0}
             icon={(kpis?.netIncome ?? 0) >= 0 ? TrendingUp : TrendingDown}
             subtitle={`${margin}% margin`}
+            href="/reporting/reports-center/financial-statements/profit-and-loss"
           />
           <StatCard
             title="Overdue A/R"
@@ -143,6 +157,7 @@ export default function OwnerDashboard() {
             isPositive={false}
             icon={ReceiptText}
             subtitle={`${kpis?.overdueReceivables?.count ?? 0} invoices`}
+            href="/sales/collections/ar-aging"
           />
           <StatCard
             title="Overdue A/P"
@@ -150,6 +165,7 @@ export default function OwnerDashboard() {
             isPositive={false}
             icon={ShoppingCart}
             subtitle={`${kpis?.overduePayables?.count ?? 0} bills`}
+            href="/expenses/payables/bills"
           />
           <StatCard
             title="Cash Balance"
@@ -157,6 +173,7 @@ export default function OwnerDashboard() {
             isPositive={(cash?.totalBalance ?? kpis?.bankBalance ?? 0) >= 0}
             icon={Wallet}
             subtitle={`${cash?.accounts?.length ?? 0} bank accounts`}
+            href="/banking-cash/cash-accounts/bank-accounts"
           />
         </div>
       )}
@@ -166,7 +183,11 @@ export default function OwnerDashboard() {
         <div className="bg-white p-6 rounded-[24px] border border-emerald-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-emerald-950">YTD Summary</h2>
-            <span className="text-xs text-slate-400">Year-to-date</span>
+            <span className="text-xs text-slate-400">
+              {kpis.period?.start && kpis.period?.end
+                ? `${format(new Date(kpis.period.start), 'MMM d')} – ${format(new Date(kpis.period.end), 'MMM d, yyyy')}`
+                : 'Year-to-date'}
+            </span>
           </div>
           <div className="grid grid-cols-3 gap-6">
             <div>
@@ -190,18 +211,29 @@ export default function OwnerDashboard() {
           {/* Simple visual bar */}
           {kpis.revenue > 0 && (
             <div className="mt-4 flex gap-1 h-3 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (kpis.expenses / kpis.revenue) * 100)}%` }}
-                transition={{ duration: 0.7 }}
-                className="bg-rose-400 rounded-l-full"
-              />
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.max(0, ((kpis.revenue - kpis.expenses) / kpis.revenue) * 100)}%` }}
-                transition={{ duration: 0.7, delay: 0.2 }}
-                className="bg-emerald-500 rounded-r-full"
-              />
+              {kpis.expenses >= kpis.revenue ? (
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 0.7 }}
+                  className="bg-rose-500 rounded-full"
+                />
+              ) : (
+                <>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (kpis.expenses / kpis.revenue) * 100)}%` }}
+                    transition={{ duration: 0.7 }}
+                    className="bg-rose-400 rounded-l-full"
+                  />
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.max(0, ((kpis.revenue - kpis.expenses) / kpis.revenue) * 100)}%` }}
+                    transition={{ duration: 0.7, delay: 0.2 }}
+                    className="bg-emerald-500 rounded-r-full"
+                  />
+                </>
+              )}
             </div>
           )}
           <div className="flex gap-6 mt-2">
@@ -220,28 +252,38 @@ export default function OwnerDashboard() {
           ) : (
             <div className="space-y-3">
               {(kpis?.overdueReceivables?.count ?? 0) > 0 && (
-                <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <ReceiptText size={16} className="text-amber-600" />
-                    <div>
-                      <p className="text-sm font-bold text-amber-900">Overdue Receivables</p>
-                      <p className="text-xs text-amber-600">{kpis?.overdueReceivables?.count} invoice(s) past due</p>
+                <Link href="/sales/collections/ar-aging" className="block hover:opacity-90 transition-opacity">
+                  <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl hover:border-amber-300">
+                    <div className="flex items-center gap-3">
+                      <ReceiptText size={16} className="text-amber-600" />
+                      <div>
+                        <p className="text-sm font-bold text-amber-900">Overdue Receivables</p>
+                        <p className="text-xs text-amber-600">{kpis?.overdueReceivables?.count} invoice(s) past due</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-black text-amber-700">{fmt(kpis?.overdueReceivables?.amount ?? 0)}</span>
+                      <ChevronRight size={14} className="text-amber-500" />
                     </div>
                   </div>
-                  <span className="text-sm font-black text-amber-700">{fmt(kpis?.overdueReceivables?.amount ?? 0)}</span>
-                </div>
+                </Link>
               )}
               {(kpis?.overduePayables?.count ?? 0) > 0 && (
-                <div className="flex items-center justify-between p-3 bg-rose-50 border border-rose-200 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <ShoppingCart size={16} className="text-rose-600" />
-                    <div>
-                      <p className="text-sm font-bold text-rose-900">Overdue Bills</p>
-                      <p className="text-xs text-rose-600">{kpis?.overduePayables?.count} bill(s) past due</p>
+                <Link href="/expenses/payables/ap-aging" className="block hover:opacity-90 transition-opacity">
+                  <div className="flex items-center justify-between p-3 bg-rose-50 border border-rose-200 rounded-xl hover:border-rose-300">
+                    <div className="flex items-center gap-3">
+                      <ShoppingCart size={16} className="text-rose-600" />
+                      <div>
+                        <p className="text-sm font-bold text-rose-900">Overdue Bills</p>
+                        <p className="text-xs text-rose-600">{kpis?.overduePayables?.count} bill(s) past due</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-black text-rose-700">{fmt(kpis?.overduePayables?.amount ?? 0)}</span>
+                      <ChevronRight size={14} className="text-rose-500" />
                     </div>
                   </div>
-                  <span className="text-sm font-black text-rose-700">{fmt(kpis?.overduePayables?.amount ?? 0)}</span>
-                </div>
+                </Link>
               )}
               {(kpis?.overdueReceivables?.count ?? 0) === 0 && (kpis?.overduePayables?.count ?? 0) === 0 && (
                 <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -256,7 +298,7 @@ export default function OwnerDashboard() {
         <div className="bg-white p-6 rounded-[24px] border border-emerald-100 shadow-sm">
           <h2 className="text-lg font-bold text-emerald-950 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-3">
-            <QuickActionButton icon={FileText} label="New Invoice" href="/sales/billing/invoices" />
+            <QuickActionButton icon={FileText} label="New Invoice" href="/sales/billing/invoices/new" />
             <QuickActionButton icon={DollarSign} label="Record Payment" href="/sales/collections/customer-payments" />
             <QuickActionButton icon={Wallet} label="Add Bill" href="/expenses/payables/bills" />
             <QuickActionButton icon={ChevronRight} label="Run Report" href="/reporting/financial-statements" />
@@ -265,24 +307,35 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Bank accounts */}
-      {!loading && cash && cash.accounts.length > 0 && (
+      {!loading && cash && (
         <div className="bg-white p-6 rounded-[24px] border border-emerald-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-emerald-950">Bank Accounts</h2>
-            <a href="/banking-cash/cash-accounts/bank-accounts" className="text-emerald-600 text-xs font-bold flex items-center gap-1 hover:underline">
+            <Link href="/banking-cash/cash-accounts/bank-accounts" className="text-emerald-600 text-xs font-bold flex items-center gap-1 hover:underline">
               View all <ChevronRight size={12} />
-            </a>
+            </Link>
           </div>
-          <div className="space-y-3">
-            {cash.accounts.slice(0, 5).map(acc => (
-              <div key={acc.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                <p className="text-sm font-semibold text-slate-700">{acc.name}</p>
-                <span className={`text-sm font-black ${Number(acc.balance) >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
-                  {fmt(Number(acc.balance))}
-                </span>
-              </div>
-            ))}
-          </div>
+          {cash.accounts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <Wallet size={32} className="text-slate-300 mb-3" />
+              <p className="text-sm font-semibold text-slate-500 mb-1">No bank accounts yet</p>
+              <p className="text-xs text-slate-400 mb-3">Add your first account to start tracking your cash flow.</p>
+              <Link href="/banking-cash/cash-accounts/bank-accounts" className="text-xs font-bold text-emerald-600 hover:underline">
+                Add bank account →
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cash.accounts.slice(0, 5).map(acc => (
+                <div key={acc.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                  <p className="text-sm font-semibold text-slate-700">{acc.name}</p>
+                  <span className={`text-sm font-black ${Number(acc.balance) >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                    {fmt(Number(acc.balance))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -290,14 +343,14 @@ export default function OwnerDashboard() {
 }
 
 function StatCard({
-  title, value, isPositive, icon: Icon, subtitle,
+  title, value, isPositive, icon: Icon, subtitle, href,
 }: {
-  title: string; value: string; isPositive: boolean; icon: any; subtitle: string
+  title: string; value: string; isPositive: boolean; icon: any; subtitle: string; href?: string
 }) {
-  return (
+  const inner = (
     <motion.div
       whileHover={{ y: -4 }}
-      className="bg-white p-4 rounded-[20px] border border-emerald-50 shadow-sm hover:shadow-md transition-all"
+      className="bg-white p-4 rounded-[20px] border border-emerald-50 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
@@ -314,13 +367,15 @@ function StatCard({
       </div>
     </motion.div>
   )
+  if (href) return <Link href={href} className="block">{inner}</Link>
+  return inner
 }
 
 function QuickActionButton({ icon: Icon, label, href }: { icon: any; label: string; href: string }) {
   return (
-    <a href={href} className="flex items-center gap-2.5 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100/50 hover:bg-emerald-50 hover:border-emerald-200 transition-all group">
+    <Link href={href} className="flex items-center gap-2.5 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100/50 hover:bg-emerald-50 hover:border-emerald-200 transition-all group">
       <Icon size={16} className="text-emerald-600" />
       <span className="text-xs font-bold text-emerald-900 group-hover:text-emerald-950">{label}</span>
-    </a>
+    </Link>
   )
 }
