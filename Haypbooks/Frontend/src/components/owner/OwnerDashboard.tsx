@@ -33,7 +33,7 @@ interface CashData {
 
 
 export default function OwnerDashboard() {
-  const { companyId, loading: companyLoading } = useCompanyId()
+  const { companyId, loading: companyLoading, error: companyError } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const { user } = useUser()
   const fmt = (n: number) => formatCurrency(n, currency)
@@ -123,6 +123,15 @@ export default function OwnerDashboard() {
       {error && (
         <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           <AlertCircle size={15} /> {error}
+        </div>
+      )}
+
+      {!companyId && !companyLoading && companyError && (
+        <div className="flex flex-col items-center gap-3 px-6 py-8 bg-amber-50 border border-amber-200 rounded-xl text-center">
+          <AlertCircle size={24} className="text-amber-500" />
+          <p className="text-sm font-medium text-amber-800">No company linked to your account yet.</p>
+          <p className="text-xs text-amber-600">Complete onboarding or create a company to start using the dashboard.</p>
+          <a href="/onboarding" className="text-xs font-bold text-amber-700 underline">Go to setup</a>
         </div>
       )}
 

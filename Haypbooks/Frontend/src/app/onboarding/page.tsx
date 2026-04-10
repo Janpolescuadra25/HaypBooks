@@ -131,6 +131,7 @@ export default function OnboardingPage() {
   const toast = useToast()
   const [currentStep, setCurrentStep] = useState<StepId>('business')
   const [isDone, setIsDone] = useState(false)
+  const [completedCompanyId, setCompletedCompanyId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [completing, setCompleting] = useState(false)
 
@@ -320,6 +321,7 @@ export default function OnboardingPage() {
         }
         const name = resJson?.company?.name || formData.businessName || formData.legalName
         if (name) push({ type: 'success', message: `Your company ${name} was created` })
+        setCompletedCompanyId(resJson?.company?.id || null)
         setIsDone(true)
       } catch (err: any) {
         // Don't silently show success when the backend call failed — the onboardingComplete
@@ -393,7 +395,7 @@ export default function OnboardingPage() {
             </ul>
           </div>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push(completedCompanyId ? `/dashboard?company=${completedCompanyId}` : '/dashboard')}
             className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-2 group"
           >
             Go to Dashboard
