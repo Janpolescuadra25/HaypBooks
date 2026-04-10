@@ -547,15 +547,36 @@ export class CompanyRepository {
     // Use WorkspaceUser.lastAccessedAt to determine the most-recently-used workspace,
     // and then return the companies belonging to those workspaces.
     // This replaces the legacy Tenant/TenantUser tables used in older schemas.
-    const rows: any[] = await this.prisma.$queryRaw`
-      SELECT c.id, c.name, wu."lastAccessedAt"
-      FROM public."Company" c
-      JOIN public."WorkspaceUser" wu ON wu."workspaceId" = c."workspaceId"
-      WHERE wu."userId" = ${userId}
-      ORDER BY wu."lastAccessedAt" DESC NULLS LAST
-      LIMIT ${limit}
-    `
-    return rows || []
+    try {
+      const rows: any[] = await this.prisma.$queryRaw`
+        SELECT c.id, c.name, wu."lastAccessedAt"
+        FROM public."Company" c
+        JOIN public."WorkspaceUser" wu ON wu."workspaceId" = c."workspaceId"
+        WHERE wu."userId" = ${userId}
+        ORDER BY wu."lastAccessedAt" DESC NULLS LAST
+        LIMIT ${limit}
+      `
+      return rows || []
+    } catch (e) {
+      // Raw SQL may fail if lastAccessedAt column hasn't been migrated yet — fall back to Prisma query
+      console.warn('[COMPANY-RECENT] Raw SQL failed, using Prisma fallback:', (e as any)?.message)
+      try {
+        const workspaceUsers = await this.prisma.workspaceUser.findMany({
+          where: { userId },
+          select: { workspaceId: true },
+        })
+        const workspaceIds = workspaceUsers.map((wu: any) => wu.workspaceId)
+        if (!workspaceIds.length) return []
+        const companies = await this.prisma.company.findMany({
+          where: { workspaceId: { in: workspaceIds }, isActive: true },
+          take: limit,
+        })
+        return companies || []
+      } catch (e2) {
+        console.error('[COMPANY-RECENT] Prisma fallback also failed:', (e2 as any)?.message)
+        return []
+      }
+    }
   }
 
   async update(id: string, data: any) {

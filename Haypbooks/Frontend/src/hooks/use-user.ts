@@ -20,10 +20,28 @@ export function useUser() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    authService.getCurrentUser()
-      .then((data) => setUser(data))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false))
+    async function fetchUser() {
+      try {
+        const data = await authService.getCurrentUser()
+        setUser(data)
+      } catch (err: any) {
+        // On 401, try a silent token refresh before giving up
+        if (err?.response?.status === 401) {
+          try {
+            await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+            const data = await authService.getCurrentUser()
+            setUser(data)
+          } catch {
+            setUser(null)
+          }
+        } else {
+          setUser(null)
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUser()
   }, [])
 
   return { user, loading }
