@@ -30,6 +30,12 @@ import {
 } from 'lucide-react'
 
 
+export interface NavTab {
+  label: string
+  value: string
+  status: 'existing' | 'ghost-fix' | 'coming-soon'
+}
+
 export interface NavItem {
   title: string
   /** Display label (alias for title used by slug pages) */
@@ -38,6 +44,8 @@ export interface NavItem {
   /** href alias for path used by slug/router pages */
   href?: string
   items?: NavItem[]
+  /** Tabs shown in ModuleTabs bar when this group is active */
+  tabs?: NavTab[]
   isEnterprise?: boolean
   /** When true, render as a visual section divider (not clickable) */
   isSectionLabel?: boolean
@@ -90,55 +98,255 @@ export const navigationData: NavSection[] = [
       {
         title: 'Cash & Banking',
         items: [
-          { title: 'Bank Transactions', path: '/banking-cash/transactions/bank-transactions' },
-          { title: 'Reconciliation',    path: '/banking-cash/reconciliation/reconcile' },
-          { title: 'Accounts',          path: '/banking-cash/accounts/bank-accounts' },
-          { title: 'Transaction Rules', path: '/banking-cash/transactions/transaction-rules' },
-          { title: 'Cash Management',   path: '/banking-cash/cash-management/cash-position' },
+          {
+            title: 'Transactions',
+            path: '/banking-cash/transactions',
+            tabs: [
+              { label: 'Bank Transactions',       value: 'bank-transactions',       status: 'existing' },
+              { label: 'Connected Transactions',   value: 'connected-transactions',  status: 'coming-soon' },
+              { label: 'Transfers',                value: 'transfers',               status: 'coming-soon' },
+              { label: 'Deposits',                 value: 'deposits',                status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Reconciliation',
+            path: '/banking-cash/reconciliation',
+            tabs: [
+              { label: 'Reconcile',         value: 'reconcile',        status: 'coming-soon' },
+              { label: 'History',           value: 'history',          status: 'coming-soon' },
+              { label: 'Statement Archive', value: 'statement-archive', status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Accounts',
+            path: '/banking-cash/accounts',
+            tabs: [
+              { label: 'Bank Accounts',     value: 'bank-accounts',    status: 'existing' },
+              { label: 'Credit Cards',      value: 'credit-cards',     status: 'coming-soon' },
+              { label: 'Petty Cash',        value: 'petty-cash',       status: 'coming-soon' },
+              { label: 'Clearing Accounts', value: 'clearing-accounts', status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Management',
+            path: '/banking-cash/cash-management',
+            tabs: [
+              { label: 'Transaction Rules',       value: 'transaction-rules',       status: 'coming-soon' },
+              { label: 'Recurring Transactions',  value: 'recurring-transactions',  status: 'coming-soon' },
+            ],
+          },
         ],
       },
       {
         title: 'Sales (Order-to-Cash)',
         items: [
-          { title: 'Customers',           path: '/sales/customers/customers' },
-          { title: 'Products & Services', path: '/sales/sales-operations/products-services' },
-          { title: 'Billing',             path: '/sales/billing/invoices' },
-          { title: 'Collections',         path: '/sales/collections/customer-payments' },
-          { title: 'Credit Notes',        path: '/sales/billing/credit-notes' },
+          {
+            title: 'Customers',
+            path: '/sales/customers',
+            tabs: [
+              { label: 'Customers',   value: 'customers',   status: 'existing' },
+              { label: 'Groups',      value: 'groups',      status: 'coming-soon' },
+              { label: 'Price Lists', value: 'price-lists', status: 'coming-soon' },
+              { label: 'Portal',      value: 'portal',      status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Sales Orders',
+            path: '/sales/sales-operations',
+            tabs: [
+              { label: 'Products & Services', value: 'products-services', status: 'coming-soon' },
+              { label: 'Quotes',              value: 'quotes',            status: 'coming-soon' },
+              { label: 'Sales Orders',        value: 'sales-orders',      status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Billing',
+            path: '/sales/billing',
+            tabs: [
+              { label: 'Invoices',           value: 'invoices',           status: 'existing' },
+              { label: 'Recurring Invoices', value: 'recurring-invoices', status: 'existing' },
+              { label: 'Subscriptions',      value: 'subscriptions',      status: 'coming-soon' },
+              { label: 'Payment Links',      value: 'payment-links',      status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Collections',
+            path: '/sales/collections',
+            tabs: [
+              { label: 'Payments',            value: 'payments',            status: 'ghost-fix' },
+              { label: 'A/R Aging',           value: 'ar-aging',            status: 'ghost-fix' },
+              { label: 'Collections Center',  value: 'collections-center',  status: 'ghost-fix' },
+              { label: 'Dunning',             value: 'dunning',             status: 'coming-soon' },
+              { label: 'Write-Offs',          value: 'write-offs',          status: 'coming-soon' },
+              { label: 'Refunds',             value: 'refunds',             status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Revenue',
+            path: '/sales/revenue',
+            tabs: [
+              { label: 'Credit Notes',          value: 'credit-notes',          status: 'ghost-fix' },
+              { label: 'Revenue Recognition',   value: 'revenue-recognition',   status: 'coming-soon' },
+              { label: 'Deferred Revenue',      value: 'deferred-revenue',      status: 'coming-soon' },
+            ],
+          },
         ],
       },
       {
         title: 'Expenses (Procure-to-Pay)',
         items: [
-          { title: 'Vendors',           path: '/expenses/vendors/vendors' },
-          { title: 'Bills & Payments',  path: '/expenses/payables/bills' },
-          { title: 'Expense Capture',   path: '/expenses/expense-capture/expenses' },
+          {
+            title: 'Purchasing',
+            path: '/expenses/purchasing',
+            tabs: [
+              { label: 'Vendors',            value: 'vendors',            status: 'existing' },
+              { label: 'Purchase Requests',  value: 'purchase-requests',  status: 'coming-soon' },
+              { label: 'Orders',             value: 'orders',             status: 'coming-soon' },
+              { label: 'RFQ',                value: 'rfq',                status: 'coming-soon' },
+              { label: 'Approvals',          value: 'approvals',          status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Bills & Payments',
+            path: '/expenses/payables',
+            tabs: [
+              { label: 'Bills',             value: 'bills',             status: 'existing' },
+              { label: 'Recurring Bills',   value: 'recurring-bills',   status: 'coming-soon' },
+              { label: 'Bill Payments',     value: 'bill-payments',     status: 'existing' },
+              { label: 'Payment Runs',      value: 'payment-runs',      status: 'coming-soon' },
+              { label: 'Vendor Credits',    value: 'vendor-credits',    status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Expense Capture',
+            path: '/expenses/expense-capture',
+            tabs: [
+              { label: 'Expenses',         value: 'expenses',         status: 'coming-soon' },
+              { label: 'Receipts',         value: 'receipts',         status: 'coming-soon' },
+              { label: 'Mileage',          value: 'mileage',          status: 'coming-soon' },
+              { label: 'Per Diem',         value: 'per-diem',         status: 'coming-soon' },
+              { label: 'Reimbursements',   value: 'reimbursements',   status: 'coming-soon' },
+            ],
+          },
         ],
       },
       {
         title: 'Inventory',
         items: [
-          { title: 'Items',       path: '/inventory/items/item-list' },
-          { title: 'Receiving',   path: '/inventory/receiving/item-receipts' },
-          { title: 'Warehousing', path: '/inventory/warehousing/warehouses' },
-          { title: 'Control',     path: '/inventory/stock-operations/cycle-counts' },
-          { title: 'Valuation',   path: '/inventory/valuation/inventory-valuation' },
+          {
+            title: 'Items',
+            path: '/inventory/items',
+            tabs: [
+              { label: 'Inventory Items', value: 'item-list',    status: 'existing' },
+              { label: 'Categories',      value: 'categories',   status: 'coming-soon' },
+              { label: 'Bundles',         value: 'bundles',      status: 'coming-soon' },
+              { label: 'Units',           value: 'units',        status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Operations',
+            path: '/inventory/stock-operations',
+            tabs: [
+              { label: 'Item Receipts',    value: 'item-receipts',    status: 'existing' },
+              { label: 'Stock Movements',  value: 'stock-movements',  status: 'coming-soon' },
+              { label: 'Adjustments',      value: 'adjustments',      status: 'coming-soon' },
+              { label: 'Transfers',        value: 'transfers',        status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Warehousing',
+            path: '/inventory/warehouses',
+            tabs: [
+              { label: 'Warehouses',    value: 'warehouse-list', status: 'existing' },
+              { label: 'Bin Locations', value: 'bin-locations', status: 'coming-soon' },
+              { label: 'Zones',         value: 'zones',         status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Control',
+            path: '/inventory/control',
+            tabs: [
+              { label: 'Cycle Counts',      value: 'cycle-counts',      status: 'coming-soon' },
+              { label: 'Physical Counts',   value: 'physical-counts',   status: 'coming-soon' },
+              { label: 'Lot/Serial Tracking', value: 'lot-serial-tracking', status: 'coming-soon' },
+              { label: 'Reorder Points',    value: 'reorder-points',    status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Valuation',
+            path: '/inventory/valuation',
+            tabs: [
+              { label: 'Valuation',         value: 'inventory-valuation', status: 'existing' },
+              { label: 'Landed Costs',      value: 'landed-costs',      status: 'coming-soon' },
+              { label: 'Cost Adjustments',  value: 'cost-adjustments',  status: 'coming-soon' },
+              { label: 'Write-Downs',       value: 'write-downs',       status: 'coming-soon' },
+            ],
+          },
         ],
       },
       {
         title: 'Projects',
         items: [
-          { title: 'Setup',      path: '/projects/project-setup/projects' },
-          { title: 'Execution',  path: '/projects/planning/project-tasks' },
-          { title: 'Billing',    path: '/projects/billing/project-billing' },
-          { title: 'Financials', path: '/projects/financials/project-profitability' },
+          {
+            title: 'Setup',
+            path: '/projects/project-setup',
+            tabs: [
+              { label: 'Projects',   value: 'projects',   status: 'existing' },
+              { label: 'Templates',  value: 'templates',  status: 'coming-soon' },
+              { label: 'Milestones', value: 'milestones', status: 'coming-soon' },
+              { label: 'Contracts',  value: 'contracts',  status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Execution',
+            path: '/projects/tasks',
+            tabs: [
+              { label: 'Tasks',              value: 'task-list',          status: 'existing' },
+              { label: 'Schedule',           value: 'schedule',           status: 'coming-soon' },
+              { label: 'Resource Planning',  value: 'resource-planning',  status: 'coming-soon' },
+              { label: 'Time & Expenses',    value: 'time-expenses',      status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Billing',
+            path: '/projects/billing',
+            tabs: [
+              { label: 'Project Billing',   value: 'project-billing',   status: 'coming-soon' },
+              { label: 'Progress Billing',  value: 'progress-billing',  status: 'coming-soon' },
+              { label: 'Change Orders',     value: 'change-orders',     status: 'coming-soon' },
+              { label: 'WIP',               value: 'wip',               status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Financials',
+            path: '/projects/financials',
+            tabs: [
+              { label: 'Project Profitability', value: 'profitability',      status: 'coming-soon' },
+              { label: 'Budget vs Actual',      value: 'budget-vs-actual',   status: 'coming-soon' },
+            ],
+          },
         ],
       },
       {
         title: 'Time',
         items: [
-          { title: 'Entry',  path: '/time/entry/time-entries' },
-          { title: 'Review', path: '/time/review/billable-time-review' },
+          {
+            title: 'Entry',
+            path: '/time/entry',
+            tabs: [
+              { label: 'Time Entries', value: 'time-entries', status: 'existing' },
+              { label: 'Timesheets',   value: 'timesheets',   status: 'coming-soon' },
+              { label: 'Timer',        value: 'timer',        status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Review',
+            path: '/time/review',
+            tabs: [
+              { label: 'Billable Review', value: 'billable-time-review', status: 'coming-soon' },
+              { label: 'Time Approvals',  value: 'time-approvals',   status: 'coming-soon' },
+            ],
+          },
         ],
       },
     ],
