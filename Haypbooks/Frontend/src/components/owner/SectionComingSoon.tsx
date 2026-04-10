@@ -14,8 +14,8 @@ function resolveTitle(sectionId: string, slug: string[] | undefined): string {
 
   for (const sec of ownerNav) {
     for (const grp of sec.groups ?? []) {
-      const found = grp.items.find((it) => it.href === href)
-      if (found) return found.label ?? ''
+      const found = grp.items.find((it) => it.href === href || it.path === href)
+      if (found) return found.label ?? found.title ?? ''
     }
   }
 
