@@ -384,14 +384,12 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Journal Entries', path: '/accounting/core-accounting/journal-entries' },
           { title: 'General Ledger', path: '/accounting/core-accounting/general-ledger' },
-          { title: 'Adjusting Entries', path: '/accounting/core-accounting/adjusting-entries' },
-          { title: 'Recurring Journals', path: '/accounting/core-accounting/recurring-journals' },
         ],
       },
       {
         title: 'Period Close',
         items: [
-          { title: 'Close Workflow', path: '/accounting/period-close/close-workflow' },
+          { title: 'Close Workflow', path: '/accounting/close-workflow' },
           { title: 'Multi-Currency Revaluation', path: '/accounting/period-close/multi-currency-revaluation' },
           { title: 'Lock Period', path: '/accounting/period-close/lock-period' },
           { title: 'Sign-Offs', path: '/accounting/period-close/sign-offs' },
@@ -415,13 +413,6 @@ export const navigationData: NavSection[] = [
           { title: 'Insurance', path: '/accounting/fixed-assets/insurance' },
         ],
       },
-      {
-        title: 'Budgeting',
-        items: [
-          { title: 'Budgets', path: '/accounting/budgeting/budgets' },
-          { title: 'Budget vs Actual', path: '/accounting/budgeting/budget-vs-actual' },
-        ],
-      },
     ],
   },
   {
@@ -433,7 +424,6 @@ export const navigationData: NavSection[] = [
         title: 'Workforce',
         items: [
           { title: 'Employees', path: '/payroll-workforce/workforce/employees' },
-          { title: 'Contractors', path: '/payroll-workforce/workforce/contractors' },
           { title: 'Job Positions', path: '/payroll-workforce/workforce/job-positions' },
           { title: 'Employee Documents', path: '/payroll-workforce/workforce/employee-documents' },
         ],
@@ -490,7 +480,6 @@ export const navigationData: NavSection[] = [
           { title: 'Tax Liabilities',  path: '/taxes/tax-center/tax-liabilities' },
           { title: 'Filing & Payments', path: '/taxes/tax-center/filing-payments' },
           { title: 'Tax Calendar',     path: '/taxes/tax-center/tax-calendar' },
-          { title: 'Filing Calendar',  path: '/taxes/tax-center/filing-calendar' },
         ],
       },
       {
@@ -498,8 +487,6 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Tax Agencies', path: '/taxes/tax-setup/tax-agencies' },
           { title: 'Tax Rates & Codes', path: '/taxes/tax-setup/tax-rates' },
-          { title: 'Country Packs', path: '/taxes/tax-setup/country-packs' },
-          { title: 'Rule Engine', path: '/taxes/tax-setup/rule-engine' },
         ],
       },
       {
@@ -507,7 +494,6 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Tax Summary', path: '/taxes/tax-reporting/tax-summary' },
           { title: 'VAT Payable', path: '/taxes/tax-reporting/vat-payable' },
-          { title: 'Withholding Tax', path: '/taxes/tax-reporting/withholding-tax' },
           { title: 'Tax Returns', path: '/taxes/filing-payments/tax-returns' },
           { title: 'E-Filing', path: '/taxes/filing-payments/e-filing' },
         ],
@@ -525,7 +511,6 @@ export const navigationData: NavSection[] = [
           { title: 'Balance Sheet', path: '/reporting/reports-center/financial-statements/balance-sheet' },
           { title: 'Profit & Loss', path: '/reporting/reports-center/financial-statements/profit-and-loss' },
           { title: 'Cash Flow Statement', path: '/reporting/reports-center/financial-statements/cash-flow-statement' },
-          { title: 'Statement of Changes in Equity', path: '/reporting/reports-center/financial-statements/statement-of-changes' },
         ],
       },
       {
@@ -533,8 +518,6 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Trial Balance', path: '/reporting/reports-center/accountant-reports/trial-balance' },
           { title: 'General Ledger Report', path: '/reporting/reports-center/accountant-reports/general-ledger' },
-          { title: 'Journal Report', path: '/reporting/reports-center/accountant-reports/journal-report' },
-          { title: 'Audit Trail', path: '/reporting/reports-center/accountant-reports/audit-trail' },
         ],
       },
       {
@@ -551,19 +534,13 @@ export const navigationData: NavSection[] = [
       {
         title: 'Analytics',
         items: [
-          { title: 'Executive Dashboard', path: '/reporting/analytics/executive-dashboard' },
           { title: 'KPI Dashboard', path: '/reporting/analytics/analytics-dashboards' },
-          { title: 'Revenue Trends', path: '/reporting/analytics/revenue-trends' },
-          { title: 'Cash Position', path: '/reporting/analytics/cash-position' },
-          { title: 'Performance Analytics', path: '/reporting/analytics/performance-analytics' },
         ],
       },
       {
         title: 'Custom Reports',
         items: [
           { title: 'Report Builder', path: '/reporting/custom-reports/report-builder' },
-          { title: 'Saved Reports', path: '/reporting/custom-reports/saved-reports' },
-          { title: 'Report Templates', path: '/reporting/custom-reports/report-templates' },
           { title: 'Scheduled Reports', path: '/reporting/custom-reports/scheduled-reports' },
         ],
       },
@@ -613,7 +590,7 @@ export const navigationData: NavSection[] = [
         title: 'Monitoring',
         items: [
           { title: 'Issue Tracking', path: '/compliance/monitoring/issue-tracking' },
-          { title: 'Fraud Detection', path: '/compliance/monitoring/fraud-detection' },
+          { title: 'Fraud Detection', path: '/compliance/monitoring/fraud-detection-rules' },
           { title: 'Compliance Audit Log', path: '/compliance/monitoring/audit-log-analysis' },
         ],
       },
@@ -625,19 +602,8 @@ export const navigationData: NavSection[] = [
     icon: UserCog,
     groups: [
       {
-        title: 'Review',
-        items: [
-          { title: 'Books Review', path: '/compliance/reporting/books-review' },
-          { title: 'Work Papers', path: '/compliance/reporting/work-papers' },
-          { title: 'Shared Reports', path: '/compliance/reporting/shared-reports' },
-          { title: 'Review Comments', path: '/compliance/reporting/review-comments' },
-        ],
-      },
-      {
         title: 'Communication',
         items: [
-          { title: 'Chat', path: '/accountant-workspace/chat' },
-          { title: 'Shared Notes', path: '/accountant-workspace/shared-notes' },
           { title: 'Client Requests', path: '/accountant-workspace/client-requests' },
         ],
       },
@@ -653,7 +619,6 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Workflow Builder', path: '/automation/workflow-engine/workflow-builder' },
           { title: 'Smart Rules', path: '/automation/workflow-engine/smart-rules' },
-          { title: 'Approval Chains', path: '/automation/workflow-engine/approval-chains' },
         ],
       },
       {
@@ -661,8 +626,6 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'AI Bookkeeping', path: '/automation/ai-intelligence/ai-bookkeeping' },
           { title: 'Smart Matching', path: '/automation/ai-intelligence/smart-matching' },
-          { title: 'Anomaly Detection', path: '/automation/ai-intelligence/anomaly-detection' },
-          { title: 'Predictions', path: '/automation/ai-intelligence/predictions' },
         ],
       },
       {
@@ -670,7 +633,6 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Automation Logs', path: '/automation/monitoring/automation-logs' },
           { title: 'Error Queue', path: '/automation/monitoring/error-queue' },
-          { title: 'Scheduled Jobs', path: '/automation/monitoring/scheduled-jobs' },
         ],
       },
     ],
@@ -708,7 +670,7 @@ export const navigationData: NavSection[] = [
         items: [
           { title: 'Company Details', path: '/settings/company-profile/company-details' },
           { title: 'Fiscal Year Setup', path: '/settings/company-profile/fiscal-year-setup' },
-          { title: 'Base Currency', path: '/settings/company-profile/base-currency' },
+          { title: 'Base Currency', path: '/settings/entity-management/base-currency' },
         ],
       },
       {
