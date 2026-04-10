@@ -30,15 +30,30 @@ const columns = [
 
 export default function BankAccountsPage() {
   const crud = useCrud({
-    endpoint: (companyId) => `/companies/{companyId}/banking/accounts`,
+    endpoint: (companyId) => `/companies/${companyId}/banking/accounts`,
     fields,
     entityName: 'Bank Account',
     searchableFields: ['name', 'bankName', 'accountNumber', 'accountType'],
     transform: (data: any) => {
       const items = Array.isArray(data) ? data : data?.items || data?.records || data?.data || []
-      return items.map(a => ({...a, displayName: a.name || a.accountName || '', status: a.status || 'Active', type: a.accountType || 'Checking'}))
+      return items.map((a: any) => ({...a, displayName: a.name || a.accountName || '', status: a.status || 'Active', type: a.accountType || 'Checking'}))
     },
   })
+
+  function exportSelected() {
+    const selected = crud.data.filter((r: any) => r._selected)
+    const rows = selected.length ? selected : crud.data
+    const headers = ['Account Name', 'Bank', 'Account #', 'Type', 'Balance', 'Currency', 'Status']
+    const csvRows = rows.map((r: any) => [
+      r.displayName, r.bankName, r.accountNumber, r.type,
+      r.balance ?? '', r.currency ?? '', r.status
+    ])
+    const csv = [headers, ...csvRows].map(row => row.map(String).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'bank-accounts.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <>
@@ -63,8 +78,8 @@ export default function BankAccountsPage() {
         emptyDescription="Add your first bank account to get started."
         emptyAction={{ label: `Add Bank Account`, onClick: crud.openCreate }}
         bulkActions={[
-          { label: 'Export Selected', icon: <Download size={13} />, onClick: () => {} },
-          { label: 'Delete Selected', icon: <Trash2 size={13} />, onClick: () => {}, variant: 'danger' },
+          { label: 'Export Selected', icon: <Download size={13} />, onClick: exportSelected },
+          { label: 'Delete Selected', icon: <Trash2 size={13} />, onClick: crud.bulkDelete ?? (() => {}), variant: 'danger' },
         ]}
         filters={[
           { key: 'status', label: 'Status', type: 'select' as const, options: [
