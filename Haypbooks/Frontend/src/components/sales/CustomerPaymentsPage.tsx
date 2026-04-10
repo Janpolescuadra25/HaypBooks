@@ -53,6 +53,45 @@ export default function CustomerPaymentsPage() {
   const [dateStart, setDateStart] = useState('')
   const [dateEnd, setDateEnd] = useState('')
   const [methodFilter, setMethodFilter] = useState('All')
+  const [newPaymentOpen, setNewPaymentOpen] = useState(false)
+
+  // New Payment form state
+  const [np, setNp] = useState({
+    customer: '',
+    invoiceNumber: '',
+    amount: '',
+    paymentMethod: 'Cash',
+    referenceNumber: '',
+    date: new Date().toISOString().split('T')[0],
+    memo: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  async function submitNewPayment(e: React.FormEvent) {
+    e.preventDefault()
+    if (!companyId) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/payments`, {
+        customer: np.customer,
+        invoiceNumber: np.invoiceNumber,
+        amount: parseFloat(np.amount),
+        paymentMethod: np.paymentMethod,
+        referenceNumber: np.referenceNumber,
+        date: np.date,
+        memo: np.memo,
+      })
+      setNewPaymentOpen(false)
+      setNp({ customer: '', invoiceNumber: '', amount: '', paymentMethod: 'Cash', referenceNumber: '', date: new Date().toISOString().split('T')[0], memo: '' })
+      fetchData()
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message || 'Failed to record payment')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   // Data fetched from API (see fetchData above)
 
@@ -87,7 +126,12 @@ export default function CustomerPaymentsPage() {
             <p className="text-sm text-slate-500 mt-1">{filtered.length} payments</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">New Payment</button>
+            <button
+              onClick={() => setNewPaymentOpen(true)}
+              className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+            >
+              New Payment
+            </button>
           </div>
         </div>
 
@@ -197,6 +241,106 @@ export default function CustomerPaymentsPage() {
           </table>
         </div>
       </div>
+
+      {/* New Payment Modal */}
+      {newPaymentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Record Payment</h2>
+              <button onClick={() => setNewPaymentOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
+            </div>
+            <form onSubmit={submitNewPayment} className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
+                <input
+                  required
+                  value={np.customer}
+                  onChange={e => setNp(p => ({ ...p, customer: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="Customer name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Invoice # (optional)</label>
+                <input
+                  value={np.invoiceNumber}
+                  onChange={e => setNp(p => ({ ...p, invoiceNumber: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="INV-0001"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={np.amount}
+                    onChange={e => setNp(p => ({ ...p, amount: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+                  <input
+                    required
+                    type="date"
+                    value={np.date}
+                    onChange={e => setNp(p => ({ ...p, date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
+                  <select
+                    value={np.paymentMethod}
+                    onChange={e => setNp(p => ({ ...p, paymentMethod: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Check">Check</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Credit Card">Credit Card</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Reference #</label>
+                  <input
+                    value={np.referenceNumber}
+                    onChange={e => setNp(p => ({ ...p, referenceNumber: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Check or ref number"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Memo</label>
+                <textarea
+                  rows={2}
+                  value={np.memo}
+                  onChange={e => setNp(p => ({ ...p, memo: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
+                  placeholder="Optional memo…"
+                />
+              </div>
+              {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setNewPaymentOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                  {saving ? 'Saving…' : 'Record Payment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

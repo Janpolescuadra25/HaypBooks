@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
-import { Loader2, AlertCircle, X, Download, Calendar } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Loader2, AlertCircle, X, Download, Calendar, Search } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -24,6 +24,8 @@ export default function TrialBalancePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [asOf, setAsOf] = useState(new Date().toISOString().split('T')[0])
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('All')
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -43,9 +45,40 @@ export default function TrialBalancePage() {
 
   useEffect(() => { fetchTB() }, [fetchTB])
 
-  const totalDebit = rows.reduce((s, r) => s + (r.debit ?? 0), 0)
-  const totalCredit = rows.reduce((s, r) => s + (r.credit ?? 0), 0)
-  const balanced = Math.abs(totalDebit - totalCredit) < 0.005
+  const accountTypes = useMemo(() => {
+    const types = [...new Set(rows.map(r => r.accountType).filter(Boolean))]
+    return ['All', ...types.sort()]
+  }, [rows])
+
+  const filtered = useMemo(() => {
+    let list = rows
+    if (typeFilter !== 'All') list = list.filter(r => r.accountType === typeFilter)
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter(r =>
+        r.accountName?.toLowerCase().includes(q) ||
+        r.accountCode?.toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [rows, typeFilter, search])
+
+  const totalDebit = filtered.reduce((s, r) => s + (r.debit ?? 0), 0)
+  const totalCredit = filtered.reduce((s, r) => s + (r.credit ?? 0), 0)
+  const balanced = Math.abs(
+    rows.reduce((s, r) => s + (r.debit ?? 0), 0) -
+    rows.reduce((s, r) => s + (r.credit ?? 0), 0)
+  ) < 0.005
+
+  function exportCsv() {
+    const headers = ['Code', 'Account', 'Type', 'Debit', 'Credit']
+    const csvRows = filtered.map(r => [r.accountCode, r.accountName, r.accountType, r.debit ?? '', r.credit ?? ''])
+    const csv = [headers, ...csvRows].map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `trial-balance-${asOf}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   if (cidLoading) {
     return (
@@ -74,7 +107,33 @@ export default function TrialBalancePage() {
               className="text-sm border-0 focus:outline-none focus:ring-0"
             />
           </div>
+          <button
+            onClick={exportCsv}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-emerald-200 rounded-lg text-emerald-700 hover:bg-emerald-50"
+          >
+            <Download size={14} /> Export CSV
+          </button>
         </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search account name or code…"
+            className="pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          {accountTypes.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
       </div>
 
       {error && (
@@ -86,7 +145,7 @@ export default function TrialBalancePage() {
 
       {/* Balance status */}
       <div className={`rounded-lg p-3 flex items-center gap-2 text-sm font-semibold ${balanced ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-        {balanced ? '✓ Trial balance is in balance' : `✗ Out of balance by ${fmt(Math.abs(totalDebit - totalCredit))}`}
+        {balanced ? '✓ Trial balance is in balance' : `✗ Out of balance by ${fmt(Math.abs(rows.reduce((s,r)=>s+(r.debit??0),0) - rows.reduce((s,r)=>s+(r.credit??0),0)))}`}
       </div>
 
       {/* Table */}
@@ -107,12 +166,12 @@ export default function TrialBalancePage() {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-12 text-center text-emerald-400">No accounts with balances for this period.</td>
                 </tr>
               ) : (
-                rows.map((row, i) => (
+                filtered.map((row, i) => (
                   <tr key={row.accountId ?? i} className="border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors">
                     <td className="px-4 py-2.5 font-mono text-xs text-emerald-600">{row.accountCode}</td>
                     <td className="px-4 py-2.5 font-medium text-emerald-900">{row.accountName}</td>

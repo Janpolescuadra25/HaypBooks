@@ -16,12 +16,36 @@ type CreditNoteRow = {
   status: 'Issued' | 'Applied' | 'Void'
 }
 
+const CREDIT_REASONS = [
+  'Returned Goods',
+  'Billing Error',
+  'Discount Adjustment',
+  'Price Correction',
+  'Service Issue',
+  'Other',
+]
+
 export default function CreditNotesPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [newOpen, setNewOpen] = useState(false)
+
+  // New Credit Note form state
+  const [nc, setNc] = useState({
+    customer: '',
+    invoiceNumber: '',
+    amount: '',
+    reason: CREDIT_REASONS[0],
+    date: new Date().toISOString().split('T')[0],
+    notes: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
@@ -38,24 +62,44 @@ export default function CreditNotesPage() {
   }, [companyId])
 
   useEffect(() => { fetchData() }, [fetchData])
-  const [search, setSearch] = useState('')
-  const [helpOpen, setHelpOpen] = useState(false)
-
-  // Data fetched from API (see fetchData above)
 
   const filtered = useMemo(() => {
     if (!search) return items
     const q = search.toLowerCase()
     return items.filter((row) =>
-      row.creditNoteNumber.toLowerCase().includes(q) ||
-      row.customer.toLowerCase().includes(q) ||
-      row.invoiceNumber.toLowerCase().includes(q) ||
-      row.date.toLowerCase().includes(q) ||
-      row.amount.toLowerCase().includes(q) ||
-      row.reason.toLowerCase().includes(q) ||
-      row.status.toLowerCase().includes(q)
+      (row.creditNoteNumber || '').toLowerCase().includes(q) ||
+      (row.customer || '').toLowerCase().includes(q) ||
+      (row.invoiceNumber || '').toLowerCase().includes(q) ||
+      (row.date || '').toLowerCase().includes(q) ||
+      (row.amount || '').toLowerCase().includes(q) ||
+      (row.reason || '').toLowerCase().includes(q) ||
+      (row.status || '').toLowerCase().includes(q)
     )
   }, [search, items])
+
+  async function submitNewCreditNote(e: React.FormEvent) {
+    e.preventDefault()
+    if (!companyId) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
+        customer: nc.customer,
+        invoiceNumber: nc.invoiceNumber,
+        amount: parseFloat(nc.amount),
+        reason: nc.reason,
+        date: nc.date,
+        notes: nc.notes,
+      })
+      setNewOpen(false)
+      setNc({ customer: '', invoiceNumber: '', amount: '', reason: CREDIT_REASONS[0], date: new Date().toISOString().split('T')[0], notes: '' })
+      fetchData()
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message || 'Failed to create credit note')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -66,7 +110,12 @@ export default function CreditNotesPage() {
             <p className="text-sm text-slate-500 mt-1">Manage customer credit notes and adjustments</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">New Credit Note</button>
+            <button
+              onClick={() => setNewOpen(true)}
+              className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+            >
+              New Credit Note
+            </button>
             <button onClick={() => setHelpOpen((cur) => !cur)} type="button" aria-label="Open documentation for Credit Notes" className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold">?</button>
           </div>
         </div>
@@ -137,6 +186,93 @@ export default function CreditNotesPage() {
           </table>
         </div>
       </div>
+
+      {/* New Credit Note Modal */}
+      {newOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-bold">New Credit Note</h2>
+              <button onClick={() => setNewOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
+            </div>
+            <form onSubmit={submitNewCreditNote} className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
+                <input
+                  required
+                  value={nc.customer}
+                  onChange={e => setNc(p => ({ ...p, customer: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="Customer name"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Invoice # (optional)</label>
+                  <input
+                    value={nc.invoiceNumber}
+                    onChange={e => setNc(p => ({ ...p, invoiceNumber: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="INV-0001"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+                  <input
+                    required
+                    type="date"
+                    value={nc.date}
+                    onChange={e => setNc(p => ({ ...p, date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={nc.amount}
+                    onChange={e => setNc(p => ({ ...p, amount: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
+                  <select
+                    value={nc.reason}
+                    onChange={e => setNc(p => ({ ...p, reason: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  >
+                    {CREDIT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+                <textarea
+                  rows={3}
+                  value={nc.notes}
+                  onChange={e => setNc(p => ({ ...p, notes: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
+                  placeholder="Additional notes…"
+                />
+              </div>
+              {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setNewOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                  {saving ? 'Saving…' : 'Create Credit Note'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {helpOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
