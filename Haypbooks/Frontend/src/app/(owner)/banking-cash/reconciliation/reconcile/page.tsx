@@ -1,10 +1,5 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+import BankReconciliationPage from '@/components/banking/BankReconciliationPage'
 
 export default function Page() {
-  return (
-    <ComingSoon
-      featureName="Reconcile"
-      estimatedTime="Q2 2026"
-    />
-  )
+  return <BankReconciliationPage />
 }
