@@ -1,5 +1,5 @@
 import TabComingSoon from '@/components/shared/TabComingSoon'
 
 export default function Page() {
-  return <TabComingSoon title="Transaction Rules" />
+  return <TabComingSoon title="Transfer History" />
 }

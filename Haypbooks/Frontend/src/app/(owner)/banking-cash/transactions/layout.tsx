@@ -1,10 +1,9 @@
 import ModuleTabs from '@/components/shared/ModuleTabs'
 
 const TABS = [
-  { label: 'Bank Transactions', value: 'bank-transactions' },
-  { label: 'Connected Transactions', value: 'connected-transactions' },
-  { label: 'Transfers', value: 'transfers' },
-  { label: 'Deposits', value: 'deposits' },
+  { label: 'For Review',  value: 'for-review' },
+  { label: 'Categorized', value: 'categorized' },
+  { label: 'Excluded',    value: 'excluded' },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {

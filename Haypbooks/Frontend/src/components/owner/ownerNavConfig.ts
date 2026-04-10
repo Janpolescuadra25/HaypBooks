@@ -99,40 +99,57 @@ export const navigationData: NavSection[] = [
         title: 'Cash & Banking',
         items: [
           {
-            title: 'Transactions',
+            title: 'Bank Feed',
             path: '/banking-cash/transactions',
             tabs: [
-              { label: 'Bank Transactions',       value: 'bank-transactions',       status: 'existing' },
-              { label: 'Connected Transactions',   value: 'connected-transactions',  status: 'coming-soon' },
-              { label: 'Transfers',                value: 'transfers',               status: 'coming-soon' },
-              { label: 'Deposits',                 value: 'deposits',                status: 'coming-soon' },
-            ],
-          },
-          {
-            title: 'Reconciliation',
-            path: '/banking-cash/reconciliation',
-            tabs: [
-              { label: 'Reconcile',         value: 'reconcile',        status: 'coming-soon' },
-              { label: 'History',           value: 'history',          status: 'coming-soon' },
-              { label: 'Statement Archive', value: 'statement-archive', status: 'coming-soon' },
+              { label: 'For Review',  value: 'for-review',  status: 'existing' },
+              { label: 'Categorized', value: 'categorized', status: 'existing' },
+              { label: 'Excluded',    value: 'excluded',    status: 'existing' },
             ],
           },
           {
             title: 'Accounts',
             path: '/banking-cash/accounts',
             tabs: [
-              { label: 'Bank Accounts',     value: 'bank-accounts',    status: 'existing' },
-              { label: 'Credit Cards',      value: 'credit-cards',     status: 'coming-soon' },
-              { label: 'Petty Cash',        value: 'petty-cash',       status: 'coming-soon' },
+              { label: 'Bank Accounts',     value: 'bank-accounts',     status: 'existing' },
+              { label: 'Credit Cards',      value: 'credit-cards',      status: 'coming-soon' },
+              { label: 'Petty Cash',        value: 'petty-cash',        status: 'coming-soon' },
               { label: 'Clearing Accounts', value: 'clearing-accounts', status: 'coming-soon' },
             ],
           },
           {
-            title: 'Management',
-            path: '/banking-cash/cash-management',
+            title: 'Reconciliation',
+            path: '/banking-cash/reconciliation',
             tabs: [
-              { label: 'Transaction Rules',       value: 'transaction-rules',       status: 'coming-soon' },
-              { label: 'Recurring Transactions',  value: 'recurring-transactions',  status: 'coming-soon' },
+              { label: 'Reconcile',  value: 'reconcile',  status: 'coming-soon' },
+              { label: 'History',    value: 'history',    status: 'coming-soon' },
+              { label: 'Statements', value: 'statements', status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Transfers',
+            path: '/banking-cash/transfers',
+            tabs: [
+              { label: 'Fund Transfers',   value: 'fund-transfers',   status: 'coming-soon' },
+              { label: 'Transfer History', value: 'transfer-history', status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Deposits',
+            path: '/banking-cash/deposits',
+            tabs: [
+              { label: 'Undeposited Funds', value: 'undeposited-funds', status: 'coming-soon' },
+              { label: 'Bank Deposits',     value: 'bank-deposits',     status: 'coming-soon' },
+              { label: 'Deposit History',   value: 'deposit-history',   status: 'coming-soon' },
+            ],
+          },
+          {
+            title: 'Bank Rules',
+            path: '/banking-cash/bank-rules',
+            tabs: [
+              { label: 'Rules',          value: 'rules',          status: 'coming-soon' },
+              { label: 'Rule Templates', value: 'rule-templates', status: 'coming-soon' },
+              { label: 'CSV Upload',     value: 'csv-upload',     status: 'coming-soon' },
             ],
           },
         ],
