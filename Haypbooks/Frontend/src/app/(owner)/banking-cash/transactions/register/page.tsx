@@ -30,6 +30,7 @@ interface RegisterTransaction {
   description: string
   type: TxType
   category?: string
+  transactionType?: string
   accountId?: string
   accountName?: string
   amount: number
@@ -51,6 +52,8 @@ const MOCK_FALLBACK: RegisterTransaction[] = [
   { id: 'm8', date: '2026-04-02', reference: 'TXN-0008', description: 'BIR Withholding Tax — Form 1601C', type: 'Debit', category: 'Taxes Payable', amount: 16240, runningBalance: 213620, status: 'Reconciled' },
   { id: 'm9', date: '2026-04-01', reference: 'TXN-0009', description: 'Office Rent — April 2026', type: 'Debit', category: 'Rent Expense', amount: 65000, runningBalance: 229860, status: 'Cleared' },
   { id: 'm10', date: '2026-03-31', reference: 'TXN-0010', description: 'Interest Income — Savings March 2026', type: 'Credit', category: 'Interest Income', amount: 2480, runningBalance: 294860, status: 'Reconciled' },
+  { id: 'm11', date: '2026-04-11', reference: 'TXN-0011', description: 'Shopify Sales Payout — pending settlement', type: 'Credit', category: '', transactionType: 'Bank Transaction', amount: 42000, runningBalance: 434400, status: 'Pending' },
+  { id: 'm12', date: '2026-04-11', reference: 'TXN-0012', description: 'Supplier Invoice — TechParts PH', type: 'Debit', category: '', transactionType: 'Bank Transaction', amount: 18750, runningBalance: 373650, status: 'Pending' },
 ]
 
 // ─── Status badge helper ──────────────────────────────────────────────────────
@@ -131,6 +134,7 @@ export default function RegisterPage() {
     description: raw.description ?? raw.memo ?? raw.note ?? '—',
     type: (raw.type === 'credit' || raw.type === 'Credit' || raw.amount > 0) ? 'Credit' : 'Debit',
     category: raw.category ?? raw.categoryName ?? undefined,
+    transactionType: raw.transactionType ?? raw.txType ?? undefined,
     accountId: raw.bankAccountId ?? raw.accountId ?? undefined,
     accountName: raw.accountName ?? accountName,
     amount: Math.abs(raw.amount ?? 0),
@@ -263,13 +267,14 @@ export default function RegisterPage() {
 
   // ── CSV export ─────────────────────────────────────────────────────────────
   const exportCSV = () => {
-    const headers = ['Date', 'Reference', 'Description', 'Account', 'Category', 'Type', 'Debit', 'Credit', 'Balance', 'Status']
+    const headers = ['Date', 'Reference', 'Description', 'Account', 'Account (Category)', 'Tx Type', 'Type', 'Debit', 'Credit', 'Balance', 'Status']
     const rows = withBalance.map(t => [
       t.date,
       t.reference ?? '',
       `"${(t.description ?? '').replace(/"/g, '""')}"`,
       t.accountName ?? '',
       t.category ?? '',
+      t.transactionType ?? '',
       t.type,
       t.type === 'Debit' ? t.amount.toFixed(2) : '',
       t.type === 'Credit' ? t.amount.toFixed(2) : '',
@@ -526,13 +531,14 @@ export default function RegisterPage() {
           {!loading && (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] text-left">
+                <table className="w-full min-w-[1050px] text-left">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                       <th className="px-4 py-3 w-28 whitespace-nowrap">Date</th>
                       <th className="px-4 py-3 min-w-[260px]">Reference / Description</th>
                       {selectedAccount === 'all' && <th className="px-4 py-3 w-40 whitespace-nowrap">Account</th>}
-                      <th className="px-4 py-3 w-36 whitespace-nowrap">Category</th>
+                      <th className="px-4 py-3 w-36 whitespace-nowrap">Account</th>
+                      <th className="px-4 py-3 w-28 whitespace-nowrap">Tx Type</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap w-32">Debit</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap w-32">Credit</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap w-36">Balance</th>
@@ -542,7 +548,7 @@ export default function RegisterPage() {
                   <tbody className="divide-y divide-slate-100">
                     {pageRows.length === 0 ? (
                       <tr>
-                        <td colSpan={selectedAccount === 'all' ? 8 : 7} className="px-4 py-16 text-center text-slate-400 text-sm">
+                        <td colSpan={selectedAccount === 'all' ? 9 : 8} className="px-4 py-16 text-center text-slate-400 text-sm">
                           No transactions match the current filters.
                         </td>
                       </tr>
@@ -556,7 +562,7 @@ export default function RegisterPage() {
                           <Fragment key={tx.id}>
                             {isNewAccount && (
                               <tr className="bg-slate-100 border-t-2 border-slate-200">
-                                <td colSpan={8} className="px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                <td colSpan={9} className="px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
                                   {tx.accountName ?? 'Unknown Account'}
                                 </td>
                               </tr>
@@ -578,10 +584,19 @@ export default function RegisterPage() {
                                   {tx.accountName ?? '—'}
                                 </td>
                               )}
-                              <td className="px-4 py-3.5">
+                                      <td className="px-4 py-3.5">
                                 {tx.category ? (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 max-w-[130px] truncate block">
                                     {tx.category}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300 text-xs">—</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {tx.transactionType ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-sky-50 text-sky-700 border border-sky-100 whitespace-nowrap">
+                                    {tx.transactionType}
                                   </span>
                                 ) : (
                                   <span className="text-slate-300 text-xs">—</span>
@@ -614,7 +629,7 @@ export default function RegisterPage() {
                   {pageRows.length > 0 && (
                     <tfoot>
                       <tr className="bg-slate-50 border-t-2 border-slate-200 text-sm font-bold">
-                        <td colSpan={selectedAccount === 'all' ? 4 : 3} className="px-4 py-3 text-xs text-slate-500 uppercase">
+                        <td colSpan={selectedAccount === 'all' ? 5 : 4} className="px-4 py-3 text-xs text-slate-500 uppercase">
                           Page totals ({pageRows.length})
                         </td>
                         <td className="px-4 py-3 text-right font-mono text-rose-600">

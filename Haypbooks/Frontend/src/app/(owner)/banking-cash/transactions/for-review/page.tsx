@@ -1,15 +1,30 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   RefreshCw, Link2, Upload, Settings2, Search,
-  ChevronDown, ChevronRight, X, Plus, Minus,
-  AlertCircle, CheckCircle2, Loader2,
+  ChevronRight, X, Plus, Minus,
+  AlertCircle, CheckCircle2, Loader2, User, Building2, Briefcase,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+
+// ─── COA + Contact types ─────────────────────────────────────────────────────
+
+interface CoaAccount {
+  id: string
+  code: string
+  name: string
+  category?: string
+}
+
+interface EntityOption {
+  id: string
+  name: string
+  entityType: 'Customer' | 'Vendor' | 'Employee'
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -97,6 +112,33 @@ export default function ForReviewPage() {
   const [matchLoading, setMatchLoading] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<string | null>(null)
 
+  // COA accounts and entity options
+  const [coaAccounts, setCoaAccounts] = useState<CoaAccount[]>([])
+  const [entities, setEntities]       = useState<EntityOption[]>([])
+  const [coaSearch, setCoaSearch]     = useState('')
+  const [entitySearch, setEntitySearch] = useState('')
+  const [coaOpen, setCoaOpen]         = useState(false)
+  const [entityOpen, setEntityOpen]   = useState(false)
+  const coaRef = useRef<HTMLDivElement>(null)
+  const entityRef = useRef<HTMLDivElement>(null)
+
+  // Detail panel selected account/entity
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
+  const [selectedEntityId, setSelectedEntityId]   = useState<string>('')
+
+  // Batch categorize modal
+  const [batchModalOpen, setBatchModalOpen]   = useState(false)
+  const [batchAccountId, setBatchAccountId]   = useState('')
+  const [batchEntityId, setBatchEntityId]     = useState('')
+  const [batchCoaSearch, setBatchCoaSearch]   = useState('')
+  const [batchEntitySearch, setBatchEntitySearch] = useState('')
+  const [batchCoaOpen, setBatchCoaOpen]       = useState(false)
+  const [batchEntityOpen, setBatchEntityOpen] = useState(false)
+  const [batchLoading, setBatchLoading]       = useState(false)
+  const [batchError, setBatchError]           = useState<string | null>(null)
+  const batchCoaRef    = useRef<HTMLDivElement>(null)
+  const batchEntityRef = useRef<HTMLDivElement>(null)
+
   // Split modal
   const [splitOpen, setSplitOpen]     = useState(false)
   const [splitLines, setSplitLines]   = useState<SplitLine[]>([
@@ -109,6 +151,49 @@ export default function ForReviewPage() {
   // Pagination
   const [page, setPage]               = useState(1)
   const PAGE_SIZE = 25
+
+  // ─── Load COA accounts ──────────────────────────────────────────────────────
+
+  const loadCoa = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const res = await apiClient.get(`/companies/${companyId}/accounts`)
+      const list: any[] = res.data?.accounts ?? res.data ?? []
+      setCoaAccounts(list.map((a: any) => ({
+        id: a.id,
+        code: a.code ?? '',
+        name: a.name ?? '',
+        category: a.type?.category ?? a.category ?? '',
+      })))
+    } catch { /* non-fatal */ }
+  }, [companyId])
+
+  // ─── Load entities (customers, vendors, employees) ───────────────────────────
+
+  const loadEntities = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const [custRes, vendorRes, empRes] = await Promise.allSettled([
+        apiClient.get(`/companies/${companyId}/customers`),
+        apiClient.get(`/companies/${companyId}/vendors`),
+        apiClient.get(`/companies/${companyId}/employees`),
+      ])
+      const opts: EntityOption[] = []
+      if (custRes.status === 'fulfilled') {
+        const list: any[] = custRes.value.data?.customers ?? custRes.value.data ?? []
+        list.forEach((c: any) => opts.push({ id: c.contactId ?? c.id, name: c.contact?.displayName ?? c.name ?? c.displayName ?? 'Unknown', entityType: 'Customer' }))
+      }
+      if (vendorRes.status === 'fulfilled') {
+        const list: any[] = vendorRes.value.data?.vendors ?? vendorRes.value.data ?? []
+        list.forEach((v: any) => opts.push({ id: v.contactId ?? v.id, name: v.contact?.displayName ?? v.name ?? v.displayName ?? 'Unknown', entityType: 'Vendor' }))
+      }
+      if (empRes.status === 'fulfilled') {
+        const list: any[] = empRes.value.data?.employees ?? empRes.value.data ?? []
+        list.forEach((e: any) => opts.push({ id: e.id, name: e.name ?? e.fullName ?? 'Unknown', entityType: 'Employee' }))
+      }
+      setEntities(opts)
+    } catch { /* non-fatal */ }
+  }, [companyId])
 
   // ─── Load accounts ──────────────────────────────────────────────────────────
 
@@ -165,16 +250,20 @@ export default function ForReviewPage() {
     }
   }, [companyId, selectedAccount])
 
-  useEffect(() => { if (companyId) { loadAccounts(); fetchTransactions() } }, [companyId, fetchTransactions, loadAccounts])
+  useEffect(() => { if (companyId) { loadAccounts(); fetchTransactions(); loadCoa(); loadEntities() } }, [companyId, fetchTransactions, loadAccounts, loadCoa, loadEntities])
 
   // Open detail panel
   const openRow = (tx: BankTransaction) => {
     setActiveRow(tx)
     setEditCategory(tx.category ?? '')
+    setSelectedAccountId('')
     setEditPayee(tx.payee ?? '')
+    setSelectedEntityId('')
     setEditMemo(tx.memo ?? '')
     setEditTags((tx.tags ?? []).join(', '))
     setActionError(null)
+    setCoaOpen(false)
+    setEntityOpen(false)
   }
 
   // ─── Filter + pagination ─────────────────────────────────────────────────────
@@ -226,7 +315,12 @@ export default function ForReviewPage() {
     setActionLoading(true); setActionError(null)
     try {
       await apiClient.patch(`/companies/${companyId}/banking/accounts/${accountForActive}/transactions/${activeRow.id}`, {
-        status: 'categorized', category: editCategory, payee: editPayee, memo: editMemo,
+        status: 'categorized',
+        accountId: selectedAccountId || undefined,
+        category: editCategory || undefined,
+        contactId: selectedEntityId || undefined,
+        memo: editMemo || undefined,
+        transactionType: 'Bank Transaction',
         tags: editTags.split(',').map(s => s.trim()).filter(Boolean),
       })
       setItems(prev => prev.filter(t => t.id !== activeRow.id))
@@ -264,8 +358,34 @@ export default function ForReviewPage() {
   }
 
   async function batchCategorize() {
-    // open a simple prompt via the existing filter — placeholder for future modal
-    setError('Batch categorize: select a category from the detail panel or use Bank Rules for bulk categorization.')
+    if (selected.size === 0) return
+    setBatchAccountId('')
+    setBatchEntityId('')
+    setBatchCoaSearch('')
+    setBatchEntitySearch('')
+    setBatchError(null)
+    setBatchModalOpen(true)
+  }
+
+  async function submitBatchCategorize() {
+    if (!batchAccountId || !accountForActive) return
+    setBatchLoading(true); setBatchError(null)
+    const coaAcct = coaAccounts.find(a => a.id === batchAccountId)
+    const entity  = entities.find(e => e.id === batchEntityId)
+    try {
+      await apiClient.post(`/companies/${companyId}/banking/accounts/${accountForActive}/transactions/batch-categorize`, {
+        transactionIds: [...selected],
+        accountId: batchAccountId,
+        contactId: batchEntityId || undefined,
+        category: coaAcct ? `${coaAcct.code} ${coaAcct.name}` : undefined,
+        transactionType: 'Bank Transaction',
+      })
+      setItems(prev => prev.filter(t => !selected.has(t.id)))
+      setSelected(new Set())
+      setBatchModalOpen(false)
+    } catch (e: any) {
+      setBatchError(e?.response?.data?.message ?? 'Batch categorize failed. Please try again.')
+    } finally { setBatchLoading(false) }
   }
 
   // Find Match
@@ -506,15 +626,99 @@ export default function ForReviewPage() {
             </div>
 
             <div className="px-5 py-4 flex-1 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Category</label>
-                <input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="e.g. Office Supplies"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              {/* Account (COA) — searchable dropdown */}
+              <div ref={coaRef} className="relative">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Account (Category)</label>
+                <button
+                  type="button"
+                  onClick={() => { setCoaOpen(o => !o); setEntityOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white flex items-center justify-between"
+                >
+                  <span className={selectedAccountId ? 'text-slate-900' : 'text-slate-400'}>
+                    {selectedAccountId
+                      ? (() => { const a = coaAccounts.find(x => x.id === selectedAccountId); return a ? `${a.code} ${a.name}` : editCategory || 'Select account…' })()
+                      : editCategory || 'Select account…'}
+                  </span>
+                  <ChevronRight size={12} className={`text-slate-400 transition-transform ${coaOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {coaOpen && (
+                  <div className="absolute z-40 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 flex flex-col">
+                    <div className="p-2 border-b border-slate-100">
+                      <input
+                        autoFocus
+                        value={coaSearch}
+                        onChange={e => setCoaSearch(e.target.value)}
+                        placeholder="Search accounts…"
+                        className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                      />
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                      {coaAccounts
+                        .filter(a => !coaSearch || `${a.code} ${a.name}`.toLowerCase().includes(coaSearch.toLowerCase()))
+                        .map(a => (
+                          <button key={a.id} type="button"
+                            onClick={() => { setSelectedAccountId(a.id); setEditCategory(`${a.code} ${a.name}`); setCoaOpen(false); setCoaSearch('') }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 ${selectedAccountId === a.id ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-slate-700'}`}
+                          >
+                            <span className="font-mono text-xs text-slate-400 mr-2">{a.code}</span>{a.name}
+                            {a.category && <span className="ml-1 text-[11px] text-slate-400">({a.category})</span>}
+                          </button>
+                        ))}
+                      {coaAccounts.filter(a => !coaSearch || `${a.code} ${a.name}`.toLowerCase().includes(coaSearch.toLowerCase())).length === 0 && (
+                        <p className="px-3 py-4 text-xs text-slate-400 text-center">No accounts match</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Payee</label>
-                <input value={editPayee} onChange={e => setEditPayee(e.target.value)} placeholder="Payee / Vendor name"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+
+              {/* Name (entity) — searchable dropdown */}
+              <div ref={entityRef} className="relative">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
+                <button
+                  type="button"
+                  onClick={() => { setEntityOpen(o => !o); setCoaOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white flex items-center justify-between"
+                >
+                  <span className={selectedEntityId ? 'text-slate-900' : 'text-slate-400'}>
+                    {selectedEntityId
+                      ? (() => { const e = entities.find(x => x.id === selectedEntityId); return e ? e.name : editPayee || 'Select entity…' })()
+                      : editPayee || 'Select entity…'}
+                  </span>
+                  <ChevronRight size={12} className={`text-slate-400 transition-transform ${entityOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {entityOpen && (
+                  <div className="absolute z-40 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 flex flex-col">
+                    <div className="p-2 border-b border-slate-100">
+                      <input
+                        autoFocus
+                        value={entitySearch}
+                        onChange={e => setEntitySearch(e.target.value)}
+                        placeholder="Search customers, vendors…"
+                        className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                      />
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                      {entities
+                        .filter(e => !entitySearch || e.name.toLowerCase().includes(entitySearch.toLowerCase()))
+                        .map(e => (
+                          <button key={e.id} type="button"
+                            onClick={() => { setSelectedEntityId(e.id); setEditPayee(e.name); setEntityOpen(false); setEntitySearch('') }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 ${selectedEntityId === e.id ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-slate-700'} flex items-center gap-2`}
+                          >
+                            {e.entityType === 'Customer' && <User size={12} className="text-emerald-500 shrink-0" />}
+                            {e.entityType === 'Vendor' && <Building2 size={12} className="text-blue-500 shrink-0" />}
+                            {e.entityType === 'Employee' && <Briefcase size={12} className="text-purple-500 shrink-0" />}
+                            <span>{e.name}</span>
+                            <span className="ml-auto text-[11px] text-slate-400">{e.entityType}</span>
+                          </button>
+                        ))}
+                      {entities.filter(e => !entitySearch || e.name.toLowerCase().includes(entitySearch.toLowerCase())).length === 0 && (
+                        <p className="px-3 py-4 text-xs text-slate-400 text-center">No entities match</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
@@ -633,6 +837,157 @@ export default function ForReviewPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Batch Categorize Modal ── */}
+      {batchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Batch Categorize</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{selected.size} transaction{selected.size !== 1 ? 's' : ''} selected</p>
+              </div>
+              <button onClick={() => setBatchModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+            </div>
+
+            {/* COA Account */}
+            <div className="px-5 pt-4 pb-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Account (Category) <span className="text-rose-400">*</span></label>
+              <div ref={batchCoaRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setBatchCoaOpen(o => !o); setBatchEntityOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white flex items-center justify-between"
+                >
+                  <span className={batchAccountId ? 'text-slate-900' : 'text-slate-400'}>
+                    {batchAccountId
+                      ? (() => { const a = coaAccounts.find(x => x.id === batchAccountId); return a ? `${a.code} ${a.name}` : 'Select account…' })()
+                      : 'Select account…'}
+                  </span>
+                  <ChevronRight size={12} className={`text-slate-400 transition-transform ${batchCoaOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {batchCoaOpen && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 flex flex-col">
+                    <div className="p-2 border-b border-slate-100">
+                      <input
+                        autoFocus
+                        value={batchCoaSearch}
+                        onChange={e => setBatchCoaSearch(e.target.value)}
+                        placeholder="Search accounts…"
+                        className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                      />
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                      {coaAccounts
+                        .filter(a => !batchCoaSearch || `${a.code} ${a.name}`.toLowerCase().includes(batchCoaSearch.toLowerCase()))
+                        .map(a => (
+                          <button key={a.id} type="button"
+                            onClick={() => { setBatchAccountId(a.id); setBatchCoaOpen(false); setBatchCoaSearch('') }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 ${batchAccountId === a.id ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-slate-700'}`}
+                          >
+                            <span className="font-mono text-xs text-slate-400 mr-2">{a.code}</span>{a.name}
+                            {a.category && <span className="ml-1 text-[11px] text-slate-400">({a.category})</span>}
+                          </button>
+                        ))}
+                      {coaAccounts.filter(a => !batchCoaSearch || `${a.code} ${a.name}`.toLowerCase().includes(batchCoaSearch.toLowerCase())).length === 0 && (
+                        <p className="px-3 py-4 text-xs text-slate-400 text-center">No accounts match</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Name (entity) */}
+            <div className="px-5 pb-4">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Name <span className="text-slate-400">(optional)</span></label>
+              <div ref={batchEntityRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setBatchEntityOpen(o => !o); setBatchCoaOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white flex items-center justify-between"
+                >
+                  <span className={batchEntityId ? 'text-slate-900' : 'text-slate-400'}>
+                    {batchEntityId
+                      ? (() => { const e = entities.find(x => x.id === batchEntityId); return e ? e.name : 'Select entity…' })()
+                      : 'Select entity…'}
+                  </span>
+                  <ChevronRight size={12} className={`text-slate-400 transition-transform ${batchEntityOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {batchEntityOpen && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 flex flex-col">
+                    <div className="p-2 border-b border-slate-100">
+                      <input
+                        autoFocus
+                        value={batchEntitySearch}
+                        onChange={e => setBatchEntitySearch(e.target.value)}
+                        placeholder="Search customers, vendors…"
+                        className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                      />
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                      {entities
+                        .filter(e => !batchEntitySearch || e.name.toLowerCase().includes(batchEntitySearch.toLowerCase()))
+                        .map(e => (
+                          <button key={e.id} type="button"
+                            onClick={() => { setBatchEntityId(e.id); setBatchEntityOpen(false); setBatchEntitySearch('') }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 ${batchEntityId === e.id ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-slate-700'} flex items-center gap-2`}
+                          >
+                            {e.entityType === 'Customer' && <User size={12} className="text-emerald-500 shrink-0" />}
+                            {e.entityType === 'Vendor' && <Building2 size={12} className="text-blue-500 shrink-0" />}
+                            {e.entityType === 'Employee' && <Briefcase size={12} className="text-purple-500 shrink-0" />}
+                            <span>{e.name}</span>
+                            <span className="ml-auto text-[11px] text-slate-400">{e.entityType}</span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Preview table */}
+            <div className="px-5 pb-2 border-t border-slate-100 flex-1 overflow-y-auto">
+              <p className="text-xs font-medium text-slate-500 mt-3 mb-2">Preview</p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <th className="pb-1.5 pr-3 font-medium">Description</th>
+                    <th className="pb-1.5 pr-3 font-medium">Date</th>
+                    <th className="pb-1.5 text-right font-medium">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.filter(t => selected.has(t.id)).map(t => (
+                    <tr key={t.id} className="border-b border-slate-50">
+                      <td className="py-1.5 pr-3 text-slate-700 truncate max-w-[220px]">{t.description}</td>
+                      <td className="py-1.5 pr-3 text-slate-500 whitespace-nowrap">{t.date}</td>
+                      <td className={`py-1.5 text-right font-semibold tabular-nums ${t.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {t.amount < 0 ? '-' : '+'}{formatCurrency(Math.abs(t.amount), currency)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {batchError && <p className="px-5 py-2 text-xs text-rose-500">{batchError}</p>}
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t border-slate-200 flex justify-end gap-2 bg-slate-50">
+              <button onClick={() => setBatchModalOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100">Cancel</button>
+              <button
+                onClick={submitBatchCategorize}
+                disabled={!batchAccountId || batchLoading}
+                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60"
+              >
+                {batchLoading ? 'Categorizing…' : `Categorize ${selected.size} transaction${selected.size !== 1 ? 's' : ''}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
