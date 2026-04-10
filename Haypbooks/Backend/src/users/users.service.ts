@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common'
+import { Injectable, Inject, NotFoundException, InternalServerErrorException } from '@nestjs/common'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
 import { USER_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 import { PrismaService } from '../repositories/prisma/prisma.service'
@@ -12,9 +12,15 @@ export class UsersService {
   ) { }
 
   async findById(id: string) {
-    const user = await this.userRepository.findById(id)
+    let user: any
+    try {
+      user = await this.userRepository.findById(id)
+    } catch (e) {
+      console.error('[USER-PROFILE] findById DB error:', e?.message || e)
+      throw new InternalServerErrorException('Failed to load user profile')
+    }
     if (!user) {
-      throw new Error('User not found')
+      throw new NotFoundException('User not found')
     }
     const { password, ...result } = user as any
 
