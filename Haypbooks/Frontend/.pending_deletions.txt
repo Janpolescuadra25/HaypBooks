@@ -1,3 +1,0 @@
-Deleted duplicate page: src/app/1099-filings/page.tsx (canonical lives under src/app/(expenses)/1099-filings/page.tsx)
-Deleted duplicate test: src/__tests__/invoice-writeoff.api(2).test.ts (canonical is invoice-writeoff.api.test.ts)
-Deleted duplicate component: src/components/JournalReclassButton(2).tsx (canonical is JournalReclassButton.tsx)
