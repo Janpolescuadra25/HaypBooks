@@ -153,10 +153,35 @@ function matchesCountry(item: { countries?: string[] }, country?: string) {
 function hasActiveNavItem(items: NavItem[] | undefined, pathname: string): boolean {
   if (!items || !pathname) return false
   for (const item of items) {
-    if (item.path && item.path === pathname) return true
+    if (item.path && (pathname === item.path || pathname.startsWith(item.path + '/'))) return true
     if (item.items && hasActiveNavItem(item.items, pathname)) return true
   }
   return false
+}
+
+/**
+ * Walk every section's items + group items to find which section owns the
+ * current pathname.  Checks both exact match and prefix (for sub-pages).
+ */
+function findSectionForPath(sections: NavSection[], pathname: string): NavSection | null {
+  if (!pathname) return null
+  const matchItem = (items: NavItem[] | undefined): boolean => {
+    if (!items) return false
+    for (const item of items) {
+      if (item.path && (pathname === item.path || pathname.startsWith(item.path + '/'))) return true
+      if (item.items && matchItem(item.items)) return true
+    }
+    return false
+  }
+  for (const section of sections) {
+    if (matchItem(section.items)) return section
+    if (section.groups) {
+      for (const group of section.groups) {
+        if (matchItem(group.items)) return section
+      }
+    }
+  }
+  return null
 }
 
 function filterNavItems(items: NavItem[] | undefined, country?: string): NavItem[] {
@@ -194,8 +219,9 @@ export default function OwnerSidebar() {
     [country]
   )
   const pathname = usePathname()
+  // Initialise from the current URL so a page refresh lands on the right section
   const [activeSection, setActiveSection] = useState<NavSection>(
-    filteredNavigation[0]
+    () => findSectionForPath(filteredNavigation, pathname ?? '') ?? filteredNavigation[0]
   )
   const [isSecondaryVisible, setIsSecondaryVisible] = useState(true)
 
@@ -213,12 +239,22 @@ export default function OwnerSidebar() {
     (s) => s.title === activeSection.title
   )
 
+  // Keep section in sync when the URL changes (client-side navigation via Link)
+  useEffect(() => {
+    if (!pathname || !filteredNavigation.length) return
+    const match = findSectionForPath(filteredNavigation, pathname)
+    if (match) setActiveSection(match)
+  }, [pathname, filteredNavigation])
+
+  // Fallback: if filteredNavigation changes and activeSection is no longer present, reset
   useEffect(() => {
     if (!filteredNavigation.length) return
     if (!activeSection || !filteredNavigation.find((s) => s.title === activeSection.title)) {
-      setActiveSection(filteredNavigation[0])
+      setActiveSection(
+        findSectionForPath(filteredNavigation, pathname ?? '') ?? filteredNavigation[0]
+      )
     }
-  }, [filteredNavigation, activeSection])
+  }, [filteredNavigation, activeSection, pathname])
 
   useEffect(() => {
     if (!activeSection.groups || !pathname) return
