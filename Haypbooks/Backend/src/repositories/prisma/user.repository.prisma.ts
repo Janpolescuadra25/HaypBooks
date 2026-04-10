@@ -30,20 +30,11 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
+    // Intentionally exclude heavy workspace/company relations here.
+    // UsersService.findById fetches companies & practices via separate, targeted queries.
+    // Including them here caused massive queries that could crash on schema mismatches.
     const u = await this.prisma.user.findUnique({
       where: { id },
-      include: {
-        ownedWorkspace: {
-          include: { companies: true, practices: true }
-        },
-        workspaceUsers: {
-          include: {
-            workspace: {
-              include: { companies: true, practices: true }
-            }
-          }
-        }
-      }
     })
     if (!u) return null
     return {

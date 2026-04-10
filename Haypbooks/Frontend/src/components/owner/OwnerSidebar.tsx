@@ -40,12 +40,13 @@ function RecursiveNavItem({
 }) {
   const isGroup = !item.path && !!item.items
 
-  // Active if path matches exactly OR if we're anywhere within the same subsection
+  // Active if path matches exactly OR if we're deeper within this item's path
   // (e.g. highlight 'Transactions' when on any tab under /operations/cash-banking/transactions/)
-  const pathPrefix = item.path ? item.path.split('/').slice(0, -1).join('/') : ''
+  // NOTE: We intentionally do NOT use the parent prefix — that would wrongly highlight
+  // siblings (e.g. both /home/dashboard and /home/performance when on /home/dashboard).
   const isActive = !!item.path && (
     activePath === item.path ||
-    (pathPrefix.length > 1 && activePath.startsWith(pathPrefix + '/'))
+    activePath.startsWith(item.path + '/')
   )
 
   const [isOpen, setIsOpen] = useState(() => {
@@ -54,8 +55,7 @@ function RecursiveNavItem({
       items.some((i) => {
         if (i.path) {
           if (activePath === i.path) return true
-          const prefix = i.path.split('/').slice(0, -1).join('/')
-          if (prefix.length > 1 && activePath.startsWith(prefix + '/')) return true
+          if (activePath.startsWith(i.path + '/')) return true
         }
         if (i.items) return hasActive(i.items)
         return false
