@@ -101,6 +101,17 @@ export class BankingController {
         return this.svc.splitTransaction(req.user.userId, cid, bid, tid, body)
     }
 
+    @Post('accounts/:bankAccountId/transactions/batch-categorize')
+    @HttpCode(HttpStatus.OK)
+    batchCategorize(
+        @Req() req: any,
+        @Param('companyId') cid: string,
+        @Param('bankAccountId') bid: string,
+        @Body() body: { transactionIds: string[]; accountId: string; contactId?: string; transactionType?: string; category?: string },
+    ) {
+        return this.svc.batchCategorize(req.user.userId, cid, bid, body)
+    }
+
     @Post('transfers')
     createTransfer(
         @Req() req: any,

@@ -99,6 +99,7 @@ export class BankingRepository {
 
     async updateTransaction(workspaceId: string, bankTransactionId: string, data: {
         category?: string; memo?: string; status?: string
+        contactId?: string; transactionType?: string; journalEntryId?: string
     }) {
         return this.prisma.bankTransaction.update({
             where: { id: bankTransactionId },
@@ -106,20 +107,24 @@ export class BankingRepository {
                 ...(data.category !== undefined ? { category: data.category, status: 'CATEGORIZED' as any } : {}),
                 ...(data.memo !== undefined ? { memo: data.memo } : {}),
                 ...(data.status !== undefined ? { status: data.status as any } : {}),
+                ...(data.contactId !== undefined ? { contactId: data.contactId } : {}),
+                ...(data.transactionType !== undefined ? { transactionType: data.transactionType } : {}),
+                ...(data.journalEntryId !== undefined ? { journalEntryId: data.journalEntryId } : {}),
             },
             include: { BankReconciliationLine: { select: { id: true, matched: true, matchType: true } } },
         })
     }
 
     async splitTransaction(workspaceId: string, bankTransactionId: string, splits: Array<{
-        accountCode: string; description: string; amount: number
+        accountCode: string; accountId?: string; description: string; amount: number
     }>) {
         return this.prisma.$transaction(async (tx) => {
             await tx.bankTransactionSplit.deleteMany({ where: { bankTransactionId } })
             await tx.bankTransactionSplit.createMany({
                 data: splits.map(s => ({
                     workspaceId, bankTransactionId,
-                    accountCode: s.accountCode, description: s.description, amount: s.amount,
+                    accountCode: s.accountCode, accountId: s.accountId ?? null,
+                    description: s.description, amount: s.amount,
                 })),
             })
             return tx.bankTransaction.update({

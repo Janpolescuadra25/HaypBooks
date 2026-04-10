@@ -5441,6 +5441,10 @@ model JournalEntry {
   version       Int           @default(1)
   /// References the immediately preceding version of this entry
   previousId    String?
+  /// Source module that created this entry ("Bank Transaction", "Bank Transfer", "Invoice", "Bill", etc.)
+  transactionSource  String?
+  /// ID of the source record (BankTransaction.id, Invoice.id, etc.)
+  sourceReferenceId  String?
 
   // Approval / review workflow (tightly scoped; optional)
   reviewedById  String?
@@ -8572,6 +8576,7 @@ model BankAccount {
   isDefault           Boolean   @default(false)
   checkStartingNumber Int?
   lastCheckNumber     Int?
+  glAccountId         String?   // GL/COA Account ID linked to this bank account
   createdAt           DateTime  @default(now())
   /// Soft-delete — null means active account
   deletedAt           DateTime?
@@ -8604,10 +8609,13 @@ model BankTransaction {
   amount        Decimal               @db.Decimal(19, 4)
   date          DateTime
   description   String
-  workspaceId   String
-  category      String?
-  memo          String?
-  status        BankTransactionStatus @default(PENDING)
+  workspaceId       String
+  category          String?
+  memo              String?
+  status            BankTransactionStatus @default(PENDING)
+  contactId         String?   // Customer/Vendor/Employee contact ID
+  journalEntryId    String?   // Journal Entry created when categorized
+  transactionType   String?   // "Bank Transaction", "Bank Transfer", "Bank Deposit", etc.
 
   bankAccount            BankAccount              @relation(fields: [bankAccountId], references: [id])
   workspace              Workspace                @relation(fields: [workspaceId], references: [id])
@@ -8621,6 +8629,8 @@ model BankTransaction {
   @@index([bankAccountId, date, amount])
   @@index([bankAccountId, date, description])
   @@index([workspaceId, date, bankAccountId])
+  @@index([contactId])
+  @@index([journalEntryId])
 }
 
 enum BankTransactionStatus {
@@ -8635,6 +8645,7 @@ model BankTransactionSplit {
   id                String  @id @default(uuid())
   bankTransactionId String
   accountCode       String
+  accountId         String?  // COA Account ID for this split line
   description       String
   amount            Decimal @db.Decimal(19, 4)
   workspaceId       String
@@ -8644,6 +8655,7 @@ model BankTransactionSplit {
 
   @@index([bankTransactionId])
   @@index([workspaceId])
+  @@index([accountId])
 }
 
 model BankTransfer {
