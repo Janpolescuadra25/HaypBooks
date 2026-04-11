@@ -520,6 +520,7 @@ export const MOCK_TRANSACTIONS: MockBankTransaction[] = [
     amount: -15_420.00, status: 'MATCHED',
     transactionType: 'Bank Payment',
     journalEntryId: 'je-bill-001',
+    bankRef: 'je-bill-001',
     accountCode: '5100', accountName: 'Utilities Expense',
     contactId: 'ent-v001', contactName: 'MERALCO',
   },
@@ -529,6 +530,7 @@ export const MOCK_TRANSACTIONS: MockBankTransaction[] = [
     amount: -4_800.00, status: 'MATCHED',
     transactionType: 'Bank Payment',
     journalEntryId: 'je-bill-002',
+    bankRef: 'je-bill-002',
     accountCode: '5101', accountName: 'Telecommunications',
     contactId: 'ent-v002', contactName: 'PLDT Enterprise',
   },
@@ -538,6 +540,7 @@ export const MOCK_TRANSACTIONS: MockBankTransaction[] = [
     amount: 85_000.00, status: 'MATCHED',
     transactionType: 'Bank Receipt',
     journalEntryId: 'je-inv-001',
+    bankRef: 'je-inv-001',
     accountCode: '4001', accountName: 'Service Revenue',
     contactId: 'ent-c001', contactName: 'Ayala Land Inc.',
   },
@@ -573,8 +576,83 @@ export const MOCK_TRANSACTIONS: MockBankTransaction[] = [
 // ─── Mutable Runtime State ────────────────────────────────────────────────────
 // mockJEs starts as a copy and accumulates newly created JEs during the session
 
+function getBankLedgerAccount(bankAccountId: string): { accountId: string; accountName: string } {
+  if (bankAccountId === 'acct-bpi') {
+    return { accountId: 'acc-1101', accountName: 'BPI Savings Account' };
+  }
+  return { accountId: 'acc-1100', accountName: 'BDO Checking Account' };
+}
+
+function getJournalEntryReferenceLabel(journalEntryId: string): string {
+  return journalEntryId.toUpperCase();
+}
+
+function buildSeededJournalEntry(tx: MockBankTransaction): MockJournalEntry | null {
+  if (tx.status !== 'CATEGORIZED' || !tx.journalEntryId) return null;
+
+  const absAmount = Math.abs(tx.amount);
+  const bankLedger = getBankLedgerAccount(tx.accountId);
+
+  if (tx.transactionType === 'Split Transaction' && tx.splitLines?.length) {
+    return {
+      id: tx.journalEntryId,
+      date: tx.date,
+      description: tx.memo ? `${tx.description} — ${tx.memo}` : tx.description,
+      type: 'BankSplit',
+      status: 'POSTED',
+      referenceNo: getJournalEntryReferenceLabel(tx.journalEntryId),
+      totalAmount: absAmount,
+      lines: [
+        ...tx.splitLines.map(line => ({
+          accountId: line.accountId,
+          accountName: line.accountName,
+          debit: tx.amount < 0 ? line.amount : 0,
+          credit: tx.amount < 0 ? 0 : line.amount,
+          memo: line.memo,
+        })),
+        {
+          accountId: bankLedger.accountId,
+          accountName: bankLedger.accountName,
+          debit: tx.amount < 0 ? 0 : absAmount,
+          credit: tx.amount < 0 ? absAmount : 0,
+        },
+      ],
+    };
+  }
+
+  if (!tx.accountName) return null;
+
+  const accountId = tx.accountCode
+    ? (MOCK_COA_ACCOUNTS.find(account => account.code === tx.accountCode)?.id ?? tx.accountCode)
+    : tx.accountName;
+
+  return {
+    id: tx.journalEntryId,
+    date: tx.date,
+    description: tx.memo ? `${tx.description} — ${tx.memo}` : tx.description,
+    type: tx.transactionType === 'Bank Transfer' ? 'BankTransfer' : 'BankCategorize',
+    status: 'POSTED',
+    referenceNo: getJournalEntryReferenceLabel(tx.journalEntryId),
+    contactName: tx.contactName,
+    totalAmount: absAmount,
+    lines: tx.amount < 0
+      ? [
+          { accountId, accountName: tx.accountName, debit: absAmount, credit: 0, memo: tx.memo },
+          { accountId: bankLedger.accountId, accountName: bankLedger.accountName, debit: 0, credit: absAmount },
+        ]
+      : [
+          { accountId: bankLedger.accountId, accountName: bankLedger.accountName, debit: absAmount, credit: 0 },
+          { accountId, accountName: tx.accountName, debit: 0, credit: absAmount, memo: tx.memo },
+        ],
+  };
+}
+
+const MOCK_GENERATED_JES: MockJournalEntry[] = MOCK_TRANSACTIONS
+  .map(buildSeededJournalEntry)
+  .filter((entry): entry is MockJournalEntry => Boolean(entry));
+
 let _jeCounter = 100;
-export let mockJEs: MockJournalEntry[] = [...MOCK_EXISTING_JES];
+export let mockJEs: MockJournalEntry[] = [...MOCK_EXISTING_JES, ...MOCK_GENERATED_JES];
 
 function nextJEId(): string {
   return `je-mock-${++_jeCounter}`;
@@ -597,8 +675,7 @@ export function categorizeTransaction(
   const jeId = nextJEId();
   const isDebit = tx.amount < 0;
   const abs = Math.abs(tx.amount);
-  const bankAccId = 'acc-1100'; // BDO Checking
-  const bankAccName = 'BDO Checking Account';
+  const bankLedger = getBankLedgerAccount(tx.accountId);
 
   const je: MockJournalEntry = {
     id: jeId,
@@ -606,15 +683,16 @@ export function categorizeTransaction(
     description: tx.description,
     type: 'BankCategorize',
     status: 'POSTED',
+    referenceNo: getJournalEntryReferenceLabel(jeId),
     contactName: contactName,
     totalAmount: abs,
     lines: isDebit
       ? [
           { accountId, accountName, debit: abs, credit: 0, memo },
-          { accountId: bankAccId, accountName: bankAccName, debit: 0, credit: abs },
+          { accountId: bankLedger.accountId, accountName: bankLedger.accountName, debit: 0, credit: abs },
         ]
       : [
-          { accountId: bankAccId, accountName: bankAccName, debit: abs, credit: 0 },
+          { accountId: bankLedger.accountId, accountName: bankLedger.accountName, debit: abs, credit: 0 },
           { accountId, accountName, debit: 0, credit: abs, memo },
         ],
   };
@@ -654,6 +732,7 @@ export function categorizeTransaction(
     contactId,
     contactName,
     memo,
+    bankRef: undefined,
     ruleName,
     splitLines: undefined,
   };
@@ -669,13 +748,16 @@ export function matchTransaction(
 ): MockBankTransaction {
   const je = mockJEs.find(j => j.id === existingJEId);
   const expenseLine = je?.lines.find(l => l.debit > 0);
+  const contact = je?.contactName ? MOCK_ENTITIES.find(entity => entity.name === je.contactName) : undefined;
   const updated: MockBankTransaction = {
     ...tx,
     status: 'MATCHED',
     transactionType: matchType,
     journalEntryId: existingJEId,
+    bankRef: existingJEId,
     accountCode: MOCK_COA_ACCOUNTS.find(a => a.id === expenseLine?.accountId)?.code,
     accountName: expenseLine?.accountName,
+    contactId: contact?.id,
     contactName: je?.contactName,
     splitLines: undefined,
   };
@@ -703,8 +785,7 @@ export function splitTransaction(
 ): MockBankTransaction {
   const jeId = nextJEId();
   const abs = Math.abs(tx.amount);
-  const bankAccId = 'acc-1100';
-  const bankAccName = 'BDO Checking Account';
+  const bankLedger = getBankLedgerAccount(tx.accountId);
   const isDebit = tx.amount < 0;
 
   const lines: MockJournalEntryLine[] = [
@@ -716,8 +797,8 @@ export function splitTransaction(
       memo: s.memo,
     })),
     {
-      accountId: bankAccId,
-      accountName: bankAccName,
+      accountId: bankLedger.accountId,
+      accountName: bankLedger.accountName,
       debit: isDebit ? 0 : abs,
       credit: isDebit ? abs : 0,
     },
@@ -729,6 +810,7 @@ export function splitTransaction(
     description: tx.description,
     type: 'BankSplit',
     status: 'POSTED',
+    referenceNo: getJournalEntryReferenceLabel(jeId),
     totalAmount: abs,
     lines,
   };
@@ -760,6 +842,7 @@ export function splitTransaction(
     accountCode: undefined,
     accountName: `Split (${splits.length} lines)`,
     splitLines: sl,
+    bankRef: undefined,
     ruleName: undefined,
   };
 }
@@ -779,6 +862,7 @@ export function excludeTransaction(tx: MockBankTransaction): MockBankTransaction
     contactName: undefined,
     memo: undefined,
     splitLines: undefined,
+    bankRef: undefined,
     ruleName: undefined,
   };
 
@@ -802,9 +886,7 @@ export function excludeTransaction(tx: MockBankTransaction): MockBankTransaction
 export function undoCategorize(tx: MockBankTransaction): MockBankTransaction {
   if (tx.journalEntryId) {
     const je = mockJEs.find(j => j.id === tx.journalEntryId);
-    // Only remove JEs we generated (BankCategorize / BankSplit / BankMatch),
-    // not pre-existing Bills/Invoices
-    if (je && (je.type === 'BankCategorize' || je.type === 'BankSplit' || je.type === 'BankMatch')) {
+    if (je && ['BankCategorize', 'BankSplit', 'BankMatch', 'BankTransfer'].includes(je.type)) {
       mockJEs = mockJEs.filter(j => j.id !== tx.journalEntryId);
     }
   }
@@ -829,7 +911,7 @@ export function undoCategorize(tx: MockBankTransaction): MockBankTransaction {
     newValue: 'PENDING',
   });
 
-  return {
+  const reverted = {
     ...tx,
     status: 'PENDING',
     transactionType: undefined,
@@ -840,8 +922,48 @@ export function undoCategorize(tx: MockBankTransaction): MockBankTransaction {
     contactName: undefined,
     memo: undefined,
     splitLines: undefined,
+    bankRef: undefined,
+    isTransferMirror: undefined,
+    transferSourceId: undefined,
     ruleName: undefined,
   };
+
+  if (tx.transactionType === 'Bank Transfer') {
+    if (tx.isTransferMirror) {
+      mockStore.items = mockStore.items.filter(item => item.id !== tx.id);
+      if (tx.transferSourceId) {
+        const sourceIndex = mockStore.items.findIndex(item => item.id === tx.transferSourceId);
+        if (sourceIndex >= 0) {
+          mockStore.items[sourceIndex] = {
+            ...mockStore.items[sourceIndex],
+            status: 'PENDING',
+            transactionType: undefined,
+            journalEntryId: undefined,
+            accountCode: undefined,
+            accountName: undefined,
+            contactId: undefined,
+            contactName: undefined,
+            memo: undefined,
+            splitLines: undefined,
+            bankRef: undefined,
+            isTransferMirror: undefined,
+            transferSourceId: undefined,
+            ruleName: undefined,
+          };
+        }
+      }
+      return reverted;
+    }
+
+    mockStore.items = mockStore.items.filter(item => item.transferSourceId !== tx.id);
+  }
+
+  const txIndex = mockStore.items.findIndex(item => item.id === tx.id);
+  if (txIndex >= 0) {
+    mockStore.items[txIndex] = reverted;
+  }
+
+  return reverted;
 }
 
 /**
@@ -1013,6 +1135,7 @@ export function transferTransaction(
   tx.transactionType = 'Bank Transfer';
   tx.accountName = 'Bank Transfers';
   tx.memo = effectiveMemo;
+  tx.bankRef = undefined;
 
   // Create Journal Entry
   const jeId = `JE-TRANSFER-${Date.now()}`;
@@ -1022,6 +1145,7 @@ export function transferTransaction(
     description: effectiveMemo,
     type: 'BankTransfer',
     status: 'POSTED',
+    referenceNo: getJournalEntryReferenceLabel(jeId),
     totalAmount: transferAmount,
     lines: direction === 'to'
       ? [
@@ -1048,6 +1172,7 @@ export function transferTransaction(
     accountId: otherAccountId,
     status: 'CATEGORIZED',
     transactionType: 'Bank Transfer',
+    journalEntryId: jeId,
     accountName: 'Bank Transfers',
     memo: effectiveMemo,
     isTransferMirror: true,
@@ -1131,10 +1256,13 @@ export function batchMatchTransactions(
   if (!targetJe) return null;
 
   txs.forEach(tx => {
+    const contact = targetJe.contactName ? MOCK_ENTITIES.find(entity => entity.name === targetJe.contactName) : undefined;
     tx.status          = 'MATCHED';
     tx.transactionType = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt';
     tx.journalEntryId  = targetJeId;
+    tx.bankRef         = targetJeId;
     tx.accountName     = targetJe.lines.find(l => l.debit > 0)?.accountName ?? tx.accountName;
+    tx.contactId       = contact?.id ?? tx.contactId;
     tx.contactName     = targetJe.contactName ?? tx.contactName;
 
     addAuditLog({
@@ -1435,7 +1563,7 @@ export function addManualRegisterEntry(input: {
     description: input.memo ? `${input.description.trim()} — ${input.memo}` : input.description.trim(),
     type: 'BankCategorize',
     status: 'POSTED',
-    referenceNo: input.reference,
+    referenceNo: input.reference || getJournalEntryReferenceLabel(jeId),
     contactName: contact?.name,
     totalAmount: absAmount,
     lines: signedAmount < 0

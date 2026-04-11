@@ -107,6 +107,12 @@ test('categorizeTransaction creates a generated JE and marks the transaction cat
   assert.equal(getJe(updated.journalEntryId).type, 'BankCategorize')
 })
 
+test('categorized transactions keep a journalEntryId for register references', () => {
+  const updated = categorizeTransaction(getTx('mt-010'), 'acc-5102', 'Rent Expense')
+  assert.ok(updated.journalEntryId)
+  assert.equal(getJe(updated.journalEntryId).id, updated.journalEntryId)
+})
+
 test('categorizeTransaction writes a categorized audit entry', () => {
   categorizeTransaction(getTx('mt-010'), 'acc-5102', 'Rent Expense', 'ent-v001', 'MERALCO')
   assert.ok(getAuditLogForEntity('mt-010').some(entry => entry.action === 'categorized'))
@@ -124,6 +130,11 @@ test('matchTransaction links to an existing JE and sets matched metadata', () =>
   assert.equal(updated.contactName, 'PLDT Enterprise')
 })
 
+test('matched transactions store bankRef using the linked JE id', () => {
+  const updated = matchTransaction(getTx('mt-002'), 'je-bill-002', 'Bank Payment')
+  assert.equal(updated.bankRef, 'je-bill-002')
+})
+
 test('matchTransaction writes a matched audit entry', () => {
   matchTransaction(getTx('mt-002'), 'je-bill-002', 'Bank Payment')
   assert.ok(getAuditLogForEntity('mt-002').some(entry => entry.action === 'matched'))
@@ -139,6 +150,16 @@ test('splitTransaction creates a split JE and split lines', () => {
   assert.equal(updated.transactionType, 'Split Transaction')
   assert.equal(updated.splitLines?.length, 2)
   assert.equal(mockJEs.length, before + 1)
+})
+
+test('split transactions keep the generated journalEntryId', () => {
+  const updated = splitTransaction(getTx('mt-010'), [
+    { accountId: 'acc-5102', accountName: 'Rent Expense', amount: 3000 },
+    { accountId: 'acc-5001', accountName: 'Cost of Goods Sold', amount: 3800 },
+  ])
+
+  assert.ok(updated.journalEntryId)
+  assert.equal(getJe(updated.journalEntryId).type, 'BankSplit')
 })
 
 test('excludeTransaction clears accounting fields and marks the transaction excluded', () => {
@@ -160,6 +181,13 @@ test('undoCategorize removes generated JEs and reverts to pending', () => {
 
   assert.equal(reverted.status, 'PENDING')
   assert.equal(mockJEs.length, before)
+})
+
+test('undoCategorize clears journalEntryId on reverted transactions', () => {
+  const categorized = categorizeTransaction(getTx('mt-010'), 'acc-5102', 'Rent Expense')
+  const reverted = undoCategorize(categorized)
+
+  assert.equal(reverted.journalEntryId, undefined)
 })
 
 test('undoCategorize logs unexcluded when restoring an excluded transaction', () => {
@@ -241,6 +269,12 @@ test('transferTransaction updates the source tx and creates mirror + JE records'
   assert.equal(result?.tx.transactionType, 'Bank Transfer')
   assert.ok(mockStore.items.some(item => item.id === result?.mirrorTx.id))
   assert.ok(mockJEs.some(entry => entry.id === result?.je.id))
+})
+
+test('transfer transactions keep the generated journalEntryId', () => {
+  const result = transferTransaction('mt-010', 'acct-bpi', 'to', '2026-04-10', 'Sweep to BPI')
+  assert.ok(result?.tx.journalEntryId)
+  assert.equal(result?.tx.journalEntryId, result?.je.id)
 })
 
 test('transferTransaction writes a transferred audit entry', () => {
