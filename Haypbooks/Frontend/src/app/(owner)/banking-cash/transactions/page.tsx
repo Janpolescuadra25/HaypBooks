@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AlertCircle, ArrowLeftRight, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
-  ChevronRight, ChevronUp, FileUp, GitMerge, Link2, Loader2, RefreshCw,
+  ChevronRight, ChevronUp, Clock, FileUp, GitMerge, Link2, Loader2, RefreshCw,
   RotateCcw, Scissors, Search, Sparkles, User, X,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
@@ -33,6 +33,10 @@ import {
   type MockBankTransaction,
   type MockSplitLine,
   type MatchSuggestion,
+  getBalances,
+  auditLog,
+  getAuditLogForEntity,
+  type AuditLogEntry,
 } from './mockGLState'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -99,6 +103,19 @@ function fmtDate(d: string) {
       month: 'short', day: 'numeric', year: 'numeric',
     })
   } catch { return d }
+}
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`
+  const days = Math.floor(hrs / 24)
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  return new Date(ts).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 const STATUS_BORDER: Record<string, string> = {
@@ -422,6 +439,12 @@ export default function BankFeedPage() {
   // ── Apply Rules ────────────────────────────────────────────────────────────
   const [applyRulesLoading, setApplyRulesLoading] = useState(false)
 
+  // ── Activity slide-over ────────────────────────────────────────────────────
+  const [activityOpen,   setActivityOpen]   = useState(false)
+  const [activityFilter, setActivityFilter] = useState<'all'|'categorized'|'matched'|'split'|'transfer'|'excluded'|'rules'|'undo'>('all')
+  const [activityLimit,  setActivityLimit]  = useState(50)
+  const [txActivityOpen, setTxActivityOpen] = useState<Record<string, boolean>>({})
+
   // ─── Data loading ──────────────────────────────────────────────────────────
 
   const loadAccounts = useCallback(async () => {
@@ -608,13 +631,7 @@ export default function BankFeedPage() {
   const pageRows   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // ─── Balance calcs ─────────────────────────────────────────────────────────
-  const totalWithdrawals = items.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0)
-  const totalDeposits    = items.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
-  const netAmount        = totalDeposits - totalWithdrawals
-  const booksTotal       = items
-    .filter(t => t.status === 'CATEGORIZED' || t.status === 'MATCHED')
-    .reduce((s, t) => s + Math.abs(t.amount), 0)
-  const diffAmt          = (totalWithdrawals + totalDeposits) - booksTotal
+  const { bankBalance, booksBalance, difference: balanceDiff } = getBalances(selectedAcct || undefined)
 
   // ─── Status counts ─────────────────────────────────────────────────────────
   const nReview      = items.filter(t => t.status === 'PENDING').length
@@ -1023,6 +1040,12 @@ export default function BankFeedPage() {
             <FileUp size={14} /> Upload CSV
           </button>
           <button
+            onClick={() => setActivityOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Clock size={14} /> Activity
+          </button>
+          <button
             onClick={() => selectedAcct && loadTransactions(selectedAcct)}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors disabled:opacity-60"
@@ -1034,22 +1057,12 @@ export default function BankFeedPage() {
       </div>
 
       {/* ── B. Balance summary line ────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-100 px-6 py-2 text-sm text-slate-500 flex items-center gap-3 flex-wrap">
-        <span>Withdrawals: <span className="font-semibold text-red-600">{fmt(totalWithdrawals)}</span></span>
+      <div className="bg-gray-50 border-b border-gray-200 py-2 px-4 text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+        <span>Bank Balance: <span className="font-semibold text-slate-700">{fmt(bankBalance)}</span></span>
         <span className="text-slate-300">·</span>
-        <span>Deposits: <span className="font-semibold text-emerald-700">{fmt(totalDeposits)}</span></span>
+        <span>HaypBooks Balance: <span className="font-semibold text-blue-600">{fmt(booksBalance)}</span></span>
         <span className="text-slate-300">·</span>
-        <span>Net: <span className={`font-semibold ${netAmount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(netAmount)}</span></span>
-        <span className="text-slate-300">·</span>
-        <span>In Books: <span className="font-medium text-slate-700">{fmt(booksTotal)}</span></span>
-        <span className="text-slate-300">·</span>
-        <span>
-          Diff:{' '}
-          <span className={`font-semibold ${diffAmt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-            {fmt(diffAmt)}
-          </span>
-          {diffAmt > 0 && <span className="ml-1 text-xs text-slate-400">({nReview} uncategorized)</span>}
-        </span>
+        <span>Difference: <span className={`font-semibold ${balanceDiff === 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(balanceDiff)}</span></span>
         {usingMock && (
           <span className="ml-2 text-xs text-amber-500 border border-amber-200 bg-amber-50 px-2 py-0.5 rounded">
             Sample data
@@ -2016,6 +2029,38 @@ export default function BankFeedPage() {
                             </div>
                           )}
 
+                          {/* ── Per-transaction activity history ── */}
+                          {(() => {
+                            const txHistory = getAuditLogForEntity(tx.id)
+                            if (txHistory.length === 0) return null
+                            const isOpen = txActivityOpen[tx.id]
+                            return (
+                              <div className="px-6 py-3 border-t border-slate-100 bg-white">
+                                <button
+                                  onClick={e => { e.stopPropagation(); setTxActivityOpen(prev => ({ ...prev, [tx.id]: !prev[tx.id] })) }}
+                                  className="text-xs text-slate-500 hover:text-slate-700 font-medium flex items-center gap-1"
+                                >
+                                  <Clock size={11} />
+                                  {isOpen ? '▲' : '▼'} Activity ({txHistory.length})
+                                </button>
+                                {isOpen && (
+                                  <div className="mt-2 space-y-1">
+                                    {txHistory.slice(0, 5).map(e => (
+                                      <div key={e.id} className="flex items-start gap-2 text-[11px] text-slate-500">
+                                        <span className="text-slate-300 shrink-0">•</span>
+                                        <span className="flex-1">{e.details}</span>
+                                        <span className="text-slate-400 shrink-0 whitespace-nowrap">{timeAgo(e.timestamp)}</span>
+                                      </div>
+                                    ))}
+                                    {txHistory.length > 5 && (
+                                      <p className="text-[11px] text-slate-400 ml-3">+{txHistory.length - 5} more entries</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()}
+
                         </td>
                       </tr>
                     )}
@@ -2216,6 +2261,78 @@ export default function BankFeedPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Activity slide-over ─────────────────────────────────────────────── */}
+      {activityOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setActivityOpen(false)} />
+          <div className="fixed inset-y-0 right-0 z-50 w-[360px] bg-white shadow-2xl flex flex-col border-l border-slate-200">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+              <h2 className="text-sm font-bold text-slate-800">Activity Log</h2>
+              <button onClick={() => setActivityOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-4 py-2 border-b border-slate-100">
+              <select
+                value={activityFilter}
+                onChange={e => setActivityFilter(e.target.value as typeof activityFilter)}
+                className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
+              >
+                <option value="all">All Actions</option>
+                <option value="categorized">Categorized</option>
+                <option value="matched">Matched</option>
+                <option value="split">Split</option>
+                <option value="transfer">Transfer</option>
+                <option value="excluded">Excluded</option>
+                <option value="rules">Rules</option>
+                <option value="undo">Undo</option>
+              </select>
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+              {(() => {
+                const logFiltered = (
+                  activityFilter === 'all' ? auditLog :
+                  activityFilter === 'rules' ? auditLog.filter(e => e.action.startsWith('rule')) :
+                  activityFilter === 'undo'  ? auditLog.filter(e => ['unmatched','unsplitted','untransferred','unexcluded'].includes(e.action)) :
+                  activityFilter === 'transfer' ? auditLog.filter(e => e.action === 'transferred' || e.action === 'untransferred') :
+                  auditLog.filter(e => e.action === activityFilter || e.action === activityFilter + 'd')
+                ).slice(0, activityLimit)
+
+                const DOT: Record<string, string> = {
+                  categorized: 'bg-emerald-500', matched: 'bg-blue-500',
+                  split: 'bg-violet-500', transferred: 'bg-purple-500',
+                  excluded: 'bg-slate-400', rule_applied: 'bg-purple-400',
+                  rule_created: 'bg-purple-400', rule_updated: 'bg-amber-400',
+                  rule_deleted: 'bg-red-400', manual_entry: 'bg-slate-500',
+                  unmatched: 'bg-amber-500', unsplitted: 'bg-amber-500', untransferred: 'bg-amber-500',
+                }
+
+                return logFiltered.length === 0
+                  ? <div className="px-4 py-8 text-center text-xs text-slate-400">No activity yet</div>
+                  : logFiltered.map(entry => (
+                      <div key={entry.id} className="px-4 py-3">
+                        <div className="flex items-start gap-2.5">
+                          <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${DOT[entry.action] ?? 'bg-slate-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-700 font-medium truncate">{entry.entityDescription}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{entry.details}</p>
+                            <p className="text-[11px] text-slate-400 mt-1">{timeAgo(entry.timestamp)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+              })()}
+              {auditLog.length > activityLimit && (
+                <div className="px-4 py-3 text-center">
+                  <button onClick={() => setActivityLimit(l => l + 50)}
+                    className="text-xs text-blue-600 hover:underline">Load more…</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── Toast ─────────────────────────────────────────────────────────── */}
