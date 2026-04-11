@@ -12,7 +12,6 @@ import {
   MOCK_COA_ACCOUNTS,
   MOCK_ENTITIES,
   addManualRegisterEntry,
-  auditLog,
   batchDeleteTransactions,
   batchEditAccount,
   editTransactionAccount,
@@ -65,14 +64,6 @@ const DEFAULT_FILTERS: AdvancedFilters = {
   minAmount: '',
   maxAmount: '',
 }
-const REGISTER_AUDIT_ACTIONS = new Set<AuditLogEntry['action']>([
-  'categorized',
-  'edited',
-  'manual_entry',
-  'reconciled',
-  'unreconciled',
-  'deleted',
-])
 
 function formatLongDate(date: string): string {
   try {
@@ -244,8 +235,6 @@ export default function RegisterPage() {
   const [batchAccountId, setBatchAccountId] = useState('')
   const [detailTxId, setDetailTxId] = useState<string | null>(null)
   const [detailFilter, setDetailFilter] = useState<ActivityFilter>('all')
-  const [activityOpen, setActivityOpen] = useState(false)
-  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all')
   const [reconcileOpen, setReconcileOpen] = useState(false)
   const [statementBalance, setStatementBalance] = useState('')
 
@@ -312,13 +301,6 @@ export default function RegisterPage() {
     if (!detailTx) return []
     return getAuditLogForEntity(detailTx.id).filter(entry => matchesAuditFilter(entry, detailFilter))
   }, [detailFilter, detailTx, version])
-
-  const registerActivityEntries = useMemo(() => {
-    const registerIds = new Set(registerEntries.map(tx => tx.id))
-    return auditLog
-      .filter(entry => registerIds.has(entry.entityId) && REGISTER_AUDIT_ACTIONS.has(entry.action))
-      .filter(entry => matchesAuditFilter(entry, activityFilter))
-  }, [activityFilter, registerEntries, version])
 
   const selectedEntries = useMemo(
     () => visibleEntries.filter(tx => selectedIds.has(tx.id)),
@@ -427,19 +409,18 @@ export default function RegisterPage() {
   }, [detailTxId, registerEntries])
 
   useEffect(() => {
-    if (!detailTxId && !activityOpen && !showAddModal && !batchEditOpen) return undefined
+    if (!detailTxId && !showAddModal && !batchEditOpen) return undefined
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       if (detailTxId) setDetailTxId(null)
-      if (activityOpen) setActivityOpen(false)
       if (showAddModal) setShowAddModal(false)
       if (batchEditOpen) setBatchEditOpen(false)
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activityOpen, batchEditOpen, detailTxId, showAddModal])
+  }, [batchEditOpen, detailTxId, showAddModal])
 
   useEffect(() => () => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -716,7 +697,7 @@ export default function RegisterPage() {
                 <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
               </button>
               <button
-                onClick={() => setActivityOpen(true)}
+                onClick={() => router.push('/banking-cash/transactions/activity')}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 <Clock className="h-4 w-4" />
@@ -1149,61 +1130,6 @@ export default function RegisterPage() {
           </div>
         </div>
       )}
-
-      {activityOpen && (
-        <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setActivityOpen(false)}>
-          <div
-            className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl"
-            onClick={event => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">Register Activity</h2>
-                <p className="text-xs text-slate-500">Audit trail for register edits, categorizations, and reconciliation.</p>
-              </div>
-              <button aria-label="Close register activity" title="Close register activity" onClick={() => setActivityOpen(false)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="border-b border-slate-100 px-5 py-3">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filter</label>
-              <select
-                aria-label="Filter register activity"
-                value={activityFilter}
-                onChange={event => setActivityFilter(event.target.value as ActivityFilter)}
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-              >
-                <option value="all">All</option>
-                <option value="edits">Edits</option>
-                <option value="reconciliations">Reconciliations</option>
-                <option value="categorizations">Categorizations</option>
-              </select>
-            </div>
-
-            <div className="h-[calc(100%-128px)] overflow-y-auto px-5 py-4">
-              {registerActivityEntries.length === 0 ? (
-                <p className="text-sm text-slate-400">No activity yet for this register.</p>
-              ) : (
-                <div className="space-y-3">
-                  {registerActivityEntries.map(entry => (
-                    <div key={entry.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
-                      <div className="flex items-start gap-2">
-                        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getAuditDot(entry.action)}`} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-slate-700">{entry.details}</p>
-                          <p className="mt-1 text-xs text-slate-400">{entry.userName} - {new Date(entry.timestamp).toLocaleString('en-PH')}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {detailTx && (
         <div className="fixed inset-0 z-40 bg-black/25 p-4" onClick={() => setDetailTxId(null)}>
           <div

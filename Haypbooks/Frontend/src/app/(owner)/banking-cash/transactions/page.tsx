@@ -34,9 +34,7 @@ import {
   type MockSplitLine,
   type MatchSuggestion,
   getBalances,
-  auditLog,
   getAuditLogForEntity,
-  type AuditLogEntry,
 } from './mockGLState'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -439,10 +437,7 @@ export default function BankFeedPage() {
   // ── Apply Rules ────────────────────────────────────────────────────────────
   const [applyRulesLoading, setApplyRulesLoading] = useState(false)
 
-  // ── Activity slide-over ────────────────────────────────────────────────────
-  const [activityOpen,   setActivityOpen]   = useState(false)
-  const [activityFilter, setActivityFilter] = useState<'all'|'categorized'|'matched'|'split'|'transfer'|'excluded'|'rules'|'undo'>('all')
-  const [activityLimit,  setActivityLimit]  = useState(50)
+  // ── Per-transaction activity expansion ────────────────────────────────────
   const [txActivityOpen, setTxActivityOpen] = useState<Record<string, boolean>>({})
 
   // ─── Data loading ──────────────────────────────────────────────────────────
@@ -1046,7 +1041,7 @@ export default function BankFeedPage() {
             <FileUp size={14} /> Upload CSV
           </button>
           <button
-            onClick={() => setActivityOpen(true)}
+            onClick={() => router.push('/banking-cash/transactions/activity')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <Clock size={14} /> Activity
@@ -2268,79 +2263,6 @@ export default function BankFeedPage() {
           </div>
         </div>
       )}
-
-      {/* ── Activity slide-over ─────────────────────────────────────────────── */}
-      {activityOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setActivityOpen(false)} />
-          <div className="fixed inset-y-0 right-0 z-50 w-[360px] bg-white shadow-2xl flex flex-col border-l border-slate-200">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-              <h2 className="text-sm font-bold text-slate-800">Activity Log</h2>
-              <button onClick={() => setActivityOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="px-4 py-2 border-b border-slate-100">
-              <select
-                value={activityFilter}
-                onChange={e => setActivityFilter(e.target.value as typeof activityFilter)}
-                className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
-              >
-                <option value="all">All Actions</option>
-                <option value="categorized">Categorized</option>
-                <option value="matched">Matched</option>
-                <option value="split">Split</option>
-                <option value="transfer">Transfer</option>
-                <option value="excluded">Excluded</option>
-                <option value="rules">Rules</option>
-                <option value="undo">Undo</option>
-              </select>
-            </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-              {(() => {
-                const logFiltered = (
-                  activityFilter === 'all' ? auditLog :
-                  activityFilter === 'rules' ? auditLog.filter(e => e.action.startsWith('rule')) :
-                  activityFilter === 'undo'  ? auditLog.filter(e => ['unmatched','unsplitted','untransferred','unexcluded'].includes(e.action)) :
-                  activityFilter === 'transfer' ? auditLog.filter(e => e.action === 'transferred' || e.action === 'untransferred') :
-                  auditLog.filter(e => e.action === activityFilter || e.action === activityFilter + 'd')
-                ).slice(0, activityLimit)
-
-                const DOT: Record<string, string> = {
-                  categorized: 'bg-emerald-500', matched: 'bg-blue-500',
-                  split: 'bg-violet-500', transferred: 'bg-purple-500',
-                  excluded: 'bg-slate-400', rule_applied: 'bg-purple-400',
-                  rule_created: 'bg-purple-400', rule_updated: 'bg-amber-400',
-                  rule_deleted: 'bg-red-400', manual_entry: 'bg-slate-500',
-                  unmatched: 'bg-amber-500', unsplitted: 'bg-amber-500', untransferred: 'bg-amber-500',
-                }
-
-                return logFiltered.length === 0
-                  ? <div className="px-4 py-8 text-center text-xs text-slate-400">No activity yet</div>
-                  : logFiltered.map(entry => (
-                      <div key={entry.id} className="px-4 py-3">
-                        <div className="flex items-start gap-2.5">
-                          <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${DOT[entry.action] ?? 'bg-slate-400'}`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-700 font-medium truncate">{entry.entityDescription}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">{entry.details}</p>
-                            <p className="text-[11px] text-slate-400 mt-1">{timeAgo(entry.timestamp)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-              })()}
-              {auditLog.length > activityLimit && (
-                <div className="px-4 py-3 text-center">
-                  <button onClick={() => setActivityLimit(l => l + 50)}
-                    className="text-xs text-blue-600 hover:underline">Load more…</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ── Toast ─────────────────────────────────────────────────────────── */}
       {toast && (
         <div className="fixed top-4 right-4 z-[60] flex items-center gap-2 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">

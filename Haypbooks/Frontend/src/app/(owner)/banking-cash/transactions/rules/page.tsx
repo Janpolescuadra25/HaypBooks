@@ -2,13 +2,17 @@
 
 import { useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp, Edit2, Plus, Trash2, X, Check, ToggleLeft, ToggleRight, Zap } from 'lucide-react'
-import { MOCK_RULES, MOCK_COA_ACCOUNTS, auditLog, type MockRule } from '../mockGLState'
-
-let ruleCounter = 9
-
-function nextRuleId() {
-  return `rule-${String(ruleCounter++).padStart(3, '0')}`
-}
+import {
+  MOCK_RULES,
+  MOCK_COA_ACCOUNTS,
+  auditLog,
+  createRule,
+  deleteRule,
+  moveRule as moveMockRule,
+  toggleRuleEnabled,
+  updateRule,
+  type MockRule,
+} from '../mockGLState'
 
 interface RuleFormState {
   name: string
@@ -73,52 +77,39 @@ export default function RulesPage() {
     if (!acct) return
 
     if (editingId) {
-      const updated = rules.map(r => r.id === editingId
-        ? { ...r, name: form.name.trim(), matchKeyword: form.matchKeyword.trim().toUpperCase(), accountId: form.accountId, accountName: acct.name, transactionType: form.transactionType }
-        : r
-      )
-      setRules(updated)
-      // Keep MOCK_RULES in sync
-      const idx = MOCK_RULES.findIndex(r => r.id === editingId)
-      if (idx >= 0) MOCK_RULES[idx] = { ...MOCK_RULES[idx], name: form.name.trim(), matchKeyword: form.matchKeyword.trim().toUpperCase(), accountId: form.accountId, accountName: acct.name, transactionType: form.transactionType }
-    } else {
-      const newRule: MockRule = {
-        id: nextRuleId(),
+      const updated = updateRule(editingId, {
         name: form.name.trim(),
         matchKeyword: form.matchKeyword.trim().toUpperCase(),
         accountId: form.accountId,
-        accountName: acct.name,
         transactionType: form.transactionType,
-      }
-      setRules(prev => [...prev, newRule])
-      MOCK_RULES.push(newRule)
+      })
+      if (!updated) return
+    } else {
+      const created = createRule({
+        name: form.name.trim(),
+        matchKeyword: form.matchKeyword.trim().toUpperCase(),
+        accountId: form.accountId,
+        transactionType: form.transactionType,
+      })
+      if (!created) return
     }
+    setRules([...MOCK_RULES])
     closeModal()
   }
 
   const handleDelete = (id: string) => {
-    setRules(prev => prev.filter(r => r.id !== id))
-    const idx = MOCK_RULES.findIndex(r => r.id === id)
-    if (idx >= 0) MOCK_RULES.splice(idx, 1)
+    deleteRule(id)
+    setRules([...MOCK_RULES])
     setDeleteConfirm(null)
   }
 
   const toggleEnabled = (id: string) => {
-    setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !(r.enabled ?? true) } : r))
-    const idx = MOCK_RULES.findIndex(r => r.id === id)
-    if (idx >= 0) MOCK_RULES[idx] = { ...MOCK_RULES[idx], enabled: !(MOCK_RULES[idx].enabled ?? true) }
+    toggleRuleEnabled(id)
+    setRules([...MOCK_RULES])
   }
 
   const moveRule = (id: string, dir: 'up' | 'down') => {
-    setRules(prev => {
-      const arr = [...prev]
-      const idx = arr.findIndex(r => r.id === id)
-      if (idx < 0) return prev
-      const swap = dir === 'up' ? idx - 1 : idx + 1
-      if (swap < 0 || swap >= arr.length) return prev
-      ;[arr[idx], arr[swap]] = [arr[swap], arr[idx]]
-      return arr.map((r, i) => ({ ...r, priority: i + 1 }))
-    })
+    setRules(moveMockRule(id, dir))
   }
 
   const appliedCount = (rule: MockRule) =>
@@ -154,11 +145,11 @@ export default function RulesPage() {
               <div key={rule.id} className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4 flex items-center gap-4">
                 {/* Priority arrows */}
                 <div className="flex flex-col gap-0.5 shrink-0">
-                  <button onClick={() => moveRule(rule.id, 'up')} disabled={rIdx === 0}
+                  <button aria-label={`Move ${rule.name} up`} title={`Move ${rule.name} up`} onClick={() => moveRule(rule.id, 'up')} disabled={rIdx === 0}
                     className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20 transition-colors">
                     <ChevronUp size={14} />
                   </button>
-                  <button onClick={() => moveRule(rule.id, 'down')} disabled={rIdx === rules.length - 1}
+                  <button aria-label={`Move ${rule.name} down`} title={`Move ${rule.name} down`} onClick={() => moveRule(rule.id, 'down')} disabled={rIdx === rules.length - 1}
                     className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20 transition-colors">
                     <ChevronDown size={14} />
                   </button>
@@ -214,11 +205,11 @@ export default function RulesPage() {
                     </>
                   ) : (
                     <>
-                      <button onClick={() => openEdit(rule)}
+                      <button aria-label={`Edit ${rule.name}`} title={`Edit ${rule.name}`} onClick={() => openEdit(rule)}
                         className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
                         <Edit2 size={14} />
                       </button>
-                      <button onClick={() => setDeleteConfirm(rule.id)}
+                      <button aria-label={`Delete ${rule.name}`} title={`Delete ${rule.name}`} onClick={() => setDeleteConfirm(rule.id)}
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 size={14} />
                       </button>
@@ -237,7 +228,7 @@ export default function RulesPage() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h2 className="text-base font-semibold text-slate-800">{editingId ? 'Edit Rule' : 'Add Rule'}</h2>
-              <button onClick={closeModal} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+              <button aria-label="Close rule dialog" title="Close rule dialog" onClick={closeModal} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
                 <X size={16} />
               </button>
             </div>

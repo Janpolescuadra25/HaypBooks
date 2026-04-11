@@ -321,6 +321,23 @@ export let MOCK_RULES: MockRule[] = [
   },
 ];
 
+let _ruleCounter = MOCK_RULES.reduce((max, rule) => {
+  const numericId = Number(rule.id.replace('rule-', ''));
+  return Number.isFinite(numericId) ? Math.max(max, numericId) : max;
+}, 0);
+
+function nextRuleId(): string {
+  _ruleCounter += 1;
+  return `rule-${String(_ruleCounter).padStart(3, '0')}`;
+}
+
+function normalizeRulePriorities(rules: MockRule[]): MockRule[] {
+  return rules.map((rule, index) => ({
+    ...rule,
+    priority: index + 1,
+  }));
+}
+
 // ─── Mock Transactions (30) ───────────────────────────────────────────────────
 // Spread March–April 2026, realistic Philippine business context
 // 10 PENDING, 12 CATEGORIZED, 3 MATCHED, 5 EXCLUDED
@@ -604,6 +621,29 @@ export function categorizeTransaction(
 
   mockJEs = [...mockJEs, je];
 
+  addAuditLog({
+    action: 'categorized',
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: ruleName
+      ? `Rule "${ruleName}" applied → ${accountName}${contactName ? ` · ${contactName}` : ''}`
+      : `Categorized as ${accountName}${contactName ? ` · ${contactName}` : ''}`,
+    oldValue: tx.status,
+    newValue: accountName,
+  });
+
+  if (ruleName) {
+    addAuditLog({
+      action: 'rule_applied',
+      entityType: 'rule',
+      entityId: tx.id,
+      entityDescription: tx.description,
+      details: `Rule "${ruleName}" applied → ${accountName}`,
+      newValue: accountName,
+    });
+  }
+
   return {
     ...tx,
     status: 'CATEGORIZED',
@@ -629,7 +669,7 @@ export function matchTransaction(
 ): MockBankTransaction {
   const je = mockJEs.find(j => j.id === existingJEId);
   const expenseLine = je?.lines.find(l => l.debit > 0);
-  return {
+  const updated: MockBankTransaction = {
     ...tx,
     status: 'MATCHED',
     transactionType: matchType,
@@ -639,6 +679,18 @@ export function matchTransaction(
     contactName: je?.contactName,
     splitLines: undefined,
   };
+
+  addAuditLog({
+    action: 'matched',
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: `Matched to ${je?.type ?? 'record'} ${je?.referenceNo ?? existingJEId}${je?.contactName ? ` · ${je.contactName}` : ''}`,
+    oldValue: tx.status,
+    newValue: existingJEId,
+  });
+
+  return updated;
 }
 
 /**
@@ -716,7 +768,7 @@ export function splitTransaction(
  * Exclude a PENDING transaction.
  */
 export function excludeTransaction(tx: MockBankTransaction): MockBankTransaction {
-  return {
+  const updated: MockBankTransaction = {
     ...tx,
     status: 'EXCLUDED',
     transactionType: undefined,
@@ -729,6 +781,18 @@ export function excludeTransaction(tx: MockBankTransaction): MockBankTransaction
     splitLines: undefined,
     ruleName: undefined,
   };
+
+  addAuditLog({
+    action: 'excluded',
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: 'Excluded from books',
+    oldValue: tx.status,
+    newValue: 'EXCLUDED',
+  });
+
+  return updated;
 }
 
 /**
@@ -744,6 +808,26 @@ export function undoCategorize(tx: MockBankTransaction): MockBankTransaction {
       mockJEs = mockJEs.filter(j => j.id !== tx.journalEntryId);
     }
   }
+
+  const undoAction: AuditLogEntry['action'] = tx.status === 'MATCHED'
+    ? 'unmatched'
+    : tx.transactionType === 'Split Transaction'
+      ? 'unsplitted'
+      : tx.transactionType === 'Bank Transfer'
+        ? 'untransferred'
+        : tx.status === 'EXCLUDED'
+          ? 'unexcluded'
+          : 'edited';
+
+  addAuditLog({
+    action: undoAction,
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: 'Moved transaction back to For Review',
+    oldValue: tx.transactionType ?? tx.status,
+    newValue: 'PENDING',
+  });
 
   return {
     ...tx,
@@ -766,11 +850,14 @@ export function undoCategorize(tx: MockBankTransaction): MockBankTransaction {
  */
 export function applyRules(transactions: MockBankTransaction[]): MockBankTransaction[] {
   const updated: MockBankTransaction[] = [];
+  const orderedRules = [...MOCK_RULES]
+    .filter(rule => rule.enabled ?? true)
+    .sort((left, right) => (left.priority ?? Number.MAX_SAFE_INTEGER) - (right.priority ?? Number.MAX_SAFE_INTEGER));
 
   for (const tx of transactions) {
     if (tx.status !== 'PENDING') continue;
 
-    const rule = MOCK_RULES.find(r =>
+    const rule = orderedRules.find(r =>
       tx.description.toUpperCase().includes(r.matchKeyword.toUpperCase()),
     );
     if (!rule) continue;
@@ -972,6 +1059,16 @@ export function transferTransaction(
   // Add to categorization history
   addToHistory(tx.description, 'transfer-clearing', 'Bank Transfers', 'XFER', null, null);
 
+  addAuditLog({
+    action: 'transferred',
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: `Transferred ${direction === 'to' ? 'to' : 'from'} ${otherAccount.name}`,
+    oldValue: 'PENDING',
+    newValue: 'Bank Transfer',
+  });
+
   return { tx, mirrorTx, je };
 }
 
@@ -1039,6 +1136,16 @@ export function batchMatchTransactions(
     tx.journalEntryId  = targetJeId;
     tx.accountName     = targetJe.lines.find(l => l.debit > 0)?.accountName ?? tx.accountName;
     tx.contactName     = targetJe.contactName ?? tx.contactName;
+
+    addAuditLog({
+      action: 'matched',
+      entityType: 'transaction',
+      entityId: tx.id,
+      entityDescription: tx.description,
+      details: `Matched to ${targetJe.type} ${targetJe.referenceNo ?? targetJe.id}${targetJe.contactName ? ` · ${targetJe.contactName}` : ''}`,
+      oldValue: 'PENDING',
+      newValue: targetJeId,
+    });
   });
 
   return targetJe;
@@ -1483,4 +1590,205 @@ export function batchDeleteTransactions(txIds: string[]): MockBankTransaction[] 
   });
 
   return removed;
+}
+
+export function createRule(input: {
+  name: string;
+  matchKeyword: string;
+  accountId: string;
+  transactionType: 'Bank Payment' | 'Bank Receipt';
+  contactId?: string;
+  contactName?: string;
+  memo?: string;
+  enabled?: boolean;
+}): MockRule | null {
+  const account = MOCK_COA_ACCOUNTS.find(item => item.id === input.accountId);
+  if (!account) return null;
+
+  const name = input.name.trim();
+  const matchKeyword = input.matchKeyword.trim().toUpperCase();
+  if (!name || !matchKeyword) return null;
+
+  const contact = input.contactId ? MOCK_ENTITIES.find(entity => entity.id === input.contactId) : undefined;
+  const created: MockRule = {
+    id: nextRuleId(),
+    name,
+    matchKeyword,
+    accountId: input.accountId,
+    accountName: account.name,
+    contactId: contact?.id,
+    contactName: input.contactName ?? contact?.name,
+    memo: input.memo?.trim() || undefined,
+    transactionType: input.transactionType,
+    enabled: input.enabled ?? true,
+    priority: MOCK_RULES.length + 1,
+  };
+
+  MOCK_RULES = normalizeRulePriorities([...MOCK_RULES, created]);
+  const rule = MOCK_RULES[MOCK_RULES.length - 1];
+
+  addAuditLog({
+    action: 'rule_created',
+    entityType: 'rule',
+    entityId: rule.id,
+    entityDescription: rule.name,
+    details: `Rule created: If description contains ${rule.matchKeyword} → ${rule.accountName}`,
+    newValue: `${rule.matchKeyword} → ${rule.accountName}`,
+  });
+
+  return rule;
+}
+
+export function updateRule(ruleId: string, updates: Partial<Omit<MockRule, 'id'>>): MockRule | null {
+  const index = MOCK_RULES.findIndex(rule => rule.id === ruleId);
+  if (index < 0) return null;
+
+  const current = MOCK_RULES[index];
+  const nextAccountId = updates.accountId ?? current.accountId;
+  const account = MOCK_COA_ACCOUNTS.find(item => item.id === nextAccountId);
+  if (!account) return null;
+
+  const nextContactId = updates.contactId === undefined ? current.contactId : updates.contactId;
+  const contact = nextContactId ? MOCK_ENTITIES.find(entity => entity.id === nextContactId) : undefined;
+  const nextName = updates.name === undefined ? current.name : updates.name.trim();
+  const nextKeyword = updates.matchKeyword === undefined ? current.matchKeyword : updates.matchKeyword.trim().toUpperCase();
+  if (!nextName || !nextKeyword) return null;
+
+  const updatedRule: MockRule = {
+    ...current,
+    ...updates,
+    name: nextName,
+    matchKeyword: nextKeyword,
+    accountId: nextAccountId,
+    accountName: account.name,
+    contactId: nextContactId,
+    contactName: updates.contactName === undefined ? contact?.name ?? current.contactName : updates.contactName,
+    memo: updates.memo === undefined ? current.memo : updates.memo?.trim() || undefined,
+  };
+
+  MOCK_RULES = MOCK_RULES.map((rule, ruleIndex) => (ruleIndex === index ? updatedRule : rule));
+
+  addAuditLog({
+    action: 'rule_updated',
+    entityType: 'rule',
+    entityId: updatedRule.id,
+    entityDescription: updatedRule.name,
+    details: `Rule updated: ${updatedRule.matchKeyword} → ${updatedRule.accountName}`,
+    oldValue: `${current.matchKeyword} → ${current.accountName}`,
+    newValue: `${updatedRule.matchKeyword} → ${updatedRule.accountName}`,
+  });
+
+  return updatedRule;
+}
+
+export function deleteRule(ruleId: string): MockRule | null {
+  const index = MOCK_RULES.findIndex(rule => rule.id === ruleId);
+  if (index < 0) return null;
+
+  const [removed] = MOCK_RULES.splice(index, 1);
+  MOCK_RULES = normalizeRulePriorities([...MOCK_RULES]);
+
+  addAuditLog({
+    action: 'rule_deleted',
+    entityType: 'rule',
+    entityId: removed.id,
+    entityDescription: removed.name,
+    details: `Rule deleted: ${removed.matchKeyword} → ${removed.accountName}`,
+    oldValue: `${removed.matchKeyword} → ${removed.accountName}`,
+  });
+
+  return removed;
+}
+
+export function toggleRuleEnabled(ruleId: string): MockRule | null {
+  const rule = MOCK_RULES.find(item => item.id === ruleId);
+  if (!rule) return null;
+
+  const updatedRule = {
+    ...rule,
+    enabled: !(rule.enabled ?? true),
+  };
+
+  MOCK_RULES = MOCK_RULES.map(item => (item.id === ruleId ? updatedRule : item));
+
+  addAuditLog({
+    action: 'rule_updated',
+    entityType: 'rule',
+    entityId: updatedRule.id,
+    entityDescription: updatedRule.name,
+    details: `Rule ${updatedRule.enabled ? 'enabled' : 'disabled'}`,
+    oldValue: String(rule.enabled ?? true),
+    newValue: String(updatedRule.enabled),
+  });
+
+  return updatedRule;
+}
+
+export function moveRule(ruleId: string, direction: 'up' | 'down'): MockRule[] {
+  const index = MOCK_RULES.findIndex(rule => rule.id === ruleId);
+  if (index < 0) return [...MOCK_RULES];
+
+  const swapIndex = direction === 'up' ? index - 1 : index + 1;
+  if (swapIndex < 0 || swapIndex >= MOCK_RULES.length) return [...MOCK_RULES];
+
+  const reordered = [...MOCK_RULES];
+  [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+  MOCK_RULES = normalizeRulePriorities(reordered);
+
+  const movedRule = MOCK_RULES[swapIndex];
+  addAuditLog({
+    action: 'rule_updated',
+    entityType: 'rule',
+    entityId: movedRule.id,
+    entityDescription: movedRule.name,
+    details: `Rule moved to priority ${swapIndex + 1}`,
+    oldValue: String(index + 1),
+    newValue: String(swapIndex + 1),
+  });
+
+  return [...MOCK_RULES];
+}
+
+function cloneSplitLine(line: MockSplitLine): MockSplitLine {
+  return { ...line };
+}
+
+function cloneTransaction(tx: MockBankTransaction): MockBankTransaction {
+  return {
+    ...tx,
+    splitLines: tx.splitLines?.map(cloneSplitLine),
+  };
+}
+
+function cloneJournalEntryLine(line: MockJournalEntryLine): MockJournalEntryLine {
+  return { ...line };
+}
+
+function cloneJournalEntry(entry: MockJournalEntry): MockJournalEntry {
+  return {
+    ...entry,
+    lines: entry.lines.map(cloneJournalEntryLine),
+  };
+}
+
+const INITIAL_MOCK_STATE = {
+  items: mockStore.items.map(cloneTransaction),
+  journalEntries: mockJEs.map(cloneJournalEntry),
+  rules: MOCK_RULES.map(rule => ({ ...rule })),
+  history: CATEGORIZATION_HISTORY.map(entry => ({ ...entry })),
+  auditEntries: auditLog.map(entry => ({ ...entry })),
+  jeCounter: _jeCounter,
+  manualEntryCounter: _manualEntryCounter,
+  ruleCounter: _ruleCounter,
+};
+
+export function resetMockState(): void {
+  mockStore.items = INITIAL_MOCK_STATE.items.map(cloneTransaction);
+  mockJEs = INITIAL_MOCK_STATE.journalEntries.map(cloneJournalEntry);
+  MOCK_RULES = INITIAL_MOCK_STATE.rules.map(rule => ({ ...rule }));
+  CATEGORIZATION_HISTORY = INITIAL_MOCK_STATE.history.map(entry => ({ ...entry }));
+  auditLog.splice(0, auditLog.length, ...INITIAL_MOCK_STATE.auditEntries.map(entry => ({ ...entry })));
+  _jeCounter = INITIAL_MOCK_STATE.jeCounter;
+  _manualEntryCounter = INITIAL_MOCK_STATE.manualEntryCounter;
+  _ruleCounter = INITIAL_MOCK_STATE.ruleCounter;
 }

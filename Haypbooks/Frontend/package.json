@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --max-old-space-size=6144 ./node_modules/jest/bin/jest.js --maxWorkers=25%",
+    "test:banking-e2e": "tsx --tsconfig tsconfig.banking-e2e.json \"src/app/(owner)/banking-cash/transactions/__tests__/banking-e2e.test.ts\"",
     "test:serial": "node --max-old-space-size=6144 ./node_modules/jest/bin/jest.js --runInBand",
     "test:limited": "node --max-old-space-size=6144 ./node_modules/jest/bin/jest.js --maxWorkers=4",
     "test:coverage": "node --max-old-space-size=6144 ./node_modules/jest/bin/jest.js --maxWorkers=4 --coverage",
@@ -58,6 +59,7 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.7",
     "ts-jest": "^29.2.5",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.5",
     "undici": "^6.19.8"
   },
