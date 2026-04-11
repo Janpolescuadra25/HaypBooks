@@ -175,6 +175,77 @@ export const MOCK_EXISTING_JES: MockJournalEntry[] = [
       { accountId: 'acc-4001', accountName: 'Service Revenue',      debit: 0, credit: 45000.00 },
     ],
   },
+  // Additional Bills & Invoices for match page search results
+  {
+    id: 'je-bill-003',
+    date: '2026-03-23',
+    description: 'Bill: Grab Philippines — Delivery Services Mar 2026',
+    type: 'Bill',
+    status: 'POSTED',
+    referenceNo: 'BILL-2026-033',
+    contactName: 'Grab Philippines',
+    totalAmount: 2350.00,
+    lines: [
+      { accountId: 'acc-5104', accountName: 'Transportation',    debit: 2350.00, credit: 0 },
+      { accountId: 'acc-2001', accountName: 'Accounts Payable',  debit: 0, credit: 2350.00 },
+    ],
+  },
+  {
+    id: 'je-inv-003',
+    date: '2026-03-28',
+    description: 'Invoice: Ayala Land — April Consulting Retainer',
+    type: 'Invoice',
+    status: 'POSTED',
+    referenceNo: 'INV-2026-016',
+    contactName: 'Ayala Land Inc.',
+    totalAmount: 75000.00,
+    lines: [
+      { accountId: 'acc-1200', accountName: 'Accounts Receivable', debit: 75000.00, credit: 0 },
+      { accountId: 'acc-4001', accountName: 'Service Revenue',      debit: 0, credit: 75000.00 },
+    ],
+  },
+  {
+    id: 'je-bill-004',
+    date: '2026-03-18',
+    description: 'Bill: Shopee Inc — Online Marketplace Fees Mar 2026',
+    type: 'Bill',
+    status: 'POSTED',
+    referenceNo: 'BILL-2026-034',
+    contactName: 'Shopee Inc.',
+    totalAmount: 4500.00,
+    lines: [
+      { accountId: 'acc-5001', accountName: 'Cost of Goods Sold', debit: 4500.00, credit: 0 },
+      { accountId: 'acc-2001', accountName: 'Accounts Payable',    debit: 0, credit: 4500.00 },
+    ],
+  },
+  {
+    id: 'je-bill-005',
+    date: '2026-03-26',
+    description: 'Bill: Converge ICT — Fiber Internet Mar 2026',
+    type: 'Bill',
+    status: 'POSTED',
+    referenceNo: 'BILL-2026-035',
+    contactName: 'Converge ICT',
+    totalAmount: 1899.00,
+    lines: [
+      { accountId: 'acc-5101', accountName: 'Telecommunications', debit: 1899.00, credit: 0 },
+      { accountId: 'acc-2001', accountName: 'Accounts Payable',    debit: 0, credit: 1899.00 },
+    ],
+  },
+  {
+    id: 'je-inv-004',
+    date: '2026-04-06',
+    description: 'Invoice: Jollibee Foods — Q1 Franchise Remittance',
+    type: 'Invoice',
+    status: 'POSTED',
+    referenceNo: 'INV-2026-017',
+    contactName: 'Jollibee Foods Corp.',
+    totalAmount: 120000.00,
+    lines: [
+      { accountId: 'acc-1200', accountName: 'Accounts Receivable', debit: 120000.00, credit: 0 },
+      { accountId: 'acc-4002', accountName: 'Product Sales',        debit: 0, credit: 120000.00 },
+    ],
+  },
 ];
 
 // ─── Auto-Categorize Rules (8) ───────────────────────────────────────────────
@@ -691,4 +762,47 @@ export function applyRules(transactions: MockBankTransaction[]): MockBankTransac
   }
 
   return updated;
+}
+
+// ─── Shared Mutable Store ─────────────────────────────────────────────────────
+// Shared client-side state so match/page and split/page can access & mutate items
+
+export const mockStore = {
+  items: [...MOCK_TRANSACTIONS] as MockBankTransaction[],
+}
+
+// ─── Auto-Match Detection ─────────────────────────────────────────────────────
+
+export interface MatchSuggestion {
+  je: MockJournalEntry;
+  diff: number;     // absolute ₱ difference
+  isExact: boolean; // true when diff < 0.01
+}
+
+/**
+ * Scan PENDING transactions against all Bills/Invoices in mockJEs.
+ * Returns a map of { transactionId → MatchSuggestion[] }.
+ * Only includes transactions that have at least one candidate (diff ≤ ₱5.00).
+ */
+export function detectAutoMatches(
+  transactions: MockBankTransaction[] = mockStore.items,
+): Record<string, MatchSuggestion[]> {
+  const result: Record<string, MatchSuggestion[]> = {}
+  const allJEs = mockJEs.filter(j => j.type === 'Bill' || j.type === 'Invoice')
+
+  for (const tx of transactions) {
+    if (tx.status !== 'PENDING') continue
+    const isExpense = tx.amount < 0
+    const absAmt   = Math.abs(tx.amount)
+    const candidates = allJEs.filter(j => isExpense ? j.type === 'Bill' : j.type === 'Invoice')
+    const matches = candidates
+      .map(je => ({ je, diff: Math.abs(je.totalAmount - absAmt) }))
+      .filter(m => m.diff <= 5.00)
+      .map(m  => ({ ...m, isExact: m.diff < 0.01 }))
+      .sort((a, b) => a.diff - b.diff)
+
+    if (matches.length > 0) result[tx.id] = matches
+  }
+
+  return result
 }
