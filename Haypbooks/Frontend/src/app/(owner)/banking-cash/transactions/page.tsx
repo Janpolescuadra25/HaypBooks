@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   AlertCircle, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
   ChevronRight, ChevronUp, FileUp, GitMerge, Link2, Loader2, RefreshCw,
@@ -14,18 +15,16 @@ import {
   MOCK_COA_ACCOUNTS,
   MOCK_ENTITIES,
   MOCK_TRANSACTIONS,
-  MOCK_EXISTING_JES,
-  MOCK_RULES,
   mockJEs,
+  mockStore,
   categorizeTransaction  as glCategorize,
-  matchTransaction       as glMatch,
-  splitTransaction       as glSplit,
   excludeTransaction     as glExclude,
   undoCategorize         as glUndo,
   applyRules             as glApplyRules,
+  detectAutoMatches,
   type MockBankTransaction,
-  type MockJournalEntry,
   type MockSplitLine,
+  type MatchSuggestion,
 } from './mockGLState'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,7 +69,7 @@ interface EntityOption {
   entityType: 'Customer' | 'Vendor' | 'Employee'
 }
 
-type StatusFilter = 'all' | 'review' | 'categorized' | 'excluded'
+type StatusFilter = 'review' | 'categorized' | 'excluded'
 type SortKey      = 'date' | 'description' | 'name' | 'account' | 'amount'
 type SortDir      = 'asc' | 'desc'
 
@@ -129,10 +128,10 @@ function mockTxToBankTx(m: MockBankTransaction): BankTransaction {
   }
 }
 
-const MOCK: BankTransaction[] = MOCK_TRANSACTIONS.map(mockTxToBankTx)
-
-// Track mock state (mutable client-side)
-let mockItems: MockBankTransaction[] = [...MOCK_TRANSACTIONS]
+// Seed mockStore if not already set (idempotent across hot-reloads)
+if (mockStore.items.length === 0) {
+  mockStore.items = [...MOCK_TRANSACTIONS]
+}
 
 // ─── SkeletonRows ─────────────────────────────────────────────────────────────
 
@@ -319,7 +318,7 @@ export default function BankFeedPage() {
   const [usingMock, setUsingMock] = useState(false)
 
   // ── Filter / sort ──────────────────────────────────────────────────────────
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('review')
   const [search,    setSearch]    = useState('')
   const [dateFrom,  setDateFrom]  = useState('')
   const [dateTo,    setDateTo]    = useState('')
@@ -332,8 +331,9 @@ export default function BankFeedPage() {
   // ── Selection ──────────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  // ── Inline categorize ──────────────────────────────────────────────────────
+  // ── Expandable row ─────────────────────────────────────────────────────────
   const [expandedId,      setExpandedId]      = useState<string | null>(null)
+  const [editMode,        setEditMode]        = useState(false)
   const [inlineCoa,       setInlineCoa]       = useState('')
   const [inlineEnt,       setInlineEnt]       = useState('')
   const [inlineMemo,      setInlineMemo]      = useState('')
@@ -345,19 +345,11 @@ export default function BankFeedPage() {
   const inlineCoaRef = useRef<HTMLDivElement>(null)
   const inlineEntRef = useRef<HTMLDivElement>(null)
 
-  // ── Detail panel ───────────────────────────────────────────────────────────
-  const [detailTx,       setDetailTx]       = useState<BankTransaction | null>(null)
-  const [detailOpen,     setDetailOpen]     = useState(false)
-  const [detailCoa,      setDetailCoa]      = useState('')
-  const [detailEnt,      setDetailEnt]      = useState('')
-  const [detailMemo,     setDetailMemo]     = useState('')
-  const [detailCoaSearch,setDetailCoaSearch] = useState('')
-  const [detailEntSearch,setDetailEntSearch] = useState('')
-  const [detailCoaOpen,  setDetailCoaOpen]  = useState(false)
-  const [detailEntOpen,  setDetailEntOpen]  = useState(false)
-  const [detailSaving,   setDetailSaving]   = useState(false)
-  const detailCoaRef = useRef<HTMLDivElement>(null)
-  const detailEntRef = useRef<HTMLDivElement>(null)
+  // ── Router ──────────────────────────────────────────────────────────────────
+  const router = useRouter()
+
+  // ── Auto-match suggestions ─────────────────────────────────────────────────
+  const [matchSuggestions, setMatchSuggestions] = useState<Record<string, number>>({})
 
   // ── Batch modal ────────────────────────────────────────────────────────────
   const [batchOpen,      setBatchOpen]      = useState(false)
@@ -399,17 +391,6 @@ export default function BankFeedPage() {
   // ── Apply Rules ────────────────────────────────────────────────────────────
   const [applyRulesLoading, setApplyRulesLoading] = useState(false)
 
-  // ── Find Match panel (inside detail) ───────────────────────────────────────
-  const [findMatchOpen, setFindMatchOpen] = useState(false)
-  const [findMatchSearch, setFindMatchSearch] = useState('')
-
-  // ── Split panel (inside detail) ────────────────────────────────────────────
-  const [splitOpen,   setSplitOpen]   = useState(false)
-  const [splitLines2, setSplitLines2] = useState<Array<{ accountId: string; amount: string; memo: string }>>([
-    { accountId: '', amount: '', memo: '' },
-    { accountId: '', amount: '', memo: '' },
-  ])
-
   // ─── Data loading ──────────────────────────────────────────────────────────
 
   const loadAccounts = useCallback(async () => {
@@ -448,10 +429,10 @@ export default function BankFeedPage() {
         createdAt:       t.createdAt,
       }))
       if (mapped.length > 0) { setItems(mapped) }
-      else { setItems(mockItems.map(mockTxToBankTx)); setUsingMock(true) }
+      else { setItems(mockStore.items.map(mockTxToBankTx)); setUsingMock(true) }
     } catch {
       // Fall back to live mock state (which may have been mutated by interactions)
-      setItems(mockItems.map(mockTxToBankTx)); setUsingMock(true)
+      setItems(mockStore.items.map(mockTxToBankTx)); setUsingMock(true)
     } finally { setLoading(false) }
   }, [companyId])
 
@@ -496,11 +477,21 @@ export default function BankFeedPage() {
   // Initialize items immediately from mock (don't wait for API)
   useEffect(() => {
     if (!loading && items.length === 0) {
-      setItems(mockItems.map(mockTxToBankTx))
+      setItems(mockStore.items.map(mockTxToBankTx))
       setUsingMock(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Recompute auto-match suggestions whenever items change
+  useEffect(() => {
+    const suggestions = detectAutoMatches()
+    const counts: Record<string, number> = {}
+    for (const [txId, matches] of Object.entries(suggestions)) {
+      counts[txId] = matches.length
+    }
+    setMatchSuggestions(counts)
+  }, [items])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (companyId) { loadAccounts(); loadCoa(); loadEntities() } }, [companyId])
@@ -537,8 +528,6 @@ export default function BankFeedPage() {
       const t = e.target as Node
       if (inlineCoaRef.current && !inlineCoaRef.current.contains(t)) setInlineCoaOpen(false)
       if (inlineEntRef.current && !inlineEntRef.current.contains(t))  setInlineEntOpen(false)
-      if (detailCoaRef.current && !detailCoaRef.current.contains(t))  setDetailCoaOpen(false)
-      if (detailEntRef.current && !detailEntRef.current.contains(t))  setDetailEntOpen(false)
       if (batchCoaRef.current  && !batchCoaRef.current.contains(t))   setBatchCoaOpen(false)
       if (batchEntRef.current  && !batchEntRef.current.contains(t))   setBatchEntOpen(false)
     }
@@ -613,14 +602,18 @@ export default function BankFeedPage() {
   const toggleRow = (id: string) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 
-  // ─── Inline categorize ────────────────────────────────────────────────────
-  const openInline = (tx: BankTransaction) => {
-    setExpandedId(tx.id)
-    setInlineCoa(tx.accountId ?? '')
-    setInlineEnt(tx.contactId ?? '')
-    setInlineMemo(tx.memo ?? '')
-    setInlineCoaSearch(''); setInlineEntSearch('')
-    setInlineCoaOpen(false); setInlineEntOpen(false)
+  // ─── Toggle expand (all statuses) ────────────────────────────────────────
+  const toggleExpand = (id: string, tx: BankTransaction) => {
+    if (expandedId === id) {
+      setExpandedId(null); setEditMode(false)
+    } else {
+      setExpandedId(id); setEditMode(false)
+      setInlineCoa(tx.accountId ?? '')
+      setInlineEnt(tx.contactId ?? '')
+      setInlineMemo(tx.memo ?? '')
+      setInlineCoaSearch(''); setInlineEntSearch('')
+      setInlineCoaOpen(false); setInlineEntOpen(false)
+    }
   }
 
   const saveInline = async () => {
@@ -630,12 +623,12 @@ export default function BankFeedPage() {
     if (!tx) { setInlineSaving(false); return }
 
     // Update mock state
-    const mockTx = mockItems.find(m => m.id === expandedId)
+    const mockTx = mockStore.items.find(m => m.id === expandedId)
     if (mockTx) {
       const coaAcct = coa.find(c => c.id === inlineCoa)
       const entOpt  = entities.find(e => e.id === inlineEnt)
       const updated = glCategorize(mockTx, inlineCoa, coaAcct?.name ?? '', inlineEnt || undefined, entOpt?.name, inlineMemo || undefined)
-      mockItems = mockItems.map(m => m.id === expandedId ? updated : m)
+      mockStore.items = mockStore.items.map(m => m.id === expandedId ? updated : m)
     }
 
     // Try real API
@@ -657,7 +650,7 @@ export default function BankFeedPage() {
       contactName: entities.find(e => e.id === inlineEnt)?.name ?? t.contactName,
       memo:        inlineMemo || t.memo,
     }))
-    setExpandedId(null)
+    setExpandedId(null); setEditMode(false)
     showToast('Transaction categorized')
     setInlineSaving(false)
   }
@@ -665,10 +658,10 @@ export default function BankFeedPage() {
   // ─── Undo ─────────────────────────────────────────────────────────────────
   const undoTransaction = async (tx: BankTransaction) => {
     // Update mock state
-    const mockTx = mockItems.find(m => m.id === tx.id)
+    const mockTx = mockStore.items.find(m => m.id === tx.id)
     if (mockTx) {
       const updated = glUndo(mockTx)
-      mockItems = mockItems.map(m => m.id === tx.id ? updated : m)
+      mockStore.items = mockStore.items.map(m => m.id === tx.id ? updated : m)
     }
     // Try real API
     try {
@@ -681,16 +674,17 @@ export default function BankFeedPage() {
     } catch { /* ignore for mock mode */ }
 
     const typeLabel =
-      tx.transactionType === 'Bank Payment' ? 'Bank Payment' :
-      tx.transactionType === 'Bank Receipt' ? 'Bank Receipt' :
-      tx.transactionType === 'Split Transaction' ? 'Split' :
-      tx.status === 'MATCHED' ? 'Match' : 'Categorize'
+      tx.transactionType === 'Bank Payment'       ? 'Bank Payment' :
+      tx.transactionType === 'Bank Receipt'        ? 'Bank Receipt' :
+      tx.transactionType === 'Split Transaction'   ? 'Split' :
+      tx.status === 'MATCHED'                      ? 'Match' : 'Categorize'
 
     setItems(prev => prev.map(t => t.id === tx.id ? {
       ...t, status: 'PENDING', transactionType: undefined, journalEntryId: undefined,
       accountId: undefined, accountName: undefined, contactId: undefined, contactName: undefined,
       memo: undefined, ruleName: undefined, splitLines: undefined,
     } : t))
+    setExpandedId(null); setEditMode(false)
     showToast(`${typeLabel} undone — moved back to For Review`)
   }
 
@@ -698,10 +692,10 @@ export default function BankFeedPage() {
   const excludeRows = async (ids: string[]) => {
     // Update mock state
     ids.forEach(id => {
-      const mockTx = mockItems.find(m => m.id === id)
+      const mockTx = mockStore.items.find(m => m.id === id)
       if (mockTx) {
         const updated = glExclude(mockTx)
-        mockItems = mockItems.map(m => m.id === id ? updated : m)
+        mockStore.items = mockStore.items.map(m => m.id === id ? updated : m)
       }
     })
     // Try real API
@@ -716,52 +710,6 @@ export default function BankFeedPage() {
     setItems(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'EXCLUDED' } : t))
     setSelected(new Set())
     showToast(`${ids.length} transaction${ids.length !== 1 ? 's' : ''} excluded`)
-  }
-
-  // ─── Detail panel ─────────────────────────────────────────────────────────
-  const openDetail = (tx: BankTransaction) => {
-    setDetailTx(tx); setDetailCoa(tx.accountId ?? ''); setDetailEnt(tx.contactId ?? '')
-    setDetailMemo(tx.memo ?? ''); setDetailCoaSearch(''); setDetailEntSearch('')
-    setDetailCoaOpen(false); setDetailEntOpen(false); setDetailSaving(false)
-    setFindMatchOpen(false); setFindMatchSearch('')
-    setSplitOpen(false)
-    setSplitLines2([{ accountId: '', amount: '', memo: '' }, { accountId: '', amount: '', memo: '' }])
-    setDetailOpen(true)
-  }
-
-  const saveDetail = async () => {
-    if (!detailTx) return
-    setDetailSaving(true)
-    const coaAcct = coa.find(c => c.id === detailCoa)
-    const entOpt  = entities.find(e => e.id === detailEnt)
-
-    // Update mock state
-    const mockTx = mockItems.find(m => m.id === detailTx.id)
-    if (mockTx) {
-      const updated = glCategorize(mockTx, detailCoa, coaAcct?.name ?? '', detailEnt || undefined, entOpt?.name, detailMemo || undefined)
-      mockItems = mockItems.map(m => m.id === detailTx.id ? updated : m)
-    }
-    // Try real API
-    try {
-      if (companyId) {
-        await apiClient.patch(
-          `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${detailTx.id}`,
-          { status: 'CATEGORIZED', accountId: detailCoa || undefined, contactId: detailEnt || undefined, memo: detailMemo || undefined, transactionType: 'Bank Transaction' },
-        )
-      }
-    } catch { /* ignore for mock mode */ }
-
-    setItems(prev => prev.map(t => t.id !== detailTx.id ? t : {
-      ...t, status: 'CATEGORIZED',
-      transactionType: t.amount < 0 ? 'Bank Payment' : 'Bank Receipt',
-      accountId:   detailCoa || t.accountId,
-      accountName: coaAcct?.name ?? t.accountName,
-      contactId:   detailEnt || t.contactId,
-      contactName: entOpt?.name ?? t.contactName,
-      memo:        detailMemo || t.memo,
-    }))
-    setDetailOpen(false); showToast('Transaction categorized')
-    setDetailSaving(false)
   }
 
   // ─── Batch categorize ─────────────────────────────────────────────────────
@@ -780,10 +728,10 @@ export default function BankFeedPage() {
 
     // Update mock state for each selected pending tx
     selected.forEach(id => {
-      const mockTx = mockItems.find(m => m.id === id)
+      const mockTx = mockStore.items.find(m => m.id === id)
       if (mockTx && mockTx.status === 'PENDING') {
         const updated = glCategorize(mockTx, batchCoa, coaAcct?.name ?? '', batchEnt || undefined, entOpt?.name)
-        mockItems = mockItems.map(m => m.id === id ? updated : m)
+        mockStore.items = mockStore.items.map(m => m.id === id ? updated : m)
       }
     })
 
@@ -824,63 +772,15 @@ export default function BankFeedPage() {
   // ─── Apply Rules ──────────────────────────────────────────────────────────
   const handleApplyRules = async () => {
     setApplyRulesLoading(true)
-    const updated = glApplyRules(mockItems)
+    const updated = glApplyRules(mockStore.items)
     let count = 0
     updated.forEach(u => {
-      mockItems = mockItems.map(m => m.id === u.id ? u : m)
+      mockStore.items = mockStore.items.map(m => m.id === u.id ? u : m)
       count++
     })
-    setItems(mockItems.map(mockTxToBankTx))
+    setItems(mockStore.items.map(mockTxToBankTx))
     setApplyRulesLoading(false)
     showToast(count > 0 ? `${count} rule${count !== 1 ? 's' : ''} applied` : 'No matching rules found')
-  }
-
-  // ─── Find Match ───────────────────────────────────────────────────────────
-  const handleFindMatch = (jeId: string) => {
-    if (!detailTx) return
-    const mockTx = mockItems.find(m => m.id === detailTx.id)
-    const matchType = (detailTx.amount < 0 ? 'Bank Payment' : 'Bank Receipt') as 'Bank Payment' | 'Bank Receipt'
-    if (mockTx) {
-      const updated = glMatch(mockTx, jeId, matchType)
-      mockItems = mockItems.map(m => m.id === detailTx.id ? updated : m)
-    }
-    const je = mockJEs.find(j => j.id === jeId)
-    const expLine = je?.lines.find(l => l.debit > 0)
-    setItems(prev => prev.map(t => t.id !== detailTx.id ? t : {
-      ...t, status: 'MATCHED', transactionType: matchType,
-      journalEntryId: jeId, accountName: expLine?.accountName,
-      contactName: je?.contactName,
-    }))
-    setFindMatchOpen(false)
-    setDetailOpen(false)
-    showToast('Transaction matched to Journal Entry')
-  }
-
-  // ─── Split ────────────────────────────────────────────────────────────────
-  const handleSaveSplit = () => {
-    if (!detailTx) return
-    const validLines = splitLines2.filter(l => l.accountId && parseFloat(l.amount) > 0)
-    if (validLines.length < 2) { showToast('Add at least 2 split lines'); return }
-    const total = validLines.reduce((s, l) => s + parseFloat(l.amount), 0)
-    const abs = Math.abs(detailTx.amount)
-    if (Math.abs(total - abs) > 0.01) {
-      showToast(`Split total ₱${total.toFixed(2)} must equal ₱${abs.toFixed(2)}`); return
-    }
-    const splits = validLines.map(l => ({
-      accountId:   l.accountId,
-      accountName: coa.find(c => c.id === l.accountId)?.name ?? '',
-      amount:      parseFloat(l.amount),
-      memo:        l.memo || undefined,
-    }))
-    const mockTx = mockItems.find(m => m.id === detailTx.id)
-    if (mockTx) {
-      const updated = glSplit(mockTx, splits)
-      mockItems = mockItems.map(m => m.id === detailTx.id ? updated : m)
-      setItems(prev => prev.map(t => t.id !== detailTx.id ? t : mockTxToBankTx(updated)))
-    }
-    setSplitOpen(false)
-    setDetailOpen(false)
-    showToast(`Transaction split into ${validLines.length} lines`)
   }
 
   const thClass = 'relative px-3 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide bg-slate-50 border-r border-slate-200 select-none overflow-hidden'
@@ -985,11 +885,16 @@ export default function BankFeedPage() {
 
       {/* ── C. Filter bar ─────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-slate-200 px-6 py-3">
+        {/* Auto-match summary */}
+        {Object.keys(matchSuggestions).length > 0 && (
+          <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+            💡 {Object.keys(matchSuggestions).length} transaction{Object.keys(matchSuggestions).length !== 1 ? 's have' : ' has'} suggested matches
+          </div>
+        )}
         {/* Status pills */}
         <div className="flex items-center gap-2 flex-wrap">
           {(
             [
-              { key: 'all',         label: 'All',          count: items.length },
               { key: 'review',      label: 'For Review',   count: nReview },
               { key: 'categorized', label: 'Categorized',  count: nCategorized },
               { key: 'excluded',    label: 'Excluded',     count: nExcluded },
@@ -1146,7 +1051,7 @@ export default function BankFeedPage() {
                 {!loading && pageRows.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-16 text-center">
-                      {hasFilters || statusFilter !== 'all' ? (
+                      {hasFilters || statusFilter !== 'review' ? (
                         <div className="text-slate-400 text-sm">
                           <p>No transactions match your filters.</p>
                           <button onClick={clearFilters} className="mt-2 text-xs text-emerald-600 underline">Clear filters</button>
@@ -1169,7 +1074,7 @@ export default function BankFeedPage() {
                   <>
                     <tr
                       key={tx.id}
-                      onClick={() => { if (expandedId !== tx.id) openDetail(tx) }}
+                      onClick={() => toggleExpand(tx.id, tx)}
                       className={`border-b border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer ${STATUS_BORDER[tx.status] ?? ''} ${selected.has(tx.id) ? 'bg-emerald-50/60' : ''}`}
                     >
                       {/* Checkbox */}
@@ -1214,7 +1119,7 @@ export default function BankFeedPage() {
                           onClick={e => e.stopPropagation()}>
                         {tx.status === 'PENDING' && (
                           <button
-                            onClick={() => openInline(tx)}
+                            onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
                             className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                           >
                             Add
@@ -1257,76 +1162,222 @@ export default function BankFeedPage() {
                       </td>
                     </tr>
 
-                    {/* ── F. Inline categorization row ── */}
+                    {/* ── F. Expandable row form (all statuses) ── */}
                     {expandedId === tx.id && (
-                      <tr key={`${tx.id}-inline`} className="border-b border-slate-100 bg-emerald-50/40">
-                        <td colSpan={7} className="px-4 py-4">
-                          <div className="max-w-2xl space-y-3">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                              Categorize: <span className="normal-case font-normal text-slate-700">{tx.description}</span>
-                              <span className={`ml-2 font-semibold ${tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                                {fmtAmt(tx.amount)}
-                              </span>
-                            </p>
+                      <tr key={`${tx.id}-inline`} className="border-b border-slate-100">
+                        <td colSpan={7} className="px-0 py-0">
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Account (COA)</label>
-                                <CoaDropdown
-                                  open={inlineCoaOpen}
-                                  onToggle={() => { setInlineCoaOpen(o => !o); setInlineEntOpen(false) }}
-                                  searchVal={inlineCoaSearch}
-                                  onSearch={setInlineCoaSearch}
-                                  value={inlineCoa}
-                                  onChange={setInlineCoa}
-                                  accounts={coa}
-                                  topClose={() => setInlineEntOpen(false)}
-                                  dropRef={inlineCoaRef}
-                                />
+                          {/* PENDING */}
+                          {tx.status === 'PENDING' && (
+                            <div className="px-6 py-4 bg-emerald-50/60 border-l-4 border-emerald-400">
+                              {matchSuggestions[tx.id] > 0 && (
+                                <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+                                  <GitMerge size={12} />
+                                  <span>💡 {matchSuggestions[tx.id]} suggested match{matchSuggestions[tx.id] !== 1 ? 'es' : ''} found</span>
+                                  <button
+                                    onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/match?txnId=${tx.id}`) }}
+                                    className="ml-auto px-2 py-0.5 bg-blue-600 text-white rounded text-[11px] font-semibold hover:bg-blue-700"
+                                  >Review matches →</button>
+                                </div>
+                              )}
+                              <div className="max-w-2xl space-y-3">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                  Categorize: <span className="normal-case font-normal text-slate-700">{tx.description}</span>
+                                  <span className={`ml-2 font-semibold ${tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{fmtAmt(tx.amount)}</span>
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Account (COA)</label>
+                                    <CoaDropdown
+                                      open={inlineCoaOpen} onToggle={() => { setInlineCoaOpen(o => !o); setInlineEntOpen(false) }}
+                                      searchVal={inlineCoaSearch} onSearch={setInlineCoaSearch}
+                                      value={inlineCoa} onChange={setInlineCoa}
+                                      accounts={coa} topClose={() => setInlineEntOpen(false)} dropRef={inlineCoaRef}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
+                                    <EntityDropdown
+                                      open={inlineEntOpen} onToggle={() => { setInlineEntOpen(o => !o); setInlineCoaOpen(false) }}
+                                      searchVal={inlineEntSearch} onSearch={setInlineEntSearch}
+                                      value={inlineEnt} onChange={setInlineEnt}
+                                      options={entities} topClose={() => setInlineCoaOpen(false)} dropRef={inlineEntRef}
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
+                                  <input value={inlineMemo} onChange={e => setInlineMemo(e.target.value)}
+                                    placeholder="Optional memo…"
+                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+                                  <button onClick={() => { setExpandedId(null); setEditMode(false) }}
+                                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                                  <button onClick={saveInline} disabled={inlineSaving || !inlineCoa}
+                                    className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 flex items-center gap-1.5">
+                                    {inlineSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Categorize
+                                  </button>
+                                  <button onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/match?txnId=${tx.id}`) }}
+                                    className="px-3 py-1.5 text-xs font-medium border border-blue-400 text-blue-700 rounded-lg hover:bg-blue-50 flex items-center gap-1.5">
+                                    <GitMerge size={12} /> Find Match
+                                  </button>
+                                  <button onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/split?txnId=${tx.id}`) }}
+                                    className="px-3 py-1.5 text-xs font-medium border border-purple-400 text-purple-700 rounded-lg hover:bg-purple-50 flex items-center gap-1.5">
+                                    <Scissors size={12} /> Split
+                                  </button>
+                                </div>
                               </div>
-                              <div>
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
-                                <EntityDropdown
-                                  open={inlineEntOpen}
-                                  onToggle={() => { setInlineEntOpen(o => !o); setInlineCoaOpen(false) }}
-                                  searchVal={inlineEntSearch}
-                                  onSearch={setInlineEntSearch}
-                                  value={inlineEnt}
-                                  onChange={setInlineEnt}
-                                  options={entities}
-                                  topClose={() => setInlineCoaOpen(false)}
-                                  dropRef={inlineEntRef}
-                                />
+                            </div>
+                          )}
+
+                          {/* CATEGORIZED – Split */}
+                          {tx.status === 'CATEGORIZED' && tx.transactionType === 'Split Transaction' && tx.splitLines && (
+                            <div className="px-6 py-4 bg-slate-50 border-l-4 border-purple-400">
+                              <div className="flex items-center gap-2 text-xs font-semibold text-purple-700 mb-3">
+                                <Scissors size={13} /> Split Transaction · {fmtAmt(tx.amount)}
+                              </div>
+                              <div className="space-y-1 mb-3 max-w-xl">
+                                {tx.splitLines.map((sl, i) => (
+                                  <div key={i} className="flex justify-between items-center px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                                    <span className="text-slate-700 font-medium">{sl.accountName}</span>
+                                    <span className="font-mono font-semibold text-slate-800">{fmt(sl.amount)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => router.push(`/banking-cash/transactions/split?txnId=${tx.id}`)}
+                                  className="px-3 py-1.5 text-xs font-medium border border-purple-400 text-purple-700 rounded-lg hover:bg-purple-50 flex items-center gap-1.5">
+                                  <Scissors size={12} /> Edit Split
+                                </button>
+                                <button onClick={() => undoTransaction(tx)}
+                                  className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 flex items-center gap-1">
+                                  <RotateCcw size={11} /> Undo Split
+                                </button>
                               </div>
                             </div>
+                          )}
 
-                            <div>
-                              <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
-                              <input
-                                value={inlineMemo}
-                                onChange={e => setInlineMemo(e.target.value)}
-                                placeholder="Optional memo…"
-                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                              />
+                          {/* CATEGORIZED – read-only summary */}
+                          {tx.status === 'CATEGORIZED' && tx.transactionType !== 'Split Transaction' && !editMode && (
+                            <div className="px-6 py-4 bg-slate-50 border-l-4 border-emerald-400">
+                              {tx.ruleName && (
+                                <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                                  <Sparkles size={12} /> Auto-categorized by rule: <span className="font-semibold ml-1">{tx.ruleName}</span>
+                                </div>
+                              )}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-3 max-w-2xl">
+                                <div><p className="text-slate-400 mb-0.5">Account</p><p className="text-slate-700 font-medium">{tx.accountName ?? '—'}</p></div>
+                                <div><p className="text-slate-400 mb-0.5">Name</p><p className="text-slate-700">{tx.contactName ?? '—'}</p></div>
+                                <div><p className="text-slate-400 mb-0.5">Type</p><p className="text-slate-700">{tx.transactionType ?? '—'}</p></div>
+                                <div><p className="text-slate-400 mb-0.5">Journal Entry</p><p className="text-emerald-700 font-medium font-mono text-[11px]">{tx.journalEntryRef ?? tx.journalEntryId?.slice(0, 8) ?? '—'}</p></div>
+                                {tx.memo && <div className="col-span-2 sm:col-span-4"><p className="text-slate-400 mb-0.5">Memo</p><p className="text-slate-600 italic">{tx.memo}</p></div>}
+                              </div>
+                              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setEditMode(true)}
+                                  className="px-3 py-1.5 text-xs font-medium border border-slate-300 text-slate-700 rounded-lg hover:bg-white">Edit</button>
+                                <button onClick={() => undoTransaction(tx)}
+                                  className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 flex items-center gap-1">
+                                  <RotateCcw size={11} /> Undo Categorization
+                                </button>
+                              </div>
                             </div>
+                          )}
 
-                            <div className="flex items-center gap-2 pt-1">
-                              <button
-                                onClick={() => setExpandedId(null)}
-                                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={saveInline}
-                                disabled={inlineSaving}
-                                className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 flex items-center gap-1.5"
-                              >
-                                {inlineSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                                Categorize
-                              </button>
+                          {/* CATEGORIZED – edit mode */}
+                          {tx.status === 'CATEGORIZED' && tx.transactionType !== 'Split Transaction' && editMode && (
+                            <div className="px-6 py-4 bg-slate-50 border-l-4 border-emerald-400">
+                              <div className="max-w-2xl space-y-3">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                  Edit Categorization: <span className="normal-case font-normal text-slate-700">{tx.description}</span>
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Account (COA)</label>
+                                    <CoaDropdown
+                                      open={inlineCoaOpen} onToggle={() => { setInlineCoaOpen(o => !o); setInlineEntOpen(false) }}
+                                      searchVal={inlineCoaSearch} onSearch={setInlineCoaSearch}
+                                      value={inlineCoa} onChange={setInlineCoa}
+                                      accounts={coa} topClose={() => setInlineEntOpen(false)} dropRef={inlineCoaRef}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
+                                    <EntityDropdown
+                                      open={inlineEntOpen} onToggle={() => { setInlineEntOpen(o => !o); setInlineCoaOpen(false) }}
+                                      searchVal={inlineEntSearch} onSearch={setInlineEntSearch}
+                                      value={inlineEnt} onChange={setInlineEnt}
+                                      options={entities} topClose={() => setInlineCoaOpen(false)} dropRef={inlineEntRef}
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
+                                  <input value={inlineMemo} onChange={e => setInlineMemo(e.target.value)}
+                                    placeholder="Optional memo…"
+                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+                                  <button onClick={() => setEditMode(false)}
+                                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                                  <button onClick={saveInline} disabled={inlineSaving || !inlineCoa}
+                                    className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 flex items-center gap-1.5">
+                                    {inlineSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save Changes
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          )}
+
+                          {/* MATCHED */}
+                          {tx.status === 'MATCHED' && (() => {
+                            const je = mockJEs.find(j => j.id === tx.journalEntryId)
+                            return (
+                              <div className="px-6 py-4 bg-blue-50/40 border-l-4 border-blue-500">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 mb-3">
+                                  <GitMerge size={13} /> Matched to {je?.type ?? 'Document'}
+                                </div>
+                                {je && (
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-3 max-w-2xl">
+                                    <div><p className="text-slate-400 mb-0.5">Type</p><p className="text-blue-700 font-medium">{je.type}</p></div>
+                                    <div><p className="text-slate-400 mb-0.5">Reference</p><p className="text-slate-700 font-mono">{je.referenceNo ?? je.id.slice(0, 8)}</p></div>
+                                    <div><p className="text-slate-400 mb-0.5">Date</p><p className="text-slate-700">{fmtDate(je.date)}</p></div>
+                                    <div><p className="text-slate-400 mb-0.5">Party</p><p className="text-slate-700">{je.contactName ?? '—'}</p></div>
+                                    <div><p className="text-slate-400 mb-0.5">JE Amount</p><p className="text-slate-700 font-mono">{fmt(je.totalAmount)}</p></div>
+                                    <div><p className="text-slate-400 mb-0.5">Bank Tx</p><p className="text-slate-700 font-mono">{fmtAmt(tx.amount)}</p></div>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                  {je && (
+                                    <button onClick={() => showToast(`Viewing ${je.type} ${je.referenceNo ?? je.id.slice(0, 8)}`)}
+                                      className="px-3 py-1.5 text-xs font-medium border border-blue-400 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center gap-1.5">
+                                      <GitMerge size={12} /> View {je.type}
+                                    </button>
+                                  )}
+                                  <button onClick={() => undoTransaction(tx)}
+                                    className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 flex items-center gap-1">
+                                    <RotateCcw size={11} /> Undo Match
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          })()}
+
+                          {/* EXCLUDED */}
+                          {tx.status === 'EXCLUDED' && (
+                            <div className="px-6 py-4 bg-slate-50/80 border-l-4 border-slate-300">
+                              <p className="text-xs text-slate-500 mb-3">This transaction has been excluded from the bank feed and will not be posted to the general ledger.</p>
+                              <div onClick={e => e.stopPropagation()}>
+                                <button onClick={() => undoTransaction(tx)}
+                                  className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 flex items-center gap-1">
+                                  <RotateCcw size={11} /> Undo Exclude
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
                         </td>
                       </tr>
                     )}
@@ -1380,354 +1431,7 @@ export default function BankFeedPage() {
         </div>
       </div>
 
-      {/* ── G. Detail panel (slide-over, 400px) ───────────────────────────── */}
-      {detailOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20"
-          onClick={() => setDetailOpen(false)}
-        />
-      )}
-      <div
-        className={`fixed top-0 right-0 h-full z-50 w-full max-w-[400px] bg-white shadow-2xl border-l border-slate-200 flex flex-col transition-transform duration-200 ease-out ${detailOpen ? 'translate-x-0' : 'translate-x-full'}`}
-      >
-        {detailTx && (
-          <>
-            {/* Detail header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-              <h3 className="text-base font-bold text-slate-900">Transaction Details</h3>
-              <button onClick={() => setDetailOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Detail content (scrollable) */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-
-              {/* ── Match banner (MATCHED transactions) ── */}
-              {detailTx.status === 'MATCHED' && detailTx.journalEntryId && (() => {
-                const je = mockJEs.find(j => j.id === detailTx.journalEntryId)
-                return je ? (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm">
-                    <div className="flex items-center gap-2 text-blue-700 font-semibold mb-1">
-                      <GitMerge size={14} /> Matched to {je.type === 'Bill' ? 'Bill' : 'Invoice'}
-                    </div>
-                    <div className="text-xs text-blue-600 space-y-0.5">
-                      <div><span className="text-blue-400">Ref:</span> {je.referenceNo ?? je.id.slice(0, 8)}</div>
-                      <div><span className="text-blue-400">Date:</span> {fmtDate(je.date)}</div>
-                      {je.contactName && <div><span className="text-blue-400">Party:</span> {je.contactName}</div>}
-                      <div><span className="text-blue-400">Amount:</span> {fmt(je.totalAmount)}</div>
-                    </div>
-                  </div>
-                ) : null
-              })()}
-
-              {/* Transaction info */}
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Description</span>
-                  <span className="text-slate-800 font-medium text-right max-w-[200px]">{detailTx.description}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Date</span>
-                  <span className="text-slate-700">{fmtDate(detailTx.date)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Amount</span>
-                  <span className={`font-semibold ${detailTx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                    {fmtAmt(detailTx.amount)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Status</span>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    detailTx.status === 'PENDING'     ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                    detailTx.status === 'CATEGORIZED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                    detailTx.status === 'MATCHED'     ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                    'bg-slate-100 text-slate-500 border border-slate-200'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${
-                      detailTx.status === 'PENDING' ? 'bg-amber-400 animate-pulse' :
-                      detailTx.status === 'CATEGORIZED' ? 'bg-emerald-500' :
-                      detailTx.status === 'MATCHED' ? 'bg-blue-500' : 'bg-slate-400'
-                    }`} />
-                    {detailTx.status === 'PENDING' ? 'For Review' : detailTx.status.charAt(0) + detailTx.status.slice(1).toLowerCase()}
-                  </span>
-                </div>
-                {detailTx.bankRef && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Bank Ref</span>
-                    <span className="text-slate-600 font-mono text-xs">{detailTx.bankRef}</span>
-                  </div>
-                )}
-              </div>
-
-              <hr className="border-slate-100" />
-
-              {/* ── Split summary ── */}
-              {detailTx.transactionType === 'Split Transaction' && detailTx.splitLines && (
-                <>
-                  <div>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                      <Scissors size={12} /> Split Lines
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      {detailTx.splitLines.map((sl, i) => (
-                        <div key={i} className="flex justify-between items-center px-3 py-1.5 bg-slate-50 rounded-lg">
-                          <span className="text-slate-700 font-medium">{sl.accountName}</span>
-                          <span className="font-mono font-semibold text-slate-800">{fmt(sl.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <hr className="border-slate-100" />
-                </>
-              )}
-
-              {/* ── Rule attribution ── */}
-              {detailTx.ruleName && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-                  <Sparkles size={12} />
-                  <span>Auto-categorized by rule: <span className="font-semibold">{detailTx.ruleName}</span></span>
-                </div>
-              )}
-
-              {/* Categorization fields */}
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Account (COA)</label>
-                  <CoaDropdown
-                    open={detailCoaOpen}
-                    onToggle={() => { setDetailCoaOpen(o => !o); setDetailEntOpen(false) }}
-                    searchVal={detailCoaSearch}
-                    onSearch={setDetailCoaSearch}
-                    value={detailCoa}
-                    onChange={setDetailCoa}
-                    accounts={coa}
-                    topClose={() => setDetailEntOpen(false)}
-                    dropRef={detailCoaRef}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
-                  <EntityDropdown
-                    open={detailEntOpen}
-                    onToggle={() => { setDetailEntOpen(o => !o); setDetailCoaOpen(false) }}
-                    searchVal={detailEntSearch}
-                    onSearch={setDetailEntSearch}
-                    value={detailEnt}
-                    onChange={setDetailEnt}
-                    options={entities}
-                    topClose={() => setDetailCoaOpen(false)}
-                    dropRef={detailEntRef}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
-                  <input
-                    value={detailMemo}
-                    onChange={e => setDetailMemo(e.target.value)}
-                    placeholder="Optional memo…"
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              {/* Journal entry / meta */}
-              {(detailTx.journalEntryId || detailTx.transactionType || detailTx.createdAt) && (
-                <>
-                  <hr className="border-slate-100" />
-                  <div className="space-y-1.5 text-xs text-slate-500">
-                    {detailTx.transactionType && (
-                      <div className="flex justify-between">
-                        <span>Transaction Type</span>
-                        <span className="text-slate-700">{detailTx.transactionType}</span>
-                      </div>
-                    )}
-                    {detailTx.journalEntryId && (
-                      <div className="flex justify-between items-center">
-                        <span>Journal Entry</span>
-                        <span className="text-emerald-700 font-medium">
-                          {detailTx.journalEntryRef ?? detailTx.journalEntryId.slice(0, 12)}
-                        </span>
-                      </div>
-                    )}
-                    {detailTx.createdAt && (
-                      <div className="flex justify-between">
-                        <span>Imported</span>
-                        <span>{fmtDate(detailTx.createdAt.substring(0, 10))}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* Categorize button (only for PENDING or when account changed) */}
-              {detailTx.status === 'PENDING' && !splitOpen && !findMatchOpen && (
-                <button
-                  onClick={saveDetail}
-                  disabled={detailSaving || !detailCoa}
-                  className="w-full py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 flex items-center justify-center gap-2"
-                >
-                  {detailSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Categorize
-                </button>
-              )}
-
-              {/* Find Match + Split buttons (PENDING only) */}
-              {detailTx.status === 'PENDING' && !splitOpen && !findMatchOpen && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setFindMatchOpen(true); setSplitOpen(false) }}
-                    className="flex-1 py-2 text-xs font-medium border border-blue-400 text-blue-700 rounded-lg hover:bg-blue-50 flex items-center justify-center gap-1.5"
-                  >
-                    <GitMerge size={13} /> Find Match
-                  </button>
-                  <button
-                    onClick={() => { setSplitOpen(true); setFindMatchOpen(false) }}
-                    className="flex-1 py-2 text-xs font-medium border border-purple-400 text-purple-700 rounded-lg hover:bg-purple-50 flex items-center justify-center gap-1.5"
-                  >
-                    <Scissors size={13} /> Split
-                  </button>
-                </div>
-              )}
-
-              {/* ── Find Match sub-panel ── */}
-              {findMatchOpen && (
-                <div className="border border-blue-200 rounded-xl overflow-hidden">
-                  <div className="bg-blue-50 px-3 py-2 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-blue-700 flex items-center gap-1.5"><GitMerge size={12} /> Match to Existing Bill / Invoice</span>
-                    <button onClick={() => setFindMatchOpen(false)} className="text-blue-400 hover:text-blue-600"><X size={14} /></button>
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <input
-                      value={findMatchSearch}
-                      onChange={e => setFindMatchSearch(e.target.value)}
-                      placeholder="Search bills and invoices…"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
-                    />
-                    <div className="space-y-1 max-h-48 overflow-y-auto">
-                      {mockJEs
-                        .filter(j => (j.type === 'Bill' || j.type === 'Invoice') &&
-                          (!findMatchSearch || j.description.toLowerCase().includes(findMatchSearch.toLowerCase()) ||
-                           (j.contactName ?? '').toLowerCase().includes(findMatchSearch.toLowerCase())))
-                        .map(je => {
-                          const amtMatch = Math.abs(je.totalAmount - Math.abs(detailTx.amount)) < 1
-                          return (
-                            <button
-                              key={je.id}
-                              onClick={() => handleFindMatch(je.id)}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${amtMatch ? 'bg-blue-50 border border-blue-300' : 'hover:bg-slate-50 border border-transparent'}`}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <span className={`inline-block px-1 py-0.5 rounded text-[10px] font-semibold mr-1.5 ${je.type === 'Bill' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                    {je.type}
-                                  </span>
-                                  <span className="text-slate-700 font-medium">{je.referenceNo}</span>
-                                  {amtMatch && <span className="ml-1.5 text-[10px] text-blue-600 font-semibold">✓ Amount match</span>}
-                                </div>
-                                <span className="font-mono font-semibold text-slate-800">{fmt(je.totalAmount)}</span>
-                              </div>
-                              <div className="text-slate-500 mt-0.5">{je.contactName} · {fmtDate(je.date)}</div>
-                            </button>
-                          )
-                        })
-                      }
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Split sub-panel ── */}
-              {splitOpen && (
-                <div className="border border-purple-200 rounded-xl overflow-hidden">
-                  <div className="bg-purple-50 px-3 py-2 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-purple-700 flex items-center gap-1.5">
-                      <Scissors size={12} /> Split Transaction
-                      <span className="text-purple-400 font-normal ml-1">Total: {fmtAmt(detailTx.amount)}</span>
-                    </span>
-                    <button onClick={() => setSplitOpen(false)} className="text-purple-400 hover:text-purple-600"><X size={14} /></button>
-                  </div>
-                  <div className="p-3 space-y-2">
-                    {splitLines2.map((line, i) => {
-                      const remaining = Math.abs(detailTx.amount) -
-                        splitLines2.filter((_, j) => j !== i).reduce((s, l) => s + (parseFloat(l.amount) || 0), 0)
-                      return (
-                        <div key={i} className="grid grid-cols-[1fr_88px_24px] gap-1.5 items-start">
-                          <div className="relative">
-                            <select
-                              value={line.accountId}
-                              onChange={e => setSplitLines2(prev => prev.map((l, j) => j === i ? { ...l, accountId: e.target.value } : l))}
-                              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 bg-white"
-                            >
-                              <option value="">Select account…</option>
-                              {coa.map(a => <option key={a.id} value={a.id}>{a.code} {a.name}</option>)}
-                            </select>
-                          </div>
-                          <input
-                            type="number"
-                            value={line.amount}
-                            onChange={e => setSplitLines2(prev => prev.map((l, j) => j === i ? { ...l, amount: e.target.value } : l))}
-                            onFocus={e => { if (!e.target.value) setSplitLines2(prev => prev.map((l, j) => j === i ? { ...l, amount: remaining > 0 ? remaining.toFixed(2) : '' } : l)) }}
-                            placeholder="0.00"
-                            className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 text-right font-mono"
-                          />
-                          <button
-                            onClick={() => setSplitLines2(prev => prev.filter((_, j) => j !== i))}
-                            disabled={splitLines2.length <= 2}
-                            className="p-1.5 text-slate-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      )
-                    })}
-                    {/* Running total */}
-                    <div className="flex justify-between text-xs px-1 mt-1">
-                      <span className="text-slate-500">Allocated</span>
-                      <span className={`font-mono font-semibold ${
-                        Math.abs(splitLines2.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0) - Math.abs(detailTx.amount)) < 0.01
-                          ? 'text-emerald-600' : 'text-red-500'
-                      }`}>
-                        {fmt(splitLines2.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))} / {fmt(Math.abs(detailTx.amount))}
-                      </span>
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button
-                        onClick={() => setSplitLines2(prev => [...prev, { accountId: '', amount: '', memo: '' }])}
-                        className="text-xs text-purple-600 hover:underline"
-                      >
-                        + Add line
-                      </button>
-                      <button
-                        onClick={handleSaveSplit}
-                        className="ml-auto px-3 py-1.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-1"
-                      >
-                        <Check size={12} /> Save Split
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Undo */}
-              {(detailTx.status === 'CATEGORIZED' || detailTx.status === 'MATCHED') && (
-                <button
-                  onClick={async () => { await undoTransaction(detailTx); setDetailOpen(false) }}
-                  className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1.5 border border-slate-200 rounded-lg hover:bg-slate-50"
-                >
-                  <RotateCcw size={13} />
-                  {detailTx.status === 'MATCHED'                    ? 'Undo Match' :
-                   detailTx.transactionType === 'Split Transaction'  ? 'Undo Split' :
-                   detailTx.transactionType === 'Bank Payment'       ? 'Undo Bank Payment' :
-                   detailTx.transactionType === 'Bank Receipt'       ? 'Undo Bank Receipt' :
-                   'Undo Categorize'}
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+      {/* ── G. (detail panel removed – expandable rows used instead) ── */}
 
       {/* ── Link Account modal ────────────────────────────────────────────── */}
       {linkAcctOpen && (
