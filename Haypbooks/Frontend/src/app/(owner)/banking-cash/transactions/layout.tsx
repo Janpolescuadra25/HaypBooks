@@ -11,10 +11,13 @@ const TABS = [
 export default function TransactionsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // Full-screen pages (Match / Split / Transfer) render without the module tab bar
+  // Full-screen pages render without the module tab bar
   const isFullScreen =
+    pathname.startsWith('/banking-cash/transactions/register') ||
+    pathname.startsWith('/banking-cash/transactions/activity') ||
     pathname.startsWith('/banking-cash/transactions/match') ||
     pathname.startsWith('/banking-cash/transactions/split') ||
+    pathname.startsWith('/banking-cash/transactions/transfer') ||
     pathname.startsWith('/banking-cash/transactions/view-record')
 
   if (isFullScreen) return <>{children}</>
