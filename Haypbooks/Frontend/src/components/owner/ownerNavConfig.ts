@@ -99,13 +99,11 @@ export const navigationData: NavSection[] = [
         title: 'Cash & Banking',
         items: [
           {
-            title: 'Bank Feed',
+            title: 'Bank Transactions',
             path: '/banking-cash/transactions',
             tabs: [
-              { label: 'Bank Feed',  value: 'transactions', status: 'existing' },
-              { label: 'Register',   value: 'register',     status: 'existing' },
-              { label: 'Transfer',   value: 'transfer',     status: 'existing' },
-              { label: 'Bank Rules', value: 'rules',        status: 'existing' },
+              { label: 'Bank Transactions', value: 'transactions', status: 'existing' },
+              { label: 'Bank Rules',        value: 'rules',        status: 'existing' },
             ],
           },
           {

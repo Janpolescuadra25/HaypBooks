@@ -67,6 +67,7 @@ export interface MockBankTransaction {
   isTransferMirror?: boolean;   // true for auto-created mirror transfers
   transferSourceId?: string;    // id of the original transfer transaction
   reconciled?: boolean;         // true when marked reconciled in bank register
+  manualEntry?: boolean;
 }
 
 export interface MockRule {
@@ -1111,7 +1112,7 @@ export interface AuditLogEntry {
     | 'categorized' | 'matched' | 'unmatched' | 'split' | 'unsplitted'
     | 'transferred' | 'untransferred' | 'excluded' | 'unexcluded'
     | 'rule_applied' | 'rule_created' | 'rule_updated' | 'rule_deleted'
-    | 'manual_entry' | 'reconciled' | 'unreconciled';
+    | 'manual_entry' | 'reconciled' | 'unreconciled' | 'edited' | 'deleted';
   userId: string;
   userName: string;
   entityType: 'transaction' | 'rule' | 'register_entry';
@@ -1209,7 +1210,11 @@ export function getRegisterEntries(
   dateTo?: string,
 ): RegisterEntry[] {
   let entries = mockStore.items.filter(
-    t => t.accountId === bankAccountId && ['CATEGORIZED', 'MATCHED'].includes(t.status),
+    t => t.accountId === bankAccountId && (
+      t.manualEntry ||
+      (t.status === 'MATCHED' && Boolean(t.journalEntryId)) ||
+      (t.status === 'CATEGORIZED' && Boolean(t.accountName || t.splitLines?.length || t.transactionType === 'Bank Transfer'))
+    ),
   );
   if (dateFrom) entries = entries.filter(t => t.date >= dateFrom);
   if (dateTo)   entries = entries.filter(t => t.date <= dateTo);
@@ -1249,4 +1254,233 @@ export function toggleReconciliation(txId: string, reconciled: boolean): void {
     entityDescription: `${tx.description} — ₱${Math.abs(tx.amount).toLocaleString()}`,
     details: reconciled ? 'Marked as reconciled' : 'Unreconciled',
   });
+}
+
+let _manualEntryCounter = 0;
+
+function nextManualEntryId(): string {
+  _manualEntryCounter += 1;
+  return `mt-manual-${Date.now()}-${_manualEntryCounter}`;
+}
+
+function getPrimaryJeLineForTransaction(je: MockJournalEntry, tx: MockBankTransaction): MockJournalEntryLine | undefined {
+  const preferred = tx.amount < 0
+    ? je.lines.find(line => line.debit > 0 && !['acc-1200', 'acc-2001'].includes(line.accountId))
+    : je.lines.find(line => line.credit > 0 && !['acc-1200', 'acc-2001'].includes(line.accountId));
+
+  return preferred
+    ?? (tx.amount < 0
+      ? je.lines.find(line => line.debit > 0)
+      : je.lines.find(line => line.credit > 0));
+}
+
+function syncLinkedJournalEntryAccount(tx: MockBankTransaction): void {
+  if (!tx.journalEntryId || !tx.accountName) return;
+  const je = mockJEs.find(entry => entry.id === tx.journalEntryId);
+  if (!je) return;
+  const targetLine = getPrimaryJeLineForTransaction(je, tx);
+  if (!targetLine) return;
+  targetLine.accountId = tx.accountCode ? (MOCK_COA_ACCOUNTS.find(a => a.code === tx.accountCode)?.id ?? targetLine.accountId) : targetLine.accountId;
+  targetLine.accountName = tx.accountName;
+}
+
+function syncLinkedJournalEntryContact(tx: MockBankTransaction): void {
+  if (!tx.journalEntryId) return;
+  const je = mockJEs.find(entry => entry.id === tx.journalEntryId);
+  if (!je) return;
+  je.contactName = tx.contactName;
+}
+
+function syncLinkedJournalEntryMemo(tx: MockBankTransaction): void {
+  if (!tx.journalEntryId) return;
+  const je = mockJEs.find(entry => entry.id === tx.journalEntryId);
+  if (!je) return;
+  const targetLine = getPrimaryJeLineForTransaction(je, tx);
+  if (targetLine) targetLine.memo = tx.memo;
+  je.description = tx.memo ? `${tx.description} — ${tx.memo}` : tx.description;
+}
+
+export function addManualRegisterEntry(input: {
+  bankAccountId: string;
+  date: string;
+  description: string;
+  reference?: string;
+  amount: number;
+  type: 'Debit' | 'Credit';
+  accountId: string;
+  contactId?: string;
+  memo?: string;
+}): MockBankTransaction | null {
+  const bankAccount = MOCK_BANK_ACCOUNTS.find(account => account.id === input.bankAccountId);
+  const coaAccount = MOCK_COA_ACCOUNTS.find(account => account.id === input.accountId);
+  const contact = input.contactId ? MOCK_ENTITIES.find(entity => entity.id === input.contactId) : undefined;
+  if (!bankAccount || !coaAccount || !input.description.trim() || input.amount <= 0) return null;
+
+  const signedAmount = input.type === 'Debit' ? -Math.abs(input.amount) : Math.abs(input.amount);
+  const jeId = nextJEId();
+  const absAmount = Math.abs(signedAmount);
+  const bankLedgerId = bankAccount.id === 'acct-bpi' ? 'acc-1101' : 'acc-1100';
+  const bankLedgerName = bankAccount.id === 'acct-bpi' ? 'BPI Savings Account' : 'BDO Checking Account';
+
+  const je: MockJournalEntry = {
+    id: jeId,
+    date: input.date,
+    description: input.memo ? `${input.description.trim()} — ${input.memo}` : input.description.trim(),
+    type: 'BankCategorize',
+    status: 'POSTED',
+    referenceNo: input.reference,
+    contactName: contact?.name,
+    totalAmount: absAmount,
+    lines: signedAmount < 0
+      ? [
+          { accountId: input.accountId, accountName: coaAccount.name, debit: absAmount, credit: 0, memo: input.memo },
+          { accountId: bankLedgerId, accountName: bankLedgerName, debit: 0, credit: absAmount },
+        ]
+      : [
+          { accountId: bankLedgerId, accountName: bankLedgerName, debit: absAmount, credit: 0 },
+          { accountId: input.accountId, accountName: coaAccount.name, debit: 0, credit: absAmount, memo: input.memo },
+        ],
+  };
+
+  const transaction: MockBankTransaction = {
+    id: nextManualEntryId(),
+    date: input.date,
+    description: input.description.trim(),
+    amount: signedAmount,
+    accountId: input.bankAccountId,
+    status: 'CATEGORIZED',
+    transactionType: signedAmount < 0 ? 'Bank Payment' : 'Bank Receipt',
+    journalEntryId: jeId,
+    accountCode: coaAccount.code,
+    accountName: coaAccount.name,
+    contactId: contact?.id,
+    contactName: contact?.name,
+    memo: input.memo?.trim() || undefined,
+    ref: input.reference?.trim() || undefined,
+    reconciled: false,
+    manualEntry: true,
+  };
+
+  mockJEs = [...mockJEs, je];
+  mockStore.items = [...mockStore.items, transaction];
+
+  addAuditLog({
+    action: 'manual_entry',
+    entityType: 'transaction',
+    entityId: transaction.id,
+    entityDescription: transaction.description,
+    details: `Manual register entry created in ${bankAccount.name}`,
+    newValue: transaction.accountName,
+  });
+
+  return transaction;
+}
+
+export function editTransactionAccount(txId: string, nextAccountId: string): MockBankTransaction | null {
+  const tx = mockStore.items.find(item => item.id === txId);
+  const nextAccount = MOCK_COA_ACCOUNTS.find(account => account.id === nextAccountId);
+  if (!tx || !nextAccount) return null;
+  const oldAccount = tx.accountName ?? 'Unassigned';
+  if (oldAccount === nextAccount.name) return tx;
+
+  tx.accountCode = nextAccount.code;
+  tx.accountName = nextAccount.name;
+  syncLinkedJournalEntryAccount(tx);
+
+  addAuditLog({
+    action: 'categorized',
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: `Changed account from '${oldAccount}' to '${nextAccount.name}'`,
+    oldValue: oldAccount,
+    newValue: nextAccount.name,
+  });
+
+  return tx;
+}
+
+export function editTransactionContact(txId: string, nextContactId?: string): MockBankTransaction | null {
+  const tx = mockStore.items.find(item => item.id === txId);
+  if (!tx) return null;
+  const nextContact = nextContactId ? MOCK_ENTITIES.find(entity => entity.id === nextContactId) : undefined;
+  const oldContact = tx.contactName ?? 'No payee';
+  const newContact = nextContact?.name ?? 'No payee';
+  if (oldContact === newContact) return tx;
+
+  tx.contactId = nextContact?.id;
+  tx.contactName = nextContact?.name;
+  syncLinkedJournalEntryContact(tx);
+
+  addAuditLog({
+    action: 'edited',
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: `Changed payee from '${oldContact}' to '${newContact}'`,
+    oldValue: oldContact,
+    newValue: newContact,
+  });
+
+  return tx;
+}
+
+export function editTransactionMemo(txId: string, nextMemo: string): MockBankTransaction | null {
+  const tx = mockStore.items.find(item => item.id === txId);
+  if (!tx) return null;
+  const oldMemo = tx.memo ?? '';
+  const trimmedMemo = nextMemo.trim();
+  if (oldMemo === trimmedMemo) return tx;
+
+  tx.memo = trimmedMemo || undefined;
+  syncLinkedJournalEntryMemo(tx);
+
+  addAuditLog({
+    action: 'edited',
+    entityType: 'transaction',
+    entityId: tx.id,
+    entityDescription: tx.description,
+    details: `Changed memo from '${oldMemo || 'Blank'}' to '${trimmedMemo || 'Blank'}'`,
+    oldValue: oldMemo,
+    newValue: trimmedMemo,
+  });
+
+  return tx;
+}
+
+export function batchEditAccount(txIds: string[], nextAccountId: string): MockBankTransaction[] {
+  return txIds
+    .map(txId => editTransactionAccount(txId, nextAccountId))
+    .filter((tx): tx is MockBankTransaction => Boolean(tx));
+}
+
+export function batchDeleteTransactions(txIds: string[]): MockBankTransaction[] {
+  const removed: MockBankTransaction[] = [];
+  const linkedJeIds = new Set<string>();
+
+  txIds.forEach(txId => {
+    const index = mockStore.items.findIndex(item => item.id === txId);
+    if (index < 0) return;
+    const [tx] = mockStore.items.splice(index, 1);
+    removed.push(tx);
+    if (tx.journalEntryId) linkedJeIds.add(tx.journalEntryId);
+
+    addAuditLog({
+      action: 'deleted',
+      entityType: 'transaction',
+      entityId: tx.id,
+      entityDescription: tx.description,
+      details: 'Deleted transaction from bank register',
+      oldValue: tx.accountName,
+    });
+  });
+
+  linkedJeIds.forEach(jeId => {
+    const stillLinked = mockStore.items.some(item => item.journalEntryId === jeId);
+    if (!stillLinked) {
+      mockJEs = mockJEs.filter(entry => entry.id !== jeId);
+    }
+  });
+
+  return removed;
 }
