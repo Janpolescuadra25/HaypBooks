@@ -23,11 +23,13 @@ import {
   getAuditLogForEntity,
   getBalances,
   getRegisterEntries,
+  importTransactions,
   matchTransaction,
   matchWithDifference,
   mockJEs,
   mockStore,
   moveRule,
+  reverseImportedAmounts,
   resetMockState,
   searchForMatch,
   splitTransaction,
@@ -79,6 +81,15 @@ function createManualEntry(amount = 1250, type: 'Debit' | 'Credit' = 'Debit') {
   })
   assert.ok(created, 'Expected manual entry to be created')
   return created
+}
+
+function createImportRows(count = 10) {
+  return Array.from({ length: count }, (_, index) => ({
+    date: `05/${String(index + 1).padStart(2, '0')}/2026`,
+    description: `Imported Row ${index + 1}`,
+    amount: index % 2 === 0 ? -(index + 1) * 125 : (index + 1) * 250,
+    reference: `IMP-${index + 1}`,
+  }))
 }
 
 test('resetMockState restores the seeded audit log after mutations', () => {
@@ -280,6 +291,41 @@ test('transfer transactions keep the generated journalEntryId', () => {
 test('transferTransaction writes a transferred audit entry', () => {
   transferTransaction('mt-010', 'acct-bpi', 'to', '2026-04-10', 'Sweep to BPI')
   assert.ok(getAuditLogForEntity('mt-010').some(entry => entry.action === 'transferred'))
+})
+
+test('importTransactions creates PENDING entries', () => {
+  const result = importTransactions('acct-bdo', createImportRows(10), {
+    fileName: 'sample_bank_statement.csv',
+    dateFormat: 'MM/DD/YYYY',
+  })
+
+  assert.equal(result.imported, 10)
+  assert.equal(result.duplicates, 0)
+
+  const imported = mockStore.items.filter(item => item.id.startsWith('TX-IMPORT-'))
+  assert.equal(imported.length, 10)
+  assert.ok(imported.every(item => item.status === 'PENDING'))
+  assert.ok(imported.every(item => item.bankAccountId === 'acct-bdo'))
+})
+
+test('importTransactions skips duplicates on repeat import', () => {
+  const rows = createImportRows(4)
+  const first = importTransactions('acct-bdo', rows, { dateFormat: 'MM/DD/YYYY' })
+  const second = importTransactions('acct-bdo', rows, { dateFormat: 'MM/DD/YYYY' })
+
+  assert.equal(first.imported, 4)
+  assert.ok(second.duplicates > 0)
+  assert.ok(second.imported < first.imported)
+})
+
+test('reverseImportedAmounts flips all signs', () => {
+  const reversed = reverseImportedAmounts([
+    { date: '03/01/2026', description: 'TEST OUT', amount: -5000 },
+    { date: '03/02/2026', description: 'TEST IN', amount: 2500 },
+  ])
+
+  assert.equal(reversed[0]?.amount, 5000)
+  assert.equal(reversed[1]?.amount, -2500)
 })
 
 test('searchForMatch returns records matching the query text', () => {

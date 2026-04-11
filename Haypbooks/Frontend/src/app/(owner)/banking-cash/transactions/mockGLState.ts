@@ -52,6 +52,7 @@ export interface MockBankTransaction {
   description: string;
   amount: number;               // negative = debit/expense, positive = credit/income
   accountId: string;            // bank account the tx belongs to
+  bankAccountId?: string;
   status: MockTxStatus;
   transactionType?: MockTxType;
   journalEntryId?: string;      // set when CATEGORIZED / MATCHED / SPLIT
@@ -68,6 +69,29 @@ export interface MockBankTransaction {
   transferSourceId?: string;    // id of the original transfer transaction
   reconciled?: boolean;         // true when marked reconciled in bank register
   manualEntry?: boolean;
+  createdAt?: string;
+}
+
+export type ImportDateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
+
+export interface ImportTransactionRow {
+  date: string;
+  description: string;
+  amount: number | string;
+  reference?: string;
+  payeeName?: string;
+}
+
+export interface ImportTransactionsOptions {
+  dateFormat?: ImportDateFormat;
+  fileName?: string;
+  skipDuplicates?: boolean;
+}
+
+export interface ImportTransactionsResult {
+  imported: number;
+  duplicates: number;
+  transactions: MockBankTransaction[];
 }
 
 export interface MockRule {
@@ -1718,6 +1742,136 @@ export function batchDeleteTransactions(txIds: string[]): MockBankTransaction[] 
   });
 
   return removed;
+}
+
+function buildImportDuplicateKey(date: string, amount: number): string {
+  return `${date}|${amount.toFixed(2)}`;
+}
+
+export function normalizeImportedDate(value: string, format: ImportDateFormat = 'MM/DD/YYYY'): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  const parts = trimmed.split(/[\/.-]/).map(part => part.trim());
+  if (parts.length !== 3) return null;
+
+  let year = '';
+  let month = '';
+  let day = '';
+
+  if (format === 'YYYY-MM-DD') {
+    [year, month, day] = parts;
+  } else if (format === 'DD/MM/YYYY') {
+    [day, month, year] = parts;
+  } else {
+    [month, day, year] = parts;
+  }
+
+  if (!year || !month || !day) return null;
+  const normalized = `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : null;
+}
+
+export function parseImportedAmount(value: number | string): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const isWrappedNegative = trimmed.startsWith('(') && trimmed.endsWith(')');
+  const sanitized = trimmed
+    .replace(/[₱,\s]/g, '')
+    .replace(/[()]/g, '');
+  if (!sanitized) return null;
+
+  const parsed = Number(sanitized);
+  if (Number.isNaN(parsed)) return null;
+
+  const normalized = isWrappedNegative ? -parsed : parsed;
+  return Math.round(normalized * 100) / 100;
+}
+
+export function reverseImportedAmounts(rows: ImportTransactionRow[]): ImportTransactionRow[] {
+  return rows.map(row => {
+    const amount = parseImportedAmount(row.amount);
+    return {
+      ...row,
+      amount: amount === null ? row.amount : amount * -1,
+    };
+  });
+}
+
+export function importTransactions(
+  bankAccountId: string,
+  rows: ImportTransactionRow[],
+  options: ImportTransactionsOptions = {},
+): ImportTransactionsResult {
+  const bankAccount = MOCK_BANK_ACCOUNTS.find(account => account.id === bankAccountId);
+  if (!bankAccount || rows.length === 0) {
+    return { imported: 0, duplicates: 0, transactions: [] };
+  }
+
+  const existingKeys = new Set(
+    mockStore.items
+      .filter(item => (item.bankAccountId ?? item.accountId) === bankAccountId)
+      .map(item => buildImportDuplicateKey(item.date, Math.round(item.amount * 100) / 100)),
+  );
+
+  const baseTimestamp = Date.now();
+  const created: MockBankTransaction[] = [];
+  let duplicates = 0;
+
+  rows.forEach((row, index) => {
+    const normalizedDate = normalizeImportedDate(row.date, options.dateFormat);
+    const normalizedAmount = parseImportedAmount(row.amount);
+    const description = row.description.trim();
+
+    if (!normalizedDate || normalizedAmount === null || !description) return;
+
+    const duplicateKey = buildImportDuplicateKey(normalizedDate, normalizedAmount);
+    if ((options.skipDuplicates ?? true) && existingKeys.has(duplicateKey)) {
+      duplicates += 1;
+      return;
+    }
+
+    existingKeys.add(duplicateKey);
+
+    const createdAt = new Date(baseTimestamp + index).toISOString();
+    const transaction: MockBankTransaction = {
+      id: `TX-IMPORT-${baseTimestamp}-${index}`,
+      date: normalizedDate,
+      description,
+      amount: normalizedAmount,
+      accountId: bankAccountId,
+      bankAccountId,
+      status: 'PENDING',
+      contactName: row.payeeName?.trim() || undefined,
+      ref: row.reference?.trim() || undefined,
+      createdAt,
+    };
+
+    created.push(transaction);
+  });
+
+  if (created.length > 0) {
+    mockStore.items = [...mockStore.items, ...created];
+    addAuditLog({
+      action: 'manual_entry',
+      entityType: 'register_entry',
+      entityId: `IMPORT-${baseTimestamp}`,
+      entityDescription: options.fileName ?? 'Imported Bank Statement',
+      details: `Imported ${created.length} transaction${created.length === 1 ? '' : 's'} from ${options.fileName ?? 'statement file'} to ${bankAccount.name}${duplicates > 0 ? ` (${duplicates} duplicate${duplicates === 1 ? '' : 's'} skipped)` : ''}`,
+      newValue: bankAccount.name,
+    });
+  }
+
+  return {
+    imported: created.length,
+    duplicates,
+    transactions: created,
+  };
 }
 
 export function createRule(input: {
