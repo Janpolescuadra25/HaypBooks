@@ -28,7 +28,7 @@ export interface MockJournalEntry {
   id: string;
   date: string;
   description: string;
-  type: 'Bill' | 'Invoice' | 'BankCategorize' | 'BankSplit' | 'BankMatch';
+  type: 'Bill' | 'Invoice' | 'BankCategorize' | 'BankSplit' | 'BankMatch' | 'BankTransfer';
   status: 'POSTED' | 'DRAFT';
   referenceNo?: string;
   contactName?: string;
@@ -44,7 +44,7 @@ export interface MockSplitLine {
 }
 
 export type MockTxStatus = 'PENDING' | 'CATEGORIZED' | 'MATCHED' | 'EXCLUDED';
-export type MockTxType = 'Bank Transaction' | 'Bank Payment' | 'Bank Receipt' | 'Split Transaction';
+export type MockTxType = 'Bank Transaction' | 'Bank Payment' | 'Bank Receipt' | 'Split Transaction' | 'Bank Transfer';
 
 export interface MockBankTransaction {
   id: string;
@@ -64,6 +64,8 @@ export interface MockBankTransaction {
   splitLines?: MockSplitLine[]; // set when SPLIT
   ref?: string;
   bankRef?: string;
+  isTransferMirror?: boolean;   // true for auto-created mirror transfers
+  transferSourceId?: string;    // id of the original transfer transaction
 }
 
 export interface MockRule {
@@ -864,3 +866,88 @@ export const MOCK_BANK_ACCOUNTS = [
   { id: 'acct-bpi',       name: 'BPI Savings',           accountNumber: '\u2022\u2022\u2022\u2022 7823', balance:  45_000 },
   { id: 'acct-metrobank', name: 'Metrobank Business',    accountNumber: '\u2022\u2022\u2022\u2022 3102', balance: 280_000 },
 ]
+
+// ─── Transfer Transaction ─────────────────────────────────────────────────────
+
+/**
+ * Mark a PENDING bank transaction as a Bank Transfer.
+ * Creates:
+ *  - A journal entry (DR one bank / CR other bank)
+ *  - A mirror transaction in the other bank's feed
+ *  - Updates tx.status to CATEGORIZED / Bank Transfer
+ */
+export function transferTransaction(
+  txId: string,
+  otherAccountId: string,
+  direction: 'to' | 'from',
+  date?: string,
+  memo?: string,
+): { tx: MockBankTransaction; mirrorTx: MockBankTransaction; je: MockJournalEntry } | null {
+  const tx = mockStore.items.find(t => t.id === txId);
+  if (!tx || tx.status !== 'PENDING') return null;
+
+  const otherAccount = MOCK_BANK_ACCOUNTS.find(a => a.id === otherAccountId);
+  if (!otherAccount) return null;
+
+  const currentBank = MOCK_BANK_ACCOUNTS.find(a => a.id === tx.accountId);
+  const transferAmount = Math.abs(tx.amount);
+  const effectiveDate = date || tx.date;
+  const effectiveMemo = memo || (
+    direction === 'to'
+      ? `Transfer to ${otherAccount.name}`
+      : `Transfer from ${otherAccount.name}`
+  );
+
+  // Update the transaction in place
+  tx.status = 'CATEGORIZED';
+  tx.transactionType = 'Bank Transfer';
+  tx.accountName = 'Bank Transfers';
+  tx.memo = effectiveMemo;
+
+  // Create Journal Entry
+  const jeId = `JE-TRANSFER-${Date.now()}`;
+  const je: MockJournalEntry = {
+    id: jeId,
+    date: effectiveDate,
+    description: effectiveMemo,
+    type: 'BankTransfer',
+    status: 'POSTED',
+    totalAmount: transferAmount,
+    lines: direction === 'to'
+      ? [
+          { accountId: otherAccountId, accountName: otherAccount.name, debit: transferAmount, credit: 0 },
+          { accountId: tx.accountId,   accountName: currentBank?.name ?? 'Bank', debit: 0, credit: transferAmount },
+        ]
+      : [
+          { accountId: tx.accountId,   accountName: currentBank?.name ?? 'Bank', debit: transferAmount, credit: 0 },
+          { accountId: otherAccountId, accountName: otherAccount.name, debit: 0, credit: transferAmount },
+        ],
+  };
+
+  tx.journalEntryId = jeId;
+  mockJEs = [...mockJEs, je];
+
+  // Create mirror transaction in the other bank's feed
+  const mirrorTx: MockBankTransaction = {
+    id: `TX-MIRROR-${Date.now()}`,
+    date: effectiveDate,
+    description: direction === 'to'
+      ? `Transfer from ${currentBank?.name ?? 'Bank'}`
+      : `Transfer to ${currentBank?.name ?? 'Bank'}`,
+    amount: direction === 'to' ? transferAmount : -transferAmount,
+    accountId: otherAccountId,
+    status: 'CATEGORIZED',
+    transactionType: 'Bank Transfer',
+    accountName: 'Bank Transfers',
+    memo: effectiveMemo,
+    isTransferMirror: true,
+    transferSourceId: txId,
+  };
+
+  mockStore.items.push(mirrorTx);
+
+  // Add to categorization history
+  addToHistory(tx.description, 'transfer-clearing', 'Bank Transfers', 'XFER', null, null);
+
+  return { tx, mirrorTx, je };
+}
