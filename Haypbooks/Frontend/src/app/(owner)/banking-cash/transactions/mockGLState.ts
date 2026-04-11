@@ -951,3 +951,131 @@ export function transferTransaction(
 
   return { tx, mirrorTx, je };
 }
+
+// ─── Search for Match ─────────────────────────────────────────────────────────
+
+/**
+ * Full-text search across all mockJEs for manual matching.
+ * Returns MatchSuggestion[] sorted by relevance (exact amount first).
+ */
+export function searchForMatch(
+  query: string,
+  filters?: {
+    type?: 'Bill' | 'Invoice' | 'JE';
+    amountMin?: number;
+    amountMax?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  },
+): MatchSuggestion[] {
+  return mockJEs
+    .filter(je => {
+      if (filters?.type) {
+        if (filters.type === 'Bill'    && je.type !== 'Bill')    return false;
+        if (filters.type === 'Invoice' && je.type !== 'Invoice') return false;
+        if (filters.type === 'JE'      && (je.type === 'Bill' || je.type === 'Invoice')) return false;
+      }
+      if (filters?.amountMin !== undefined && je.totalAmount < filters.amountMin) return false;
+      if (filters?.amountMax !== undefined && je.totalAmount > filters.amountMax) return false;
+      if (filters?.dateFrom && je.date < filters.dateFrom) return false;
+      if (filters?.dateTo   && je.date > filters.dateTo)   return false;
+      if (query) {
+        const q = query.toLowerCase();
+        return (
+          je.description.toLowerCase().includes(q) ||
+          (je.contactName ?? '').toLowerCase().includes(q) ||
+          (je.referenceNo ?? '').toLowerCase().includes(q) ||
+          je.id.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    })
+    .map(je => ({ je, diff: 0, isExact: false }));
+}
+
+// ─── Batch Match Transactions ─────────────────────────────────────────────────
+
+/**
+ * Match multiple PENDING bank transactions to a single Bill/Invoice JE.
+ * All selected transactions are linked to the same targetJeId.
+ */
+export function batchMatchTransactions(
+  txIds: string[],
+  targetJeId: string,
+): MockJournalEntry | null {
+  const txs = txIds
+    .map(id => mockStore.items.find(t => t.id === id))
+    .filter((t): t is MockBankTransaction => Boolean(t));
+  if (txs.length === 0) return null;
+  const targetJe = mockJEs.find(je => je.id === targetJeId);
+  if (!targetJe) return null;
+
+  txs.forEach(tx => {
+    tx.status          = 'MATCHED';
+    tx.transactionType = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt';
+    tx.journalEntryId  = targetJeId;
+    tx.accountName     = targetJe.lines.find(l => l.debit > 0)?.accountName ?? tx.accountName;
+    tx.contactName     = targetJe.contactName ?? tx.contactName;
+  });
+
+  return targetJe;
+}
+
+// ─── Match With Difference ────────────────────────────────────────────────────
+
+/**
+ * Match a PENDING transaction to a JE where amounts don't exactly match.
+ * Resolution types:
+ *  - write_off: create an adjustment JE for the difference amount
+ *  - adjust:    match at the bank tx amount (no extra JE)
+ *  - split_remaining: match + leave difference as a new PENDING transaction
+ */
+export function matchWithDifference(
+  txId: string,
+  targetJeId: string,
+  resolution: {
+    type: 'write_off' | 'adjust' | 'split_remaining';
+    writeOffAccountId?: string;
+    adjustedAmount?: number;
+  },
+): MockJournalEntry | null {
+  const tx = mockStore.items.find(t => t.id === txId);
+  if (!tx) return null;
+  const targetJe = mockJEs.find(je => je.id === targetJeId);
+  if (!targetJe) return null;
+
+  const matchType: 'Bank Payment' | 'Bank Receipt' = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt';
+
+  if (resolution.type === 'write_off' && resolution.writeOffAccountId) {
+    const diff      = Math.abs(tx.amount) - targetJe.totalAmount;
+    const writeAcct = MOCK_COA_ACCOUNTS.find(a => a.id === resolution.writeOffAccountId);
+    if (Math.abs(diff) > 0.01 && writeAcct) {
+      const adjJeId = nextJEId();
+      const adjJe: MockJournalEntry = {
+        id: adjJeId,
+        date: tx.date,
+        description: `Difference write-off: ${tx.description}`,
+        type: 'BankMatch',
+        status: 'POSTED',
+        totalAmount: Math.abs(diff),
+        lines: diff > 0
+          ? [
+              { accountId: resolution.writeOffAccountId, accountName: writeAcct.name, debit: Math.abs(diff), credit: 0 },
+              { accountId: tx.accountId, accountName: 'Bank', debit: 0, credit: Math.abs(diff) },
+            ]
+          : [
+              { accountId: tx.accountId, accountName: 'Bank', debit: Math.abs(diff), credit: 0 },
+              { accountId: resolution.writeOffAccountId, accountName: writeAcct.name, debit: 0, credit: Math.abs(diff) },
+            ],
+      };
+      mockJEs = [...mockJEs, adjJe];
+    }
+  }
+
+  // Update the transaction
+  const updated = matchTransaction(tx, targetJeId, matchType);
+  const idx = mockStore.items.findIndex(t => t.id === txId);
+  if (idx >= 0) mockStore.items[idx] = updated;
+
+  return targetJe;
+}

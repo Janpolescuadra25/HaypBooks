@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import {
   mockJEs, mockStore, detectAutoMatches, matchTransaction,
+  batchMatchTransactions, matchWithDifference, MOCK_COA_ACCOUNTS,
   type MockJournalEntry,
 } from '../mockGLState'
 
@@ -25,7 +26,18 @@ function MatchPageInner() {
   const router       = useRouter()
   const txnId        = searchParams.get('txnId') ?? ''
 
-  const tx = mockStore.items.find(m => m.id === txnId)
+  // Batch mode: multiple transactions selected from the main feed
+  const selectedTxIdsParam = searchParams.get('selectedTxIds') ?? ''
+  const selectedTxIds = selectedTxIdsParam ? selectedTxIdsParam.split(',').filter(Boolean) : []
+  const isBatch = selectedTxIds.length > 1
+  const batchTxs = isBatch
+    ? selectedTxIds.map(id => mockStore.items.find(m => m.id === id)).filter(Boolean)
+    : []
+  const batchTotal = batchTxs.reduce((s, t) => s + Math.abs(t!.amount), 0)
+
+  // For single-tx mode, use txnId; for batch mode, use first selected tx for header info
+  const primaryTxId = txnId || (selectedTxIds[0] ?? '')
+  const tx = mockStore.items.find(m => m.id === primaryTxId)
 
   // Filters
   type JETypeFilter = 'All' | 'Bills' | 'Invoices' | 'Journal Entries'
@@ -35,12 +47,17 @@ function MatchPageInner() {
   const [saving,     setSaving]     = useState(false)
   const [saved,      setSaved]      = useState(false)
 
-  // Auto-match suggestions for this tx
+  // Difference resolution state
+  const [diffResJeId, setDiffResJeId] = useState<string | null>(null)
+  const [diffResType, setDiffResType] = useState<'write_off' | 'adjust' | 'split_remaining'>('write_off')
+  const [diffResAcct, setDiffResAcct] = useState('')
+
+  // Auto-match suggestions for this tx (skip in batch mode)
   const suggestions = useMemo(() => {
-    if (!tx) return []
+    if (!tx || isBatch) return []
     const all = detectAutoMatches([tx])
     return all[tx.id] ?? []
-  }, [tx])
+  }, [tx, isBatch])
 
   // All JEs available in manual search
   const manualJEs = useMemo(() => {
@@ -59,7 +76,7 @@ function MatchPageInner() {
     })
   }, [search, typeFilter])
 
-  if (!tx) {
+  if (!tx && !isBatch) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
         <div className="text-center">
@@ -70,27 +87,44 @@ function MatchPageInner() {
       </div>
     )
   }
+  if (isBatch && batchTxs.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500">
+        <div className="text-center">
+          <p className="text-lg font-medium mb-2">No transactions selected</p>
+          <button onClick={() => router.push('/banking-cash/transactions')}
+            className="text-sm text-emerald-600 underline">← Back to transactions</button>
+        </div>
+      </div>
+    )
+  }
 
-  const matchType = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt'
+  const matchType: 'Bank Payment' | 'Bank Receipt' = (tx?.amount ?? -1) < 0 ? 'Bank Payment' : 'Bank Receipt'
 
   const confirmMatch = async (je: MockJournalEntry) => {
     setSaving(true)
     await new Promise(r => setTimeout(r, 600))
-    const updated = matchTransaction(tx, je.id, matchType)
-    const idx = mockStore.items.findIndex(m => m.id === tx.id)
-    if (idx >= 0) mockStore.items[idx] = updated
+    if (isBatch) {
+      batchMatchTransactions(selectedTxIds, je.id)
+    } else if (tx) {
+      const updated = matchTransaction(tx, je.id, matchType)
+      const idx = mockStore.items.findIndex(m => m.id === tx.id)
+      if (idx >= 0) mockStore.items[idx] = updated
+    }
     setSaving(false)
     setSaved(true)
     setTimeout(() => router.push('/banking-cash/transactions'), 900)
   }
 
   const JECard = ({ je, highlight }: { je: MockJournalEntry; highlight?: boolean }) => {
-    const diff = Math.abs(Math.abs(tx.amount) - je.totalAmount)
+    const bankAmt = isBatch ? batchTotal : Math.abs(tx?.amount ?? 0)
+    const diff = Math.abs(bankAmt - je.totalAmount)
     const isExact = diff < 0.01
     const isSelected = selected?.id === je.id
+    const hasDiff = diff > 5
+    const isDiffOpen = diffResJeId === je.id
     return (
-      <button
-        onClick={() => setSelected(je.id === selected?.id ? null : je)}
+      <div
         className={`w-full text-left rounded-xl border p-3.5 transition-all ${
           isSelected
             ? 'border-emerald-500 bg-emerald-50 shadow-sm'
@@ -99,36 +133,79 @@ function MatchPageInner() {
               : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
         }`}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${
-                je.type === 'Bill'    ? 'bg-orange-100 text-orange-700'  :
-                je.type === 'Invoice' ? 'bg-emerald-100 text-emerald-700' :
-                'bg-slate-100 text-slate-600'
-              }`}>{je.type}</span>
-              {je.referenceNo && <span className="text-xs font-mono text-slate-500">{je.referenceNo}</span>}
-              {isExact
-                ? <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-1 rounded">✓ Exact match</span>
-                : diff <= 5
-                  ? <span className="text-[11px] text-amber-600 font-medium bg-amber-50 px-1 rounded">~{fmt(diff)} diff</span>
-                  : null
-              }
+        {/* Clickable selection area */}
+        <div className="cursor-pointer" onClick={() => setSelected(je.id === selected?.id ? null : je)}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+                  je.type === 'Bill'    ? 'bg-orange-100 text-orange-700'  :
+                  je.type === 'Invoice' ? 'bg-emerald-100 text-emerald-700' :
+                  'bg-slate-100 text-slate-600'
+                }`}>{je.type}</span>
+                {je.referenceNo && <span className="text-xs font-mono text-slate-500">{je.referenceNo}</span>}
+                {isExact
+                  ? <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-1 rounded">✓ Exact match</span>
+                  : diff <= 5
+                    ? <span className="text-[11px] text-amber-600 font-medium bg-amber-50 px-1 rounded">~{fmt(diff)} diff</span>
+                    : hasDiff
+                      ? <span className="text-[11px] text-red-600 font-medium bg-red-50 px-1 rounded">⚠ {fmt(diff)} diff</span>
+                      : null
+                }
+              </div>
+              <p className="text-sm font-medium text-slate-800 truncate">{je.description}</p>
+              {je.contactName && <p className="text-xs text-slate-500 mt-0.5">{je.contactName}</p>}
+              <p className="text-xs text-slate-400 mt-0.5">{fmtDate(je.date)}</p>
             </div>
-            <p className="text-sm font-medium text-slate-800 truncate">{je.description}</p>
-            {je.contactName && <p className="text-xs text-slate-500 mt-0.5">{je.contactName}</p>}
-            <p className="text-xs text-slate-400 mt-0.5">{fmtDate(je.date)}</p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-sm font-semibold text-slate-800 font-mono">{fmt(je.totalAmount)}</p>
-            {isSelected && (
-              <span className="inline-flex items-center gap-0.5 text-[11px] text-emerald-600 font-medium mt-1">
-                <Check size={11} /> Selected
-              </span>
-            )}
+            <div className="text-right shrink-0">
+              <p className="text-sm font-semibold text-slate-800 font-mono">{fmt(je.totalAmount)}</p>
+              {isSelected && (
+                <span className="inline-flex items-center gap-0.5 text-[11px] text-emerald-600 font-medium mt-1">
+                  <Check size={11} /> Selected
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </button>
+        {/* Difference resolution (when diff > 5) */}
+        {hasDiff && (
+          <div className="mt-2" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setDiffResJeId(isDiffOpen ? null : je.id)}
+              className="text-[11px] text-amber-700 hover:underline font-medium"
+            >
+              {isDiffOpen ? '▲ Hide resolution' : '▼ Resolve difference'}
+            </button>
+            {isDiffOpen && (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                <div className="text-xs text-amber-800 font-medium">
+                  Bank: {fmt(bankAmt)} · Record: {fmt(je.totalAmount)} · Diff: {fmt(diff)}
+                </div>
+                <div className="space-y-1.5">
+                  {(['write_off', 'adjust', 'split_remaining'] as const).map(rt => (
+                    <label key={rt} className="flex items-center gap-2 cursor-pointer text-xs">
+                      <input type="radio" name={`diff-${je.id}`} value={rt}
+                        checked={diffResType === rt} onChange={() => setDiffResType(rt)} />
+                      {rt === 'write_off'       && <span>Write off difference to:</span>}
+                      {rt === 'adjust'          && <span>Adjust to bank amount ({fmt(bankAmt)})</span>}
+                      {rt === 'split_remaining' && <span>Split: match + new tx for remaining</span>}
+                      {rt === 'write_off' && diffResType === 'write_off' && (
+                        <select value={diffResAcct} onChange={e => setDiffResAcct(e.target.value)}
+                          className="ml-1 text-xs border border-slate-200 rounded px-1 py-0.5 bg-white">
+                          <option value="">Select account…</option>
+                          {MOCK_COA_ACCOUNTS.filter(a => a.type === 'Expense').map(a => (
+                            <option key={a.id} value={a.id}>{a.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     )
   }
 
@@ -146,11 +223,14 @@ function MatchPageInner() {
           </button>
           <div className="h-4 w-px bg-slate-200" />
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-slate-900 truncate">{tx.description}</h1>
-            <p className="text-xs text-slate-500">{fmtDate(tx.date)}</p>
+            {isBatch
+              ? <h1 className="text-sm font-bold text-slate-900">{selectedTxIds.length} transactions selected</h1>
+              : <h1 className="text-sm font-bold text-slate-900 truncate">{tx?.description}</h1>
+            }
+            <p className="text-xs text-slate-500">{isBatch ? `Combined: ${fmt(batchTotal)}` : fmtDate(tx?.date ?? '')}</p>
           </div>
-          <div className={`text-base font-bold font-mono ${tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-            {fmt(tx.amount)}
+          <div className={`text-base font-bold font-mono ${(tx?.amount ?? -1) < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+            {isBatch ? fmt(batchTotal) : fmt(tx?.amount ?? 0)}
           </div>
         </div>
       </div>
@@ -161,6 +241,19 @@ function MatchPageInner() {
         {saved && (
           <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium">
             <Check size={16} /> Matched successfully — returning…
+          </div>
+        )}
+
+        {/* ── Batch Banner ── */}
+        {isBatch && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+            <GitMerge size={16} className="shrink-0" />
+            <div>
+              <p className="font-semibold">Matching {selectedTxIds.length} transactions</p>
+              <p className="text-xs text-blue-500 mt-0.5">
+                Combined total: {fmt(batchTotal)} — select a document below to match all to it
+              </p>
+            </div>
           </div>
         )}
 
@@ -184,10 +277,10 @@ function MatchPageInner() {
         {selected && (
           <div className="rounded-xl border border-emerald-400 bg-emerald-50 p-4 space-y-3">
             <p className="text-sm font-semibold text-emerald-800">
-              Confirm match: <span className="font-normal text-emerald-700">{tx.description} → {selected.type} {selected.referenceNo ?? selected.id.slice(0, 8)}</span>
+              Confirm match: <span className="font-normal text-emerald-700">{isBatch ? `${selectedTxIds.length} transactions` : (tx?.description ?? '')} → {selected.type} {selected.referenceNo ?? selected.id.slice(0, 8)}</span>
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
-              <div><span className="text-slate-400">Bank tx:</span> {fmt(Math.abs(tx.amount))}</div>
+              <div><span className="text-slate-400">{isBatch ? 'Combined total:' : 'Bank tx:'}</span> {fmt(isBatch ? batchTotal : Math.abs(tx?.amount ?? 0))}</div>
               <div><span className="text-slate-400">JE amount:</span> {fmt(selected.totalAmount)}</div>
               <div><span className="text-slate-400">Match type:</span> {matchType}</div>
               <div><span className="text-slate-400">Party:</span> {selected.contactName ?? '—'}</div>
