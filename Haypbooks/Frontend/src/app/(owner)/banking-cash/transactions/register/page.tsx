@@ -2,13 +2,17 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AlertCircle, ArrowRightLeft, ChevronLeft, ChevronRight,
-  Download, Loader2, RefreshCw, Search, X,
+  AlertCircle, ArrowRightLeft, CheckSquare, ChevronDown, ChevronLeft, ChevronRight,
+  Download, Loader2, Printer, RefreshCw, Search, X,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import {
+  MOCK_BANK_ACCOUNTS, getAuditLogForEntity, toggleReconciliation,
+  type AuditLogEntry,
+} from '../mockGLState'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,23 +41,24 @@ interface RegisterTransaction {
   runningBalance?: number
   status: TxStatus
   bankRef?: string
+  reconciled?: boolean
 }
 
 // ─── Fallback mock data (shown ONLY when API returns no records) ──────────────
 
 const MOCK_FALLBACK: RegisterTransaction[] = [
-  { id: 'm1', date: '2026-04-10', reference: 'TXN-0001', description: 'Customer Payment — INV-2026-0089', type: 'Credit', category: 'Accounts Receivable', amount: 85000, runningBalance: 392400, status: 'Cleared', bankRef: 'PNBFT-884321' },
-  { id: 'm2', date: '2026-04-09', reference: 'TXN-0002', description: 'Vendor Payment — Metro Office Supplies', type: 'Debit', category: 'Office Expenses', amount: 12500, runningBalance: 307400, status: 'Cleared' },
-  { id: 'm3', date: '2026-04-08', reference: 'TXN-0003', description: 'Payroll — April 1–15 Salary Run', type: 'Debit', category: 'Salaries & Wages', amount: 245000, runningBalance: 480100, status: 'Cleared', bankRef: 'BPIFT-554112' },
-  { id: 'm4', date: '2026-04-07', reference: 'TXN-0004', description: 'Fund Transfer — Operating to Payroll', type: 'Credit', category: 'Inter-Bank Transfer', amount: 300000, runningBalance: 725100, status: 'Cleared' },
-  { id: 'm5', date: '2026-04-05', reference: 'TXN-0005', description: 'SSS / PhilHealth / Pag-IBIG Remittance', type: 'Debit', category: 'Government Contributions', amount: 38420, runningBalance: 307900, status: 'Reconciled' },
-  { id: 'm6', date: '2026-04-04', reference: 'TXN-0006', description: 'Credit Card Bill Payment — Corporate Visa', type: 'Debit', category: 'Credit Card Payment', amount: 24800, runningBalance: 346320, status: 'Cleared' },
-  { id: 'm7', date: '2026-04-03', reference: 'TXN-0007', description: 'Customer Advance — GlobalEdge Solutions', type: 'Credit', category: 'Accounts Receivable', amount: 157500, runningBalance: 371120, status: 'Cleared' },
-  { id: 'm8', date: '2026-04-02', reference: 'TXN-0008', description: 'BIR Withholding Tax — Form 1601C', type: 'Debit', category: 'Taxes Payable', amount: 16240, runningBalance: 213620, status: 'Reconciled' },
-  { id: 'm9', date: '2026-04-01', reference: 'TXN-0009', description: 'Office Rent — April 2026', type: 'Debit', category: 'Rent Expense', amount: 65000, runningBalance: 229860, status: 'Cleared' },
-  { id: 'm10', date: '2026-03-31', reference: 'TXN-0010', description: 'Interest Income — Savings March 2026', type: 'Credit', category: 'Interest Income', amount: 2480, runningBalance: 294860, status: 'Reconciled' },
-  { id: 'm11', date: '2026-04-11', reference: 'TXN-0011', description: 'Shopify Sales Payout — pending settlement', type: 'Credit', category: '', transactionType: 'Bank Transaction', amount: 42000, runningBalance: 434400, status: 'Pending' },
-  { id: 'm12', date: '2026-04-11', reference: 'TXN-0012', description: 'Supplier Invoice — TechParts PH', type: 'Debit', category: '', transactionType: 'Bank Transaction', amount: 18750, runningBalance: 373650, status: 'Pending' },
+  { id: 'm1',  date: '2026-04-10', reference: 'TXN-0001', description: 'Customer Payment — INV-2026-0089',          type: 'Credit', category: 'Accounts Receivable',     amount: 85000,  runningBalance: 392400, status: 'Cleared',    bankRef: 'PNBFT-884321', reconciled: true  },
+  { id: 'm2',  date: '2026-04-09', reference: 'TXN-0002', description: 'Vendor Payment — Metro Office Supplies',   type: 'Debit',  category: 'Office Expenses',         amount: 12500,  runningBalance: 307400, status: 'Cleared',    reconciled: true  },
+  { id: 'm3',  date: '2026-04-08', reference: 'TXN-0003', description: 'Payroll — April 1–15 Salary Run',          type: 'Debit',  category: 'Salaries & Wages',        amount: 245000, runningBalance: 480100, status: 'Cleared',    bankRef: 'BPIFT-554112', reconciled: true  },
+  { id: 'm4',  date: '2026-04-07', reference: 'TXN-0004', description: 'Fund Transfer — Operating to Payroll',    type: 'Credit', category: 'Inter-Bank Transfer',     amount: 300000, runningBalance: 725100, status: 'Cleared',    reconciled: true  },
+  { id: 'm5',  date: '2026-04-05', reference: 'TXN-0005', description: 'SSS / PhilHealth / Pag-IBIG Remittance',   type: 'Debit',  category: 'Government Contributions', amount: 38420,  runningBalance: 307900, status: 'Reconciled', reconciled: true  },
+  { id: 'm6',  date: '2026-04-04', reference: 'TXN-0006', description: 'Credit Card Bill Payment — Corporate Visa', type: 'Debit',  category: 'Credit Card Payment',     amount: 24800,  runningBalance: 346320, status: 'Cleared',    reconciled: true  },
+  { id: 'm7',  date: '2026-04-03', reference: 'TXN-0007', description: 'Customer Advance — GlobalEdge Solutions',  type: 'Credit', category: 'Accounts Receivable',     amount: 157500, runningBalance: 371120, status: 'Cleared',    reconciled: true  },
+  { id: 'm8',  date: '2026-04-02', reference: 'TXN-0008', description: 'BIR Withholding Tax — Form 1601C',         type: 'Debit',  category: 'Taxes Payable',           amount: 16240,  runningBalance: 213620, status: 'Reconciled', reconciled: true  },
+  { id: 'm9',  date: '2026-04-01', reference: 'TXN-0009', description: 'Office Rent — April 2026',                 type: 'Debit',  category: 'Rent Expense',            amount: 65000,  runningBalance: 229860, status: 'Cleared',    reconciled: false },
+  { id: 'm10', date: '2026-03-31', reference: 'TXN-0010', description: 'Interest Income — Savings March 2026',     type: 'Credit', category: 'Interest Income',         amount: 2480,   runningBalance: 294860, status: 'Reconciled', reconciled: false },
+  { id: 'm11', date: '2026-04-11', reference: 'TXN-0011', description: 'Shopify Sales Payout — pending settlement', type: 'Credit', category: '',                        amount: 42000,  runningBalance: 434400, status: 'Pending',    reconciled: false },
+  { id: 'm12', date: '2026-04-11', reference: 'TXN-0012', description: 'Supplier Invoice — TechParts PH',           type: 'Debit',  category: '',                        amount: 18750,  runningBalance: 373650, status: 'Pending',    reconciled: false },
 ]
 
 // ─── Status badge helper ──────────────────────────────────────────────────────
@@ -73,6 +78,16 @@ function StatusBadge({ status }: { status: TxStatus }) {
       {status}
     </span>
   )
+}
+
+function formatLongDate(date: string): string {
+  try {
+    return new Date(date + 'T12:00:00').toLocaleDateString('en-PH', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    })
+  } catch {
+    return date
+  }
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -114,6 +129,12 @@ export default function RegisterPage() {
   const [toast, setToast]                 = useState('')
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
+  // ── Reconciliation & detail state ───────────────────────────────────────
+  const [reconciledIds, setReconciledIds] = useState<Set<string>>(new Set())
+  const [detailTx, setDetailTx]           = useState<(RegisterTransaction & { _balance: number }) | null>(null)
+  const [reconcileOpen, setReconcileOpen] = useState(false)
+  const [statementBalance, setStatementBalance] = useState('')
+
   // ── Load bank accounts ─────────────────────────────────────────────────────
   const loadAccounts = useCallback(async () => {
     if (!companyId) return
@@ -146,6 +167,7 @@ export default function RegisterPage() {
       : raw.isCleared ? 'Cleared'
       : 'Pending') as TxStatus,
     bankRef: raw.bankRef ?? undefined,
+    reconciled: raw.reconciled ?? false,
   })
 
   // ── Fetch transactions ─────────────────────────────────────────────────────
@@ -217,6 +239,10 @@ export default function RegisterPage() {
 
   useEffect(() => { if (companyId) loadAccounts() }, [companyId, loadAccounts])
   useEffect(() => { if (companyId) { setPage(1); fetchTransactions() } }, [companyId, selectedAccount, fetchTransactions])
+  // Initialise reconciled IDs from loaded items
+  useEffect(() => {
+    setReconciledIds(new Set(items.filter(t => t.reconciled).map(t => t.id)))
+  }, [items])
 
   // ── Derived, filtered, sorted ──────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -263,11 +289,35 @@ export default function RegisterPage() {
   const totalCredits  = filtered.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0)
   const totalDebits   = filtered.filter(t => t.type === 'Debit').reduce((s, t) => s + t.amount, 0)
   const netFlow       = totalCredits - totalDebits
-  const pendingCount  = filtered.filter(t => t.status === 'Pending').length
+
+  // Reconciliation derived
+  const reconciledCount         = filtered.filter(t => reconciledIds.has(t.id)).length
+  const totalCount              = filtered.length
+  const closingBalance          = withBalance.length > 0 ? withBalance[withBalance.length - 1]._balance : 0
+  const outstandingWithdrawals  = filtered.filter(t => t.type === 'Debit'   && !reconciledIds.has(t.id)).reduce((s, t) => s + t.amount, 0)
+  const outstandingDeposits     = filtered.filter(t => t.type === 'Credit'  && !reconciledIds.has(t.id)).reduce((s, t) => s + t.amount, 0)
+  const stmtBal                 = parseFloat(statementBalance) || 0
+  const adjustedBookBalance     = closingBalance - outstandingWithdrawals + outstandingDeposits
+  const reconcileDiff           = stmtBal - adjustedBookBalance
+
+  // Opening balance for selected single account
+  const selectedMockAcct = MOCK_BANK_ACCOUNTS.find(a => a.id === selectedAccount)
+  const openingBalance   = selectedMockAcct?.openingBalance ?? 0
+
+  const markAllReconciled = () => {
+    const allIds = filtered.map(t => t.id)
+    const allDone = allIds.every(id => reconciledIds.has(id))
+    setReconciledIds(prev => {
+      const next = new Set(prev)
+      if (allDone) { allIds.forEach(id => next.delete(id)) }
+      else         { allIds.forEach(id => next.add(id)) }
+      return next
+    })
+  }
 
   // ── CSV export ─────────────────────────────────────────────────────────────
   const exportCSV = () => {
-    const headers = ['Date', 'Reference', 'Description', 'Account', 'Account (Category)', 'Tx Type', 'Type', 'Debit', 'Credit', 'Balance', 'Status']
+    const headers = ['Date', 'Reference', 'Description', 'Account', 'Category', 'Tx Type', 'Type', 'Debit', 'Credit', 'Balance', 'Status', 'Reconciled']
     const rows = withBalance.map(t => [
       t.date,
       t.reference ?? '',
@@ -276,10 +326,11 @@ export default function RegisterPage() {
       t.category ?? '',
       t.transactionType ?? '',
       t.type,
-      t.type === 'Debit' ? t.amount.toFixed(2) : '',
-      t.type === 'Credit' ? t.amount.toFixed(2) : '',
+      t.type === 'Debit'   ? t.amount.toFixed(2) : '',
+      t.type === 'Credit'  ? t.amount.toFixed(2) : '',
       t._balance.toFixed(2),
       t.status,
+      reconciledIds.has(t.id) ? 'Yes' : 'No',
     ])
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -351,7 +402,21 @@ export default function RegisterPage() {
             <h1 className="text-2xl font-bold text-slate-900">Bank Register</h1>
             <p className="text-sm text-slate-500 mt-0.5">Full transaction history with running balances by account</p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap print:hidden">
+            <button
+              onClick={markAllReconciled}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <CheckSquare className="w-4 h-4 text-emerald-600" />
+              {filtered.every(t => reconciledIds.has(t.id)) ? 'Unreconcile All' : 'Mark All Reconciled'}
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <Printer className="w-4 h-4" />
+              Print
+            </button>
             <button
               onClick={exportCSV}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
@@ -402,11 +467,11 @@ export default function RegisterPage() {
               icon: '≈',
             },
             {
-              label: 'Pending',
-              value: String(pendingCount),
-              sub: 'Unreconciled items',
-              color: 'text-amber-700 bg-amber-50',
-              icon: '!',
+              label: 'Reconciled',
+              value: `${reconciledCount} / ${totalCount}`,
+              sub: `${totalCount > 0 ? Math.round((reconciledCount / totalCount) * 100) : 0}% reconciled`,
+              color: 'text-emerald-700 bg-emerald-50',
+              icon: '✓',
             },
           ].map(c => (
             <div key={c.label} className="rounded-xl border border-slate-200 bg-white p-4 flex items-start gap-3">
@@ -425,6 +490,15 @@ export default function RegisterPage() {
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
       <div className="px-6 py-5">
+
+        {/* Print-only header */}
+        <div className="hidden print:block mb-4">
+          <h2 className="text-lg font-bold text-slate-900">
+            Bank Register &mdash; {selectedAcctObj?.name ?? 'All Accounts'}
+            {dateFrom || dateTo ? ` \u2014 ${dateFrom || '\u2026'} to ${dateTo || '\u2026'}` : ''}
+          </h2>
+          <p className="text-xs text-slate-500">Printed {new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
 
         {/* Mock data banner */}
         {usingMock && (
@@ -446,7 +520,7 @@ export default function RegisterPage() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 
           {/* ── Filters toolbar ─────────────────────────────────────────────── */}
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap print:hidden">
 
             {/* Search */}
             <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -520,6 +594,22 @@ export default function RegisterPage() {
             <span className="ml-auto text-xs text-slate-400">{filtered.length} records</span>
           </div>
 
+          {/* ── Reconciliation progress bar ──────────────────────────────────── */}
+          {totalCount > 0 && (
+            <div className="flex items-center gap-3 text-xs text-gray-500 px-4 py-1.5 border-b border-slate-100 print:hidden">
+              <span>{reconciledCount} of {totalCount} transactions reconciled</span>
+              <div className="flex-1 max-w-xs h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: `${(reconciledCount / totalCount) * 100}%` }}
+                />
+              </div>
+              <span className="font-medium text-gray-700">
+                {Math.round((reconciledCount / totalCount) * 100)}%
+              </span>
+            </div>
+          )}
+
           {/* ── Loading state ────────────────────────────────────────────────── */}
           {loading && (
             <div className="flex items-center justify-center h-40">
@@ -537,11 +627,11 @@ export default function RegisterPage() {
                       <th className="px-4 py-3 w-28 whitespace-nowrap">Date</th>
                       <th className="px-4 py-3 min-w-[260px]">Reference / Description</th>
                       {selectedAccount === 'all' && <th className="px-4 py-3 w-40 whitespace-nowrap">Account</th>}
-                      <th className="px-4 py-3 w-36 whitespace-nowrap">Account</th>
+                      <th className="px-4 py-3 w-36 whitespace-nowrap">Category</th>
                       <th className="px-4 py-3 w-28 whitespace-nowrap">Tx Type</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap w-32">Debit</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap w-32">Credit</th>
-                      <th className="px-4 py-3 text-right whitespace-nowrap w-36">Balance</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap w-36 border-l-2 border-gray-300">Balance</th>
                       <th className="px-4 py-3 w-32 whitespace-nowrap">Status</th>
                     </tr>
                   </thead>
@@ -553,77 +643,107 @@ export default function RegisterPage() {
                         </td>
                       </tr>
                     ) : (
-                      pageRows.map((tx, idx) => {
-                        const prevTx = pageRows[idx - 1]
-                        const isNewAccount = selectedAccount === 'all' &&
-                          (idx === 0 || prevTx?.accountName !== tx.accountName)
+                      <>
+                        {/* Opening balance row — only on page 1 for a specific account */}
+                        {selectedAccount !== 'all' && page === 1 && (
+                          <tr className="bg-blue-50/50 font-medium">
+                            <td colSpan={6} className="px-4 py-2 text-sm text-blue-700 italic">
+                              Opening Balance &mdash; {selectedMockAcct?.name ?? selectedAcctObj?.name}
+                            </td>
+                            <td className="px-4 py-2 text-right text-sm font-semibold text-blue-700 border-l-2 border-gray-300">
+                              {fmt(openingBalance)}
+                            </td>
+                            <td />
+                          </tr>
+                        )}
+                        {pageRows.map((tx, idx) => {
+                          const prevTx = pageRows[idx - 1]
+                          const isNewDate    = idx === 0 || prevTx?.date !== tx.date
+                          const isNewAccount = selectedAccount === 'all' &&
+                            (idx === 0 || prevTx?.accountName !== tx.accountName)
+                          const isReconciled = reconciledIds.has(tx.id)
+                          const colCount     = selectedAccount === 'all' ? 9 : 8
 
-                        return (
-                          <Fragment key={tx.id}>
-                            {isNewAccount && (
-                              <tr className="bg-slate-100 border-t-2 border-slate-200">
-                                <td colSpan={9} className="px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
-                                  {tx.accountName ?? 'Unknown Account'}
+                          return (
+                            <Fragment key={tx.id}>
+                              {isNewAccount && (
+                                <tr className="bg-slate-100 border-t-2 border-slate-200">
+                                  <td colSpan={colCount} className="px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                    {tx.accountName ?? 'Unknown Account'}
+                                  </td>
+                                </tr>
+                              )}
+                              {isNewDate && (
+                                <tr className="bg-gray-50">
+                                  <td colSpan={colCount} className="px-4 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    {formatLongDate(tx.date)}
+                                  </td>
+                                </tr>
+                              )}
+                              <tr
+                                className={`hover:bg-slate-50/70 transition-colors cursor-pointer select-none ${
+                                  isReconciled ? 'border-l-4 border-green-400 bg-green-50/30' : ''
+                                }`}
+                                onDoubleClick={() => setDetailTx(tx)}
+                                title="Double-click for details"
+                              >
+                                <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap font-mono">
+                                  {tx.date}
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <div className="text-sm font-medium text-slate-800">{tx.description}</div>
+                                  {(tx.reference || tx.bankRef) && (
+                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                      {tx.reference}{tx.reference && tx.bankRef ? ' \u00b7 ' : ''}{tx.bankRef}
+                                    </div>
+                                  )}
+                                </td>
+                                {selectedAccount === 'all' && (
+                                  <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap max-w-[160px] truncate">
+                                    {tx.accountName ?? '\u2014'}
+                                  </td>
+                                )}
+                                <td className="px-4 py-3.5">
+                                  {tx.category ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 max-w-[130px] truncate block">
+                                      {tx.category}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-300 text-xs">\u2014</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  {tx.transactionType ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-sky-50 text-sky-700 border border-sky-100 whitespace-nowrap">
+                                      {tx.transactionType}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-300 text-xs">\u2014</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3.5 text-right font-mono text-sm">
+                                  {tx.type === 'Debit'
+                                    ? <span className="text-rose-600 font-semibold">{fmt(tx.amount)}</span>
+                                    : <span className="text-slate-300">\u2014</span>}
+                                </td>
+                                <td className="px-4 py-3.5 text-right font-mono text-sm">
+                                  {tx.type === 'Credit'
+                                    ? <span className="text-emerald-700 font-semibold">{fmt(tx.amount)}</span>
+                                    : <span className="text-slate-300">\u2014</span>}
+                                </td>
+                                <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold whitespace-nowrap border-l-2 border-gray-300">
+                                  {tx._balance !== 0 || selectedAccount !== 'all'
+                                    ? <span className={tx._balance < 0 ? 'text-red-600 font-bold' : 'text-slate-800'}>{fmt(tx._balance)}</span>
+                                    : <span className="text-slate-300">\u2014</span>}
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <StatusBadge status={tx.status} />
                                 </td>
                               </tr>
-                            )}
-                            <tr className="hover:bg-slate-50/70 transition-colors">
-                              <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap font-mono">
-                                {tx.date}
-                              </td>
-                              <td className="px-4 py-3.5">
-                                <div className="text-sm font-medium text-slate-800">{tx.description}</div>
-                                {(tx.reference || tx.bankRef) && (
-                                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                    {tx.reference}{tx.reference && tx.bankRef ? ' · ' : ''}{tx.bankRef}
-                                  </div>
-                                )}
-                              </td>
-                              {selectedAccount === 'all' && (
-                                <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap max-w-[160px] truncate">
-                                  {tx.accountName ?? '—'}
-                                </td>
-                              )}
-                                      <td className="px-4 py-3.5">
-                                {tx.category ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 max-w-[130px] truncate block">
-                                    {tx.category}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-300 text-xs">—</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3.5">
-                                {tx.transactionType ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-sky-50 text-sky-700 border border-sky-100 whitespace-nowrap">
-                                    {tx.transactionType}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-300 text-xs">—</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3.5 text-right font-mono text-sm">
-                                {tx.type === 'Debit'
-                                  ? <span className="text-rose-600 font-semibold">{fmt(tx.amount)}</span>
-                                  : <span className="text-slate-300">—</span>}
-                              </td>
-                              <td className="px-4 py-3.5 text-right font-mono text-sm">
-                                {tx.type === 'Credit'
-                                  ? <span className="text-emerald-700 font-semibold">{fmt(tx.amount)}</span>
-                                  : <span className="text-slate-300">—</span>}
-                              </td>
-                              <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-slate-800 whitespace-nowrap">
-                                {tx._balance !== 0 || selectedAccount !== 'all'
-                                  ? <span className={tx._balance < 0 ? 'text-rose-600' : ''}>{fmt(tx._balance)}</span>
-                                  : <span className="text-slate-300">—</span>}
-                              </td>
-                              <td className="px-4 py-3.5">
-                                <StatusBadge status={tx.status} />
-                              </td>
-                            </tr>
-                          </Fragment>
-                        )
-                      })
+                            </Fragment>
+                          )
+                        })}
+                      </>
                     )}
                   </tbody>
                   {pageRows.length > 0 && (
@@ -638,8 +758,8 @@ export default function RegisterPage() {
                         <td className="px-4 py-3 text-right font-mono text-emerald-700">
                           {fmt(pageRows.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0))}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-800">
-                          {pageRows.length > 0 ? fmt(pageRows[pageRows.length - 1]._balance) : '—'}
+                        <td className="px-4 py-3 text-right font-mono text-slate-800 border-l-2 border-gray-300">
+                          {pageRows.length > 0 ? fmt(pageRows[pageRows.length - 1]._balance) : '\u2014'}
                         </td>
                         <td />
                       </tr>
@@ -650,7 +770,7 @@ export default function RegisterPage() {
 
               {/* ── Pagination ─────────────────────────────────────────────── */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 print:hidden">
                   <span className="text-xs text-slate-500">
                     Page {page} of {totalPages} · {filtered.length} records
                   </span>
@@ -692,6 +812,72 @@ export default function RegisterPage() {
             </>
           )}
         </div>
+
+        {/* ── Bank Reconciliation Widget ───────────────────────────────────── */}
+        <div className="mt-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:hidden">
+          <button
+            onClick={() => setReconcileOpen(o => !o)}
+            className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-emerald-600" />
+              Bank Reconciliation
+            </span>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${reconcileOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {reconcileOpen && (
+            <div className="px-5 pb-5 border-t border-slate-100">
+              <div className="mt-4 max-w-sm">
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Statement Balance (from your bank statement)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">&#8369;</span>
+                  <input
+                    type="number"
+                    value={statementBalance}
+                    onChange={e => setStatementBalance(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full pl-7 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2 text-sm max-w-sm">
+                {[
+                  { label: 'Calculated Balance',         value: closingBalance,         sign: '',  cls: 'text-slate-800' },
+                  { label: 'Less: Outstanding Withdrawals', value: outstandingWithdrawals, sign: '-', cls: 'text-rose-600' },
+                  { label: 'Add: Outstanding Deposits',  value: outstandingDeposits,    sign: '+', cls: 'text-emerald-700' },
+                  { label: 'Adjusted Book Balance',      value: adjustedBookBalance,    sign: '',  cls: 'font-semibold text-slate-900 border-t border-slate-200 pt-2 mt-2' },
+                ].map(row => (
+                  <div key={row.label} className={`flex justify-between ${row.cls}`}>
+                    <span className="text-slate-500">{row.label}</span>
+                    <span className="font-mono">{row.sign}{fmt(Math.abs(row.value))}</span>
+                  </div>
+                ))}
+                <div className={`flex justify-between font-bold border-t-2 border-slate-300 pt-2 mt-2 ${
+                  reconcileDiff === 0 ? 'text-emerald-600' : 'text-red-600'
+                }`}>
+                  <span className="text-slate-600 font-semibold">Difference</span>
+                  <span className="font-mono">{fmt(Math.abs(reconcileDiff))}</span>
+                </div>
+              </div>
+
+              {statementBalance !== '' && (
+                <div className={`mt-4 px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2 ${
+                  reconcileDiff === 0
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-red-50 text-red-600 border border-red-200'
+                }`}>
+                  {reconcileDiff === 0
+                    ? '✅ RECONCILED'
+                    : `❌ NOT BALANCED — Difference: ${fmt(Math.abs(reconcileDiff))}`}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Toast ─────────────────────────────────────────────────────────────── */}
@@ -700,6 +886,113 @@ export default function RegisterPage() {
           {toast}
         </div>
       )}
+
+      {/* ── Detail Popover ────────────────────────────────────────────────────── */}
+      {detailTx && (() => {
+        const history: AuditLogEntry[] = getAuditLogForEntity(detailTx.id)
+        const DOT: Record<string, string> = {
+          categorized: 'bg-emerald-500', matched: 'bg-sky-500', split: 'bg-purple-500',
+          excluded: 'bg-slate-400', reconciled: 'bg-green-600', unreconciled: 'bg-amber-500',
+        }
+        return (
+          <div
+            className="fixed inset-0 z-40 bg-black/20 flex items-center justify-center p-4"
+            onClick={() => setDetailTx(null)}
+            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && setDetailTx(null)}
+            tabIndex={-1}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-slate-100">
+                <div className="flex-1 min-w-0 mr-3">
+                  <h2 className="font-bold text-slate-900 text-base truncate">{detailTx.description}</h2>
+                  <p className="text-xs text-slate-500 mt-1">{formatLongDate(detailTx.date)}</p>
+                </div>
+                <button onClick={() => setDetailTx(null)} className="p-1 text-slate-400 hover:text-slate-600 shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Details */}
+              <div className="px-6 py-4">
+                <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-sm">
+                  <span className="text-slate-500">Category</span>
+                  <span className="font-medium text-slate-800">{detailTx.category || '\u2014'}</span>
+                  <span className="text-slate-500">Amount</span>
+                  <span className={`font-semibold ${detailTx.type === 'Debit' ? 'text-rose-600' : 'text-emerald-700'}`}>
+                    {detailTx.type === 'Debit' ? '\u2212' : '+'}{fmt(detailTx.amount)}
+                  </span>
+                  <span className="text-slate-500">Balance</span>
+                  <span className={`font-mono font-semibold ${detailTx._balance < 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                    {fmt(detailTx._balance)}
+                  </span>
+                  <span className="text-slate-500">Status</span>
+                  <span><StatusBadge status={detailTx.status} /></span>
+                  {detailTx.reference && (
+                    <>
+                      <span className="text-slate-500">Reference</span>
+                      <span className="font-mono text-xs text-slate-700">{detailTx.reference}</span>
+                    </>
+                  )}
+                  <span className="text-slate-500">Reconciled</span>
+                  <span className={reconciledIds.has(detailTx.id) ? 'text-green-600 font-medium' : 'text-slate-400'}>
+                    {reconciledIds.has(detailTx.id) ? 'Yes' : 'No'}
+                  </span>
+                </div>
+
+                {/* Audit history */}
+                {history.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-slate-100">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Activity</p>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {history.map(e => (
+                        <div key={e.id} className="flex items-start gap-2 text-xs">
+                          <span className={`w-2 h-2 rounded-full mt-0.5 shrink-0 ${DOT[e.action] ?? 'bg-slate-300'}`} />
+                          <div>
+                            <span className="text-slate-700">{e.details}</span>
+                            <span className="text-slate-400 ml-1">\u00b7 {e.userName}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center gap-2 px-6 py-4 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    const was = reconciledIds.has(detailTx.id)
+                    setReconciledIds(prev => {
+                      const next = new Set(prev)
+                      was ? next.delete(detailTx.id) : next.add(detailTx.id)
+                      return next
+                    })
+                    toggleReconciliation(detailTx.id, !was)
+                  }}
+                  className={`flex-1 py-2 text-sm rounded-lg font-medium transition-colors ${
+                    reconciledIds.has(detailTx.id)
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  {reconciledIds.has(detailTx.id) ? 'Unreconcile' : 'Mark Reconciled'}
+                </button>
+                <button
+                  onClick={() => setDetailTx(null)}
+                  className="flex-1 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Transfer Funds Modal ───────────────────────────────────────────────── */}
       {showTransfer && (

@@ -66,6 +66,7 @@ export interface MockBankTransaction {
   bankRef?: string;
   isTransferMirror?: boolean;   // true for auto-created mirror transfers
   transferSourceId?: string;    // id of the original transfer transaction
+  reconciled?: boolean;         // true when marked reconciled in bank register
 }
 
 export interface MockRule {
@@ -1110,7 +1111,7 @@ export interface AuditLogEntry {
     | 'categorized' | 'matched' | 'unmatched' | 'split' | 'unsplitted'
     | 'transferred' | 'untransferred' | 'excluded' | 'unexcluded'
     | 'rule_applied' | 'rule_created' | 'rule_updated' | 'rule_deleted'
-    | 'manual_entry';
+    | 'manual_entry' | 'reconciled' | 'unreconciled';
   userId: string;
   userName: string;
   entityType: 'transaction' | 'rule' | 'register_entry';
@@ -1220,5 +1221,32 @@ export function getRegisterEntries(
   return entries.map(tx => {
     runningBalance += tx.amount;
     return { ...tx, runningBalance: Math.round(runningBalance * 100) / 100 };
+  });
+}
+
+// ─── Pre-reconcile ~70% of categorised/matched mock transactions ─────────────
+;(() => {
+  const toReconcile = [
+    'mt-011', 'mt-012', 'mt-013', 'mt-014', 'mt-015',
+    'mt-016', 'mt-017', 'mt-018', 'mt-023', 'mt-024',
+  ];
+  toReconcile.forEach(id => {
+    const tx = MOCK_TRANSACTIONS.find(t => t.id === id);
+    if (tx) tx.reconciled = true;
+  });
+})();
+
+// ─── Reconciliation ───────────────────────────────────────────────────────────
+
+export function toggleReconciliation(txId: string, reconciled: boolean): void {
+  const tx = mockStore.items.find(t => t.id === txId);
+  if (!tx) return;
+  tx.reconciled = reconciled;
+  addAuditLog({
+    action: reconciled ? 'reconciled' : 'unreconciled',
+    entityType: 'transaction',
+    entityId: txId,
+    entityDescription: `${tx.description} — ₱${Math.abs(tx.amount).toLocaleString()}`,
+    details: reconciled ? 'Marked as reconciled' : 'Unreconciled',
   });
 }
