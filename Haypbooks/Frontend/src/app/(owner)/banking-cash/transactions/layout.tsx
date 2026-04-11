@@ -4,17 +4,20 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const TABS = [
-  { label: 'Bank Feed', href: '/banking-cash/transactions', exact: true  },
-  { label: 'Register',  href: '/banking-cash/transactions/register', exact: false },
+  { label: 'Bank Feed',  href: '/banking-cash/transactions',          exact: true  },
+  { label: 'Register',   href: '/banking-cash/transactions/register', exact: false },
+  { label: 'Transfer',   href: '/banking-cash/transactions/transfer', exact: false },
+  { label: 'Bank Rules', href: '/banking-cash/transactions/rules',    exact: false },
 ]
 
 export default function TransactionsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // Full-screen pages (Match / Split) render without the module tab bar
+  // Full-screen pages (Match / Split / Transfer) render without the module tab bar
   const isFullScreen =
     pathname.startsWith('/banking-cash/transactions/match') ||
-    pathname.startsWith('/banking-cash/transactions/split')
+    pathname.startsWith('/banking-cash/transactions/split') ||
+    pathname.startsWith('/banking-cash/transactions/transfer')
 
   if (isFullScreen) return <>{children}</>
 

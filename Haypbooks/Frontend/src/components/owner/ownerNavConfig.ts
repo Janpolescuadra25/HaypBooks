@@ -102,8 +102,10 @@ export const navigationData: NavSection[] = [
             title: 'Bank Feed',
             path: '/banking-cash/transactions',
             tabs: [
-              { label: 'Bank Feed', value: 'transactions', status: 'existing' },
-              { label: 'Register',  value: 'register',     status: 'existing' },
+              { label: 'Bank Feed',  value: 'transactions', status: 'existing' },
+              { label: 'Register',   value: 'register',     status: 'existing' },
+              { label: 'Transfer',   value: 'transfer',     status: 'existing' },
+              { label: 'Bank Rules', value: 'rules',        status: 'existing' },
             ],
           },
           {
@@ -126,29 +128,12 @@ export const navigationData: NavSection[] = [
             ],
           },
           {
-            title: 'Transfers',
-            path: '/banking-cash/transfers',
-            tabs: [
-              { label: 'Fund Transfers',   value: 'fund-transfers',   status: 'coming-soon' },
-              { label: 'Transfer History', value: 'transfer-history', status: 'coming-soon' },
-            ],
-          },
-          {
             title: 'Deposits',
             path: '/banking-cash/deposits',
             tabs: [
               { label: 'Undeposited Funds', value: 'undeposited-funds', status: 'coming-soon' },
               { label: 'Bank Deposits',     value: 'bank-deposits',     status: 'coming-soon' },
               { label: 'Deposit History',   value: 'deposit-history',   status: 'coming-soon' },
-            ],
-          },
-          {
-            title: 'Bank Rules',
-            path: '/banking-cash/bank-rules',
-            tabs: [
-              { label: 'Rules',          value: 'rules',          status: 'coming-soon' },
-              { label: 'Rule Templates', value: 'rule-templates', status: 'coming-soon' },
-              { label: 'CSV Upload',     value: 'csv-upload',     status: 'coming-soon' },
             ],
           },
         ],
