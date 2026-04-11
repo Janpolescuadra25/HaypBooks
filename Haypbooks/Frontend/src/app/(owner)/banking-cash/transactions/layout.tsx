@@ -13,8 +13,6 @@ export default function TransactionsLayout({ children }: { children: React.React
 
   // Full-screen pages render without the module tab bar
   const isFullScreen =
-    pathname.startsWith('/banking-cash/transactions/register') ||
-    pathname.startsWith('/banking-cash/transactions/activity') ||
     pathname.startsWith('/banking-cash/transactions/match') ||
     pathname.startsWith('/banking-cash/transactions/split') ||
     pathname.startsWith('/banking-cash/transactions/transfer') ||
