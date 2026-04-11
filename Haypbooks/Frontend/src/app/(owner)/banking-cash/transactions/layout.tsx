@@ -17,7 +17,8 @@ export default function TransactionsLayout({ children }: { children: React.React
   const isFullScreen =
     pathname.startsWith('/banking-cash/transactions/match') ||
     pathname.startsWith('/banking-cash/transactions/split') ||
-    pathname.startsWith('/banking-cash/transactions/transfer')
+    pathname.startsWith('/banking-cash/transactions/transfer') ||
+    pathname.startsWith('/banking-cash/transactions/view-record')
 
   if (isFullScreen) return <>{children}</>
 
