@@ -27,6 +27,9 @@ import {
   detectAutoMatches,
   findHistoryMatch,
   addToHistory,
+  searchForMatch,
+  matchWithDifference    as glMatchWithDiff,
+  batchMatchTransactions as glBatchMatch,
   type MockBankTransaction,
   type MockSplitLine,
   type MatchSuggestion,
@@ -362,6 +365,17 @@ export default function BankFeedPage() {
   const [transferMemo,       setTransferMemo]       = useState('')
   const [transferSaving,     setTransferSaving]     = useState(false)
 
+  // ── Per-row inline account/contact (PENDING rows) ─────────────────────────
+  const [inlineAcctMap,    setInlineAcctMap]    = useState<Record<string, string>>({})
+  const [inlineContactMap, setInlineContactMap] = useState<Record<string, string>>({})
+
+  // ── Match tab search + diff resolution (in expanded row) ─────────────────
+  const [matchSearchQuery,  setMatchSearchQuery]  = useState('')
+  const [matchSearchType,   setMatchSearchType]   = useState<'All' | 'Bills' | 'Invoices' | 'JE'>('All')
+  const [diffResKey,  setDiffResKey]  = useState<string | null>(null)
+  const [diffResType, setDiffResType] = useState<'write_off' | 'adjust' | 'split_remaining'>('write_off')
+  const [diffResAcct, setDiffResAcct] = useState('')
+
   // ── Router ──────────────────────────────────────────────────────────────────
   const router = useRouter()
 
@@ -655,6 +669,8 @@ export default function BankFeedPage() {
       setInlineCoaSearch(''); setInlineEntSearch('')
       setInlineCoaOpen(false); setInlineEntOpen(false)
       setQuickMatchConfirm(null)
+      setMatchSearchQuery(''); setMatchSearchType('All')
+      setDiffResKey(null)
     }
   }
 
@@ -757,37 +773,37 @@ export default function BankFeedPage() {
   }
 
   // ─── Smart Match Action ────────────────────────────────────────────────────
-  // Called from the [Match (N)] button in the Actions column.
-  // 1 suggestion → match immediately; 2+ suggestions → expand + scroll to match cards.
   const smartMatchAction = useCallback((tx: BankTransaction) => {
-    const count = matchSuggestions[tx.id] ?? 0
-    if (count === 0) {
-      toggleExpand(tx.id, tx)
+    // If already on match tab for this row, scroll to cards
+    if (expandedId === tx.id && expandedTab === 'match') {
+      requestAnimationFrame(() => {
+        document.getElementById(`match-cards-${tx.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
       return
     }
+    // 1 suggestion + small amount → instant match
+    const count = matchSuggestions[tx.id] ?? 0
     if (count === 1) {
-      // Exactly 1 match — do it right away (no expand needed)
       const scanned = detectAutoMatches([mockStore.items.find(m => m.id === tx.id)!].filter(Boolean))
       const matches = scanned[tx.id] ?? []
-      if (matches.length === 1) {
+      if (matches.length === 1 && Math.abs(tx.amount) <= 50000) {
         const { je } = matches[0]
         const mType: 'Bank Payment' | 'Bank Receipt' = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt'
         const jeRef = je.referenceNo ?? je.id.slice(0, 8)
-        if (Math.abs(tx.amount) > 50000) {
-          // Large amount — expand so user can confirm via match tab
-          toggleExpand(tx.id, tx)
-          setExpandedTab('match')
-        } else {
-          handleQuickMatch(tx, je.id, mType, jeRef)
-        }
+        handleQuickMatch(tx, je.id, mType, jeRef)
         return
       }
     }
-    // 2+ matches — expand row and show match tab
+    // Expand row and switch to Match tab
     toggleExpand(tx.id, tx)
     setExpandedTab('match')
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById(`match-cards-${tx.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 100)
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchSuggestions])
+  }, [matchSuggestions, expandedId, expandedTab])
 
   // ─── Handle Transfer ──────────────────────────────────────────────────
   const handleTransfer = (tx: BankTransaction) => {
@@ -816,6 +832,30 @@ export default function BankFeedPage() {
       showToast('Transfer failed — check account selection')
     }
     setTransferSaving(false)
+  }
+
+  // ─── Quick Categorize (from inline row dropdowns — no expand) ────────────
+  const quickCategorize = (tx: BankTransaction, coaId: string, contactId: string) => {
+    if (!coaId) return
+    const mockTx = mockStore.items.find(m => m.id === tx.id)
+    if (!mockTx) return
+    const coaAcct = coa.find(c => c.id === coaId)
+    const entOpt  = entities.find(e => e.id === contactId)
+    const updated = glCategorize(mockTx, coaId, coaAcct?.name ?? '', contactId || undefined, entOpt?.name)
+    mockStore.items = mockStore.items.map(m => m.id === tx.id ? updated : m)
+    if (coaId) {
+      addToHistory(mockTx.description, coaId, coaAcct?.name ?? '', coaAcct?.code ?? '', contactId || null, entOpt?.name ?? null)
+    }
+    setItems(prev => prev.map(t => t.id !== tx.id ? t : {
+      ...t, status: 'CATEGORIZED',
+      transactionType: t.amount < 0 ? 'Bank Payment' : 'Bank Receipt',
+      accountId:   coaId,
+      accountName: coaAcct?.name ?? t.accountName,
+      contactId:   contactId || t.contactId,
+      contactName: entOpt?.name ?? t.contactName,
+    }))
+    setExpandedId(null)
+    showToast('Transaction categorized')
   }
 
   // ─── Exclude ─────────────────────────────────────────────────────────────
@@ -1106,29 +1146,45 @@ export default function BankFeedPage() {
       </div>
 
       {/* ── D. Batch action bar ───────────────────────────────────────────── */}
-      {selected.size > 0 && (
-        <div className="sticky top-[45px] z-30 bg-white border-b border-slate-200 shadow-sm px-6 py-2.5 flex items-center gap-3">
-          <span className="text-sm font-medium text-slate-700">{selected.size} selected</span>
-          <button
-            onClick={openBatch}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-          >
-            Batch Categorize <ChevronDown size={12} />
-          </button>
-          <button
-            onClick={() => excludeRows([...selected])}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-          >
-            Batch Exclude
-          </button>
-          <button
-            onClick={() => setSelected(new Set())}
-            className="ml-auto text-xs text-slate-400 hover:text-slate-600"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      {selected.size > 0 && (() => {
+        const selItems      = items.filter(t => selected.has(t.id))
+        const selTotal      = selItems.reduce((s, t) => s + Math.abs(t.amount), 0)
+        const selPendingIds = selItems.filter(t => t.status === 'PENDING').map(t => t.id)
+        return (
+          <div className="sticky top-[45px] z-30 bg-white border-b border-slate-200 shadow-sm px-6 py-2.5 flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-slate-700">
+              {selected.size} selected
+              <span className="ml-1.5 text-slate-400 font-normal text-xs">· {fmt(selTotal)} total</span>
+            </span>
+            {selPendingIds.length >= 2 && (
+              <button
+                onClick={() => router.push(`/banking-cash/transactions/match?selectedTxIds=${selPendingIds.join(',')}`)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                <GitMerge size={14} /> Match Selected ({selPendingIds.length})
+              </button>
+            )}
+            <button
+              onClick={openBatch}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Categorize Selected <ChevronDown size={12} />
+            </button>
+            <button
+              onClick={() => excludeRows([...selected])}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              Exclude Selected
+            </button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="ml-auto text-xs text-slate-400 hover:text-slate-600"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )
+      })()}
 
       {/* ── Body ──────────────────────────────────────────────────────────── */}
       <div className="px-6 py-5">
@@ -1259,25 +1315,64 @@ export default function BankFeedPage() {
                         {tx.bankRef && <div className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">{tx.bankRef}</div>}
                       </td>
                       {/* Name */}
-                      <td className={tdClass} style={{ width: colW.name }}>
-                        {tx.contactName
-                          ? <span className="truncate block text-slate-700">{tx.contactName}</span>
-                          : <span className="text-slate-300">—</span>}
+                      <td className={tdClass} style={{ width: colW.name }}
+                          onClick={e => e.stopPropagation()}>
+                        {tx.status !== 'PENDING' ? (
+                          tx.contactName
+                            ? <span className="truncate block text-slate-700">{tx.contactName}</span>
+                            : <span className="text-slate-300">—</span>
+                        ) : (
+                          <select
+                            value={inlineContactMap[tx.id] ?? ''}
+                            onChange={e => {
+                              e.stopPropagation()
+                              setInlineContactMap(prev => ({ ...prev, [tx.id]: e.target.value }))
+                            }}
+                            className="h-7 px-1.5 text-xs rounded border border-gray-200 bg-white w-full min-w-[100px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="">Name...</option>
+                            {MOCK_ENTITIES.map(entity => (
+                              <option key={entity.id} value={entity.id}>{entity.name}</option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       {/* Account */}
-                      <td className={tdClass} style={{ width: colW.account }}>
-                        {tx.accountName ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 max-w-full truncate">
-                            {tx.accountName}
-                          </span>
-                        ) : tx.status === 'PENDING' ? (() => {
-                          const hist = findHistoryMatch(tx.description)
-                          return hist
-                            ? <span className="text-slate-400 italic text-xs truncate block" title={`Suggested: ${hist.accountName}`}>{hist.accountName}*</span>
+                      <td className={tdClass} style={{ width: colW.account }}
+                          onClick={e => e.stopPropagation()}>
+                        {tx.status !== 'PENDING' ? (
+                          tx.accountName
+                            ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 max-w-full truncate">{tx.accountName}</span>
                             : <span className="text-slate-300">—</span>
-                        })() : (
-                          <span className="text-slate-300">—</span>
-                        )}
+                        ) : (() => {
+                          const hist      = findHistoryMatch(tx.description)
+                          const rowVal    = tx.id in inlineAcctMap ? inlineAcctMap[tx.id] : (hist?.accountId ?? '')
+                          const isPrefill = !(tx.id in inlineAcctMap) && !!hist
+                          return (
+                            <select
+                              value={rowVal}
+                              onChange={e => {
+                                e.stopPropagation()
+                                setInlineAcctMap(prev => ({ ...prev, [tx.id]: e.target.value }))
+                              }}
+                              className={`h-7 px-1.5 text-xs rounded bg-white w-full min-w-[120px] focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                isPrefill
+                                  ? 'border border-dashed border-blue-300 text-blue-700'
+                                  : 'border border-gray-200 text-gray-700'
+                              }`}
+                              title={isPrefill ? `Suggested from history: ${hist?.accountName}` : undefined}
+                            >
+                              <option value="">Account...</option>
+                              {MOCK_COA_ACCOUNTS
+                                .slice().sort((a, b) => a.name.localeCompare(b.name))
+                                .map(account => (
+                                  <option key={account.id} value={account.id}>
+                                    {account.name}{isPrefill && account.id === rowVal ? ' *' : ''}
+                                  </option>
+                                ))}
+                            </select>
+                          )
+                        })()}
                       </td>
                       {/* Withdrawal */}
                       <td className={`${tdClass} text-right font-mono font-semibold`} style={{ width: colW.withdrawal }}>
@@ -1294,71 +1389,87 @@ export default function BankFeedPage() {
                       {/* Actions */}
                       <td className={tdClass} style={{ width: colW.actions }}
                           onClick={e => e.stopPropagation()}>
-                        {tx.status === 'PENDING' && (
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {(matchSuggestions[tx.id] ?? 0) > 0 ? (
+                        {tx.status === 'PENDING' && (() => {
+                          const hist       = findHistoryMatch(tx.description)
+                          const rowAcctId  = tx.id in inlineAcctMap ? inlineAcctMap[tx.id] : (hist?.accountId ?? '')
+                          const matchCount = matchSuggestions[tx.id] ?? 0
+                          return (
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {rowAcctId && (
+                                <button
+                                  onClick={e => { e.stopPropagation(); quickCategorize(tx, rowAcctId, inlineContactMap[tx.id] ?? '') }}
+                                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                                >
+                                  <Check size={11} /> Add
+                                </button>
+                              )}
                               <button
                                 onClick={e => { e.stopPropagation(); smartMatchAction(tx) }}
-                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                                  matchCount > 0
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'border border-slate-300 text-slate-500 hover:bg-slate-50'
+                                }`}
                               >
-                                <GitMerge size={11} /> Match ({matchSuggestions[tx.id]})
+                                <GitMerge size={11} />
+                                {matchCount > 0 ? `Match (${matchCount})` : 'Match'}
                               </button>
-                            ) : (
-                              <button
-                                onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
-                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                              >
-                                Add
-                              </button>
-                            )}
-                            {tx.amount < 0 && /transfer|wire|fund.transfer|to\s+bdo|to\s+bpi/i.test(tx.description) && (
-                              <button
-                                title="Transfer"
-                                onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx); setExpandedTab('transfer') }}
-                                className="flex items-center px-1.5 py-1 text-xs font-medium rounded-md border border-indigo-400 text-indigo-600 hover:bg-indigo-50 transition-colors"
-                              >
-                                <ArrowLeftRight size={11} />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        {tx.status === 'CATEGORIZED' && tx.transactionType === 'Split Transaction' && (
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <Scissors size={12} className="text-purple-600 shrink-0" />
-                              <button
-                                onClick={() => undoTransaction(tx)}
-                                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
-                              >
-                                <RotateCcw size={11} /> Undo Split
-                              </button>
+                              {tx.amount < 0 && /transfer|wire|fund.transfer|to\s+bdo|to\s+bpi/i.test(tx.description) && (
+                                <button
+                                  title="Transfer"
+                                  onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx); setExpandedTab('transfer') }}
+                                  className="flex items-center px-1.5 py-1 text-xs font-medium rounded-md border border-indigo-400 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                >
+                                  <ArrowLeftRight size={11} />
+                                </button>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          )
+                        })()}
+                        {tx.status === 'CATEGORIZED' && (() => {
+                          const isTransfer = tx.transactionType === 'Bank Transfer'
+                          const isSplit    = tx.transactionType === 'Split Transaction'
+                          return (
+                            <div className="flex flex-col items-start gap-0.5">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {isSplit ? (
+                                  <><Scissors size={11} className="text-purple-600 shrink-0" />
+                                  <button onClick={() => undoTransaction(tx)}
+                                    className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5">
+                                    <RotateCcw size={11} /> Undo Split
+                                  </button></>
+                                ) : isTransfer ? (
+                                  <><ArrowLeftRight size={11} className="text-indigo-600 shrink-0" />
+                                  <button onClick={() => undoTransaction(tx)}
+                                    className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5">
+                                    <RotateCcw size={11} /> Undo Transfer
+                                  </button></>
+                                ) : (
+                                  <><Check size={11} className="text-emerald-600 shrink-0" />
+                                  <button onClick={() => undoTransaction(tx)}
+                                    className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5">
+                                    <RotateCcw size={11} /> Undo
+                                  </button></>
+                                )}
+                              </div>
+                              <button onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
+                                className="text-[11px] text-blue-500 hover:text-blue-700">View</button>
+                            </div>
+                          )
+                        })()}
                         {tx.status === 'MATCHED' && (
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <Link2 size={12} className="text-blue-600 shrink-0" />
+                          <div className="flex flex-col items-start gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <Link2 size={11} className="text-blue-600 shrink-0" />
                               <button
-                                onClick={() => undoTransaction(tx)}
-                                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
-                              >
-                                <RotateCcw size={11} /> Undo Match
-                              </button>
+                                onClick={() => router.push(`/banking-cash/transactions/view-record?txnId=${tx.id}`)}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >View Record</button>
                             </div>
-                          </div>
-                        )}
-                        {tx.status === 'CATEGORIZED' && tx.transactionType !== 'Split Transaction' && (
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <Check size={12} className="text-emerald-600 shrink-0" />
-                              <button
-                                onClick={() => undoTransaction(tx)}
-                                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
-                              >
-                                <RotateCcw size={11} /> Undo
-                              </button>
-                            </div>
+                            <button onClick={() => undoTransaction(tx)}
+                              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5">
+                              <RotateCcw size={11} /> Undo Match
+                            </button>
                           </div>
                         )}
                         {tx.status === 'EXCLUDED' && (
@@ -1382,11 +1493,13 @@ export default function BankFeedPage() {
                             <div className="px-6 py-4 bg-emerald-50/60 border-l-4 border-emerald-400">
                               {/* ── Mini tab bar ── */}
                               {(() => {
+                                const matchCnt = matchSuggestions[tx.id] ?? 0
                                 const tabs: { key: 'categorize' | 'match' | 'split' | 'transfer'; label: React.ReactNode }[] = [
                                   { key: 'categorize', label: 'Categorize' },
-                                  ...((matchSuggestions[tx.id] ?? 0) > 0
-                                    ? [{ key: 'match' as const, label: <span className="flex items-center gap-1">Match <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full bg-blue-600 text-white font-bold">{matchSuggestions[tx.id]}</span></span> }]
-                                    : []),
+                                  { key: 'match', label: matchCnt > 0
+                                    ? <span className="flex items-center gap-1">Match <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full bg-blue-600 text-white font-bold">{matchCnt}</span></span>
+                                    : 'Match'
+                                  },
                                   { key: 'split',    label: <span className="flex items-center gap-1"><Scissors size={11} /> Split</span> },
                                   { key: 'transfer', label: <span className="flex items-center gap-1"><ArrowLeftRight size={11} /> Transfer</span> },
                                 ]
@@ -1455,59 +1568,174 @@ export default function BankFeedPage() {
                               )}
 
                               {/* ── Tab: Match ── */}
-                              {expandedTab === 'match' && (matchSuggestions[tx.id] ?? 0) > 0 && (() => {
+                              {expandedTab === 'match' && (() => {
                                 const allMatches = (() => {
                                   const scanned = detectAutoMatches([mockStore.items.find(m => m.id === tx.id)!].filter(Boolean))
                                   return scanned[tx.id] ?? []
                                 })()
+                                const matchType: 'Bank Payment' | 'Bank Receipt' = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt'
+                                const manualResults = matchSearchQuery.trim()
+                                  ? searchForMatch(matchSearchQuery, {
+                                      type: matchSearchType === 'All' ? undefined : matchSearchType as 'Bill' | 'Invoice' | 'JE',
+                                    })
+                                  : []
                                 return (
                                   <div id={`match-cards-${tx.id}`} className="max-w-2xl">
-                                    <p className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
-                                      <GitMerge size={12} /> {allMatches.length} suggested match{allMatches.length !== 1 ? 'es' : ''} found
-                                    </p>
-                                    <div className="space-y-1.5 mb-3">
-                                      {allMatches.map(({ je, isExact }) => {
-                                        const matchType: 'Bank Payment' | 'Bank Receipt' = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt'
-                                        const jeRef = je.referenceNo ?? je.id.slice(0, 8)
-                                        const isThisConfirming = quickMatchConfirm?.txId === tx.id && quickMatchConfirm?.jeId === je.id
-                                        return (
-                                          <div key={je.id} className="flex items-center gap-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs" onClick={e => e.stopPropagation()}>
-                                            <span className={`px-1.5 py-0.5 rounded font-medium text-[10px] ${je.type === 'Bill' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>{je.type}</span>
-                                            <span className="font-mono text-slate-500">{jeRef}</span>
-                                            {je.contactName && <span className="text-slate-700 truncate max-w-[120px]">{je.contactName}</span>}
-                                            <span className={`font-mono font-semibold ${isExact ? 'text-emerald-700' : 'text-amber-600'}`}>{fmtAmt(je.totalAmount)}</span>
-                                            {!isExact && <span className="text-amber-500 text-[10px]">≈</span>}
-                                            <button
-                                              onClick={() => router.push(`/banking-cash/transactions/view-record?type=${je.type === 'Bill' ? 'bill' : 'invoice'}&id=${je.id}&txnId=${tx.id}`)}
-                                              className="text-blue-600 hover:underline text-[11px] font-medium"
-                                            >
-                                              View
-                                            </button>
-                                            <div className="ml-auto flex items-center gap-1.5">
-                                              {isThisConfirming ? (
-                                                <>
-                                                  <span className="text-amber-700 text-[11px] font-semibold">Confirm match?</span>
-                                                  <button onClick={() => handleQuickMatch(tx, je.id, matchType, jeRef)}
-                                                    className="px-2 py-0.5 bg-blue-600 text-white rounded text-[11px] font-semibold hover:bg-blue-700">Yes, match</button>
-                                                  <button onClick={() => setQuickMatchConfirm(null)}
-                                                    className="px-2 py-0.5 border border-slate-300 text-slate-600 rounded text-[11px] hover:bg-slate-50">Cancel</button>
-                                                </>
-                                              ) : (
-                                                <button
-                                                  onClick={() => {
-                                                    if (Math.abs(tx.amount) > 50000) {
-                                                      setQuickMatchConfirm({ txId: tx.id, jeId: je.id, matchType, jeRef, jeAmount: je.totalAmount })
-                                                    } else {
-                                                      handleQuickMatch(tx, je.id, matchType, jeRef)
-                                                    }
-                                                  }}
-                                                  className="px-2.5 py-0.5 bg-blue-600 text-white rounded text-[11px] font-semibold hover:bg-blue-700"
-                                                >Match</button>
-                                              )}
-                                            </div>
-                                          </div>
-                                        )
-                                      })}
+                                    {allMatches.length > 0 ? (
+                                      <>
+                                        <p className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
+                                          <GitMerge size={12} /> {allMatches.length} suggested match{allMatches.length !== 1 ? 'es' : ''} found
+                                        </p>
+                                        <div className="space-y-1.5 mb-3">
+                                          {allMatches.map(({ je, isExact }) => {
+                                            const jeRef = je.referenceNo ?? je.id.slice(0, 8)
+                                            const diff = Math.abs(Math.abs(tx.amount) - je.totalAmount)
+                                            const isThisConfirming = quickMatchConfirm?.txId === tx.id && quickMatchConfirm?.jeId === je.id
+                                            const resKey = `${tx.id}-${je.id}`
+                                            return (
+                                              <div key={je.id} className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs" onClick={e => e.stopPropagation()}>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                  <span className={`px-1.5 py-0.5 rounded font-medium text-[10px] ${je.type === 'Bill' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>{je.type}</span>
+                                                  <span className="font-mono text-slate-500">{jeRef}</span>
+                                                  {je.contactName && <span className="text-slate-700 truncate max-w-[100px]">{je.contactName}</span>}
+                                                  <span className={`font-mono font-semibold ${isExact ? 'text-emerald-700' : 'text-amber-600'}`}>{fmtAmt(je.totalAmount)}</span>
+                                                  {!isExact && <span className="text-amber-500 text-[10px]">≈</span>}
+                                                  <button
+                                                    onClick={() => router.push(`/banking-cash/transactions/view-record?type=${je.type === 'Bill' ? 'bill' : 'invoice'}&id=${je.id}&txnId=${tx.id}`)}
+                                                    className="text-blue-600 hover:underline text-[11px] font-medium">View</button>
+                                                  <div className="ml-auto flex items-center gap-1.5">
+                                                    {isThisConfirming ? (
+                                                      <>
+                                                        <span className="text-amber-700 text-[11px] font-semibold">Confirm?</span>
+                                                        <button onClick={() => handleQuickMatch(tx, je.id, matchType, jeRef)}
+                                                          className="px-2 py-0.5 bg-blue-600 text-white rounded text-[11px] font-semibold hover:bg-blue-700">Yes</button>
+                                                        <button onClick={() => setQuickMatchConfirm(null)}
+                                                          className="px-2 py-0.5 border border-slate-300 text-slate-600 rounded text-[11px] hover:bg-slate-50">No</button>
+                                                      </>
+                                                    ) : (
+                                                      <button
+                                                        onClick={() => {
+                                                          if (diff > 5) {
+                                                            setDiffResKey(resKey); setDiffResType('write_off'); setDiffResAcct('')
+                                                          } else if (Math.abs(tx.amount) > 50000) {
+                                                            setQuickMatchConfirm({ txId: tx.id, jeId: je.id, matchType, jeRef, jeAmount: je.totalAmount })
+                                                          } else {
+                                                            handleQuickMatch(tx, je.id, matchType, jeRef)
+                                                          }
+                                                        }}
+                                                        className="px-2.5 py-0.5 bg-blue-600 text-white rounded text-[11px] font-semibold hover:bg-blue-700"
+                                                      >Match</button>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                                {/* Difference resolution panel */}
+                                                {diff > 5 && diffResKey === resKey && (
+                                                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg space-y-1.5" onClick={e => e.stopPropagation()}>
+                                                    <p className="text-xs font-medium text-amber-800">
+                                                      Bank: {fmtAmt(tx.amount)} · Record: {fmtAmt(je.totalAmount)} · Diff: {fmt(diff)}
+                                                    </p>
+                                                    <div className="space-y-1">
+                                                      {(['write_off', 'adjust', 'split_remaining'] as const).map(rt => (
+                                                        <label key={rt} className="flex items-center gap-2 cursor-pointer text-xs">
+                                                          <input type="radio" name={`dr-${resKey}`} value={rt}
+                                                            checked={diffResType === rt} onChange={() => setDiffResType(rt)}
+                                                            className="text-blue-600" />
+                                                          {rt === 'write_off'       && <span>Write off difference to:</span>}
+                                                          {rt === 'adjust'          && <span>Adjust to bank amount ({fmtAmt(tx.amount)})</span>}
+                                                          {rt === 'split_remaining' && <span>Split: match + leave {fmt(diff)} as new</span>}
+                                                          {rt === 'write_off' && diffResType === 'write_off' && (
+                                                            <select value={diffResAcct} onChange={e => setDiffResAcct(e.target.value)}
+                                                              className="ml-1 text-xs border border-slate-200 rounded px-1 py-0.5 bg-white">
+                                                              <option value="">Account…</option>
+                                                              {MOCK_COA_ACCOUNTS.filter(a => a.type === 'Expense').map(a => (
+                                                                <option key={a.id} value={a.id}>{a.name}</option>
+                                                              ))}
+                                                            </select>
+                                                          )}
+                                                        </label>
+                                                      ))}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                      <button
+                                                        onClick={() => {
+                                                          glMatchWithDiff(tx.id, je.id, { type: diffResType, writeOffAccountId: diffResAcct || undefined })
+                                                          setItems(prev => prev.map(t => t.id === tx.id
+                                                            ? { ...t, status: 'MATCHED', transactionType: matchType, journalEntryId: je.id, accountName: je.lines.find(l => l.debit > 0)?.accountName, contactName: je.contactName }
+                                                            : t))
+                                                          setDiffResKey(null); setExpandedId(null)
+                                                          showToast(`Matched to ${jeRef} with difference resolved`)
+                                                        }}
+                                                        className="px-2.5 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700"
+                                                      >Confirm Match</button>
+                                                      <button onClick={() => setDiffResKey(null)}
+                                                        className="px-2.5 py-1 border border-slate-300 text-slate-600 rounded text-xs hover:bg-slate-50">Cancel</button>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="mb-3 px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500">
+                                        <p className="font-medium text-slate-700 mb-1">No automatic matches found.</p>
+                                        <p className="text-[11px]">Search below for Bills, Invoices, or Journal Entries to match manually.</p>
+                                      </div>
+                                    )}
+
+                                    {/* Manual search panel */}
+                                    <div className="space-y-2 mb-2">
+                                      <div className="flex gap-1 flex-wrap">
+                                        {(['All', 'Bills', 'Invoices', 'JE'] as const).map(f => (
+                                          <button key={f} onClick={e => { e.stopPropagation(); setMatchSearchType(f) }}
+                                            className={`px-2 py-0.5 text-[11px] rounded border transition-colors ${matchSearchType === f ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                            {f === 'JE' ? 'Journal Entries' : f}
+                                          </button>
+                                        ))}
+                                      </div>
+                                      <div className="relative" onClick={e => e.stopPropagation()}>
+                                        <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                          value={matchSearchQuery}
+                                          onChange={e => { e.stopPropagation(); setMatchSearchQuery(e.target.value) }}
+                                          onClick={e => e.stopPropagation()}
+                                          placeholder="Search Bills, Invoices, JEs by description, ref, contact…"
+                                          className="w-full pl-6 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                        />
+                                      </div>
+                                      {matchSearchQuery.trim() !== '' && (
+                                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                                          {manualResults.length === 0
+                                            ? <p className="text-xs text-slate-400 text-center py-3">No results for &ldquo;{matchSearchQuery}&rdquo;</p>
+                                            : manualResults.slice(0, 8).map(({ je: sJe }) => {
+                                                const sRef = sJe.referenceNo ?? sJe.id.slice(0, 8)
+                                                const sDiff = Math.abs(Math.abs(tx.amount) - sJe.totalAmount)
+                                                return (
+                                                  <div key={sJe.id} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs" onClick={e => e.stopPropagation()}>
+                                                    <span className={`px-1.5 py-0.5 rounded font-medium text-[10px] ${sJe.type === 'Bill' ? 'bg-orange-100 text-orange-700' : sJe.type === 'Invoice' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{sJe.type}</span>
+                                                    <span className="font-mono text-slate-400 text-[10px]">{sRef}</span>
+                                                    <span className="text-slate-700 truncate flex-1">{sJe.description}</span>
+                                                    <span className="font-mono font-semibold text-slate-700 shrink-0">{fmt(sJe.totalAmount)}</span>
+                                                    <button
+                                                      onClick={() => {
+                                                        if (sDiff > 5) {
+                                                          setDiffResKey(`${tx.id}-${sJe.id}`); setDiffResType('write_off'); setDiffResAcct('')
+                                                        } else {
+                                                          handleQuickMatch(tx, sJe.id, matchType, sRef)
+                                                        }
+                                                      }}
+                                                      className="px-2 py-0.5 bg-blue-600 text-white rounded text-[11px] font-semibold hover:bg-blue-700 shrink-0"
+                                                    >Match</button>
+                                                  </div>
+                                                )
+                                              })
+                                          }
+                                          {manualResults.length > 8 && (
+                                            <p className="text-[11px] text-slate-400 text-center">+{manualResults.length - 8} more — refine search</p>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                     <button
                                       onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/match?txnId=${tx.id}`) }}
