@@ -1,878 +1,1122 @@
 'use client'
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
-  AlertCircle, ArrowRightLeft, CheckSquare, ChevronDown, ChevronLeft, ChevronRight,
-  Download, Loader2, Printer, RefreshCw, Search, X,
+  ArrowLeft, CheckSquare, ChevronDown, Clock, Download, Filter, Plus, Printer, Trash2, X,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
-import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import {
-  MOCK_BANK_ACCOUNTS, getAuditLogForEntity, toggleReconciliation,
+  MOCK_BANK_ACCOUNTS,
+  MOCK_COA_ACCOUNTS,
+  MOCK_ENTITIES,
+  addManualRegisterEntry,
+  auditLog,
+  batchDeleteTransactions,
+  batchEditAccount,
+  editTransactionAccount,
+  editTransactionContact,
+  editTransactionMemo,
+  getAuditLogForEntity,
+  getRegisterEntries,
+  toggleReconciliation,
   type AuditLogEntry,
+  type RegisterEntry,
 } from '../mockGLState'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+type SourceFilter = 'all' | 'imported' | 'manual' | 'matched' | 'transfer'
+type ReconciledFilter = 'all' | 'reconciled' | 'unreconciled'
+type EditableField = 'account' | 'contact' | 'memo'
+type ActivityFilter = 'all' | 'edits' | 'reconciliations' | 'categorizations'
 
-interface BankAccount {
-  id: string
+interface AdvancedFilters {
+  accountId: string
+  status: SourceFilter
+  reconciled: ReconciledFilter
+  minAmount: string
+  maxAmount: string
+}
+
+interface SavedFilter {
   name: string
-  accountNumber?: string
-  balance?: number
-  accountType?: string
+  search: string
+  dateFrom: string
+  dateTo: string
+  filters: AdvancedFilters
 }
 
-type TxType   = 'Credit' | 'Debit'
-type TxStatus = 'Cleared' | 'Pending' | 'Reconciled' | 'Voided'
-
-interface RegisterTransaction {
-  id: string
+interface AddEntryForm {
   date: string
-  reference?: string
   description: string
-  type: TxType
-  category?: string
-  transactionType?: string
-  accountId?: string
-  accountName?: string
-  amount: number
-  runningBalance?: number
-  status: TxStatus
-  bankRef?: string
-  reconciled?: boolean
+  reference: string
+  type: 'Debit' | 'Credit'
+  amount: string
+  accountId: string
+  contactId: string
+  memo: string
 }
 
-// ─── Fallback mock data (shown ONLY when API returns no records) ──────────────
-
-const MOCK_FALLBACK: RegisterTransaction[] = [
-  { id: 'm1',  date: '2026-04-10', reference: 'TXN-0001', description: 'Customer Payment — INV-2026-0089',          type: 'Credit', category: 'Accounts Receivable',     amount: 85000,  runningBalance: 392400, status: 'Cleared',    bankRef: 'PNBFT-884321', reconciled: true  },
-  { id: 'm2',  date: '2026-04-09', reference: 'TXN-0002', description: 'Vendor Payment — Metro Office Supplies',   type: 'Debit',  category: 'Office Expenses',         amount: 12500,  runningBalance: 307400, status: 'Cleared',    reconciled: true  },
-  { id: 'm3',  date: '2026-04-08', reference: 'TXN-0003', description: 'Payroll — April 1–15 Salary Run',          type: 'Debit',  category: 'Salaries & Wages',        amount: 245000, runningBalance: 480100, status: 'Cleared',    bankRef: 'BPIFT-554112', reconciled: true  },
-  { id: 'm4',  date: '2026-04-07', reference: 'TXN-0004', description: 'Fund Transfer — Operating to Payroll',    type: 'Credit', category: 'Inter-Bank Transfer',     amount: 300000, runningBalance: 725100, status: 'Cleared',    reconciled: true  },
-  { id: 'm5',  date: '2026-04-05', reference: 'TXN-0005', description: 'SSS / PhilHealth / Pag-IBIG Remittance',   type: 'Debit',  category: 'Government Contributions', amount: 38420,  runningBalance: 307900, status: 'Reconciled', reconciled: true  },
-  { id: 'm6',  date: '2026-04-04', reference: 'TXN-0006', description: 'Credit Card Bill Payment — Corporate Visa', type: 'Debit',  category: 'Credit Card Payment',     amount: 24800,  runningBalance: 346320, status: 'Cleared',    reconciled: true  },
-  { id: 'm7',  date: '2026-04-03', reference: 'TXN-0007', description: 'Customer Advance — GlobalEdge Solutions',  type: 'Credit', category: 'Accounts Receivable',     amount: 157500, runningBalance: 371120, status: 'Cleared',    reconciled: true  },
-  { id: 'm8',  date: '2026-04-02', reference: 'TXN-0008', description: 'BIR Withholding Tax — Form 1601C',         type: 'Debit',  category: 'Taxes Payable',           amount: 16240,  runningBalance: 213620, status: 'Reconciled', reconciled: true  },
-  { id: 'm9',  date: '2026-04-01', reference: 'TXN-0009', description: 'Office Rent — April 2026',                 type: 'Debit',  category: 'Rent Expense',            amount: 65000,  runningBalance: 229860, status: 'Cleared',    reconciled: false },
-  { id: 'm10', date: '2026-03-31', reference: 'TXN-0010', description: 'Interest Income — Savings March 2026',     type: 'Credit', category: 'Interest Income',         amount: 2480,   runningBalance: 294860, status: 'Reconciled', reconciled: false },
-  { id: 'm11', date: '2026-04-11', reference: 'TXN-0011', description: 'Shopify Sales Payout — pending settlement', type: 'Credit', category: '',                        amount: 42000,  runningBalance: 434400, status: 'Pending',    reconciled: false },
-  { id: 'm12', date: '2026-04-11', reference: 'TXN-0012', description: 'Supplier Invoice — TechParts PH',           type: 'Debit',  category: '',                        amount: 18750,  runningBalance: 373650, status: 'Pending',    reconciled: false },
-]
-
-// ─── Status badge helper ──────────────────────────────────────────────────────
-
-const STATUS_STYLE: Record<TxStatus, { bg: string; dot: string }> = {
-  Cleared:    { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  Reconciled: { bg: 'bg-sky-50 text-sky-700 border-sky-200',             dot: 'bg-sky-500' },
-  Pending:    { bg: 'bg-amber-50 text-amber-700 border-amber-200',       dot: 'bg-amber-400 animate-pulse' },
-  Voided:     { bg: 'bg-slate-100 text-slate-400 border-slate-200',      dot: 'bg-slate-300' },
+const FILTER_STORAGE_KEY = 'hb-bank-register-saved-filters'
+const DEFAULT_FILTERS: AdvancedFilters = {
+  accountId: '',
+  status: 'all',
+  reconciled: 'all',
+  minAmount: '',
+  maxAmount: '',
 }
-
-function StatusBadge({ status }: { status: TxStatus }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.Pending
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${s.bg}`}>
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
-      {status}
-    </span>
-  )
-}
+const REGISTER_AUDIT_ACTIONS = new Set<AuditLogEntry['action']>([
+  'categorized',
+  'edited',
+  'manual_entry',
+  'reconciled',
+  'unreconciled',
+  'deleted',
+])
 
 function formatLongDate(date: string): string {
   try {
-    return new Date(date + 'T12:00:00').toLocaleDateString('en-PH', {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    return new Date(`${date}T12:00:00`).toLocaleDateString('en-PH', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     })
   } catch {
     return date
   }
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+function formatShortDate(date: string): string {
+  try {
+    return new Date(`${date}T12:00:00`).toLocaleDateString('en-PH', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  } catch {
+    return date
+  }
+}
 
-const PAGE_SIZE = 25
+function csvEscape(value: string | number | boolean | undefined): string {
+  const stringValue = String(value ?? '')
+  return `"${stringValue.replace(/"/g, '""')}"`
+}
+
+function getTransactionSource(tx: RegisterEntry): Exclude<SourceFilter, 'all'> {
+  if (tx.manualEntry) return 'manual'
+  if (tx.transactionType === 'Bank Transfer') return 'transfer'
+  if (tx.status === 'MATCHED') return 'matched'
+  return 'imported'
+}
+
+function getTransactionSourceLabel(tx: RegisterEntry): string {
+  const source = getTransactionSource(tx)
+  if (source === 'manual') return 'Manual'
+  if (source === 'matched') return 'Matched'
+  if (source === 'transfer') return 'Transfer'
+  return 'Imported'
+}
+
+function getAuditBucket(action: AuditLogEntry['action']): ActivityFilter {
+  if (action === 'edited') return 'edits'
+  if (action === 'reconciled' || action === 'unreconciled') return 'reconciliations'
+  return 'categorizations'
+}
+
+function getAuditDot(action: AuditLogEntry['action']): string {
+  if (action === 'edited') return 'bg-blue-500'
+  if (action === 'reconciled') return 'bg-emerald-500'
+  if (action === 'unreconciled') return 'bg-amber-500'
+  if (action === 'deleted') return 'bg-rose-500'
+  if (action === 'manual_entry') return 'bg-violet-500'
+  return 'bg-slate-500'
+}
+
+function getAuditFilterLabel(filter: ActivityFilter): string {
+  if (filter === 'edits') return 'Edits'
+  if (filter === 'reconciliations') return 'Reconciliations'
+  if (filter === 'categorizations') return 'Categorizations'
+  return 'All'
+}
+
+function matchesAuditFilter(entry: AuditLogEntry, filter: ActivityFilter): boolean {
+  return filter === 'all' ? true : getAuditBucket(entry.action) === filter
+}
+
+function getCoaId(tx: RegisterEntry): string {
+  if (tx.accountCode) {
+    const byCode = MOCK_COA_ACCOUNTS.find(account => account.code === tx.accountCode)
+    if (byCode) return byCode.id
+  }
+  return MOCK_COA_ACCOUNTS.find(account => account.name === tx.accountName)?.id ?? ''
+}
+
+function getStatusBadgeClasses(source: string): string {
+  if (source === 'Matched') return 'bg-sky-50 text-sky-700 border-sky-200'
+  if (source === 'Manual') return 'bg-violet-50 text-violet-700 border-violet-200'
+  if (source === 'Transfer') return 'bg-amber-50 text-amber-700 border-amber-200'
+  return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+}
+
+function buildCsv(rows: RegisterEntry[]): string {
+  const headers = [
+    'Date',
+    'Reference',
+    'Payee',
+    'Description',
+    'Account',
+    'Withdrawal',
+    'Deposit',
+    'Balance',
+    'Reconciled',
+    'Memo',
+  ]
+  const body = rows.map(row => [
+    csvEscape(row.date),
+    csvEscape(row.ref ?? row.bankRef ?? ''),
+    csvEscape(row.contactName ?? ''),
+    csvEscape(row.description),
+    csvEscape(row.accountName ?? ''),
+    csvEscape(row.amount < 0 ? Math.abs(row.amount).toFixed(2) : ''),
+    csvEscape(row.amount > 0 ? row.amount.toFixed(2) : ''),
+    csvEscape(row.runningBalance.toFixed(2)),
+    csvEscape(row.reconciled ? 'Yes' : 'No'),
+    csvEscape(row.memo ?? ''),
+  ])
+  return [headers.map(csvEscape), ...body].map(line => line.join(',')).join('\n')
+}
+
+function downloadCsv(filename: string, csv: string): void {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function StatusBadge({ label }: { label: string }) {
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadgeClasses(label)}`}>
+      {label}
+    </span>
+  )
+}
 
 export default function RegisterPage() {
-  const { companyId, loading: cidLoading } = useCompanyId()
+  const router = useRouter()
   const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+  const formatMoney = (value: number) => formatCurrency(value, currency)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── Bank accounts ──────────────────────────────────────────────────────────
-  const [accounts, setAccounts]           = useState<BankAccount[]>([])
-  const [selectedAccount, setSelectedAccount] = useState<string>('all')
-
-  // ── Transactions ───────────────────────────────────────────────────────────
-  const [items, setItems]                 = useState<RegisterTransaction[]>([])
-  const [loading, setLoading]             = useState(false)
-  const [error, setError]                 = useState<string | null>(null)
-  const [usingMock, setUsingMock]         = useState(false)
-
-  // ── Filters ────────────────────────────────────────────────────────────────
-  const [search, setSearch]               = useState('')
-  const [dateFrom, setDateFrom]           = useState('')
-  const [dateTo, setDateTo]               = useState('')
-  const [typeFilter, setTypeFilter]       = useState<TxType | 'All'>('All')
-  const [statusFilter, setStatusFilter]   = useState<TxStatus | 'All'>('All')
-
-  // ── Pagination ─────────────────────────────────────────────────────────────
-  const [page, setPage]                   = useState(1)
-
-  // ── Transfer modal ─────────────────────────────────────────────────────────
-  const [showTransfer, setShowTransfer]   = useState(false)
-  const [transferForm, setTransferForm]   = useState({
-    fromId: '', toId: '', amount: '', date: new Date().toISOString().split('T')[0], memo: '',
+  const [version, setVersion] = useState(0)
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState(MOCK_BANK_ACCOUNTS[0]?.id ?? '')
+  const [search, setSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [draftFilters, setDraftFilters] = useState<AdvancedFilters>(DEFAULT_FILTERS)
+  const [appliedFilters, setAppliedFilters] = useState<AdvancedFilters>(DEFAULT_FILTERS)
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
+  const [savedFilterName, setSavedFilterName] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [editingCell, setEditingCell] = useState<{ txId: string; field: EditableField } | null>(null)
+  const [editingValue, setEditingValue] = useState('')
+  const [toast, setToast] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addError, setAddError] = useState('')
+  const [addForm, setAddForm] = useState<AddEntryForm>({
+    date: new Date().toISOString().slice(0, 10),
+    description: '',
+    reference: '',
+    type: 'Debit',
+    amount: '',
+    accountId: '',
+    contactId: '',
+    memo: '',
   })
-  const [transferLoading, setTransferLoading] = useState(false)
-  const [transferError, setTransferError]   = useState('')
-  const [toast, setToast]                 = useState('')
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
-
-  // ── Reconciliation & detail state ───────────────────────────────────────
-  const [reconciledIds, setReconciledIds] = useState<Set<string>>(new Set())
-  const [detailTx, setDetailTx]           = useState<(RegisterTransaction & { _balance: number }) | null>(null)
+  const [batchEditOpen, setBatchEditOpen] = useState(false)
+  const [batchAccountId, setBatchAccountId] = useState('')
+  const [detailTxId, setDetailTxId] = useState<string | null>(null)
+  const [detailFilter, setDetailFilter] = useState<ActivityFilter>('all')
+  const [activityOpen, setActivityOpen] = useState(false)
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all')
   const [reconcileOpen, setReconcileOpen] = useState(false)
   const [statementBalance, setStatementBalance] = useState('')
 
-  // ── Load bank accounts ─────────────────────────────────────────────────────
-  const loadAccounts = useCallback(async () => {
-    if (!companyId) return
-    try {
-      const res = await apiClient.get(`/companies/${companyId}/banking/accounts`)
-      const list: BankAccount[] = Array.isArray(res.data) ? res.data : res.data?.accounts ?? []
-      setAccounts(list)
-    } catch {
-      // non-fatal
-    }
-  }, [companyId])
+  const selectedBankAccount = useMemo(
+    () => MOCK_BANK_ACCOUNTS.find(account => account.id === selectedBankAccountId) ?? null,
+    [selectedBankAccountId],
+  )
 
-  // ── Normalise any transaction shape from the API ───────────────────────────
-  const normalise = (raw: any, accountName?: string): RegisterTransaction => ({
-    id: raw.id ?? raw._id ?? String(Math.random()),
-    date: (raw.date ?? raw.transactionDate ?? raw.createdAt ?? '').substring(0, 10),
-    reference: raw.reference ?? raw.ref ?? raw.bankRef ?? undefined,
-    description: raw.description ?? raw.memo ?? raw.note ?? '—',
-    type: (raw.type === 'credit' || raw.type === 'Credit' || raw.amount > 0) ? 'Credit' : 'Debit',
-    category: raw.category ?? raw.categoryName ?? undefined,
-    transactionType: raw.transactionType ?? raw.txType ?? undefined,
-    accountId: raw.bankAccountId ?? raw.accountId ?? undefined,
-    accountName: raw.accountName ?? accountName,
-    amount: Math.abs(raw.amount ?? 0),
-    runningBalance: raw.runningBalance ?? raw.balance ?? undefined,
-    status: (['Cleared', 'Reconciled', 'Voided'].includes(raw.status)
-      ? raw.status
-      : raw.status === 'reconciled' ? 'Reconciled'
-      : raw.status === 'voided' ? 'Voided'
-      : raw.isCleared ? 'Cleared'
-      : 'Pending') as TxStatus,
-    bankRef: raw.bankRef ?? undefined,
-    reconciled: raw.reconciled ?? false,
-  })
+  const registerEntries = useMemo(() => {
+    if (!selectedBankAccountId) return []
+    return getRegisterEntries(selectedBankAccountId, dateFrom || undefined, dateTo || undefined)
+  }, [selectedBankAccountId, dateFrom, dateTo, version])
 
-  // ── Fetch transactions ─────────────────────────────────────────────────────
-  const fetchTransactions = useCallback(async () => {
-    if (!companyId) return
-    setLoading(true)
-    setError(null)
-    setUsingMock(false)
-    try {
-      let all: RegisterTransaction[] = []
+  const accountFilterOptions = useMemo(() => {
+    const ids = new Set(registerEntries.map(tx => getCoaId(tx)).filter(Boolean))
+    return MOCK_COA_ACCOUNTS.filter(account => ids.has(account.id))
+  }, [registerEntries])
 
-      if (selectedAccount !== 'all') {
-        const res = await apiClient.get(
-          `/companies/${companyId}/banking/accounts/${selectedAccount}/transactions`,
-          { params: { pageSize: 200, page: 1 } },
-        )
-        const raw: any[] = res.data?.transactions ?? res.data ?? []
-        const acct = accounts.find(a => a.id === selectedAccount)
-        all = raw.map(t => normalise(t, acct?.name))
-      } else {
-        // Load from each account (capped at 6)
-        const acctList = accounts.length > 0 ? accounts : (() => {
-          // If accounts not loaded yet, fetch inline
-          return []
-        })()
-        if (acctList.length === 0) {
-          // Try fetching accounts first
-          const ar = await apiClient.get(`/companies/${companyId}/banking/accounts`)
-          const loaded: BankAccount[] = Array.isArray(ar.data) ? ar.data : ar.data?.accounts ?? []
-          setAccounts(loaded)
-          for (const acct of loaded.slice(0, 6)) {
-            try {
-              const res = await apiClient.get(
-                `/companies/${companyId}/banking/accounts/${acct.id}/transactions`,
-                { params: { pageSize: 100, page: 1 } },
-              )
-              const raw: any[] = res.data?.transactions ?? res.data ?? []
-              all.push(...raw.map(t => normalise(t, acct.name)))
-            } catch { /* skip */ }
-          }
-        } else {
-          for (const acct of acctList.slice(0, 6)) {
-            try {
-              const res = await apiClient.get(
-                `/companies/${companyId}/banking/accounts/${acct.id}/transactions`,
-                { params: { pageSize: 100, page: 1 } },
-              )
-              const raw: any[] = res.data?.transactions ?? res.data ?? []
-              all.push(...raw.map(t => normalise(t, acct.name)))
-            } catch { /* skip */ }
-          }
-        }
-      }
+  const visibleEntries = useMemo(() => {
+    let rows = [...registerEntries].sort((left, right) => {
+      const byDate = right.date.localeCompare(left.date)
+      if (byDate !== 0) return byDate
+      return right.id.localeCompare(left.id)
+    })
 
-      if (all.length > 0) {
-        setItems(all)
-      } else {
-        setItems(MOCK_FALLBACK)
-        setUsingMock(true)
-      }
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load transactions')
-      setItems(MOCK_FALLBACK)
-      setUsingMock(true)
-    } finally {
-      setLoading(false)
-    }
-  }, [companyId, selectedAccount, accounts])
-
-  useEffect(() => { if (companyId) loadAccounts() }, [companyId, loadAccounts])
-  useEffect(() => { if (companyId) { setPage(1); fetchTransactions() } }, [companyId, selectedAccount, fetchTransactions])
-  // Initialise reconciled IDs from loaded items
-  useEffect(() => {
-    setReconciledIds(new Set(items.filter(t => t.reconciled).map(t => t.id)))
-  }, [items])
-
-  // ── Derived, filtered, sorted ──────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let list = items
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(t =>
-        t.description.toLowerCase().includes(q) ||
-        (t.reference ?? '').toLowerCase().includes(q) ||
-        (t.category ?? '').toLowerCase().includes(q) ||
-        (t.accountName ?? '').toLowerCase().includes(q)
+    const query = search.trim().toLowerCase()
+    if (query) {
+      rows = rows.filter(tx =>
+        tx.description.toLowerCase().includes(query) ||
+        (tx.contactName ?? '').toLowerCase().includes(query) ||
+        (tx.accountName ?? '').toLowerCase().includes(query) ||
+        (tx.memo ?? '').toLowerCase().includes(query) ||
+        (tx.ref ?? tx.bankRef ?? '').toLowerCase().includes(query),
       )
     }
-    if (dateFrom)           list = list.filter(t => t.date >= dateFrom)
-    if (dateTo)             list = list.filter(t => t.date <= dateTo)
-    if (typeFilter !== 'All') list = list.filter(t => t.type === typeFilter)
-    if (statusFilter !== 'All') list = list.filter(t => t.status === statusFilter)
-    // Sort by date desc, then account
-    return [...list].sort((a, b) =>
-      b.date.localeCompare(a.date) || (a.accountName ?? '').localeCompare(b.accountName ?? '')
-    )
-  }, [items, search, dateFrom, dateTo, typeFilter, statusFilter])
 
-  // Running balance: compute per-account or globally
-  const withBalance = useMemo<Array<RegisterTransaction & { _balance: number }>>(() => {
-    if (selectedAccount !== 'all') {
-      // Single account — compute running balance from earliest to latest
-      const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date))
-      let running = 0
-      const withBal = sorted.map(t => {
-        running = t.type === 'Credit' ? running + t.amount : running - t.amount
-        return { ...t, _balance: running }
-      })
-      // Reverse back to newest-first for display
-      return withBal.reverse()
+    if (appliedFilters.accountId) {
+      rows = rows.filter(tx => getCoaId(tx) === appliedFilters.accountId)
     }
-    // Multi-account — use runningBalance from API if available, else just show amount
-    return filtered.map(t => ({ ...t, _balance: t.runningBalance ?? 0 }))
-  }, [filtered, selectedAccount])
+    if (appliedFilters.status !== 'all') {
+      rows = rows.filter(tx => getTransactionSource(tx) === appliedFilters.status)
+    }
+    if (appliedFilters.reconciled !== 'all') {
+      rows = rows.filter(tx => appliedFilters.reconciled === 'reconciled' ? Boolean(tx.reconciled) : !tx.reconciled)
+    }
+    if (appliedFilters.minAmount) {
+      const min = Number(appliedFilters.minAmount)
+      if (!Number.isNaN(min)) rows = rows.filter(tx => Math.abs(tx.amount) >= min)
+    }
+    if (appliedFilters.maxAmount) {
+      const max = Number(appliedFilters.maxAmount)
+      if (!Number.isNaN(max)) rows = rows.filter(tx => Math.abs(tx.amount) <= max)
+    }
 
-  const totalPages = Math.max(1, Math.ceil(withBalance.length / PAGE_SIZE))
-  const pageRows   = withBalance.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    return rows
+  }, [registerEntries, search, appliedFilters])
 
-  const totalCredits  = filtered.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0)
-  const totalDebits   = filtered.filter(t => t.type === 'Debit').reduce((s, t) => s + t.amount, 0)
-  const netFlow       = totalCredits - totalDebits
+  const detailTx = useMemo(
+    () => (detailTxId ? registerEntries.find(tx => tx.id === detailTxId) ?? null : null),
+    [detailTxId, registerEntries],
+  )
 
-  // Reconciliation derived
-  const reconciledCount         = filtered.filter(t => reconciledIds.has(t.id)).length
-  const totalCount              = filtered.length
-  const closingBalance          = withBalance.length > 0 ? withBalance[withBalance.length - 1]._balance : 0
-  const outstandingWithdrawals  = filtered.filter(t => t.type === 'Debit'   && !reconciledIds.has(t.id)).reduce((s, t) => s + t.amount, 0)
-  const outstandingDeposits     = filtered.filter(t => t.type === 'Credit'  && !reconciledIds.has(t.id)).reduce((s, t) => s + t.amount, 0)
-  const stmtBal                 = parseFloat(statementBalance) || 0
-  const adjustedBookBalance     = closingBalance - outstandingWithdrawals + outstandingDeposits
-  const reconcileDiff           = stmtBal - adjustedBookBalance
+  const detailHistory = useMemo(() => {
+    if (!detailTx) return []
+    return getAuditLogForEntity(detailTx.id).filter(entry => matchesAuditFilter(entry, detailFilter))
+  }, [detailFilter, detailTx, version])
 
-  // Opening balance for selected single account
-  const selectedMockAcct = MOCK_BANK_ACCOUNTS.find(a => a.id === selectedAccount)
-  const openingBalance   = selectedMockAcct?.openingBalance ?? 0
+  const registerActivityEntries = useMemo(() => {
+    const registerIds = new Set(registerEntries.map(tx => tx.id))
+    return auditLog
+      .filter(entry => registerIds.has(entry.entityId) && REGISTER_AUDIT_ACTIONS.has(entry.action))
+      .filter(entry => matchesAuditFilter(entry, activityFilter))
+  }, [activityFilter, registerEntries, version])
 
-  const markAllReconciled = () => {
-    const allIds = filtered.map(t => t.id)
-    const allDone = allIds.every(id => reconciledIds.has(id))
-    setReconciledIds(prev => {
-      const next = new Set(prev)
-      if (allDone) { allIds.forEach(id => next.delete(id)) }
-      else         { allIds.forEach(id => next.add(id)) }
+  const selectedEntries = useMemo(
+    () => visibleEntries.filter(tx => selectedIds.has(tx.id)),
+    [selectedIds, visibleEntries],
+  )
+
+  const openingBalance = selectedBankAccount?.openingBalance ?? 0
+  const totalDeposits = registerEntries.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0)
+  const totalWithdrawals = registerEntries.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
+  const closingBalance = registerEntries.length > 0 ? registerEntries[registerEntries.length - 1].runningBalance : openingBalance
+  const reconciledTotal = registerEntries.filter(tx => tx.reconciled).length
+  const outstandingWithdrawals = registerEntries.filter(tx => tx.amount < 0 && !tx.reconciled).reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
+  const outstandingDeposits = registerEntries.filter(tx => tx.amount > 0 && !tx.reconciled).reduce((sum, tx) => sum + tx.amount, 0)
+  const adjustedBookBalance = closingBalance - outstandingWithdrawals + outstandingDeposits
+  const statementBalanceNumber = Number(statementBalance || '0')
+  const reconciliationDifference = statementBalance ? statementBalanceNumber - adjustedBookBalance : 0
+  const selectedTotal = selectedEntries.reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
+  const allVisibleSelected = visibleEntries.length > 0 && visibleEntries.every(tx => selectedIds.has(tx.id))
+
+  const activeFilterPills = useMemo(() => {
+    const pills: Array<{ key: string; label: string; onRemove: () => void }> = []
+
+    if (search.trim()) {
+      pills.push({ key: 'search', label: `Search: ${search.trim()}`, onRemove: () => setSearch('') })
+    }
+    if (dateFrom) {
+      pills.push({ key: 'dateFrom', label: `From: ${formatShortDate(dateFrom)}`, onRemove: () => setDateFrom('') })
+    }
+    if (dateTo) {
+      pills.push({ key: 'dateTo', label: `To: ${formatShortDate(dateTo)}`, onRemove: () => setDateTo('') })
+    }
+    if (appliedFilters.accountId) {
+      const account = MOCK_COA_ACCOUNTS.find(item => item.id === appliedFilters.accountId)
+      pills.push({
+        key: 'accountId',
+        label: `Account: ${account?.name ?? appliedFilters.accountId}`,
+        onRemove: () => {
+          setAppliedFilters(current => ({ ...current, accountId: '' }))
+          setDraftFilters(current => ({ ...current, accountId: '' }))
+        },
+      })
+    }
+    if (appliedFilters.status !== 'all') {
+      pills.push({
+        key: 'status',
+        label: `Status: ${appliedFilters.status}`,
+        onRemove: () => {
+          setAppliedFilters(current => ({ ...current, status: 'all' }))
+          setDraftFilters(current => ({ ...current, status: 'all' }))
+        },
+      })
+    }
+    if (appliedFilters.reconciled !== 'all') {
+      pills.push({
+        key: 'reconciled',
+        label: `Reconciled: ${appliedFilters.reconciled}`,
+        onRemove: () => {
+          setAppliedFilters(current => ({ ...current, reconciled: 'all' }))
+          setDraftFilters(current => ({ ...current, reconciled: 'all' }))
+        },
+      })
+    }
+    if (appliedFilters.minAmount) {
+      pills.push({
+        key: 'minAmount',
+        label: `Min: ${formatMoney(Number(appliedFilters.minAmount || '0'))}`,
+        onRemove: () => {
+          setAppliedFilters(current => ({ ...current, minAmount: '' }))
+          setDraftFilters(current => ({ ...current, minAmount: '' }))
+        },
+      })
+    }
+    if (appliedFilters.maxAmount) {
+      pills.push({
+        key: 'maxAmount',
+        label: `Max: ${formatMoney(Number(appliedFilters.maxAmount || '0'))}`,
+        onRemove: () => {
+          setAppliedFilters(current => ({ ...current, maxAmount: '' }))
+          setDraftFilters(current => ({ ...current, maxAmount: '' }))
+        },
+      })
+    }
+
+    return pills
+  }, [appliedFilters, dateFrom, dateTo, formatMoney, search])
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FILTER_STORAGE_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as SavedFilter[]
+      if (Array.isArray(parsed)) setSavedFilters(parsed)
+    } catch {
+      // ignore malformed local state
+    }
+  }, [])
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [selectedBankAccountId, dateFrom, dateTo, search, appliedFilters, version])
+
+  useEffect(() => {
+    if (detailTxId && !registerEntries.some(tx => tx.id === detailTxId)) {
+      setDetailTxId(null)
+    }
+  }, [detailTxId, registerEntries])
+
+  useEffect(() => {
+    if (!detailTxId && !activityOpen && !showAddModal && !batchEditOpen) return undefined
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (detailTxId) setDetailTxId(null)
+      if (activityOpen) setActivityOpen(false)
+      if (showAddModal) setShowAddModal(false)
+      if (batchEditOpen) setBatchEditOpen(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activityOpen, batchEditOpen, detailTxId, showAddModal])
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+  }, [])
+
+  const showToast = (message: string) => {
+    setToast(message)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = setTimeout(() => setToast(''), 2400)
+  }
+
+  const persistSavedFilters = (nextFilters: SavedFilter[]) => {
+    setSavedFilters(nextFilters)
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(nextFilters))
+  }
+
+  const applyFilters = () => {
+    setAppliedFilters({ ...draftFilters })
+  }
+
+  const clearAllFilters = () => {
+    setSearch('')
+    setDateFrom('')
+    setDateTo('')
+    setDraftFilters(DEFAULT_FILTERS)
+    setAppliedFilters(DEFAULT_FILTERS)
+  }
+
+  const saveCurrentFilter = () => {
+    const name = savedFilterName.trim()
+    if (!name) return
+    const next = [
+      { name, search, dateFrom, dateTo, filters: { ...draftFilters } },
+      ...savedFilters.filter(filter => filter.name !== name),
+    ]
+    persistSavedFilters(next)
+    setSavedFilterName('')
+    showToast('Saved filter added')
+  }
+
+  const applySavedFilter = (savedFilter: SavedFilter) => {
+    setSearch(savedFilter.search)
+    setDateFrom(savedFilter.dateFrom)
+    setDateTo(savedFilter.dateTo)
+    setDraftFilters(savedFilter.filters)
+    setAppliedFilters(savedFilter.filters)
+    showToast(`Applied saved filter: ${savedFilter.name}`)
+  }
+
+  const removeSavedFilter = (name: string) => {
+    persistSavedFilters(savedFilters.filter(filter => filter.name !== name))
+  }
+
+  const beginEdit = (tx: RegisterEntry, field: EditableField) => {
+    if (field === 'account') setEditingValue(getCoaId(tx))
+    if (field === 'contact') setEditingValue(tx.contactId ?? '')
+    if (field === 'memo') setEditingValue(tx.memo ?? '')
+    setEditingCell({ txId: tx.id, field })
+  }
+
+  const saveEdit = (tx: RegisterEntry) => {
+    if (!editingCell || editingCell.txId !== tx.id) return
+
+    let updated = false
+    if (editingCell.field === 'account' && editingValue) {
+      updated = Boolean(editTransactionAccount(tx.id, editingValue))
+    }
+    if (editingCell.field === 'contact') {
+      updated = Boolean(editTransactionContact(tx.id, editingValue || undefined))
+    }
+    if (editingCell.field === 'memo') {
+      updated = Boolean(editTransactionMemo(tx.id, editingValue))
+    }
+
+    setEditingCell(null)
+    setEditingValue('')
+
+    if (updated) {
+      setVersion(current => current + 1)
+      showToast('Updated')
+    }
+  }
+
+  const toggleSelectAllVisible = () => {
+    setSelectedIds(current => {
+      const next = new Set(current)
+      if (allVisibleSelected) {
+        visibleEntries.forEach(tx => next.delete(tx.id))
+      } else {
+        visibleEntries.forEach(tx => next.add(tx.id))
+      }
       return next
     })
   }
 
-  // ── CSV export ─────────────────────────────────────────────────────────────
-  const exportCSV = () => {
-    const headers = ['Date', 'Reference', 'Description', 'Account', 'Category', 'Tx Type', 'Type', 'Debit', 'Credit', 'Balance', 'Status', 'Reconciled']
-    const rows = withBalance.map(t => [
-      t.date,
-      t.reference ?? '',
-      `"${(t.description ?? '').replace(/"/g, '""')}"`,
-      t.accountName ?? '',
-      t.category ?? '',
-      t.transactionType ?? '',
-      t.type,
-      t.type === 'Debit'   ? t.amount.toFixed(2) : '',
-      t.type === 'Credit'  ? t.amount.toFixed(2) : '',
-      t._balance.toFixed(2),
-      t.status,
-      reconciledIds.has(t.id) ? 'Yes' : 'No',
-    ])
-    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url
-    a.download = `bank-register-${new Date().toISOString().substring(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  const toggleSelected = (txId: string) => {
+    setSelectedIds(current => {
+      const next = new Set(current)
+      if (next.has(txId)) next.delete(txId)
+      else next.add(txId)
+      return next
+    })
   }
 
-  // ── Transfer funds ─────────────────────────────────────────────────────────
-  const openTransfer = () => {
-    setTransferForm({ fromId: '', toId: '', amount: '', date: new Date().toISOString().split('T')[0], memo: '' })
-    setTransferError('')
-    setShowTransfer(true)
+  const toggleSingleReconciliation = (tx: RegisterEntry) => {
+    toggleReconciliation(tx.id, !tx.reconciled)
+    setVersion(current => current + 1)
+    showToast(tx.reconciled ? 'Marked unreconciled' : 'Marked reconciled')
   }
 
-  const submitTransfer = async () => {
-    const amt = parseFloat(transferForm.amount)
-    if (!transferForm.fromId || !transferForm.toId || isNaN(amt) || amt <= 0) {
-      setTransferError('Please complete all required fields.')
+  const reconcileSelected = () => {
+    if (selectedEntries.length === 0) return
+    const shouldReconcile = selectedEntries.some(tx => !tx.reconciled)
+    selectedEntries.forEach(tx => toggleReconciliation(tx.id, shouldReconcile))
+    setVersion(current => current + 1)
+    setSelectedIds(new Set())
+    showToast(shouldReconcile ? 'Selected transactions reconciled' : 'Selected transactions unreconciled')
+  }
+
+  const openBatchEdit = () => {
+    setBatchAccountId('')
+    setBatchEditOpen(true)
+  }
+
+  const applyBatchAccountEdit = () => {
+    if (!batchAccountId || selectedEntries.length === 0) return
+    batchEditAccount(selectedEntries.map(tx => tx.id), batchAccountId)
+    setVersion(current => current + 1)
+    setBatchEditOpen(false)
+    setBatchAccountId('')
+    showToast('Batch account update applied')
+  }
+
+  const deleteSelected = () => {
+    if (selectedEntries.length === 0) return
+    const confirmed = window.confirm(`Delete ${selectedEntries.length} transactions? This cannot be undone.`)
+    if (!confirmed) return
+    batchDeleteTransactions(selectedEntries.map(tx => tx.id))
+    setVersion(current => current + 1)
+    setSelectedIds(new Set())
+    setDetailTxId(null)
+    showToast('Selected transactions deleted')
+  }
+
+  const exportVisible = () => {
+    const csv = buildCsv(visibleEntries)
+    downloadCsv(`bank-register-${selectedBankAccountId || 'export'}.csv`, csv)
+  }
+
+  const exportSelected = () => {
+    const csv = buildCsv(selectedEntries)
+    downloadCsv(`bank-register-selected-${selectedBankAccountId || 'export'}.csv`, csv)
+  }
+
+  const submitAddTransaction = () => {
+    if (!selectedBankAccountId) {
+      setAddError('Select a bank account first.')
       return
     }
-    if (transferForm.fromId === transferForm.toId) {
-      setTransferError('Source and destination must be different accounts.')
+    if (!addForm.accountId) {
+      setAddError('Account/Category is required.')
       return
     }
-    setTransferLoading(true)
-    setTransferError('')
-    try {
-      await apiClient.post(`/companies/${companyId}/banking/transfers`, {
-        fromBankAccountId: transferForm.fromId,
-        toBankAccountId:   transferForm.toId,
-        amount:            amt,
-        date:              transferForm.date,
-        memo:              transferForm.memo || undefined,
-      })
-      showToast('Transfer completed successfully')
-      setShowTransfer(false)
-      fetchTransactions()
-    } catch (e: any) {
-      setTransferError(e?.response?.data?.message ?? 'Transfer failed. Please try again.')
-    } finally {
-      setTransferLoading(false)
+    if (!addForm.description.trim()) {
+      setAddError('Description is required.')
+      return
     }
-  }
 
-  const selectedAcctObj = accounts.find(a => a.id === selectedAccount)
+    const amount = Number(addForm.amount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setAddError('Amount must be greater than zero.')
+      return
+    }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+    const created = addManualRegisterEntry({
+      bankAccountId: selectedBankAccountId,
+      date: addForm.date,
+      description: addForm.description,
+      reference: addForm.reference || undefined,
+      amount,
+      type: addForm.type,
+      accountId: addForm.accountId,
+      contactId: addForm.contactId || undefined,
+      memo: addForm.memo || undefined,
+    })
 
-  if (cidLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-      </div>
-    )
+    if (!created) {
+      setAddError('Unable to create the manual entry.')
+      return
+    }
+
+    setVersion(current => current + 1)
+    setShowAddModal(false)
+    setAddError('')
+    setAddForm({
+      date: new Date().toISOString().slice(0, 10),
+      description: '',
+      reference: '',
+      type: 'Debit',
+      amount: '',
+      accountId: '',
+      contactId: '',
+      memo: '',
+    })
+    showToast('Manual transaction added')
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
-
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-200 px-6 py-5">
-        <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
-          <div>
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking & Cash / Transactions</p>
-            <h1 className="text-2xl font-bold text-slate-900">Bank Register</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Full transaction history with running balances by account</p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap print:hidden">
-            <button
-              onClick={markAllReconciled}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <CheckSquare className="w-4 h-4 text-emerald-600" />
-              {filtered.every(t => reconciledIds.has(t.id)) ? 'Unreconcile All' : 'Mark All Reconciled'}
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <Printer className="w-4 h-4" />
-              Print
-            </button>
-            <button
-              onClick={exportCSV}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-            <button
-              onClick={openTransfer}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <ArrowRightLeft className="w-4 h-4" />
-              Transfer Funds
-            </button>
-            <button
-              onClick={() => { setPage(1); fetchTransactions() }}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        {/* ── KPI cards ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            {
-              label: 'Total Credits',
-              value: fmt(totalCredits),
-              sub: `${filtered.filter(t => t.type === 'Credit').length} inflows`,
-              color: 'text-emerald-700 bg-emerald-50',
-              icon: '↑',
-            },
-            {
-              label: 'Total Debits',
-              value: fmt(totalDebits),
-              sub: `${filtered.filter(t => t.type === 'Debit').length} outflows`,
-              color: 'text-rose-600 bg-rose-50',
-              icon: '↓',
-            },
-            {
-              label: 'Net Flow',
-              value: fmt(Math.abs(netFlow)),
-              sub: netFlow >= 0 ? 'Net inflow' : 'Net outflow',
-              color: netFlow >= 0 ? 'text-sky-700 bg-sky-50' : 'text-amber-700 bg-amber-50',
-              icon: '≈',
-            },
-            {
-              label: 'Reconciled',
-              value: `${reconciledCount} / ${totalCount}`,
-              sub: `${totalCount > 0 ? Math.round((reconciledCount / totalCount) * 100) : 0}% reconciled`,
-              color: 'text-emerald-700 bg-emerald-50',
-              icon: '✓',
-            },
-          ].map(c => (
-            <div key={c.label} className="rounded-xl border border-slate-200 bg-white p-4 flex items-start gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 ${c.color}`}>
-                {c.icon}
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">{c.label}</p>
-                <p className="text-xl font-bold text-slate-900 mt-0.5">{c.value}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">{c.sub}</p>
-              </div>
+      <div className="border-b border-slate-200 bg-white print:hidden">
+        <div className="px-6 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <button
+                onClick={() => router.push('/banking-cash/transactions')}
+                className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Bank Feed
+              </button>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Banking & Cash / Bank Transactions</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">Bank Register</h1>
+              <p className="mt-1 text-sm text-slate-500">Processed transactions, manual entries, and reconciliation for a single bank account.</p>
             </div>
-          ))}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Bank account"
+                value={selectedBankAccountId}
+                onChange={event => setSelectedBankAccountId(event.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none ring-0"
+              >
+                {MOCK_BANK_ACCOUNTS.map(account => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} - {account.accountNumber}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="search"
+                aria-label="Search register transactions"
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+                placeholder="Search payee, memo, account..."
+                className="min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none ring-0"
+              />
+              <input
+                type="date"
+                aria-label="Date from"
+                value={dateFrom}
+                onChange={event => setDateFrom(event.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none ring-0"
+              />
+              <input
+                type="date"
+                aria-label="Date to"
+                value={dateTo}
+                onChange={event => setDateTo(event.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none ring-0"
+              />
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+              >
+                <Plus className="h-4 w-4" />
+                Add Transaction
+              </button>
+              <button
+                onClick={() => setFiltersOpen(current => !current)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <button
+                onClick={() => setActivityOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Clock className="h-4 w-4" />
+                Activity
+              </button>
+              <button
+                onClick={exportVisible}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Body ────────────────────────────────────────────────────────────── */}
-      <div className="px-6 py-5">
+      <div className="hidden border-b border-slate-200 bg-white px-6 py-4 print:block">
+        <h2 className="text-lg font-bold text-slate-900">Bank Register - {selectedBankAccount?.name ?? 'Bank Account'}</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          {dateFrom || dateTo ? `${dateFrom || 'Start'} to ${dateTo || 'End'}` : 'All Dates'}
+        </p>
+      </div>
 
-        {/* Print-only header */}
-        <div className="hidden print:block mb-4">
-          <h2 className="text-lg font-bold text-slate-900">
-            Bank Register &mdash; {selectedAcctObj?.name ?? 'All Accounts'}
-            {dateFrom || dateTo ? ` \u2014 ${dateFrom || '\u2026'} to ${dateTo || '\u2026'}` : ''}
-          </h2>
-          <p className="text-xs text-slate-500">Printed {new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <div className="space-y-4 px-6 py-5">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600">
+            <span>Opening Balance: <span className="font-semibold text-slate-900">{formatMoney(openingBalance)}</span></span>
+            <span>Total Deposits: <span className="font-semibold text-emerald-700">{formatMoney(totalDeposits)}</span></span>
+            <span>Total Withdrawals: <span className="font-semibold text-rose-600">{formatMoney(totalWithdrawals)}</span></span>
+            <span>Closing Balance: <span className={`font-semibold ${closingBalance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{formatMoney(closingBalance)}</span></span>
+            <span>Reconciled: <span className="font-semibold text-emerald-700">{reconciledTotal} / {registerEntries.length}</span></span>
+          </div>
         </div>
 
-        {/* Mock data banner */}
-        {usingMock && (
-          <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            Showing sample data — no transactions found for your accounts yet.
-          </div>
-        )}
+        {filtersOpen && (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm print:hidden">
+            <div className="grid gap-3 lg:grid-cols-6">
+              <label className="space-y-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span>Account</span>
+                <select
+                  aria-label="Filter by account"
+                  value={draftFilters.accountId}
+                  onChange={event => setDraftFilters(current => ({ ...current, accountId: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-700"
+                >
+                  <option value="">All Accounts</option>
+                  {accountFilterOptions.map(account => (
+                    <option key={account.id} value={account.id}>{account.name}</option>
+                  ))}
+                </select>
+              </label>
 
-        {/* Error banner */}
-        {error && !loading && (
-          <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
-            <button onClick={fetchTransactions} className="ml-auto text-xs underline">Retry</button>
-          </div>
-        )}
+              <label className="space-y-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span>Status</span>
+                <select
+                  aria-label="Filter by status"
+                  value={draftFilters.status}
+                  onChange={event => setDraftFilters(current => ({ ...current, status: event.target.value as SourceFilter }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-700"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="imported">Imported</option>
+                  <option value="manual">Manual</option>
+                  <option value="matched">Matched</option>
+                  <option value="transfer">Transfer</option>
+                </select>
+              </label>
 
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <label className="space-y-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span>Reconciled</span>
+                <select
+                  aria-label="Filter by reconciled state"
+                  value={draftFilters.reconciled}
+                  onChange={event => setDraftFilters(current => ({ ...current, reconciled: event.target.value as ReconciledFilter }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-700"
+                >
+                  <option value="all">All</option>
+                  <option value="reconciled">Reconciled</option>
+                  <option value="unreconciled">Unreconciled</option>
+                </select>
+              </label>
 
-          {/* ── Filters toolbar ─────────────────────────────────────────────── */}
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap print:hidden">
-
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                value={search}
-                onChange={e => { setSearch(e.target.value); setPage(1) }}
-                placeholder="Search transactions…"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 transition-colors"
-              />
-            </div>
-
-            {/* Account selector */}
-            <select
-              aria-label="Filter by account"
-              value={selectedAccount}
-              onChange={e => { setSelectedAccount(e.target.value); setPage(1) }}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer max-w-[220px]"
-            >
-              <option value="all">All Accounts</option>
-              {accounts.map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.name}{a.accountNumber ? ` — ${a.accountNumber}` : ''}
-                </option>
-              ))}
-            </select>
-
-            {/* Date range */}
-            <input
-              type="date"
-              aria-label="Date from"
-              value={dateFrom}
-              onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-            />
-            <span className="text-slate-400 text-sm">–</span>
-            <input
-              type="date"
-              aria-label="Date to"
-              value={dateTo}
-              onChange={e => { setDateTo(e.target.value); setPage(1) }}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-            />
-
-            {/* Type */}
-            <select
-              aria-label="Filter by type"
-              value={typeFilter}
-              onChange={e => { setTypeFilter(e.target.value as any); setPage(1) }}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
-            >
-              <option value="All">All Types</option>
-              <option value="Credit">Credit</option>
-              <option value="Debit">Debit</option>
-            </select>
-
-            {/* Status */}
-            <select
-              aria-label="Filter by status"
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value as any); setPage(1) }}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Cleared">Cleared</option>
-              <option value="Reconciled">Reconciled</option>
-              <option value="Pending">Pending</option>
-              <option value="Voided">Voided</option>
-            </select>
-
-            <span className="ml-auto text-xs text-slate-400">{filtered.length} records</span>
-          </div>
-
-          {/* ── Reconciliation progress bar ──────────────────────────────────── */}
-          {totalCount > 0 && (
-            <div className="flex items-center gap-3 text-xs text-gray-500 px-4 py-1.5 border-b border-slate-100 print:hidden">
-              <span>{reconciledCount} of {totalCount} transactions reconciled</span>
-              <div className="flex-1 max-w-xs h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-green-500 rounded-full transition-all"
-                  style={{ width: `${(reconciledCount / totalCount) * 100}%` }}
+              <label className="space-y-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span>Min Amount</span>
+                <input
+                  type="number"
+                  aria-label="Minimum amount"
+                  value={draftFilters.minAmount}
+                  onChange={event => setDraftFilters(current => ({ ...current, minAmount: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-700"
+                  placeholder="0.00"
                 />
-              </div>
-              <span className="font-medium text-gray-700">
-                {Math.round((reconciledCount / totalCount) * 100)}%
-              </span>
-            </div>
-          )}
+              </label>
 
-          {/* ── Loading state ────────────────────────────────────────────────── */}
-          {loading && (
-            <div className="flex items-center justify-center h-40">
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-            </div>
-          )}
+              <label className="space-y-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span>Max Amount</span>
+                <input
+                  type="number"
+                  aria-label="Maximum amount"
+                  value={draftFilters.maxAmount}
+                  onChange={event => setDraftFilters(current => ({ ...current, maxAmount: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-700"
+                  placeholder="0.00"
+                />
+              </label>
 
-          {/* ── Table ───────────────────────────────────────────────────────── */}
-          {!loading && (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1050px] text-left">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                      <th className="px-4 py-3 w-28 whitespace-nowrap">Date</th>
-                      <th className="px-4 py-3 min-w-[260px]">Reference / Description</th>
-                      {selectedAccount === 'all' && <th className="px-4 py-3 w-40 whitespace-nowrap">Account</th>}
-                      <th className="px-4 py-3 w-36 whitespace-nowrap">Category</th>
-                      <th className="px-4 py-3 w-28 whitespace-nowrap">Tx Type</th>
-                      <th className="px-4 py-3 text-right whitespace-nowrap w-32">Debit</th>
-                      <th className="px-4 py-3 text-right whitespace-nowrap w-32">Credit</th>
-                      <th className="px-4 py-3 text-right whitespace-nowrap w-36 border-l-2 border-gray-300">Balance</th>
-                      <th className="px-4 py-3 w-32 whitespace-nowrap">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {pageRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={selectedAccount === 'all' ? 9 : 8} className="px-4 py-16 text-center text-slate-400 text-sm">
-                          No transactions match the current filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      <>
-                        {/* Opening balance row — only on page 1 for a specific account */}
-                        {selectedAccount !== 'all' && page === 1 && (
-                          <tr className="bg-blue-50/50 font-medium">
-                            <td colSpan={6} className="px-4 py-2 text-sm text-blue-700 italic">
-                              Opening Balance &mdash; {selectedMockAcct?.name ?? selectedAcctObj?.name}
-                            </td>
-                            <td className="px-4 py-2 text-right text-sm font-semibold text-blue-700 border-l-2 border-gray-300">
-                              {fmt(openingBalance)}
-                            </td>
-                            <td />
-                          </tr>
-                        )}
-                        {pageRows.map((tx, idx) => {
-                          const prevTx = pageRows[idx - 1]
-                          const isNewDate    = idx === 0 || prevTx?.date !== tx.date
-                          const isNewAccount = selectedAccount === 'all' &&
-                            (idx === 0 || prevTx?.accountName !== tx.accountName)
-                          const isReconciled = reconciledIds.has(tx.id)
-                          const colCount     = selectedAccount === 'all' ? 9 : 8
-
-                          return (
-                            <Fragment key={tx.id}>
-                              {isNewAccount && (
-                                <tr className="bg-slate-100 border-t-2 border-slate-200">
-                                  <td colSpan={colCount} className="px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
-                                    {tx.accountName ?? 'Unknown Account'}
-                                  </td>
-                                </tr>
-                              )}
-                              {isNewDate && (
-                                <tr className="bg-gray-50">
-                                  <td colSpan={colCount} className="px-4 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    {formatLongDate(tx.date)}
-                                  </td>
-                                </tr>
-                              )}
-                              <tr
-                                className={`hover:bg-slate-50/70 transition-colors cursor-pointer select-none ${
-                                  isReconciled ? 'border-l-4 border-green-400 bg-green-50/30' : ''
-                                }`}
-                                onDoubleClick={() => setDetailTx(tx)}
-                                title="Double-click for details"
-                              >
-                                <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap font-mono">
-                                  {tx.date}
-                                </td>
-                                <td className="px-4 py-3.5">
-                                  <div className="text-sm font-medium text-slate-800">{tx.description}</div>
-                                  {(tx.reference || tx.bankRef) && (
-                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                      {tx.reference}{tx.reference && tx.bankRef ? ' \u00b7 ' : ''}{tx.bankRef}
-                                    </div>
-                                  )}
-                                </td>
-                                {selectedAccount === 'all' && (
-                                  <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap max-w-[160px] truncate">
-                                    {tx.accountName ?? '\u2014'}
-                                  </td>
-                                )}
-                                <td className="px-4 py-3.5">
-                                  {tx.category ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 max-w-[130px] truncate block">
-                                      {tx.category}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-300 text-xs">\u2014</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3.5">
-                                  {tx.transactionType ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-sky-50 text-sky-700 border border-sky-100 whitespace-nowrap">
-                                      {tx.transactionType}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-300 text-xs">\u2014</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3.5 text-right font-mono text-sm">
-                                  {tx.type === 'Debit'
-                                    ? <span className="text-rose-600 font-semibold">{fmt(tx.amount)}</span>
-                                    : <span className="text-slate-300">\u2014</span>}
-                                </td>
-                                <td className="px-4 py-3.5 text-right font-mono text-sm">
-                                  {tx.type === 'Credit'
-                                    ? <span className="text-emerald-700 font-semibold">{fmt(tx.amount)}</span>
-                                    : <span className="text-slate-300">\u2014</span>}
-                                </td>
-                                <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold whitespace-nowrap border-l-2 border-gray-300">
-                                  {tx._balance !== 0 || selectedAccount !== 'all'
-                                    ? <span className={tx._balance < 0 ? 'text-red-600 font-bold' : 'text-slate-800'}>{fmt(tx._balance)}</span>
-                                    : <span className="text-slate-300">\u2014</span>}
-                                </td>
-                                <td className="px-4 py-3.5">
-                                  <StatusBadge status={tx.status} />
-                                </td>
-                              </tr>
-                            </Fragment>
-                          )
-                        })}
-                      </>
-                    )}
-                  </tbody>
-                  {pageRows.length > 0 && (
-                    <tfoot>
-                      <tr className="bg-slate-50 border-t-2 border-slate-200 text-sm font-bold">
-                        <td colSpan={selectedAccount === 'all' ? 5 : 4} className="px-4 py-3 text-xs text-slate-500 uppercase">
-                          Page totals ({pageRows.length})
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-rose-600">
-                          {fmt(pageRows.filter(t => t.type === 'Debit').reduce((s, t) => s + t.amount, 0))}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-emerald-700">
-                          {fmt(pageRows.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0))}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-800 border-l-2 border-gray-300">
-                          {pageRows.length > 0 ? fmt(pageRows[pageRows.length - 1]._balance) : '\u2014'}
-                        </td>
-                        <td />
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-
-              {/* ── Pagination ─────────────────────────────────────────────── */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 print:hidden">
-                  <span className="text-xs text-slate-500">
-                    Page {page} of {totalPages} · {filtered.length} records
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const start = Math.max(1, Math.min(page - 2, totalPages - 4))
-                      const n = start + i
-                      return (
-                        <button
-                          key={n}
-                          onClick={() => setPage(n)}
-                          className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                            n === page
-                              ? 'bg-emerald-600 text-white'
-                              : 'text-slate-500 hover:bg-slate-100'
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      )
-                    })}
-                    <button
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* ── Bank Reconciliation Widget ───────────────────────────────────── */}
-        <div className="mt-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:hidden">
-          <button
-            onClick={() => setReconcileOpen(o => !o)}
-            className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-emerald-600" />
-              Bank Reconciliation
-            </span>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${reconcileOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {reconcileOpen && (
-            <div className="px-5 pb-5 border-t border-slate-100">
-              <div className="mt-4 max-w-sm">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Statement Balance (from your bank statement)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">&#8369;</span>
+              <div className="space-y-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span>Saved Filters</span>
+                <div className="flex gap-2">
                   <input
-                    type="number"
-                    value={statementBalance}
-                    onChange={e => setStatementBalance(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-7 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    aria-label="Saved filter name"
+                    value={savedFilterName}
+                    onChange={event => setSavedFilterName(event.target.value)}
+                    placeholder="Save current"
+                    className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-700"
                   />
+                  <button
+                    onClick={saveCurrentFilter}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case text-slate-700 hover:bg-slate-50"
+                  >
+                    Save
+                  </button>
                 </div>
               </div>
+            </div>
 
-              <div className="mt-4 space-y-2 text-sm max-w-sm">
-                {[
-                  { label: 'Calculated Balance',         value: closingBalance,         sign: '',  cls: 'text-slate-800' },
-                  { label: 'Less: Outstanding Withdrawals', value: outstandingWithdrawals, sign: '-', cls: 'text-rose-600' },
-                  { label: 'Add: Outstanding Deposits',  value: outstandingDeposits,    sign: '+', cls: 'text-emerald-700' },
-                  { label: 'Adjusted Book Balance',      value: adjustedBookBalance,    sign: '',  cls: 'font-semibold text-slate-900 border-t border-slate-200 pt-2 mt-2' },
-                ].map(row => (
-                  <div key={row.label} className={`flex justify-between ${row.cls}`}>
-                    <span className="text-slate-500">{row.label}</span>
-                    <span className="font-mono">{row.sign}{fmt(Math.abs(row.value))}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={applyFilters}
+                className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Apply Filters
+              </button>
+              <button
+                onClick={clearAllFilters}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Clear Filters
+              </button>
+            </div>
+
+            {savedFilters.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                {savedFilters.map(filter => (
+                  <div key={filter.name} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
+                    <button onClick={() => applySavedFilter(filter)} className="font-medium hover:text-slate-900">
+                      {filter.name}
+                    </button>
+                    <button aria-label={`Remove saved filter ${filter.name}`} title={`Remove saved filter ${filter.name}`} onClick={() => removeSavedFilter(filter.name)} className="text-slate-400 hover:text-rose-500">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 ))}
-                <div className={`flex justify-between font-bold border-t-2 border-slate-300 pt-2 mt-2 ${
-                  reconcileDiff === 0 ? 'text-emerald-600' : 'text-red-600'
-                }`}>
-                  <span className="text-slate-600 font-semibold">Difference</span>
-                  <span className="font-mono">{fmt(Math.abs(reconcileDiff))}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeFilterPills.length > 0 && (
+          <div className="flex flex-wrap gap-2 print:hidden">
+            {activeFilterPills.map(filter => (
+              <button
+                key={filter.key}
+                onClick={filter.onRemove}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm hover:border-slate-300"
+              >
+                {filter.label}
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1260px] w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAllVisible}
+                      aria-label="Select all visible transactions"
+                    />
+                  </th>
+                  <th className="w-28 px-4 py-3">Date</th>
+                  <th className="min-w-[260px] px-4 py-3">Reference / Description</th>
+                  <th className="w-48 px-4 py-3">Payee / Name</th>
+                  <th className="w-48 px-4 py-3">Account / Category</th>
+                  <th className="w-52 px-4 py-3">Memo / Notes</th>
+                  <th className="w-32 px-4 py-3 text-right">Withdrawal</th>
+                  <th className="w-32 px-4 py-3 text-right">Deposit</th>
+                  <th className="w-36 border-l-2 border-slate-300 px-4 py-3 text-right">Balance</th>
+                  <th className="w-40 px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {visibleEntries.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-16 text-center text-sm text-slate-400">
+                      No register transactions match the current filters.
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                    <tr className="bg-blue-50/50 font-medium">
+                      <td colSpan={7} className="px-4 py-2 text-sm italic text-blue-700">
+                        Opening Balance - {selectedBankAccount?.name}
+                      </td>
+                      <td className="border-l-2 border-slate-300 px-4 py-2 text-right text-sm font-semibold text-blue-700">
+                        {formatMoney(openingBalance)}
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+
+                    {visibleEntries.map((tx, index) => {
+                      const previous = visibleEntries[index - 1]
+                      const isNewDate = index === 0 || previous?.date !== tx.date
+                      const isEditingAccount = editingCell?.txId === tx.id && editingCell.field === 'account'
+                      const isEditingContact = editingCell?.txId === tx.id && editingCell.field === 'contact'
+                      const isEditingMemo = editingCell?.txId === tx.id && editingCell.field === 'memo'
+
+                      return (
+                        <Fragment key={tx.id}>
+                          {isNewDate && (
+                            <tr className="bg-gray-50">
+                              <td colSpan={10} className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                {formatLongDate(tx.date)}
+                              </td>
+                            </tr>
+                          )}
+                          <tr
+                            onDoubleClick={() => setDetailTxId(tx.id)}
+                            className={`transition-colors hover:bg-slate-50/80 ${tx.reconciled ? 'border-l-4 border-green-400 bg-green-50/30' : ''}`}
+                            title="Double-click for details"
+                          >
+                            <td className="px-3 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(tx.id)}
+                                onChange={() => toggleSelected(tx.id)}
+                                aria-label={`Select ${tx.description}`}
+                              />
+                            </td>
+                            <td className="px-4 py-3 align-top font-mono text-sm text-slate-600">{formatShortDate(tx.date)}</td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="font-medium text-slate-800">{tx.description}</div>
+                              <div className="mt-0.5 text-[11px] text-slate-400 font-mono">{tx.ref ?? tx.bankRef ?? 'No reference'}</div>
+                            </td>
+                            <td className="px-4 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
+                              {isEditingContact ? (
+                                <select
+                                  autoFocus
+                                  aria-label={`Edit payee for ${tx.description}`}
+                                  value={editingValue}
+                                  onChange={event => setEditingValue(event.target.value)}
+                                  onBlur={() => saveEdit(tx)}
+                                  className="w-full rounded-md border border-blue-300 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none"
+                                >
+                                  <option value="">No payee</option>
+                                  {MOCK_ENTITIES.map(entity => (
+                                    <option key={entity.id} value={entity.id}>{entity.name}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <button
+                                  onClick={() => beginEdit(tx, 'contact')}
+                                  className="w-full rounded-md border border-transparent px-2 py-1.5 text-left text-sm text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                                >
+                                  {tx.contactName ?? <span className="text-slate-300">Select payee</span>}
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
+                              {isEditingAccount ? (
+                                <select
+                                  autoFocus
+                                  aria-label={`Edit account for ${tx.description}`}
+                                  value={editingValue}
+                                  onChange={event => setEditingValue(event.target.value)}
+                                  onBlur={() => saveEdit(tx)}
+                                  className="w-full rounded-md border border-blue-300 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none"
+                                >
+                                  <option value="">Select account</option>
+                                  {MOCK_COA_ACCOUNTS.map(account => (
+                                    <option key={account.id} value={account.id}>{account.code} - {account.name}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <button
+                                  onClick={() => beginEdit(tx, 'account')}
+                                  className="w-full rounded-md border border-transparent px-2 py-1.5 text-left text-sm text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                                >
+                                  {tx.accountName ?? <span className="text-slate-300">Select account</span>}
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
+                              {isEditingMemo ? (
+                                <input
+                                  autoFocus
+                                  aria-label={`Edit memo for ${tx.description}`}
+                                  value={editingValue}
+                                  onChange={event => setEditingValue(event.target.value)}
+                                  onBlur={() => saveEdit(tx)}
+                                  onKeyDown={event => {
+                                    if (event.key === 'Enter') saveEdit(tx)
+                                  }}
+                                  className="w-full rounded-md border border-blue-300 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none"
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => beginEdit(tx, 'memo')}
+                                  className="w-full rounded-md border border-transparent px-2 py-1.5 text-left text-sm text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                                >
+                                  {tx.memo || <span className="text-slate-300">Add memo</span>}
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono text-sm align-top">
+                              {tx.amount < 0 ? <span className="font-semibold text-rose-600">{formatMoney(Math.abs(tx.amount))}</span> : <span className="text-slate-300">-</span>}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono text-sm align-top">
+                              {tx.amount > 0 ? <span className="font-semibold text-emerald-700">{formatMoney(tx.amount)}</span> : <span className="text-slate-300">-</span>}
+                            </td>
+                            <td className="border-l-2 border-slate-300 px-4 py-3 text-right font-mono text-sm align-top">
+                              <span className={tx.runningBalance < 0 ? 'font-bold text-red-600' : 'text-slate-800'}>
+                                {formatMoney(tx.runningBalance)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="space-y-2">
+                                <StatusBadge label={getTransactionSourceLabel(tx)} />
+                                <button
+                                  onClick={event => {
+                                    event.stopPropagation()
+                                    toggleSingleReconciliation(tx)
+                                  }}
+                                  className={`block rounded-md px-2 py-1 text-xs font-medium ${tx.reconciled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                >
+                                  {tx.reconciled ? 'Reconciled' : 'Mark Reconciled'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        </Fragment>
+                      )
+                    })}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm print:hidden">
+          <button
+            onClick={() => setReconcileOpen(current => !current)}
+            className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <span>Bank Reconciliation</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${reconcileOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {reconcileOpen && (
+            <div className="border-t border-slate-100 px-5 pb-5 pt-4">
+              <div className="max-w-sm">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Statement Balance</label>
+                <input
+                  type="number"
+                  aria-label="Statement balance"
+                  value={statementBalance}
+                  onChange={event => setStatementBalance(event.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                />
+              </div>
+
+              <div className="mt-4 max-w-md space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-slate-500">Calculated Balance</span><span className="font-mono text-slate-800">{formatMoney(closingBalance)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Less: Outstanding Withdrawals</span><span className="font-mono text-rose-600">-{formatMoney(outstandingWithdrawals)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Add: Outstanding Deposits</span><span className="font-mono text-emerald-700">+{formatMoney(outstandingDeposits)}</span></div>
+                <div className="flex justify-between border-t border-slate-200 pt-2 font-semibold"><span className="text-slate-700">Adjusted Book Balance</span><span className="font-mono text-slate-900">{formatMoney(adjustedBookBalance)}</span></div>
+                <div className={`flex justify-between border-t-2 border-slate-300 pt-2 font-bold ${statementBalance && reconciliationDifference === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <span>Difference</span>
+                  <span className="font-mono">{formatMoney(Math.abs(reconciliationDifference))}</span>
                 </div>
               </div>
 
-              {statementBalance !== '' && (
-                <div className={`mt-4 px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2 ${
-                  reconcileDiff === 0
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-red-50 text-red-600 border border-red-200'
-                }`}>
-                  {reconcileDiff === 0
-                    ? '✅ RECONCILED'
-                    : `❌ NOT BALANCED — Difference: ${fmt(Math.abs(reconcileDiff))}`}
+              {statementBalance && (
+                <div className={`mt-4 rounded-lg border px-4 py-3 text-sm font-semibold ${reconciliationDifference === 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-600'}`}>
+                  {reconciliationDifference === 0 ? 'RECONCILED' : 'NOT BALANCED'}
                 </div>
               )}
             </div>
@@ -880,274 +1124,342 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* ── Toast ─────────────────────────────────────────────────────────────── */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
-          {toast}
+      {selectedEntries.length > 0 && (
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 print:hidden">
+          <div className="flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-2xl">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">{selectedEntries.length} transactions selected</p>
+              <p className="text-xs text-slate-500">{formatMoney(selectedTotal)} total</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={reconcileSelected} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                {selectedEntries.every(tx => tx.reconciled) ? 'Unreconcile Selected' : 'Reconcile Selected'}
+              </button>
+              <button onClick={openBatchEdit} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Edit Account
+              </button>
+              <button onClick={deleteSelected} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100">
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+              <button onClick={exportSelected} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                CSV
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── Detail Popover ────────────────────────────────────────────────────── */}
-      {detailTx && (() => {
-        const history: AuditLogEntry[] = getAuditLogForEntity(detailTx.id)
-        const DOT: Record<string, string> = {
-          categorized: 'bg-emerald-500', matched: 'bg-sky-500', split: 'bg-purple-500',
-          excluded: 'bg-slate-400', reconciled: 'bg-green-600', unreconciled: 'bg-amber-500',
-        }
-        return (
+      {activityOpen && (
+        <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setActivityOpen(false)}>
           <div
-            className="fixed inset-0 z-40 bg-black/20 flex items-center justify-center p-4"
-            onClick={() => setDetailTx(null)}
-            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && setDetailTx(null)}
-            tabIndex={-1}
+            className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl"
+            onClick={event => event.stopPropagation()}
           >
-            <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-slate-100">
-                <div className="flex-1 min-w-0 mr-3">
-                  <h2 className="font-bold text-slate-900 text-base truncate">{detailTx.description}</h2>
-                  <p className="text-xs text-slate-500 mt-1">{formatLongDate(detailTx.date)}</p>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Register Activity</h2>
+                <p className="text-xs text-slate-500">Audit trail for register edits, categorizations, and reconciliation.</p>
+              </div>
+              <button aria-label="Close register activity" title="Close register activity" onClick={() => setActivityOpen(false)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-100 px-5 py-3">
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filter</label>
+              <select
+                aria-label="Filter register activity"
+                value={activityFilter}
+                onChange={event => setActivityFilter(event.target.value as ActivityFilter)}
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+              >
+                <option value="all">All</option>
+                <option value="edits">Edits</option>
+                <option value="reconciliations">Reconciliations</option>
+                <option value="categorizations">Categorizations</option>
+              </select>
+            </div>
+
+            <div className="h-[calc(100%-128px)] overflow-y-auto px-5 py-4">
+              {registerActivityEntries.length === 0 ? (
+                <p className="text-sm text-slate-400">No activity yet for this register.</p>
+              ) : (
+                <div className="space-y-3">
+                  {registerActivityEntries.map(entry => (
+                    <div key={entry.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
+                      <div className="flex items-start gap-2">
+                        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getAuditDot(entry.action)}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-slate-700">{entry.details}</p>
+                          <p className="mt-1 text-xs text-slate-400">{entry.userName} - {new Date(entry.timestamp).toLocaleString('en-PH')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <button onClick={() => setDetailTx(null)} className="p-1 text-slate-400 hover:text-slate-600 shrink-0">
-                  <X className="w-4 h-4" />
-                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detailTx && (
+        <div className="fixed inset-0 z-40 bg-black/25 p-4" onClick={() => setDetailTxId(null)}>
+          <div
+            className="mx-auto mt-12 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-bold text-slate-900">{detailTx.description}</h2>
+                <p className="mt-1 text-xs text-slate-500">{formatLongDate(detailTx.date)}</p>
+              </div>
+              <button aria-label="Close transaction detail" title="Close transaction detail" onClick={() => setDetailTxId(null)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 text-sm">
+                <span className="text-slate-500">Payee</span>
+                <span className="text-slate-800">{detailTx.contactName ?? 'No payee'}</span>
+                <span className="text-slate-500">Category</span>
+                <span className="text-slate-800">{detailTx.accountName ?? 'Unassigned'}</span>
+                <span className="text-slate-500">Amount</span>
+                <span className={detailTx.amount < 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-700'}>
+                  {detailTx.amount < 0 ? '-' : '+'}{formatMoney(Math.abs(detailTx.amount))}
+                </span>
+                <span className="text-slate-500">Status</span>
+                <span className="text-slate-800">{getTransactionSourceLabel(detailTx)}</span>
+                <span className="text-slate-500">JE Reference</span>
+                <span className="font-mono text-xs text-slate-700">{detailTx.journalEntryId ?? 'No journal entry'}</span>
+                <span className="text-slate-500">Memo</span>
+                <span className="text-slate-800">{detailTx.memo ?? 'No memo'}</span>
               </div>
 
-              {/* Details */}
-              <div className="px-6 py-4">
-                <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-sm">
-                  <span className="text-slate-500">Category</span>
-                  <span className="font-medium text-slate-800">{detailTx.category || '\u2014'}</span>
-                  <span className="text-slate-500">Amount</span>
-                  <span className={`font-semibold ${detailTx.type === 'Debit' ? 'text-rose-600' : 'text-emerald-700'}`}>
-                    {detailTx.type === 'Debit' ? '\u2212' : '+'}{fmt(detailTx.amount)}
-                  </span>
-                  <span className="text-slate-500">Balance</span>
-                  <span className={`font-mono font-semibold ${detailTx._balance < 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                    {fmt(detailTx._balance)}
-                  </span>
-                  <span className="text-slate-500">Status</span>
-                  <span><StatusBadge status={detailTx.status} /></span>
-                  {detailTx.reference && (
-                    <>
-                      <span className="text-slate-500">Reference</span>
-                      <span className="font-mono text-xs text-slate-700">{detailTx.reference}</span>
-                    </>
-                  )}
-                  <span className="text-slate-500">Reconciled</span>
-                  <span className={reconciledIds.has(detailTx.id) ? 'text-green-600 font-medium' : 'text-slate-400'}>
-                    {reconciledIds.has(detailTx.id) ? 'Yes' : 'No'}
-                  </span>
+              <div className="border-t border-slate-100 pt-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Activity</p>
+                  <select
+                    aria-label="Filter transaction detail activity"
+                    value={detailFilter}
+                    onChange={event => setDetailFilter(event.target.value as ActivityFilter)}
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                  >
+                    <option value="all">All</option>
+                    <option value="edits">Edits</option>
+                    <option value="reconciliations">Reconciliations</option>
+                    <option value="categorizations">Categorizations</option>
+                  </select>
                 </div>
 
-                {/* Audit history */}
-                {history.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Activity</p>
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                      {history.map(e => (
-                        <div key={e.id} className="flex items-start gap-2 text-xs">
-                          <span className={`w-2 h-2 rounded-full mt-0.5 shrink-0 ${DOT[e.action] ?? 'bg-slate-300'}`} />
-                          <div>
-                            <span className="text-slate-700">{e.details}</span>
-                            <span className="text-slate-400 ml-1">\u00b7 {e.userName}</span>
-                          </div>
+                {detailHistory.length === 0 ? (
+                  <p className="text-sm text-slate-400">No activity for {getAuditFilterLabel(detailFilter).toLowerCase()}.</p>
+                ) : (
+                  <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {detailHistory.map(entry => (
+                      <div key={entry.id} className="flex items-start gap-2 text-sm">
+                        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getAuditDot(entry.action)}`} />
+                        <div>
+                          <p className="text-slate-700">{entry.details}</p>
+                          <p className="text-xs text-slate-400">{entry.userName} - {new Date(entry.timestamp).toLocaleString('en-PH')}</p>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Footer */}
-              <div className="flex items-center gap-2 px-6 py-4 border-t border-slate-100">
-                <button
-                  onClick={() => {
-                    const was = reconciledIds.has(detailTx.id)
-                    setReconciledIds(prev => {
-                      const next = new Set(prev)
-                      was ? next.delete(detailTx.id) : next.add(detailTx.id)
-                      return next
-                    })
-                    toggleReconciliation(detailTx.id, !was)
-                  }}
-                  className={`flex-1 py-2 text-sm rounded-lg font-medium transition-colors ${
-                    reconciledIds.has(detailTx.id)
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
-                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                  }`}
-                >
-                  {reconciledIds.has(detailTx.id) ? 'Unreconcile' : 'Mark Reconciled'}
-                </button>
-                <button
-                  onClick={() => setDetailTx(null)}
-                  className="flex-1 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+            <div className="flex items-center gap-2 border-t border-slate-100 px-6 py-4">
+              <button
+                onClick={() => showToast(detailTx.journalEntryId ? `Journal Entry ${detailTx.journalEntryId}` : 'No journal entry linked')}
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                View Journal Entry
+              </button>
+              <button
+                onClick={() => setDetailTxId(null)}
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Close
+              </button>
             </div>
           </div>
-        )
-      })()}
+        </div>
+      )}
 
-      {/* ── Transfer Funds Modal ───────────────────────────────────────────────── */}
-      {showTransfer && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 flex items-center justify-center p-4"
-          onClick={() => setShowTransfer(false)}
-        >
+      {showAddModal && (
+        <div className="fixed inset-0 z-40 bg-black/25 p-4" onClick={() => setShowAddModal(false)}>
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md"
-            onClick={e => e.stopPropagation()}
+            className="mx-auto mt-10 w-full max-w-xl rounded-2xl bg-white shadow-2xl"
+            onClick={event => event.stopPropagation()}
           >
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <ArrowRightLeft className="w-5 h-5 text-emerald-600" />
-                <h2 className="font-bold text-slate-900">Transfer Funds</h2>
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Add Manual Transaction</h2>
+                <p className="text-xs text-slate-500">Manual entries stay in the Bank Register and require an account selection.</p>
               </div>
-              <button
-                onClick={() => setShowTransfer(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
+              <button aria-label="Close add transaction dialog" title="Close add transaction dialog" onClick={() => setShowAddModal(false)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Modal body */}
-            <div className="px-6 py-5 space-y-4">
-              {/* From */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  From Account <span className="text-red-500">*</span>
-                </label>
-                <select
-                  aria-label="From Account"
-                  value={transferForm.fromId}
-                  onChange={e => setTransferForm(f => ({ ...f, fromId: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
-                >
-                  <option value="">Select source account…</option>
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id} disabled={a.id === transferForm.toId}>
-                      {a.name}{a.accountNumber ? ` — ${a.accountNumber}` : ''}
-                      {a.balance !== undefined ? ` (${fmt(a.balance)})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* To */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  To Account <span className="text-red-500">*</span>
-                </label>
-                <select
-                  aria-label="To Account"
-                  value={transferForm.toId}
-                  onChange={e => setTransferForm(f => ({ ...f, toId: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
-                >
-                  <option value="">Select destination account…</option>
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id} disabled={a.id === transferForm.fromId}>
-                      {a.name}{a.accountNumber ? ` — ${a.accountNumber}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Amount + Date */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Amount <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number" min="0.01" step="0.01"
-                    value={transferForm.amount}
-                    onChange={e => setTransferForm(f => ({ ...f, amount: e.target.value }))}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
-                  <input
-                    type="date"
-                    aria-label="Transfer Date"
-                    value={transferForm.date}
-                    onChange={e => setTransferForm(f => ({ ...f, date: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
-                  />
-                </div>
-              </div>
-
-              {/* Memo */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Memo</label>
+            <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+              <label className="space-y-1 text-sm text-slate-600">
+                <span>Date</span>
                 <input
-                  type="text"
-                  value={transferForm.memo}
-                  onChange={e => setTransferForm(f => ({ ...f, memo: e.target.value }))}
-                  placeholder="Optional description"
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  type="date"
+                  aria-label="Manual entry date"
+                  value={addForm.date}
+                  onChange={event => setAddForm(current => ({ ...current, date: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
                 />
-              </div>
+              </label>
 
-              {/* Journal preview */}
-              {transferForm.fromId && transferForm.toId && transferForm.amount && (
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
-                  <p className="font-semibold text-slate-700 mb-1">Journal Entry Preview</p>
-                  <div className="flex justify-between">
-                    <span>DR — {accounts.find(a => a.id === transferForm.toId)?.name ?? 'To Account'}</span>
-                    <span className="font-mono font-semibold text-emerald-700">
-                      {fmt(parseFloat(transferForm.amount) || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>CR — {accounts.find(a => a.id === transferForm.fromId)?.name ?? 'From Account'}</span>
-                    <span className="font-mono font-semibold text-blue-700">
-                      {fmt(parseFloat(transferForm.amount) || 0)}
-                    </span>
-                  </div>
-                </div>
-              )}
+              <label className="space-y-1 text-sm text-slate-600">
+                <span>Reference</span>
+                <input
+                  aria-label="Manual entry reference"
+                  value={addForm.reference}
+                  onChange={event => setAddForm(current => ({ ...current, reference: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                />
+              </label>
 
-              {transferError && (
-                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{transferError}</p>
-              )}
+              <label className="space-y-1 text-sm text-slate-600 md:col-span-2">
+                <span>Description</span>
+                <input
+                  aria-label="Manual entry description"
+                  value={addForm.description}
+                  onChange={event => setAddForm(current => ({ ...current, description: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                />
+              </label>
+
+              <label className="space-y-1 text-sm text-slate-600">
+                <span>Type</span>
+                <select
+                  aria-label="Manual entry type"
+                  value={addForm.type}
+                  onChange={event => setAddForm(current => ({ ...current, type: event.target.value as AddEntryForm['type'] }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="Debit">Withdrawal</option>
+                  <option value="Credit">Deposit</option>
+                </select>
+              </label>
+
+              <label className="space-y-1 text-sm text-slate-600">
+                <span>Amount</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  aria-label="Manual entry amount"
+                  value={addForm.amount}
+                  onChange={event => setAddForm(current => ({ ...current, amount: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                />
+              </label>
+
+              <label className="space-y-1 text-sm text-slate-600">
+                <span>Account / Category *</span>
+                <select
+                  aria-label="Manual entry account"
+                  value={addForm.accountId}
+                  onChange={event => setAddForm(current => ({ ...current, accountId: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="">Select account</option>
+                  {MOCK_COA_ACCOUNTS.map(account => (
+                    <option key={account.id} value={account.id}>{account.code} - {account.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1 text-sm text-slate-600">
+                <span>Payee / Name</span>
+                <select
+                  aria-label="Manual entry payee"
+                  value={addForm.contactId}
+                  onChange={event => setAddForm(current => ({ ...current, contactId: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="">No payee</option>
+                  {MOCK_ENTITIES.map(entity => (
+                    <option key={entity.id} value={entity.id}>{entity.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1 text-sm text-slate-600 md:col-span-2">
+                <span>Memo</span>
+                <input
+                  aria-label="Manual entry memo"
+                  value={addForm.memo}
+                  onChange={event => setAddForm(current => ({ ...current, memo: event.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                />
+              </label>
+
+              {addError && <p className="md:col-span-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{addError}</p>}
             </div>
 
-            {/* Modal footer */}
-            <div className="flex items-center gap-2 px-6 py-4 border-t border-slate-100">
-              <button
-                onClick={() => setShowTransfer(false)}
-                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-              >
+            <div className="flex items-center gap-2 border-t border-slate-100 px-6 py-4">
+              <button onClick={() => setShowAddModal(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 Cancel
               </button>
-              <button
-                onClick={submitTransfer}
-                disabled={
-                  transferLoading ||
-                  !transferForm.fromId ||
-                  !transferForm.toId ||
-                  !transferForm.amount
-                }
-                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {transferLoading
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Transferring…</>
-                  : <><ArrowRightLeft className="w-4 h-4" /> Transfer Funds</>}
+              <button onClick={submitAddTransaction} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                Save Transaction
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {batchEditOpen && (
+        <div className="fixed inset-0 z-40 bg-black/20 p-4" onClick={() => setBatchEditOpen(false)}>
+          <div
+            className="mx-auto mt-24 w-full max-w-md rounded-2xl bg-white shadow-2xl"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="border-b border-slate-100 px-6 py-4">
+              <h2 className="text-base font-semibold text-slate-900">Batch Edit Account</h2>
+              <p className="text-xs text-slate-500">Apply one account to {selectedEntries.length} selected transactions.</p>
+            </div>
+            <div className="space-y-3 px-6 py-5">
+              <label className="space-y-1 text-sm text-slate-600">
+                <span>Set Account to</span>
+                <select
+                  aria-label="Batch account selection"
+                  value={batchAccountId}
+                  onChange={event => setBatchAccountId(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="">Select account</option>
+                  {MOCK_COA_ACCOUNTS.map(account => (
+                    <option key={account.id} value={account.id}>{account.code} - {account.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex items-center gap-2 border-t border-slate-100 px-6 py-4">
+              <button onClick={() => setBatchEditOpen(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button onClick={applyBatchAccountEdit} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed right-4 top-4 z-50 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg print:hidden">
+          {toast}
         </div>
       )}
     </div>

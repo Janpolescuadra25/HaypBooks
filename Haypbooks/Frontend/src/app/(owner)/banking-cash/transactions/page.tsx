@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  AlertCircle, ArrowLeftRight, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
+  AlertCircle, ArrowLeftRight, BookOpen, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
   ChevronRight, ChevronUp, Clock, FileUp, GitMerge, Link2, Loader2, RefreshCw,
   RotateCcw, Scissors, Search, Sparkles, User, X,
 } from 'lucide-react'
@@ -1001,7 +1001,7 @@ export default function BankFeedPage() {
       {/* ── A. Header ──────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
-          <h2 className="text-lg font-semibold text-slate-800 whitespace-nowrap">Bank transactions</h2>
+          <h2 className="text-lg font-semibold text-slate-800 whitespace-nowrap">Bank Transactions</h2>
           <select
             value={selectedAcct}
             onChange={e => setSelectedAcct(e.target.value)}
@@ -1019,6 +1019,12 @@ export default function BankFeedPage() {
         <div className="flex items-center gap-2 shrink-0">
           <input ref={csvRef} type="file" accept=".csv" className="hidden"
             onChange={() => showToast('CSV upload coming soon')} />
+          <button
+            onClick={() => router.push('/banking-cash/transactions/register')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <BookOpen size={14} /> Bank Register
+          </button>
           <button
             onClick={() => setLinkAcctOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
