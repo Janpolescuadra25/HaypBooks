@@ -740,6 +740,43 @@ export default function BankFeedPage() {
     showToast(`Matched to ${jeRef}`)
   }
 
+  // ─── Smart Match Action ────────────────────────────────────────────────────
+  // Called from the [Match (N)] button in the Actions column.
+  // 1 suggestion → match immediately; 2+ suggestions → expand + scroll to match cards.
+  const smartMatchAction = useCallback((tx: BankTransaction) => {
+    const count = matchSuggestions[tx.id] ?? 0
+    if (count === 0) {
+      toggleExpand(tx.id, tx)
+      return
+    }
+    if (count === 1) {
+      // Exactly 1 match — do it right away (no expand needed)
+      const scanned = detectAutoMatches([mockStore.items.find(m => m.id === tx.id)!].filter(Boolean))
+      const matches = scanned[tx.id] ?? []
+      if (matches.length === 1) {
+        const { je } = matches[0]
+        const mType: 'Bank Payment' | 'Bank Receipt' = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt'
+        const jeRef = je.referenceNo ?? je.id.slice(0, 8)
+        if (Math.abs(tx.amount) > 50000) {
+          // Large amount — expand so user can confirm via card UI
+          toggleExpand(tx.id, tx)
+          setTimeout(() => {
+            document.getElementById(`match-cards-${tx.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }, 120)
+        } else {
+          handleQuickMatch(tx, je.id, mType, jeRef)
+        }
+        return
+      }
+    }
+    // 2+ matches — expand row and scroll to match cards
+    toggleExpand(tx.id, tx)
+    setTimeout(() => {
+      document.getElementById(`match-cards-${tx.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 120)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchSuggestions])
+
   // ─── Exclude ─────────────────────────────────────────────────────────────
   const excludeRows = async (ids: string[]) => {
     // Update mock state
@@ -1200,7 +1237,14 @@ export default function BankFeedPage() {
                       </td>
                       {/* Description */}
                       <td className={tdClass} style={{ width: colW.description }}>
-                        <div className="font-medium text-slate-800 truncate">{tx.description}</div>
+                        <div className="font-medium text-slate-800 truncate flex items-center gap-1">
+                          <span className="truncate">{tx.description}</span>
+                          {tx.status === 'PENDING' && (matchSuggestions[tx.id] ?? 0) > 0 && (
+                            <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700">
+                              {matchSuggestions[tx.id]} match{matchSuggestions[tx.id] > 1 ? 'es' : ''}
+                            </span>
+                          )}
+                        </div>
                         {tx.bankRef && <div className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">{tx.bankRef}</div>}
                       </td>
                       {/* Name */}
@@ -1240,25 +1284,49 @@ export default function BankFeedPage() {
                       <td className={tdClass} style={{ width: colW.actions }}
                           onClick={e => e.stopPropagation()}>
                         {tx.status === 'PENDING' && (
-                          <div className="flex items-center gap-1">
-                            {matchSuggestions[tx.id] > 0 && (
-                              <button
-                                onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
-                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                title={`${matchSuggestions[tx.id]} match suggestion${matchSuggestions[tx.id] !== 1 ? 's' : ''}`}
-                              >
-                                <Link2 size={10} /> {matchSuggestions[tx.id]}
-                              </button>
-                            )}
+                          (matchSuggestions[tx.id] ?? 0) > 0 ? (
+                            <button
+                              onClick={e => { e.stopPropagation(); smartMatchAction(tx) }}
+                              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            >
+                              <GitMerge size={11} /> Match ({matchSuggestions[tx.id]})
+                            </button>
+                          ) : (
                             <button
                               onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
-                              className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                             >
                               Add
                             </button>
+                          )
+                        )}
+                        {tx.status === 'CATEGORIZED' && tx.transactionType === 'Split Transaction' && (
+                          <div className="flex flex-col items-start gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <Scissors size={12} className="text-purple-600 shrink-0" />
+                              <button
+                                onClick={() => undoTransaction(tx)}
+                                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
+                              >
+                                <RotateCcw size={11} /> Undo Split
+                              </button>
+                            </div>
                           </div>
                         )}
-                        {(tx.status === 'CATEGORIZED' || tx.status === 'MATCHED') && (
+                        {tx.status === 'MATCHED' && (
+                          <div className="flex flex-col items-start gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <Link2 size={12} className="text-blue-600 shrink-0" />
+                              <button
+                                onClick={() => undoTransaction(tx)}
+                                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
+                              >
+                                <RotateCcw size={11} /> Undo Match
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {tx.status === 'CATEGORIZED' && tx.transactionType !== 'Split Transaction' && (
                           <div className="flex flex-col items-start gap-1">
                             <div className="flex items-center gap-1.5">
                               <Check size={12} className="text-emerald-600 shrink-0" />
@@ -1269,19 +1337,6 @@ export default function BankFeedPage() {
                                 <RotateCcw size={11} /> Undo
                               </button>
                             </div>
-                            {tx.transactionType && (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                                tx.transactionType === 'Bank Payment'      ? 'bg-red-50 text-red-600' :
-                                tx.transactionType === 'Bank Receipt'      ? 'bg-emerald-50 text-emerald-700' :
-                                tx.transactionType === 'Split Transaction' ? 'bg-purple-50 text-purple-700' :
-                                'bg-blue-50 text-blue-700'
-                              }`}>
-                                {tx.transactionType === 'Bank Payment'      ? 'Payment' :
-                                 tx.transactionType === 'Bank Receipt'      ? 'Receipt' :
-                                 tx.transactionType === 'Split Transaction' ? 'Split' :
-                                 tx.status === 'MATCHED'                   ? 'Matched' : tx.transactionType}
-                              </span>
-                            )}
                           </div>
                         )}
                         {tx.status === 'EXCLUDED' && (
@@ -1311,7 +1366,7 @@ export default function BankFeedPage() {
                                   return scanned[tx.id] ?? []
                                 })()
                                 return (
-                                  <div className="mb-4">
+                                  <div id={`match-cards-${tx.id}`} className="mb-4">
                                     <p className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
                                       <GitMerge size={12} /> {allMatches.length} suggested match{allMatches.length !== 1 ? 'es' : ''} found
                                     </p>
