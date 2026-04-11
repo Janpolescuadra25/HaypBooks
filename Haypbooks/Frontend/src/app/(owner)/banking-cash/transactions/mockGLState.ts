@@ -63,6 +63,7 @@ export interface MockBankTransaction {
   ruleName?: string;            // set when auto-categorised by rule
   splitLines?: MockSplitLine[]; // set when SPLIT
   ref?: string;
+  bankRef?: string;
 }
 
 export interface MockRule {
@@ -250,7 +251,7 @@ export const MOCK_EXISTING_JES: MockJournalEntry[] = [
 
 // ─── Auto-Categorize Rules (8) ───────────────────────────────────────────────
 
-export const MOCK_RULES: MockRule[] = [
+export let MOCK_RULES: MockRule[] = [
   {
     id: 'rule-001', name: 'MERALCO Utility Bills',
     matchKeyword: 'MERALCO',
@@ -806,3 +807,60 @@ export function detectAutoMatches(
 
   return result
 }
+
+// ─── Categorization History ───────────────────────────────────────────────────
+
+export interface CategorizationHistory {
+  description: string     // keyword to match against tx.description (uppercase)
+  accountId: string
+  accountName: string
+  accountCode: string
+  contactId: string | null
+  contactName: string | null
+  count: number
+}
+
+export let CATEGORIZATION_HISTORY: CategorizationHistory[] = [
+  { description: 'MERALCO',   accountId: 'acc-5100', accountName: 'Utilities Expense',        accountCode: '5100', contactId: 'ent-v001', contactName: 'MERALCO',           count: 3 },
+  { description: 'PLDT',      accountId: 'acc-5101', accountName: 'Telecommunications',        accountCode: '5101', contactId: 'ent-v002', contactName: 'PLDT Enterprise',    count: 2 },
+  { description: 'GLOBE',     accountId: 'acc-5101', accountName: 'Telecommunications',        accountCode: '5101', contactId: 'ent-v003', contactName: 'Globe Telecom',      count: 2 },
+  { description: 'GRAB',      accountId: 'acc-5104', accountName: 'Transportation',            accountCode: '5104', contactId: 'ent-v004', contactName: 'Grab Philippines',   count: 2 },
+  { description: '7-ELEVEN',  accountId: 'acc-5103', accountName: 'Meals & Entertainment',     accountCode: '5103', contactId: null,       contactName: null,                count: 1 },
+  { description: 'SSS',       accountId: 'acc-5200', accountName: 'Government Contributions',  accountCode: '5200', contactId: null,       contactName: null,                count: 2 },
+  { description: 'GOOGLE',    accountId: 'acc-5202', accountName: 'Software Subscriptions',    accountCode: '5202', contactId: null,       contactName: null,                count: 2 },
+  { description: 'MICROSOFT', accountId: 'acc-5202', accountName: 'Software Subscriptions',    accountCode: '5202', contactId: null,       contactName: null,                count: 2 },
+]
+
+export function findHistoryMatch(description: string): CategorizationHistory | null {
+  const upper = description.toUpperCase()
+  return CATEGORIZATION_HISTORY.find(h => upper.includes(h.description)) ?? null
+}
+
+export function addToHistory(
+  description: string,
+  accountId: string,
+  accountName: string,
+  accountCode: string,
+  contactId: string | null,
+  contactName: string | null,
+): void {
+  const upper = description.toUpperCase()
+  // Extract a keyword: first word of description (at least 4 chars)
+  const keyword = upper.split(/\s+/).find(w => w.length >= 4) ?? upper.slice(0, 8)
+  const existing = CATEGORIZATION_HISTORY.find(
+    h => h.description === keyword && h.accountId === accountId
+  )
+  if (existing) {
+    existing.count++
+  } else {
+    CATEGORIZATION_HISTORY.push({ description: keyword, accountId, accountName, accountCode, contactId, contactName, count: 1 })
+  }
+}
+
+// ─── Mock Bank Accounts ───────────────────────────────────────────────────────
+
+export const MOCK_BANK_ACCOUNTS = [
+  { id: 'acct-bdo',       name: 'BDO Checking',         accountNumber: '\u2022\u2022\u2022\u2022 4521', balance: 150_000 },
+  { id: 'acct-bpi',       name: 'BPI Savings',           accountNumber: '\u2022\u2022\u2022\u2022 7823', balance:  45_000 },
+  { id: 'acct-metrobank', name: 'Metrobank Business',    accountNumber: '\u2022\u2022\u2022\u2022 3102', balance: 280_000 },
+]
