@@ -73,7 +73,7 @@ interface EntityOption {
 }
 
 type StatusFilter = 'review' | 'categorized' | 'excluded'
-type SortKey      = 'date' | 'description' | 'name' | 'account' | 'amount'
+type SortKey      = 'date' | 'description' | 'name' | 'account' | 'withdrawal' | 'deposit'
 type SortDir      = 'asc' | 'desc'
 
 // ─── Module-level helpers ─────────────────────────────────────────────────────
@@ -106,8 +106,8 @@ const STATUS_BORDER: Record<string, string> = {
 const PAGE_SIZE = 25
 
 const DEFAULT_COL_W: Record<string, number> = {
-  checkbox: 40, date: 110, description: 260, name: 160,
-  account: 190, amount: 130, actions: 100,
+  checkbox: 40, date: 110, description: 260, name: 150,
+  account: 180, withdrawal: 120, deposit: 120, actions: 100,
 }
 
 // ─── Mock fallback — convert from mockGLState types ───────────────────────────
@@ -148,6 +148,7 @@ function SkeletonRows() {
           <td className="px-3 py-3 border-r border-slate-100"><div className="h-3.5 w-48 bg-slate-200 rounded" /></td>
           <td className="px-3 py-3 border-r border-slate-100"><div className="h-3.5 w-28 bg-slate-200 rounded" /></td>
           <td className="px-3 py-3 border-r border-slate-100"><div className="h-3.5 w-32 bg-slate-200 rounded" /></td>
+          <td className="px-3 py-3 border-r border-slate-100"><div className="h-3.5 w-20 bg-slate-200 rounded ml-auto" /></td>
           <td className="px-3 py-3 border-r border-slate-100"><div className="h-3.5 w-20 bg-slate-200 rounded ml-auto" /></td>
           <td className="px-3 py-3"><div className="h-6 w-14 bg-slate-200 rounded" /></td>
         </tr>
@@ -330,6 +331,8 @@ export default function BankFeedPage() {
   const [sortKey,   setSortKey]   = useState<SortKey>('date')
   const [sortDir,   setSortDir]   = useState<SortDir>('desc')
   const [page,      setPage]      = useState(1)
+  const [matchFilter, setMatchFilter] = useState<'all' | 'has-suggestion' | 'no-suggestion' | 'matched'>('all')
+  const [typeFilter,  setTypeFilter]  = useState<'all' | 'withdrawal' | 'deposit'>('all')
 
   // ── Selection ──────────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -560,26 +563,34 @@ export default function BankFeedPage() {
     if (minAmt)   list = list.filter(t => Math.abs(t.amount) >= parseFloat(minAmt))
     if (maxAmt)   list = list.filter(t => Math.abs(t.amount) <= parseFloat(maxAmt))
 
+    if (matchFilter === 'has-suggestion')  list = list.filter(t => (matchSuggestions[t.id] ?? 0) > 0)
+    if (matchFilter === 'no-suggestion')   list = list.filter(t => (matchSuggestions[t.id] ?? 0) === 0 && t.status === 'PENDING')
+    if (matchFilter === 'matched')         list = list.filter(t => t.status === 'MATCHED')
+    if (typeFilter === 'withdrawal')       list = list.filter(t => t.amount < 0)
+    if (typeFilter === 'deposit')          list = list.filter(t => t.amount > 0)
+
     return [...list].sort((a, b) => {
       let cmp = 0
       if (sortKey === 'date')         cmp = a.date.localeCompare(b.date)
       else if (sortKey === 'description') cmp = a.description.localeCompare(b.description)
       else if (sortKey === 'name')    cmp = (a.contactName ?? '').localeCompare(b.contactName ?? '')
       else if (sortKey === 'account') cmp = (a.accountName ?? '').localeCompare(b.accountName ?? '')
-      else if (sortKey === 'amount')  cmp = Math.abs(a.amount) - Math.abs(b.amount)
+      else if (sortKey === 'withdrawal' || sortKey === 'deposit') cmp = a.amount - b.amount
       return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [items, statusFilter, search, dateFrom, dateTo, minAmt, maxAmt, sortKey, sortDir])
+  }, [items, statusFilter, search, dateFrom, dateTo, minAmt, maxAmt, matchFilter, typeFilter, matchSuggestions, sortKey, sortDir])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageRows   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // ─── Balance calcs ─────────────────────────────────────────────────────────
-  const bankTotal  = items.reduce((s, t) => s + Math.abs(t.amount), 0)
-  const booksTotal = items
+  const totalWithdrawals = items.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0)
+  const totalDeposits    = items.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
+  const netAmount        = totalDeposits - totalWithdrawals
+  const booksTotal       = items
     .filter(t => t.status === 'CATEGORIZED' || t.status === 'MATCHED')
     .reduce((s, t) => s + Math.abs(t.amount), 0)
-  const diffAmt = bankTotal - booksTotal
+  const diffAmt          = (totalWithdrawals + totalDeposits) - booksTotal
 
   // ─── Status counts ─────────────────────────────────────────────────────────
   const nReview      = items.filter(t => t.status === 'PENDING').length
@@ -806,8 +817,8 @@ export default function BankFeedPage() {
   }
 
   // ─── Misc ─────────────────────────────────────────────────────────────────
-  const hasFilters = !!(search || dateFrom || dateTo || minAmt || maxAmt)
-  const clearFilters = () => { setSearch(''); setDateFrom(''); setDateTo(''); setMinAmt(''); setMaxAmt('') }
+  const hasFilters = !!(search || dateFrom || dateTo || minAmt || maxAmt || matchFilter !== 'all' || typeFilter !== 'all')
+  const clearFilters = () => { setSearch(''); setDateFrom(''); setDateTo(''); setMinAmt(''); setMaxAmt(''); setMatchFilter('all'); setTypeFilter('all') }
   const acctObj = accounts.find(a => a.id === selectedAcct)
 
   // ─── Apply Rules ──────────────────────────────────────────────────────────
@@ -905,20 +916,24 @@ export default function BankFeedPage() {
       </div>
 
       {/* ── B. Balance summary line ────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-100 px-6 py-2 text-sm text-slate-500">
-        <span>Bank: <span className="font-medium text-slate-700">{fmt(bankTotal)}</span></span>
-        <span className="mx-3 text-slate-300">·</span>
+      <div className="bg-white border-b border-slate-100 px-6 py-2 text-sm text-slate-500 flex items-center gap-3 flex-wrap">
+        <span>Withdrawals: <span className="font-semibold text-red-600">{fmt(totalWithdrawals)}</span></span>
+        <span className="text-slate-300">·</span>
+        <span>Deposits: <span className="font-semibold text-emerald-700">{fmt(totalDeposits)}</span></span>
+        <span className="text-slate-300">·</span>
+        <span>Net: <span className={`font-semibold ${netAmount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(netAmount)}</span></span>
+        <span className="text-slate-300">·</span>
         <span>In Books: <span className="font-medium text-slate-700">{fmt(booksTotal)}</span></span>
-        <span className="mx-3 text-slate-300">·</span>
+        <span className="text-slate-300">·</span>
         <span>
-          Difference:{' '}
+          Diff:{' '}
           <span className={`font-semibold ${diffAmt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
             {fmt(diffAmt)}
           </span>
           {diffAmt > 0 && <span className="ml-1 text-xs text-slate-400">({nReview} uncategorized)</span>}
         </span>
         {usingMock && (
-          <span className="ml-4 text-xs text-amber-500 border border-amber-200 bg-amber-50 px-2 py-0.5 rounded">
+          <span className="ml-2 text-xs text-amber-500 border border-amber-200 bg-amber-50 px-2 py-0.5 rounded">
             Sample data
           </span>
         )}
@@ -962,6 +977,55 @@ export default function BankFeedPage() {
               <X size={12} /> Clear filters
             </button>
           )}
+        </div>
+
+        {/* Match filter */}
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium w-14 shrink-0">Match:</span>
+          {(
+            [
+              { key: 'all',            label: 'All' },
+              { key: 'has-suggestion', label: 'Has Suggestion' },
+              { key: 'no-suggestion',  label: 'No Suggestion' },
+              { key: 'matched',        label: 'Matched' },
+            ] as const
+          ).map(f => (
+            <button
+              key={f.key}
+              onClick={() => { setMatchFilter(f.key); setPage(1) }}
+              className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                matchFilter === f.key
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-blue-600 border-blue-400 hover:bg-blue-50'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Type filter */}
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium w-14 shrink-0">Type:</span>
+          {(
+            [
+              { key: 'all',        label: 'All' },
+              { key: 'withdrawal', label: 'Withdrawal' },
+              { key: 'deposit',    label: 'Deposit' },
+            ] as const
+          ).map(f => (
+            <button
+              key={f.key}
+              onClick={() => { setTypeFilter(f.key); setPage(1) }}
+              className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                typeFilter === f.key
+                  ? 'bg-slate-700 text-white border-slate-700'
+                  : 'bg-white text-slate-600 border-slate-400 hover:bg-slate-50'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
         {/* Search + date + amount */}
@@ -1072,11 +1136,17 @@ export default function BankFeedPage() {
                     Account <SortIcon col="account" sk={sortKey} sd={sortDir} />
                     <ResizeHandle col="account" />
                   </th>
-                  {/* Amount */}
-                  <th className={`${thClass} text-right cursor-pointer`} style={{ width: colW.amount }}
-                      onClick={() => handleSort('amount')}>
-                    Amount <SortIcon col="amount" sk={sortKey} sd={sortDir} />
-                    <ResizeHandle col="amount" />
+                  {/* Withdrawal */}
+                  <th className={`${thClass} text-right cursor-pointer`} style={{ width: colW.withdrawal }}
+                      onClick={() => handleSort('withdrawal')}>
+                    Withdrawal <SortIcon col="withdrawal" sk={sortKey} sd={sortDir} />
+                    <ResizeHandle col="withdrawal" />
+                  </th>
+                  {/* Deposit */}
+                  <th className={`${thClass} text-right cursor-pointer`} style={{ width: colW.deposit }}
+                      onClick={() => handleSort('deposit')}>
+                    Deposit <SortIcon col="deposit" sk={sortKey} sd={sortDir} />
+                    <ResizeHandle col="deposit" />
                   </th>
                   {/* Actions */}
                   <th className={thClass} style={{ width: colW.actions }}>
@@ -1091,7 +1161,7 @@ export default function BankFeedPage() {
 
                 {!loading && pageRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-16 text-center">
+                    <td colSpan={8} className="px-4 py-16 text-center">
                       {hasFilters || statusFilter !== 'review' ? (
                         <div className="text-slate-400 text-sm">
                           <p>No transactions match your filters.</p>
@@ -1154,22 +1224,39 @@ export default function BankFeedPage() {
                           <span className="text-slate-300">—</span>
                         )}
                       </td>
-                      {/* Amount */}
-                      <td className={`${tdClass} text-right font-mono font-semibold`} style={{ width: colW.amount }}>
-                        <span className={tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}>
-                          {fmtAmt(tx.amount)}
-                        </span>
+                      {/* Withdrawal */}
+                      <td className={`${tdClass} text-right font-mono font-semibold`} style={{ width: colW.withdrawal }}>
+                        {tx.amount < 0
+                          ? <span className="text-red-600">{fmt(Math.abs(tx.amount))}</span>
+                          : <span className="text-slate-300">—</span>}
+                      </td>
+                      {/* Deposit */}
+                      <td className={`${tdClass} text-right font-mono font-semibold`} style={{ width: colW.deposit }}>
+                        {tx.amount > 0
+                          ? <span className="text-emerald-700">{fmt(tx.amount)}</span>
+                          : <span className="text-slate-300">—</span>}
                       </td>
                       {/* Actions */}
                       <td className={tdClass} style={{ width: colW.actions }}
                           onClick={e => e.stopPropagation()}>
                         {tx.status === 'PENDING' && (
-                          <button
-                            onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
-                            className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
-                          >
-                            Add
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {matchSuggestions[tx.id] > 0 && (
+                              <button
+                                onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                title={`${matchSuggestions[tx.id]} match suggestion${matchSuggestions[tx.id] !== 1 ? 's' : ''}`}
+                              >
+                                <Link2 size={10} /> {matchSuggestions[tx.id]}
+                              </button>
+                            )}
+                            <button
+                              onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
+                              className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
                         )}
                         {(tx.status === 'CATEGORIZED' || tx.status === 'MATCHED') && (
                           <div className="flex flex-col items-start gap-1">
@@ -1211,7 +1298,7 @@ export default function BankFeedPage() {
                     {/* ── F. Expandable row form (all statuses) ── */}
                     {expandedId === tx.id && (
                       <tr key={`${tx.id}-inline`} className="border-b border-slate-100">
-                        <td colSpan={7} className="px-0 py-0">
+                        <td colSpan={8} className="px-0 py-0">
 
                           {/* PENDING */}
                           {tx.status === 'PENDING' && (
@@ -1240,6 +1327,12 @@ export default function BankFeedPage() {
                                             {je.contactName && <span className="text-slate-700 truncate max-w-[120px]">{je.contactName}</span>}
                                             <span className={`font-mono font-semibold ${isExact ? 'text-emerald-700' : 'text-amber-600'}`}>{fmtAmt(je.totalAmount)}</span>
                                             {!isExact && <span className="text-amber-500 text-[10px]">≈</span>}
+                                            <button
+                                              onClick={() => router.push(`/banking-cash/transactions/view-record?type=${je.type === 'Bill' ? 'bill' : 'invoice'}&id=${je.id}&txnId=${tx.id}`)}
+                                              className="text-blue-600 hover:underline text-[11px] font-medium"
+                                            >
+                                              View
+                                            </button>
                                             <div className="ml-auto flex items-center gap-1.5">
                                               {isThisConfirming ? (
                                                 <>
