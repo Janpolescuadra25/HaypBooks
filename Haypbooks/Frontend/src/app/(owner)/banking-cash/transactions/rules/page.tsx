@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Edit2, Plus, Trash2, X, Check } from 'lucide-react'
-import { MOCK_RULES, MOCK_COA_ACCOUNTS, type MockRule } from '../mockGLState'
+import { ChevronDown, ChevronUp, Edit2, Plus, Trash2, X, Check, ToggleLeft, ToggleRight, Zap } from 'lucide-react'
+import { MOCK_RULES, MOCK_COA_ACCOUNTS, auditLog, type MockRule } from '../mockGLState'
 
 let ruleCounter = 9
 
@@ -103,6 +103,27 @@ export default function RulesPage() {
     setDeleteConfirm(null)
   }
 
+  const toggleEnabled = (id: string) => {
+    setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !(r.enabled ?? true) } : r))
+    const idx = MOCK_RULES.findIndex(r => r.id === id)
+    if (idx >= 0) MOCK_RULES[idx] = { ...MOCK_RULES[idx], enabled: !(MOCK_RULES[idx].enabled ?? true) }
+  }
+
+  const moveRule = (id: string, dir: 'up' | 'down') => {
+    setRules(prev => {
+      const arr = [...prev]
+      const idx = arr.findIndex(r => r.id === id)
+      if (idx < 0) return prev
+      const swap = dir === 'up' ? idx - 1 : idx + 1
+      if (swap < 0 || swap >= arr.length) return prev
+      ;[arr[idx], arr[swap]] = [arr[swap], arr[idx]]
+      return arr.map((r, i) => ({ ...r, priority: i + 1 }))
+    })
+  }
+
+  const appliedCount = (rule: MockRule) =>
+    auditLog.filter(e => e.action === 'rule_applied' && e.details.includes(rule.name)).length
+
   const selectedAcct = MOCK_COA_ACCOUNTS.find(a => a.id === form.accountId)
 
   return (
@@ -129,17 +150,35 @@ export default function RulesPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {rules.map(rule => (
+            {rules.map((rule, rIdx) => (
               <div key={rule.id} className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4 flex items-center gap-4">
+                {/* Priority arrows */}
+                <div className="flex flex-col gap-0.5 shrink-0">
+                  <button onClick={() => moveRule(rule.id, 'up')} disabled={rIdx === 0}
+                    className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20 transition-colors">
+                    <ChevronUp size={14} />
+                  </button>
+                  <button onClick={() => moveRule(rule.id, 'down')} disabled={rIdx === rules.length - 1}
+                    className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20 transition-colors">
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+
                 {/* Rule info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-slate-400 font-mono">#{rule.priority ?? rIdx + 1}</span>
                     <span className="text-sm font-semibold text-slate-800">{rule.name}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                       rule.transactionType === 'Bank Payment' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
                     }`}>
                       {rule.transactionType === 'Bank Payment' ? 'Payment' : 'Receipt'}
                     </span>
+                    {appliedCount(rule) > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">
+                        <Zap size={9} /> {appliedCount(rule)} applied
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <span>If description contains <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-700">{rule.matchKeyword}</code></span>
@@ -154,8 +193,17 @@ export default function RulesPage() {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
+                {/* Enabled toggle + Actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => toggleEnabled(rule.id)}
+                    title={(rule.enabled ?? true) ? 'Disable rule' : 'Enable rule'}
+                    className={`p-1 rounded transition-colors ${
+                      (rule.enabled ?? true) ? 'text-emerald-500 hover:text-emerald-700' : 'text-slate-300 hover:text-slate-500'
+                    }`}
+                  >
+                    {(rule.enabled ?? true) ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                  </button>
                   {deleteConfirm === rule.id ? (
                     <>
                       <span className="text-xs text-slate-500 mr-1">Delete this rule?</span>
