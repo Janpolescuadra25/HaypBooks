@@ -22,7 +22,6 @@ import {
   findHistoryMatch,
   getAuditLogForEntity,
   getBalances,
-  getReconciliationHistory,
   getRegisterEntries,
   importTransactions,
   matchTransaction,
@@ -32,7 +31,6 @@ import {
   moveRule,
   reverseImportedAmounts,
   resetMockState,
-  saveReconciliation,
   searchForMatch,
   splitTransaction,
   toggleReconciliation,
@@ -40,6 +38,8 @@ import {
   transferTransaction,
   undoCategorize,
   updateRule,
+  saveReconciliation,
+  getReconciliationHistory,
 } from '../mockGLState'
 
 type TestCase = {
@@ -410,55 +410,6 @@ test('toggleReconciliation updates the flag and records an audit event', () => {
   assert.ok(getAuditLogForEntity('mt-011').some(entry => entry.action === 'unreconciled'))
 })
 
-test('saveReconciliation marks selected transactions as reconciled', () => {
-  saveReconciliation({
-    bankAccountId: 'acct-bdo',
-    statementDate: '2026-04-30',
-    statementBalance: 240000,
-    calculatedBalance: 240000,
-    clearedTxIds: ['mt-001', 'mt-004'],
-  })
-
-  assert.equal(getTx('mt-001').reconciled, true)
-  assert.equal(getTx('mt-004').reconciled, true)
-})
-
-test('saveReconciliation creates a service charge transaction', () => {
-  const beforeCount = mockStore.items.length
-  saveReconciliation({
-    bankAccountId: 'acct-bdo',
-    statementDate: '2026-04-30',
-    statementBalance: 239850,
-    calculatedBalance: 240000,
-    clearedTxIds: ['mt-001'],
-    serviceCharge: 150,
-  })
-
-  assert.equal(mockStore.items.length, beforeCount + 1)
-  const serviceChargeTx = mockStore.items.find(item => item.description === 'Bank Service Charge')
-
-  assert.ok(serviceChargeTx)
-  assert.equal(serviceChargeTx?.amount, -150)
-  assert.equal(serviceChargeTx?.accountName, 'Bank Charges Expense')
-  assert.equal(serviceChargeTx?.accountId, 'acct-bdo')
-})
-
-test('saveReconciliation appends a new reconciliation history entry', () => {
-  const before = getReconciliationHistory('acct-bdo').length
-  const saved = saveReconciliation({
-    bankAccountId: 'acct-bdo',
-    statementDate: '2026-04-30',
-    statementBalance: 240125.5,
-    calculatedBalance: 240125.5,
-    clearedTxIds: ['mt-001', 'mt-004'],
-    interestIncome: 125.5,
-  })
-
-  const history = getReconciliationHistory('acct-bdo')
-  assert.equal(history.length, before + 1)
-  assert.equal(history[0]?.id, saved.id)
-})
-
 test('addManualRegisterEntry creates a categorized manual transaction and JE', () => {
   const beforeTxCount = mockStore.items.length
   const beforeJeCount = mockJEs.length
@@ -580,6 +531,83 @@ test('resetMockState restores rule ids so new rules restart from the seed counte
   })
 
   assert.equal(created?.id, 'rule-009')
+})
+
+test('save reconciliation marks transactions as reconciled', () => {
+  const ids = ['mt-001', 'mt-002', 'mt-003']
+  saveReconciliation({
+    bankAccountId: 'acct-bdo',
+    statementDate: '2026-03-31',
+    statementBalance: 50000,
+    calculatedBalance: 50000,
+    clearedTxIds: ids,
+    outstandingTxIds: [],
+  })
+  for (const id of ids) {
+    const tx = mockStore.items.find(t => t.id === id)
+    assert.ok(tx, `Expected tx ${id} to exist`)
+    assert.equal(tx!.reconciled, true, `Expected ${id} to be reconciled`)
+  }
+  const untouched = mockStore.items.find(t => t.id === 'mt-004')
+  assert.notEqual(untouched?.reconciled, true, 'mt-004 should not be reconciled')
+})
+
+test('service charge creates new transaction during reconciliation', () => {
+  const before = mockStore.items.length
+  saveReconciliation({
+    bankAccountId: 'acct-bdo',
+    statementDate: '2026-03-31',
+    statementBalance: 50000,
+    calculatedBalance: 49850,
+    clearedTxIds: [],
+    outstandingTxIds: [],
+    serviceCharge: 150,
+  })
+  assert.ok(mockStore.items.length > before, 'Expected a new transaction to be created')
+  const chargeTx = mockStore.items.find(t => t.description === 'Bank Service Charge')
+  assert.ok(chargeTx, 'Expected a Bank Service Charge transaction')
+  assert.equal(chargeTx!.amount, -150, 'Service charge should be negative')
+})
+
+test('interest income creates new transaction during reconciliation', () => {
+  const before = mockStore.items.length
+  saveReconciliation({
+    bankAccountId: 'acct-bdo',
+    statementDate: '2026-03-31',
+    statementBalance: 50200,
+    calculatedBalance: 50200,
+    clearedTxIds: [],
+    outstandingTxIds: [],
+    interestIncome: 200,
+  })
+  assert.ok(mockStore.items.length > before, 'Expected a new transaction to be created')
+  const interestTx = mockStore.items.find(t => t.description === 'Interest Income')
+  assert.ok(interestTx, 'Expected an Interest Income transaction')
+  assert.equal(interestTx!.amount, 200, 'Interest income should be positive')
+})
+
+test('reconciliation history is saved and retrievable', () => {
+  saveReconciliation({
+    bankAccountId: 'acct-bdo',
+    statementDate: '2026-03-31',
+    statementBalance: 50000,
+    calculatedBalance: 50000,
+    clearedTxIds: ['mt-001'],
+    outstandingTxIds: [],
+  })
+  saveReconciliation({
+    bankAccountId: 'acct-bpi',
+    statementDate: '2026-03-31',
+    statementBalance: 30000,
+    calculatedBalance: 30000,
+    clearedTxIds: ['mt-005'],
+    outstandingTxIds: [],
+  })
+  const all = getReconciliationHistory()
+  assert.ok(all.length >= 2, 'Expected at least 2 reconciliation history entries')
+  const bdoOnly = getReconciliationHistory('acct-bdo')
+  assert.ok(bdoOnly.every(r => r.bankAccountId === 'acct-bdo'), 'Filtered history should only contain BDO entries')
+  assert.ok(!bdoOnly.some(r => r.bankAccountId === 'acct-bpi'), 'Filtered history should not contain BPI entries')
 })
 
 function run() {

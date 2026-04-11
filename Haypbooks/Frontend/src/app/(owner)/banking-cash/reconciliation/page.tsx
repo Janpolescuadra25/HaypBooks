@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function Page() {
-  redirect('/banking-cash/transactions/reconciliation')
+  redirect('/banking-cash/reconciliation/reconcile')
 }

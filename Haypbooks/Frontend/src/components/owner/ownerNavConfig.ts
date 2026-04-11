@@ -103,13 +103,16 @@ export const navigationData: NavSection[] = [
             path: '/banking-cash/transactions',
             tabs: [
               { label: 'Bank Transactions', value: 'transactions', status: 'existing' },
+              { label: 'Bank Rules',        value: 'rules',        status: 'existing' },
             ],
           },
           {
             title: 'Reconciliation',
-            path: '/banking-cash/transactions/reconciliation',
+            path: '/banking-cash/reconciliation',
             tabs: [
-              { label: 'Reconciliation', value: 'reconciliation', status: 'existing' },
+              { label: 'Reconcile',  value: 'reconcile',  status: 'existing' },
+              { label: 'History',    value: 'history',    status: 'existing' },
+              { label: 'Statements', value: 'statements', status: 'coming-soon' },
             ],
           },
         ],

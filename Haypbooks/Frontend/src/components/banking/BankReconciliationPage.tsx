@@ -1,500 +1,399 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
-  Loader2, AlertCircle, CheckCircle2, Link2, Link2Off, Zap,
-  RefreshCw, ChevronRight, ArrowLeft, Clock, History, X,
+  AlertTriangle, ArrowLeft, Check, CheckCircle2, ChevronLeft,
+  ChevronRight, History, Plus, Printer, X,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
-import { formatCurrency } from '@/lib/format'
-import { useCompanyId } from '@/hooks/useCompanyId'
-import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Step = 'history' | 'setup' | 'match' | 'complete'
-type ReconStatus = 'IN_PROGRESS' | 'COMPLETED' | 'VOIDED'
-
-interface BankAccount {
-  id: string
-  name: string
-  accountNumber?: string
-  balance?: number
-}
-
-interface BankTransaction {
-  id: string
-  date: string
-  description: string
-  amount: number
-  type: 'CREDIT' | 'DEBIT'
-  reference?: string
-  matchedJournalLineId?: string | null
-}
-
-interface BookEntry {
-  id: string
-  date: string
-  entryNumber?: string
-  description?: string
-  debit: number
-  credit: number
-  accountCode: string
-  accountName: string
-  matchedBankTransactionId?: string | null
-}
-
-interface ReconciliationSummary {
-  id: string
-  bankAccountId: string
-  bankAccountName?: string
-  statementDate: string
-  openingBalance: number
-  closingBalance: number
-  status: ReconStatus
-  createdAt: string
-  matchedCount?: number
-}
-
-interface ReconciliationDetail extends ReconciliationSummary {
-  bankTransactions: BankTransaction[]
-  bookEntries: BookEntry[]
-  matches: Array<{ bankTransactionId: string; journalLineId: string }>
-}
+import {
+  MOCK_BANK_ACCOUNTS,
+  getReconciliationHistory,
+  saveReconciliation,
+  mockStore,
+  type MockBankTransaction,
+  type MockReconciliation,
+} from '@/app/(owner)/banking-cash/transactions/mockGLState'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtDate(d: string) {
-  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return d }
+function fmt(n: number): string {
+  const abs = Math.abs(n)
+  const s = abs.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return (n < 0 ? '-' : '') + '₱' + s
 }
+
+function fmtMonth(d: string): string {
+  try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) } catch { return d }
+}
+
+function fmtShort(d: string): string {
+  try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return d }
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Step = 'history' | 'setup' | 'reconcile'
+type TxFilter = 'all' | 'cleared' | 'uncleared'
+
+interface SetupForm {
+  bankAccountId: string
+  statementDate: string
+  statementBalance: string
+  serviceCharge: string
+  interestIncome: string
+}
+
+const PAGE_SIZE = 25
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BankReconciliationPage() {
-  const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
-  const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-
-  // ── Navigation state ─────────────────────────────────────────────────────
+  // ── Navigation ───────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>('history')
 
-  // ── Shared data ──────────────────────────────────────────────────────────
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
-  const [history, setHistory] = useState<ReconciliationSummary[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyError, setHistoryError] = useState('')
-  const [toast, setToast] = useState('')
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
-
-  // ── Setup form state ─────────────────────────────────────────────────────
-  const [setupForm, setSetupForm] = useState({
-    bankAccountId: '',
+  // ── Setup form ───────────────────────────────────────────────────────────
+  const [form, setForm] = useState<SetupForm>({
+    bankAccountId: MOCK_BANK_ACCOUNTS[0]?.id ?? '',
     statementDate: new Date().toISOString().split('T')[0],
-    openingBalance: '',
-    closingBalance: '',
+    statementBalance: '',
+    serviceCharge: '',
+    interestIncome: '',
   })
-  const [setupLoading, setSetupLoading] = useState(false)
-  const [setupError, setSetupError] = useState('')
+  const [formError, setFormError] = useState('')
 
-  // ── Active reconciliation state ─────────────────────────────────────────
-  const [recon, setRecon] = useState<ReconciliationDetail | null>(null)
-  const [matchLoading, setMatchLoading] = useState('')
-  const [autoMatchLoading, setAutoMatchLoading] = useState(false)
-  const [completeLoading, setCompleteLoading] = useState(false)
+  // ── Reconcile step ───────────────────────────────────────────────────────
+  // accountTxs: snapshot of all transactions for the selected account (captured on Start)
+  const [accountTxs, setAccountTxs] = useState<MockBankTransaction[]>([])
+  // prevReconciledIds: txs already reconciled before this session started (disabled)
+  const [prevReconciledIds, setPrevReconciledIds] = useState<Set<string>>(new Set())
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
+  const [txFilter, setTxFilter] = useState<TxFilter>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(0)
 
-  // ── Selection for manual matching ────────────────────────────────────────
-  const [selectedBankTx, setSelectedBankTx] = useState<string | null>(null)
-  const [selectedBookEntry, setSelectedBookEntry] = useState<string | null>(null)
+  // ── Modals ───────────────────────────────────────────────────────────────
+  const [modal, setModal] = useState<'none' | 'unbalanced' | 'success'>('none')
 
-  // ── Load bank accounts & history ─────────────────────────────────────────
-  const loadInitialData = useCallback(async () => {
-    if (!companyId) return
-    setHistoryLoading(true)
-    try {
-      const [accsRes] = await Promise.allSettled([
-        apiClient.get(`/companies/${companyId}/banking/accounts`),
-      ])
-      if (accsRes.status === 'fulfilled') {
-        const a = accsRes.value.data
-        setBankAccounts(Array.isArray(a) ? a : a.accounts ?? [])
-      }
-      setHistoryError('')
-    } catch (e: any) {
-      setHistoryError(e?.response?.data?.message ?? 'Failed to load data')
-    } finally {
-      setHistoryLoading(false)
-    }
-  }, [companyId])
+  // ── Toast ────────────────────────────────────────────────────────────────
+  const [toast, setToast] = useState('')
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
-  const loadHistory = useCallback(async (bankAccountId?: string) => {
-    if (!companyId) return
-    if (!bankAccountId && !setupForm.bankAccountId) return
-    const bid = bankAccountId ?? setupForm.bankAccountId
-    setHistoryLoading(true)
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/banking/accounts/${bid}/reconciliations`)
-      setHistory(Array.isArray(data) ? data : data.items ?? [])
-    } catch {
-      setHistory([])
-    } finally {
-      setHistoryLoading(false)
-    }
-  }, [companyId, setupForm.bankAccountId])
+  // ── Derived: reconcile summary ────────────────────────────────────────────
+  const account = MOCK_BANK_ACCOUNTS.find(a => a.id === form.bankAccountId)
+  const openingBalance = account?.openingBalance ?? 0
+  const statementBalance = parseFloat(form.statementBalance) || 0
+  const serviceChargeAmt = parseFloat(form.serviceCharge) || 0
+  const interestIncomeAmt = parseFloat(form.interestIncome) || 0
 
-  useEffect(() => { loadInitialData() }, [loadInitialData])
-
-  // ── Setup: create reconciliation ─────────────────────────────────────────
-  const handleStartReconciliation = async () => {
-    if (!setupForm.bankAccountId || !setupForm.statementDate || setupForm.openingBalance === '' || setupForm.closingBalance === '') {
-      setSetupError('Please fill in all fields.')
-      return
-    }
-    setSetupLoading(true)
-    setSetupError('')
-    try {
-      const { data } = await apiClient.post(
-        `/companies/${companyId}/banking/accounts/${setupForm.bankAccountId}/reconciliations`,
-        {
-          statementDate: setupForm.statementDate,
-          openingBalance: parseFloat(setupForm.openingBalance),
-          closingBalance: parseFloat(setupForm.closingBalance),
-        },
-      )
-      // Load full detail immediately
-      const { data: detail } = await apiClient.get(`/companies/${companyId}/banking/reconciliations/${data.id}`)
-      setRecon(detail)
-      setStep('match')
-    } catch (e: any) {
-      setSetupError(e?.response?.data?.message ?? 'Failed to start reconciliation')
-    } finally {
-      setSetupLoading(false)
-    }
-  }
-
-  // ── Load existing reconciliation ─────────────────────────────────────────
-  const handleOpenRecon = async (reconId: string, readOnly = false) => {
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/banking/reconciliations/${reconId}`)
-      setRecon(data)
-      setStep(readOnly || data.status === 'COMPLETED' ? 'complete' : 'match')
-    } catch (e: any) {
-      showToast(e?.response?.data?.message ?? 'Failed to load reconciliation')
-    }
-  }
-
-  // ── Auto-match ────────────────────────────────────────────────────────────
-  const handleAutoMatch = async () => {
-    if (!recon) return
-    setAutoMatchLoading(true)
-    try {
-      const { data } = await apiClient.post(`/companies/${companyId}/banking/reconciliations/${recon.id}/auto-match`)
-      setRecon(data)
-      showToast('Auto-match complete')
-    } catch (e: any) {
-      showToast(e?.response?.data?.message ?? 'Auto-match failed')
-    } finally {
-      setAutoMatchLoading(false)
-    }
-  }
-
-  // ── Manual match ─────────────────────────────────────────────────────────
-  const handleMatch = async () => {
-    if (!recon || !selectedBankTx || !selectedBookEntry) return
-    setMatchLoading(`${selectedBankTx}-${selectedBookEntry}`)
-    try {
-      const { data } = await apiClient.post(`/companies/${companyId}/banking/reconciliations/${recon.id}/match`, {
-        bankTransactionId: selectedBankTx,
-        journalLineId: selectedBookEntry,
-      })
-      setRecon(data)
-      setSelectedBankTx(null)
-      setSelectedBookEntry(null)
-    } catch (e: any) {
-      showToast(e?.response?.data?.message ?? 'Match failed')
-    } finally {
-      setMatchLoading('')
-    }
-  }
-
-  // ── Unmatch ───────────────────────────────────────────────────────────────
-  const handleUnmatch = async (bankTxId: string) => {
-    if (!recon) return
-    setMatchLoading(bankTxId)
-    try {
-      const { data } = await apiClient.delete(
-        `/companies/${companyId}/banking/reconciliations/${recon.id}/match/${bankTxId}`,
-      )
-      setRecon(data)
-    } catch (e: any) {
-      showToast(e?.response?.data?.message ?? 'Unmatch failed')
-    } finally {
-      setMatchLoading('')
-    }
-  }
-
-  // ── Complete ──────────────────────────────────────────────────────────────
-  const handleComplete = async () => {
-    if (!recon) return
-    setCompleteLoading(true)
-    try {
-      const { data } = await apiClient.post(`/companies/${companyId}/banking/reconciliations/${recon.id}/complete`)
-      setRecon(data)
-      setStep('complete')
-      showToast('Reconciliation completed!')
-      loadHistory(recon.bankAccountId)
-    } catch (e: any) {
-      showToast(e?.response?.data?.message ?? 'Failed to complete reconciliation')
-    } finally {
-      setCompleteLoading(false)
-    }
-  }
-
-  // ── Derived match info ────────────────────────────────────────────────────
-  const matchMap = useMemo(() => {
-    if (!recon) return new Map<string, string>()
-    const m = new Map<string, string>()
-    recon.matches?.forEach(mx => {
-      m.set(mx.bankTransactionId, mx.journalLineId)
-      m.set(mx.journalLineId, mx.bankTransactionId)
-    })
-    // Also read from inlined fields
-    recon.bankTransactions?.forEach(tx => {
-      if (tx.matchedJournalLineId) m.set(tx.id, tx.matchedJournalLineId)
-    })
-    recon.bookEntries?.forEach(e => {
-      if (e.matchedBankTransactionId) m.set(e.id, e.matchedBankTransactionId)
-    })
-    return m
-  }, [recon])
-
-  const matchedBankCount = recon?.bankTransactions?.filter(tx => matchMap.has(tx.id)).length ?? 0
-  const unmatchedBankCount = (recon?.bankTransactions?.length ?? 0) - matchedBankCount
-  const matchedBookCount = recon?.bookEntries?.filter(e => matchMap.has(e.id)).length ?? 0
-  const unmatchedBookCount = (recon?.bookEntries?.length ?? 0) - matchedBookCount
-
-  const statementClosing = recon?.closingBalance ?? 0
-  const matchedTotal = recon?.bankTransactions
-    ?.filter(tx => matchMap.has(tx.id))
-    ?.reduce((s, tx) => s + (tx.type === 'CREDIT' ? tx.amount : -tx.amount), 0) ?? 0
-  const bookBalance = (recon?.openingBalance ?? 0) + matchedTotal
-  const difference = Math.abs(statementClosing - bookBalance)
-  const isBalanced = difference < 0.005
-
-  const canMatch = !!selectedBankTx && !!selectedBookEntry && !matchMap.has(selectedBankTx) && !matchMap.has(selectedBookEntry)
-
-  // ─── Render guards ────────────────────────────────────────────────────────
-  if (cidLoading) return (
-    <div className="p-6 flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-      <span className="ml-2 text-emerald-700">Loading…</span>
-    </div>
+  const clearedDeposits = useMemo(
+    () => accountTxs.filter(tx => checkedIds.has(tx.id) && tx.amount > 0).reduce((s, tx) => s + tx.amount, 0),
+    [accountTxs, checkedIds],
   )
-  if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
+  const clearedWithdrawals = useMemo(
+    () => Math.abs(accountTxs.filter(tx => checkedIds.has(tx.id) && tx.amount < 0).reduce((s, tx) => s + tx.amount, 0)),
+    [accountTxs, checkedIds],
+  )
 
-  // ─── STEP: History ────────────────────────────────────────────────────────
+  const calculatedBalance = Math.round(
+    (openingBalance + clearedDeposits - clearedWithdrawals - serviceChargeAmt + interestIncomeAmt) * 100,
+  ) / 100
+  const difference = Math.round((calculatedBalance - statementBalance) * 100) / 100
+  const isBalanced = Math.abs(difference) < 0.005
+
+  const outstandingWithdrawals = useMemo(
+    () => accountTxs.filter(tx => !checkedIds.has(tx.id) && tx.amount < 0),
+    [accountTxs, checkedIds],
+  )
+  const outstandingDeposits = useMemo(
+    () => accountTxs.filter(tx => !checkedIds.has(tx.id) && tx.amount > 0),
+    [accountTxs, checkedIds],
+  )
+
+  // Smart highlight: uncleared tx whose amount would close the remaining difference
+  const smartHighlightIds = useMemo(() => {
+    if (isBalanced) return new Set<string>()
+    const s = new Set<string>()
+    for (const tx of accountTxs) {
+      if (checkedIds.has(tx.id)) continue
+      // Checking this tx changes calculatedBalance by tx.amount; that fixes the diff when diff + tx.amount ≈ 0
+      if (Math.abs(difference + tx.amount) < 0.01) s.add(tx.id)
+    }
+    return s
+  }, [accountTxs, checkedIds, difference, isBalanced])
+
+  // Filtered + sorted transactions for display
+  const visibleTxs = useMemo(() => {
+    let txs = accountTxs
+    if (txFilter === 'cleared')   txs = txs.filter(tx => checkedIds.has(tx.id))
+    if (txFilter === 'uncleared') txs = txs.filter(tx => !checkedIds.has(tx.id))
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      txs = txs.filter(tx => tx.description.toLowerCase().includes(q))
+    }
+    return [...txs].sort((a, b) => b.date.localeCompare(a.date))
+  }, [accountTxs, txFilter, checkedIds, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(visibleTxs.length / PAGE_SIZE))
+  const pagedTxs = visibleTxs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  // ── History data (refreshed whenever step changes to 'history') ────────────
+  const [historyData, setHistoryData] = useState<MockReconciliation[]>([])
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  function goToHistory() {
+    setHistoryData(getReconciliationHistory())
+    setStep('history')
+  }
+
+  function handleStartReconciliation() {
+    if (!form.bankAccountId) { setFormError('Please select a bank account.'); return }
+    if (!form.statementBalance.trim()) { setFormError('Please enter the statement ending balance.'); return }
+    setFormError('')
+
+    const txs = mockStore.items.filter(tx => tx.accountId === form.bankAccountId)
+    const prevRec = new Set(txs.filter(tx => tx.reconciled).map(tx => tx.id))
+    setAccountTxs(txs)
+    setPrevReconciledIds(prevRec)
+    setCheckedIds(new Set(prevRec))
+    setTxFilter('all')
+    setSearchQuery('')
+    setPage(0)
+    setStep('reconcile')
+  }
+
+  function handleToggle(txId: string) {
+    if (prevReconciledIds.has(txId)) return
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      next.has(txId) ? next.delete(txId) : next.add(txId)
+      return next
+    })
+  }
+
+  function handleMarkAll() {
+    setCheckedIds(new Set(accountTxs.map(tx => tx.id)))
+  }
+
+  function handleClearAll() {
+    setCheckedIds(new Set(prevReconciledIds))
+  }
+
+  function handleFinishClick() {
+    setModal(isBalanced ? 'success' : 'unbalanced')
+  }
+
+  function handleConfirmFinish() {
+    const clearedTxIds = Array.from(checkedIds)
+    const outstandingTxIds = accountTxs.filter(tx => !checkedIds.has(tx.id)).map(tx => tx.id)
+
+    saveReconciliation({
+      bankAccountId: form.bankAccountId,
+      statementDate: form.statementDate,
+      statementBalance,
+      calculatedBalance,
+      clearedTxIds,
+      outstandingTxIds,
+      serviceCharge: serviceChargeAmt > 0 ? serviceChargeAmt : undefined,
+      interestIncome: interestIncomeAmt > 0 ? interestIncomeAmt : undefined,
+    })
+
+    setModal('none')
+    showToast('Reconciliation saved successfully!')
+    goToHistory()
+  }
+
+  // ─── Render: History ──────────────────────────────────────────────────────
   if (step === 'history') {
     return (
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-5">
         {toast && (
-          <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">{toast}</div>
+          <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
+            {toast}
+          </div>
         )}
+
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking & Cash</p>
+            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking &amp; Cash</p>
             <h1 className="text-2xl font-bold text-slate-900">Bank Reconciliation</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Match bank statement lines to your book transactions</p>
+            <p className="text-sm text-slate-500 mt-0.5">Reconcile your bank statements to your books</p>
           </div>
           <button
-            onClick={() => { setSetupForm(f => ({ ...f, bankAccountId: '' })); setSetupError(''); setStep('setup') }}
+            onClick={() => { setFormError(''); setStep('setup') }}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
           >
-            New Reconciliation <ChevronRight size={14} />
+            <Plus size={14} /> New Reconciliation
           </button>
         </div>
 
-        {/* Filter by account */}
-        <div className="bg-white rounded-xl border border-slate-200 p-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs text-slate-500 mb-1">Filter by bank account</label>
-              <select
-                aria-label="Filter by bank account"
-                onChange={e => { setSetupForm(f => ({ ...f, bankAccountId: e.target.value })); loadHistory(e.target.value) }}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
-              >
-                <option value="">All accounts</option>
-                {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
+        {historyData.length === 0 ? (
+          <div className="bg-white rounded-xl border border-slate-200 flex flex-col items-center justify-center py-16 text-slate-400">
+            <History size={36} className="mb-3 text-slate-200" />
+            <p className="font-medium text-slate-500">No reconciliations yet</p>
+            <p className="text-sm mt-1">Start a new reconciliation to get started.</p>
+            <button
+              onClick={() => setStep('setup')}
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              <Plus size={14} /> New Reconciliation
+            </button>
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          {historyLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-              <span className="ml-2 text-slate-500">Loading history…</span>
-            </div>
-          ) : history.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-              <History size={36} className="mb-3 text-slate-200" />
-              <p className="font-medium text-slate-500">No reconciliations yet</p>
-              <p className="text-sm mt-1">Start a new reconciliation to match your bank statement.</p>
-              <button
-                onClick={() => setStep('setup')}
-                className="mt-4 flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
-                New Reconciliation <ChevronRight size={14} />
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                    <th className="px-4 py-3 whitespace-nowrap">Statement Date</th>
-                    <th className="px-4 py-3">Bank Account</th>
-                    <th className="px-4 py-3 text-right whitespace-nowrap">Opening</th>
-                    <th className="px-4 py-3 text-right whitespace-nowrap">Closing</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {history.map(h => (
-                    <tr key={h.id} className="hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => handleOpenRecon(h.id, h.status === 'COMPLETED')}>
-                      <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{fmtDate(h.statementDate)}</td>
-                      <td className="px-4 py-3.5 text-sm font-medium text-slate-800">{h.bankAccountName ?? '—'}</td>
-                      <td className="px-4 py-3.5 text-right font-mono text-sm text-slate-600 tabular-nums">{fmt(h.openingBalance)}</td>
-                      <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-slate-800 tabular-nums">{fmt(h.closingBalance)}</td>
+        ) : (
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Bank Account</th>
+                  <th className="px-4 py-3 text-center">Status</th>
+                  <th className="px-4 py-3 text-right">Difference</th>
+                  <th className="px-4 py-3 text-right">Cleared Items</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[...historyData].reverse().map(h => {
+                  const acct = MOCK_BANK_ACCOUNTS.find(a => a.id === h.bankAccountId)
+                  return (
+                    <tr key={h.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{fmtMonth(h.statementDate)}</td>
+                      <td className="px-4 py-3.5 text-sm font-medium text-slate-800">{acct?.name ?? h.bankAccountId}</td>
                       <td className="px-4 py-3.5 text-center">
-                        {h.status === 'COMPLETED' ? (
+                        {h.status === 'balanced' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 size={10} /> Completed
+                            <CheckCircle2 size={10} /> Balanced
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                            <Clock size={10} /> In Progress
+                            <AlertTriangle size={10} /> Not Balanced
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-emerald-700 font-medium">
-                          {h.status === 'COMPLETED' ? 'View' : 'Continue'} <ChevronRight size={11} />
-                        </span>
+                      <td className={`px-4 py-3.5 text-right font-mono text-sm tabular-nums ${Math.abs(h.difference) < 0.01 ? 'text-emerald-700' : 'text-red-600'
+                        }`}>{fmt(h.difference)}</td>
+                      <td className="px-4 py-3.5 text-right text-sm text-slate-600">
+                        {h.clearedTxIds.length} transactions
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     )
   }
 
-  // ─── STEP: Setup ──────────────────────────────────────────────────────────
+  // ─── Render: Setup ────────────────────────────────────────────────────────
   if (step === 'setup') {
     return (
       <div className="p-4 sm:p-6 flex items-start justify-center min-h-[60vh]">
-        {toast && (
-          <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">{toast}</div>
-        )}
         <div className="w-full max-w-lg">
           <button
-            onClick={() => setStep('history')}
+            onClick={goToHistory}
             className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors"
           >
             <ArrowLeft size={14} /> Back to History
           </button>
+
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100">
               <h2 className="font-bold text-slate-900 text-lg">New Reconciliation</h2>
-              <p className="text-sm text-slate-500 mt-0.5">Enter your bank statement details to begin matching</p>
+              <p className="text-sm text-slate-500 mt-0.5">Enter your bank statement details</p>
             </div>
+
             <div className="px-6 py-6 space-y-4">
-              {/* Bank account */}
+              {/* Bank Account */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Bank Account <span className="text-red-500">*</span>
                 </label>
                 <select
-                  aria-label="Bank Account"
-                  value={setupForm.bankAccountId}
-                  onChange={e => setSetupForm(f => ({ ...f, bankAccountId: e.target.value }))}
+                  value={form.bankAccountId}
+                  onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                 >
                   <option value="">Select bank account…</option>
-                  {bankAccounts.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}{a.accountNumber ? ` — ${a.accountNumber}` : ''}
-                    </option>
+                  {MOCK_BANK_ACCOUNTS.map(a => (
+                    <option key={a.id} value={a.id}>{a.name} — {a.accountNumber}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Statement date */}
+              {/* Statement Date */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Statement Date <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="date" value={setupForm.statementDate}
-                  aria-label="Statement Date"
-                  onChange={e => setSetupForm(f => ({ ...f, statementDate: e.target.value }))}
+                  type="date"
+                  value={form.statementDate}
+                  onChange={e => setForm(f => ({ ...f, statementDate: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                 />
               </div>
 
-              {/* Balances */}
+              {/* Statement Ending Balance */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Statement Ending Balance <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number" step="0.01"
+                  value={form.statementBalance}
+                  onChange={e => setForm(f => ({ ...f, statementBalance: e.target.value }))}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Ending balance shown on your bank statement</p>
+              </div>
+
+              {/* Optional adjustments */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Opening Balance <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Service Charge</label>
                   <input
-                    type="number" step="0.01" value={setupForm.openingBalance}
-                    onChange={e => setSetupForm(f => ({ ...f, openingBalance: e.target.value }))}
+                    type="number" step="0.01"
+                    value={form.serviceCharge}
+                    onChange={e => setForm(f => ({ ...f, serviceCharge: e.target.value }))}
                     placeholder="0.00"
                     className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">From your bank statement</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Bank fees not in feed (optional)</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Closing Balance <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Interest Income</label>
                   <input
-                    type="number" step="0.01" value={setupForm.closingBalance}
-                    onChange={e => setSetupForm(f => ({ ...f, closingBalance: e.target.value }))}
+                    type="number" step="0.01"
+                    value={form.interestIncome}
+                    onChange={e => setForm(f => ({ ...f, interestIncome: e.target.value }))}
                     placeholder="0.00"
                     className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">Ending balance on statement</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Bank interest not in feed (optional)</p>
                 </div>
               </div>
 
-              {setupError && (
+              {formError && (
                 <p className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                  <AlertCircle size={14} /> {setupError}
+                  <AlertTriangle size={14} /> {formError}
                 </p>
               )}
             </div>
+
             <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
               <button
-                onClick={() => setStep('history')}
+                onClick={goToHistory}
                 className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStartReconciliation}
-                disabled={setupLoading || !setupForm.bankAccountId || !setupForm.statementDate}
-                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
               >
-                {setupLoading ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
-                {setupLoading ? 'Starting…' : 'Start Reconciliation'}
+                Start Reconciliation →
               </button>
             </div>
           </div>
@@ -503,220 +402,297 @@ export default function BankReconciliationPage() {
     )
   }
 
-  // ─── STEP: Match ──────────────────────────────────────────────────────────
-  if ((step === 'match' || step === 'complete') && recon) {
-    const isReadOnly = step === 'complete' || recon.status === 'COMPLETED'
-    const bankTxs = recon.bankTransactions ?? []
-    const bookEntries = recon.bookEntries ?? []
+  // ─── Render: Reconcile ────────────────────────────────────────────────────
+  return (
+    <div className="p-4 sm:p-6 space-y-4">
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">
+          {toast}
+        </div>
+      )}
 
-    return (
-      <div className="p-4 sm:p-6 space-y-4">
-        {toast && (
-          <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-emerald-700 text-white text-sm rounded-lg shadow-lg">{toast}</div>
-        )}
-
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <button
-              onClick={() => { setStep('history'); setRecon(null); setSelectedBankTx(null); setSelectedBookEntry(null) }}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-2 transition-colors"
-            >
-              <ArrowLeft size={14} /> Back to History
-            </button>
-            <h1 className="text-xl font-bold text-slate-900">
-              Reconciliation — {bankAccounts.find(a => a.id === recon.bankAccountId)?.name ?? 'Bank Account'}
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">Statement date: {fmtDate(recon.statementDate)}</p>
-          </div>
-          {!isReadOnly && (
-            <div className="flex items-center gap-2 flex-shrink-0">
+      {/* ── Unbalanced modal ──────────────────────────────────────────────── */}
+      {modal === 'unbalanced' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <AlertTriangle size={20} className="text-amber-500 flex-shrink-0" />
+              <h3 className="font-bold text-slate-900">Unbalanced Reconciliation</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              Your books don&apos;t match the bank statement.<br />
+              <strong>Difference: {fmt(difference)}</strong><br />
+              You can finish now and reconcile later, or go back and review.
+            </p>
+            <div className="flex gap-2">
               <button
-                onClick={handleAutoMatch}
-                disabled={autoMatchLoading}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                onClick={() => setModal('none')}
+                className="flex-1 px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
               >
-                {autoMatchLoading ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                Auto-Match
+                Go Back
               </button>
-              {canMatch && (
+              <button
+                onClick={handleConfirmFinish}
+                className="flex-1 px-4 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg"
+              >
+                Finish Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Balanced modal ────────────────────────────────────────────────── */}
+      {modal === 'success' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <CheckCircle2 size={20} className="text-emerald-600 flex-shrink-0" />
+              <h3 className="font-bold text-slate-900">Reconciliation Complete!</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              All transactions are balanced. Your books match the bank statement.
+            </p>
+            <button
+              onClick={handleConfirmFinish}
+              className="w-full px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg"
+            >
+              Finish
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Header ───────────────────────────────────────────────────────── */}
+      <div>
+        <button
+          onClick={() => setStep('setup')}
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-2 transition-colors"
+        >
+          <ArrowLeft size={14} /> Back to Setup
+        </button>
+        <h1 className="text-xl font-bold text-slate-900">
+          Reconcile — {account?.name ?? 'Bank Account'}
+        </h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Statement date: {fmtShort(form.statementDate)} · Check off transactions that appear on your bank statement
+        </p>
+      </div>
+
+      {/* ── Two-column layout ─────────────────────────────────────────────── */}
+      <div className="flex gap-4 items-start">
+
+        {/* LEFT: Transaction list ~60% */}
+        <div className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 overflow-hidden">
+          {/* Toolbar */}
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleMarkAll}
+              className="px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-600 hover:bg-white transition-colors"
+            >
+              Mark All
+            </button>
+            <button
+              onClick={handleClearAll}
+              className="px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-600 hover:bg-white transition-colors"
+            >
+              Clear All
+            </button>
+            <select
+              value={txFilter}
+              onChange={e => { setTxFilter(e.target.value as TxFilter); setPage(0) }}
+              className="px-2 py-1.5 text-xs border border-slate-200 rounded-md text-slate-600 focus:outline-none"
+            >
+              <option value="all">All</option>
+              <option value="cleared">Cleared</option>
+              <option value="uncleared">Uncleared</option>
+            </select>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setPage(0) }}
+              placeholder="Search description…"
+              className="flex-1 min-w-[140px] px-3 py-1.5 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            />
+          </div>
+
+          {pagedTxs.length === 0 ? (
+            <p className="p-6 text-sm text-center text-slate-400">No transactions match the filter.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {pagedTxs.map(tx => {
+                const isPrevRec = prevReconciledIds.has(tx.id)
+                const isChecked = checkedIds.has(tx.id)
+                const isHighlight = smartHighlightIds.has(tx.id)
+
+                return (
+                  <div
+                    key={tx.id}
+                    onClick={() => handleToggle(tx.id)}
+                    title={isHighlight ? '💡 Possible match to clear the difference' : undefined}
+                    className={[
+                      'px-4 py-3 flex items-center gap-3 transition-colors select-none',
+                      isPrevRec
+                        ? 'bg-slate-50 cursor-default opacity-60'
+                        : 'cursor-pointer hover:bg-slate-50',
+                      isHighlight && !isPrevRec
+                        ? 'bg-yellow-50 hover:bg-yellow-100 border-l-4 border-yellow-400'
+                        : '',
+                    ].join(' ')}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      disabled={isPrevRec}
+                      onChange={() => handleToggle(tx.id)}
+                      onClick={e => e.stopPropagation()}
+                      className="w-4 h-4 accent-emerald-600 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${isPrevRec ? 'italic text-slate-400' : 'text-slate-800'}`}>
+                        {tx.description}
+                        {isPrevRec && <span className="ml-1 text-xs font-normal">(Previously reconciled)</span>}
+                        {isHighlight && !isPrevRec && <span className="ml-1 text-xs font-normal text-yellow-600">💡 Possible match</span>}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">{fmtShort(tx.date)}</p>
+                    </div>
+                    <span className={`font-mono font-semibold text-sm tabular-nums flex-shrink-0 ${tx.amount >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                      {tx.amount >= 0 ? '+' : ''}{fmt(tx.amount)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50">
+              <span className="text-xs text-slate-400">
+                Page {page + 1} of {totalPages} · {visibleTxs.length} transactions
+              </span>
+              <div className="flex items-center gap-1">
                 <button
-                  onClick={handleMatch}
-                  disabled={!!matchLoading}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="p-1 rounded text-slate-400 hover:text-slate-600 disabled:opacity-40"
                 >
-                  <Link2 size={14} /> Match Selected
+                  <ChevronLeft size={14} />
                 </button>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="p-1 rounded text-slate-400 hover:text-slate-600 disabled:opacity-40"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: Reconciliation Summary ~40%, sticky */}
+        <div className="w-[340px] flex-shrink-0 sticky top-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-semibold text-sm text-slate-700">Reconciliation Summary</h3>
+            </div>
+
+            <div className="px-4 py-4 space-y-2 text-sm">
+              <SummaryRow label="Opening Balance:" value={fmt(openingBalance)} />
+              <SummaryRow label="(+) Deposits Cleared:" value={'+' + fmt(clearedDeposits)} valueClass="text-emerald-700" />
+              <SummaryRow label="(-) Checks Cleared:" value={'-' + fmt(clearedWithdrawals)} valueClass="text-rose-600" />
+              {serviceChargeAmt > 0 && (
+                <SummaryRow label="(-) Service Charges:" value={'-' + fmt(serviceChargeAmt)} valueClass="text-rose-600" />
+              )}
+              {interestIncomeAmt > 0 && (
+                <SummaryRow label="(+) Interest Income:" value={'+' + fmt(interestIncomeAmt)} valueClass="text-emerald-700" />
+              )}
+              <div className="border-t border-slate-100 pt-2">
+                <SummaryRow label="Calculated Balance:" value={fmt(calculatedBalance)} bold />
+              </div>
+              <SummaryRow label="Statement Balance:" value={fmt(statementBalance)} bold />
+              <div className="border-t border-slate-100 pt-2">
+                <SummaryRow
+                  label="Difference:"
+                  value={fmt(difference)}
+                  bold
+                  valueClass={isBalanced ? 'text-emerald-700' : 'text-red-600'}
+                />
+              </div>
+            </div>
+
+            {/* Balance status badge */}
+            <div className={`px-4 py-3 border-t ${isBalanced ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+              {isBalanced ? (
+                <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
+                  <Check size={15} /> BALANCED
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
+                  <X size={15} /> NOT BALANCED — {fmt(Math.abs(difference))}
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Summary panel */}
-        <div className={`flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 rounded-lg border text-sm ${
-          isBalanced ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'
-        }`}>
-          <span className={`text-xs font-bold uppercase tracking-wide ${isBalanced ? 'text-emerald-700' : 'text-amber-700'}`}>
-            {isBalanced ? '✓ Balanced' : '⚠ Difference'}: {fmt(difference)}
-          </span>
-          <span className="text-slate-500 text-xs">Statement closing: <span className="font-semibold tabular-nums">{fmt(statementClosing)}</span></span>
-          <span className="text-slate-300 text-xs hidden sm:inline">|</span>
-          <span className="text-slate-500 text-xs">Matched: <span className="font-semibold text-emerald-700">{matchedBankCount}</span></span>
-          <span className="text-slate-300 text-xs hidden sm:inline">|</span>
-          <span className="text-slate-500 text-xs">Unmatched bank: <span className="font-semibold text-amber-600">{unmatchedBankCount}</span></span>
-          <span className="text-slate-300 text-xs hidden sm:inline">|</span>
-          <span className="text-slate-500 text-xs">Unmatched book: <span className="font-semibold text-slate-600">{unmatchedBookCount}</span></span>
-          {!isReadOnly && (
-            <button
-              onClick={handleComplete}
-              disabled={!isBalanced || completeLoading}
-              className="ml-auto flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={isBalanced ? 'Complete reconciliation' : 'Resolve all differences first'}
-            >
-              {completeLoading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-              Complete Reconciliation
-            </button>
-          )}
-          {isReadOnly && (
-            <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
-              <CheckCircle2 size={12} /> Completed
-            </span>
-          )}
-        </div>
-
-        {/* Two-column matching layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-
-          {/* LEFT: Bank Transactions */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-              <h3 className="font-semibold text-sm text-slate-700">Bank Statement Lines</h3>
-              <span className="text-xs text-slate-400">{bankTxs.length} transactions</span>
-            </div>
-            {bankTxs.length === 0 ? (
-              <p className="p-6 text-sm text-center text-slate-400">No bank transactions loaded for this reconciliation.</p>
-            ) : (
-              <div className="divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
-                {bankTxs.map(tx => {
-                  const isMatched = matchMap.has(tx.id)
-                  const isSelected = selectedBankTx === tx.id
-                  return (
-                    <div
-                      key={tx.id}
-                      onClick={() => !isReadOnly && !isMatched && setSelectedBankTx(prev => prev === tx.id ? null : tx.id)}
-                      className={`px-4 py-3 flex items-center justify-between gap-3 transition-colors ${
-                        isReadOnly ? '' : 'cursor-pointer'
-                      } ${isMatched ? 'bg-emerald-50/50' : ''} ${isSelected ? 'ring-2 ring-inset ring-emerald-400 bg-emerald-50' : ''
-                      } ${!isReadOnly && !isMatched ? 'hover:bg-slate-50' : ''}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {isMatched
-                            ? <CheckCircle2 size={13} className="text-emerald-600 flex-shrink-0" />
-                            : <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isSelected ? 'bg-emerald-500' : 'bg-amber-400'}`} />}
-                          <span className="text-sm font-medium text-slate-800 truncate">{tx.description}</span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5 ml-5">
-                          <span className="text-xs text-slate-400">{fmtDate(tx.date)}</span>
-                          {tx.reference && <span className="text-xs font-mono text-slate-400">{tx.reference}</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`font-mono font-semibold text-sm tabular-nums ${
-                          tx.type === 'CREDIT' ? 'text-emerald-700' : 'text-rose-600'
-                        }`}>
-                          {tx.type === 'CREDIT' ? '+' : '-'}{fmt(tx.amount)}
-                        </span>
-                        {isMatched && !isReadOnly && (
-                          <button
-                            onClick={e => { e.stopPropagation(); handleUnmatch(tx.id) }}
-                            disabled={matchLoading === tx.id}
-                            className="p-1 text-slate-300 hover:text-red-400 transition-colors"
-                            title="Unmatch"
-                          >
-                            {matchLoading === tx.id ? <Loader2 size={12} className="animate-spin" /> : <Link2Off size={12} />}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+            {/* Outstanding items */}
+            <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+              <p className="font-semibold text-slate-600 mb-1">Outstanding Items:</p>
+              <div className="flex justify-between">
+                <span>Withdrawals:</span>
+                <span className="text-rose-600 tabular-nums">
+                  {fmt(Math.abs(outstandingWithdrawals.reduce((s, tx) => s + tx.amount, 0)))}
+                  {' '}({outstandingWithdrawals.length} items)
+                </span>
               </div>
-            )}
-          </div>
-
-          {/* RIGHT: Book Entries (GL) */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-              <h3 className="font-semibold text-sm text-slate-700">Book Transactions (GL)</h3>
-              <span className="text-xs text-slate-400">{bookEntries.length} entries</span>
-            </div>
-            {bookEntries.length === 0 ? (
-              <p className="p-6 text-sm text-center text-slate-400">No GL entries loaded for this reconciliation.</p>
-            ) : (
-              <div className="divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
-                {bookEntries.map(entry => {
-                  const isMatched = matchMap.has(entry.id)
-                  const isSelected = selectedBookEntry === entry.id
-                  return (
-                    <div
-                      key={entry.id}
-                      onClick={() => !isReadOnly && !isMatched && setSelectedBookEntry(prev => prev === entry.id ? null : entry.id)}
-                      className={`px-4 py-3 flex items-center justify-between gap-3 transition-colors ${
-                        isReadOnly ? '' : 'cursor-pointer'
-                      } ${isMatched ? 'bg-emerald-50/50' : ''} ${isSelected ? 'ring-2 ring-inset ring-emerald-400 bg-emerald-50' : ''
-                      } ${!isReadOnly && !isMatched ? 'hover:bg-slate-50' : ''}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {isMatched
-                            ? <CheckCircle2 size={13} className="text-emerald-600 flex-shrink-0" />
-                            : <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isSelected ? 'bg-emerald-500' : 'bg-slate-300'}`} />}
-                          <span className="text-sm font-medium text-slate-800 truncate">
-                            {entry.description ?? entry.accountName}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5 ml-5">
-                          <span className="text-xs text-slate-400">{fmtDate(entry.date)}</span>
-                          {entry.entryNumber && <span className="text-xs font-mono text-slate-400">{entry.entryNumber}</span>}
-                          <span className="text-xs text-slate-400">{entry.accountCode} — {entry.accountName}</span>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0 text-right">
-                        {entry.debit > 0 && (
-                          <span className="block font-mono font-semibold text-sm text-emerald-700 tabular-nums">+{fmt(entry.debit)}</span>
-                        )}
-                        {entry.credit > 0 && (
-                          <span className="block font-mono font-semibold text-sm text-rose-600 tabular-nums">-{fmt(entry.credit)}</span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+              <div className="flex justify-between">
+                <span>Deposits:</span>
+                <span className="text-emerald-700 tabular-nums">
+                  {fmt(outstandingDeposits.reduce((s, tx) => s + tx.amount, 0))}
+                  {' '}({outstandingDeposits.length} items)
+                </span>
               </div>
-            )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-4 py-3 border-t border-slate-100 flex gap-2">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <Printer size={12} /> Print Report
+              </button>
+              <button
+                onClick={handleFinishClick}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors text-white ${isBalanced ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'}`}
+              >
+                Finish Reconcile
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Manual match instructions (only when something selected but not yet matched) */}
-        {(selectedBankTx || selectedBookEntry) && !isReadOnly && (
-          <div className={`flex items-center justify-between gap-4 px-4 py-3 rounded-lg border text-sm ${
-            canMatch ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-blue-50 border-blue-200 text-blue-800'
-          }`}>
-            <div className="flex items-center gap-2">
-              <Link2 size={14} />
-              {canMatch
-                ? 'Both sides selected — click "Match Selected" to pair them.'
-                : `${selectedBankTx ? '1 bank transaction' : '0 bank transactions'} selected. Now click a ${selectedBankTx ? 'book entry' : 'bank transaction'} on the right.`}
-            </div>
-            <button onClick={() => { setSelectedBankTx(null); setSelectedBookEntry(null) }} className="text-xs opacity-60 hover:opacity-100 flex items-center gap-1">
-              <X size={11} /> Clear
-            </button>
-          </div>
-        )}
       </div>
-    )
-  }
+    </div>
+  )
+}
 
-  return null
+// ─── Sub-component: summary row ───────────────────────────────────────────────
+
+function SummaryRow({
+  label,
+  value,
+  bold = false,
+  valueClass = 'text-slate-800',
+}: {
+  label: string
+  value: string
+  bold?: boolean
+  valueClass?: string
+}) {
+  return (
+    <div className={`flex justify-between ${bold ? 'font-semibold' : ''}`}>
+      <span className={bold ? 'text-slate-700' : 'text-slate-500'}>{label}</span>
+      <span className={`font-mono tabular-nums ${valueClass}`}>{value}</span>
+    </div>
+  )
 }
