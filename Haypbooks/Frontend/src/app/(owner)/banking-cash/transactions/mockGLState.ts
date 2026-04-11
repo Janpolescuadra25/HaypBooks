@@ -44,7 +44,7 @@ export interface MockSplitLine {
 }
 
 export type MockTxStatus = 'PENDING' | 'CATEGORIZED' | 'MATCHED' | 'EXCLUDED';
-export type MockTxType = 'Bank Transaction' | 'Bank Payment' | 'Bank Receipt' | 'Split Transaction' | 'Bank Transfer';
+export type MockTxType = 'Bank Transaction' | 'Bank Payment' | 'Bank Receipt' | 'Split Transaction' | 'Bank Transfer' | 'Manual Entry';
 
 export interface MockBankTransaction {
   id: string;
@@ -117,6 +117,21 @@ export interface MockBankAccount {
   currency: string;
 }
 
+export interface MockReconciliation {
+  id: string;
+  bankAccountId: string;
+  statementDate: string;
+  statementBalance: number;
+  calculatedBalance: number;
+  difference: number;
+  serviceCharge?: number;
+  interestIncome?: number;
+  clearedTxIds: string[];
+  status: 'balanced' | 'not_balanced';
+  createdBy: string;
+  createdAt: string;
+}
+
 // ─── COA Accounts (21) ──────────────────────────────────────────────────────
 
 export const MOCK_COA_ACCOUNTS: MockCOAAccount[] = [
@@ -133,12 +148,14 @@ export const MOCK_COA_ACCOUNTS: MockCOAAccount[] = [
   { id: 'acc-4001', code: '4001', name: 'Service Revenue',        type: 'Revenue'   },
   { id: 'acc-4002', code: '4002', name: 'Product Sales',          type: 'Revenue'   },
   { id: 'acc-4003', code: '4003', name: 'Other Income',           type: 'Revenue'   },
+  { id: 'acc-4004', code: '4004', name: 'Interest Income',        type: 'Revenue'   },
   { id: 'acc-5001', code: '5001', name: 'Cost of Goods Sold',     type: 'Expense'   },
   { id: 'acc-5100', code: '5100', name: 'Utilities Expense',      type: 'Expense'   },
   { id: 'acc-5101', code: '5101', name: 'Telecommunications',     type: 'Expense'   },
   { id: 'acc-5102', code: '5102', name: 'Rent Expense',           type: 'Expense'   },
   { id: 'acc-5103', code: '5103', name: 'Meals & Entertainment',  type: 'Expense'   },
   { id: 'acc-5104', code: '5104', name: 'Transportation',         type: 'Expense'   },
+  { id: 'acc-5105', code: '5105', name: 'Bank Charges Expense',   type: 'Expense'   },
   { id: 'acc-5200', code: '5200', name: 'Government Contributions', type: 'Expense' },
   { id: 'acc-5202', code: '5202', name: 'Software Subscriptions', type: 'Expense'   },
 ];
@@ -1515,6 +1532,197 @@ export function toggleReconciliation(txId: string, reconciled: boolean): void {
   });
 }
 
+export const reconciliationHistory: MockReconciliation[] = [];
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function createReconciliationAdjustmentTransaction(params: {
+  bankAccountId: string;
+  statementDate: string;
+  description: string;
+  amount: number;
+  coaAccountId: string;
+  auditDescription: string;
+}): MockBankTransaction | null {
+  const bankAccount = MOCK_BANK_ACCOUNTS.find(account => account.id === params.bankAccountId);
+  const coaAccount = MOCK_COA_ACCOUNTS.find(account => account.id === params.coaAccountId);
+  if (!bankAccount || !coaAccount || Math.abs(params.amount) < 0.01) return null;
+
+  const txId = `${params.amount < 0 ? 'TX-SVC' : 'TX-INT'}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const jeId = nextJEId();
+  const absAmount = Math.abs(params.amount);
+  const bankLedger = getBankLedgerAccount(params.bankAccountId);
+
+  const journalEntry: MockJournalEntry = {
+    id: jeId,
+    date: params.statementDate,
+    description: params.description,
+    type: 'BankCategorize',
+    status: 'POSTED',
+    referenceNo: getJournalEntryReferenceLabel(jeId),
+    totalAmount: absAmount,
+    lines: params.amount < 0
+      ? [
+          { accountId: coaAccount.id, accountName: coaAccount.name, debit: absAmount, credit: 0 },
+          { accountId: bankLedger.accountId, accountName: bankLedger.accountName, debit: 0, credit: absAmount },
+        ]
+      : [
+          { accountId: bankLedger.accountId, accountName: bankLedger.accountName, debit: absAmount, credit: 0 },
+          { accountId: coaAccount.id, accountName: coaAccount.name, debit: 0, credit: absAmount },
+        ],
+  };
+
+  const transaction: MockBankTransaction = {
+    id: txId,
+    date: params.statementDate,
+    description: params.description,
+    amount: roundCurrency(params.amount),
+    accountId: params.bankAccountId,
+    bankAccountId: params.bankAccountId,
+    status: 'CATEGORIZED',
+    transactionType: 'Manual Entry',
+    journalEntryId: jeId,
+    accountCode: coaAccount.code,
+    accountName: coaAccount.name,
+    reconciled: true,
+    manualEntry: true,
+  };
+
+  mockJEs = [...mockJEs, journalEntry];
+  mockStore.items = [...mockStore.items, transaction];
+
+  addAuditLog({
+    action: 'manual_entry',
+    entityType: 'transaction',
+    entityId: transaction.id,
+    entityDescription: params.auditDescription,
+    details: 'Auto-created during reconciliation',
+    newValue: coaAccount.name,
+  });
+
+  return transaction;
+}
+
+export function saveReconciliation(params: {
+  bankAccountId: string;
+  statementDate: string;
+  statementBalance: number;
+  calculatedBalance: number;
+  clearedTxIds: string[];
+  serviceCharge?: number;
+  interestIncome?: number;
+}): MockReconciliation {
+  const statementBalance = roundCurrency(params.statementBalance);
+  const calculatedBalance = roundCurrency(params.calculatedBalance);
+  const serviceCharge = params.serviceCharge ? roundCurrency(params.serviceCharge) : undefined;
+  const interestIncome = params.interestIncome ? roundCurrency(params.interestIncome) : undefined;
+  const difference = roundCurrency(statementBalance - calculatedBalance);
+
+  const reconciliation: MockReconciliation = {
+    id: `RECON-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    bankAccountId: params.bankAccountId,
+    statementDate: params.statementDate,
+    statementBalance,
+    calculatedBalance,
+    difference,
+    serviceCharge,
+    interestIncome,
+    clearedTxIds: [...params.clearedTxIds],
+    status: Math.abs(difference) < 0.01 ? 'balanced' : 'not_balanced',
+    createdBy: 'Juan Dela Cruz',
+    createdAt: new Date().toISOString(),
+  };
+
+  reconciliationHistory.unshift(reconciliation);
+
+  params.clearedTxIds.forEach(txId => {
+    const tx = mockStore.items.find(item => item.id === txId);
+    if (tx && !tx.reconciled) {
+      toggleReconciliation(txId, true);
+    }
+  });
+
+  if (serviceCharge && serviceCharge > 0) {
+    createReconciliationAdjustmentTransaction({
+      bankAccountId: params.bankAccountId,
+      statementDate: params.statementDate,
+      description: 'Bank Service Charge',
+      amount: serviceCharge * -1,
+      coaAccountId: 'acc-5105',
+      auditDescription: `Bank Service Charge - ₱${serviceCharge.toLocaleString()}`,
+    });
+  }
+
+  if (interestIncome && interestIncome > 0) {
+    createReconciliationAdjustmentTransaction({
+      bankAccountId: params.bankAccountId,
+      statementDate: params.statementDate,
+      description: 'Interest Income',
+      amount: interestIncome,
+      coaAccountId: 'acc-4004',
+      auditDescription: `Interest Income - ₱${interestIncome.toLocaleString()}`,
+    });
+  }
+
+  addAuditLog({
+    action: 'reconciled',
+    entityType: 'register_entry',
+    entityId: reconciliation.id,
+    entityDescription: `Reconciliation for ${params.statementDate}`,
+    details: `${reconciliation.status === 'balanced' ? 'Balanced' : 'Not balanced'} — ${params.clearedTxIds.length} transactions cleared`,
+    newValue: reconciliation.status,
+  });
+
+  return reconciliation;
+}
+
+export function getReconciliationHistory(bankAccountId?: string): MockReconciliation[] {
+  const entries = bankAccountId
+    ? reconciliationHistory.filter(entry => entry.bankAccountId === bankAccountId)
+    : reconciliationHistory;
+
+  return [...entries].sort((left, right) => {
+    const statementOrder = right.statementDate.localeCompare(left.statementDate);
+    if (statementOrder !== 0) return statementOrder;
+    return right.createdAt.localeCompare(left.createdAt);
+  });
+}
+
+;(() => {
+  const seeded: MockReconciliation[] = [
+    {
+      id: 'RECON-SEED-2026-02',
+      bankAccountId: 'acct-bdo',
+      statementDate: '2026-02-28',
+      statementBalance: 200000,
+      calculatedBalance: 200000,
+      difference: 0,
+      serviceCharge: 150,
+      interestIncome: 125.5,
+      clearedTxIds: [],
+      status: 'balanced',
+      createdBy: 'Juan Dela Cruz',
+      createdAt: '2026-03-01T08:00:00.000Z',
+    },
+    {
+      id: 'RECON-SEED-2026-01',
+      bankAccountId: 'acct-bdo',
+      statementDate: '2026-01-31',
+      statementBalance: 184950,
+      calculatedBalance: 185000,
+      difference: -50,
+      clearedTxIds: [],
+      status: 'not_balanced',
+      createdBy: 'Juan Dela Cruz',
+      createdAt: '2026-02-01T09:15:00.000Z',
+    },
+  ];
+
+  reconciliationHistory.splice(0, reconciliationHistory.length, ...seeded);
+})();
+
 let _manualEntryCounter = 0;
 
 function nextManualEntryId(): string {
@@ -2053,11 +2261,19 @@ function cloneJournalEntry(entry: MockJournalEntry): MockJournalEntry {
   };
 }
 
+function cloneReconciliation(entry: MockReconciliation): MockReconciliation {
+  return {
+    ...entry,
+    clearedTxIds: [...entry.clearedTxIds],
+  };
+}
+
 const INITIAL_MOCK_STATE = {
   items: mockStore.items.map(cloneTransaction),
   journalEntries: mockJEs.map(cloneJournalEntry),
   rules: MOCK_RULES.map(rule => ({ ...rule })),
   history: CATEGORIZATION_HISTORY.map(entry => ({ ...entry })),
+  reconciliationEntries: reconciliationHistory.map(cloneReconciliation),
   auditEntries: auditLog.map(entry => ({ ...entry })),
   jeCounter: _jeCounter,
   manualEntryCounter: _manualEntryCounter,
@@ -2069,6 +2285,7 @@ export function resetMockState(): void {
   mockJEs = INITIAL_MOCK_STATE.journalEntries.map(cloneJournalEntry);
   MOCK_RULES = INITIAL_MOCK_STATE.rules.map(rule => ({ ...rule }));
   CATEGORIZATION_HISTORY = INITIAL_MOCK_STATE.history.map(entry => ({ ...entry }));
+  reconciliationHistory.splice(0, reconciliationHistory.length, ...INITIAL_MOCK_STATE.reconciliationEntries.map(cloneReconciliation));
   auditLog.splice(0, auditLog.length, ...INITIAL_MOCK_STATE.auditEntries.map(entry => ({ ...entry })));
   _jeCounter = INITIAL_MOCK_STATE.jeCounter;
   _manualEntryCounter = INITIAL_MOCK_STATE.manualEntryCounter;

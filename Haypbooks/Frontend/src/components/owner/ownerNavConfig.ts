@@ -103,35 +103,13 @@ export const navigationData: NavSection[] = [
             path: '/banking-cash/transactions',
             tabs: [
               { label: 'Bank Transactions', value: 'transactions', status: 'existing' },
-              { label: 'Bank Rules',        value: 'rules',        status: 'existing' },
-            ],
-          },
-          {
-            title: 'Accounts',
-            path: '/banking-cash/accounts',
-            tabs: [
-              { label: 'Bank Accounts',     value: 'bank-accounts',     status: 'existing' },
-              { label: 'Credit Cards',      value: 'credit-cards',      status: 'coming-soon' },
-              { label: 'Petty Cash',        value: 'petty-cash',        status: 'coming-soon' },
-              { label: 'Clearing Accounts', value: 'clearing-accounts', status: 'coming-soon' },
             ],
           },
           {
             title: 'Reconciliation',
-            path: '/banking-cash/reconciliation',
+            path: '/banking-cash/transactions/reconciliation',
             tabs: [
-              { label: 'Reconcile',  value: 'reconcile',  status: 'coming-soon' },
-              { label: 'History',    value: 'history',    status: 'coming-soon' },
-              { label: 'Statements', value: 'statements', status: 'coming-soon' },
-            ],
-          },
-          {
-            title: 'Deposits',
-            path: '/banking-cash/deposits',
-            tabs: [
-              { label: 'Undeposited Funds', value: 'undeposited-funds', status: 'coming-soon' },
-              { label: 'Bank Deposits',     value: 'bank-deposits',     status: 'coming-soon' },
-              { label: 'Deposit History',   value: 'deposit-history',   status: 'coming-soon' },
+              { label: 'Reconciliation', value: 'reconciliation', status: 'existing' },
             ],
           },
         ],

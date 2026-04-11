@@ -22,6 +22,7 @@ import {
   findHistoryMatch,
   getAuditLogForEntity,
   getBalances,
+  getReconciliationHistory,
   getRegisterEntries,
   importTransactions,
   matchTransaction,
@@ -31,6 +32,7 @@ import {
   moveRule,
   reverseImportedAmounts,
   resetMockState,
+  saveReconciliation,
   searchForMatch,
   splitTransaction,
   toggleReconciliation,
@@ -406,6 +408,55 @@ test('toggleReconciliation updates the flag and records an audit event', () => {
   toggleReconciliation('mt-011', false)
   assert.equal(getTx('mt-011').reconciled, false)
   assert.ok(getAuditLogForEntity('mt-011').some(entry => entry.action === 'unreconciled'))
+})
+
+test('saveReconciliation marks selected transactions as reconciled', () => {
+  saveReconciliation({
+    bankAccountId: 'acct-bdo',
+    statementDate: '2026-04-30',
+    statementBalance: 240000,
+    calculatedBalance: 240000,
+    clearedTxIds: ['mt-001', 'mt-004'],
+  })
+
+  assert.equal(getTx('mt-001').reconciled, true)
+  assert.equal(getTx('mt-004').reconciled, true)
+})
+
+test('saveReconciliation creates a service charge transaction', () => {
+  const beforeCount = mockStore.items.length
+  saveReconciliation({
+    bankAccountId: 'acct-bdo',
+    statementDate: '2026-04-30',
+    statementBalance: 239850,
+    calculatedBalance: 240000,
+    clearedTxIds: ['mt-001'],
+    serviceCharge: 150,
+  })
+
+  assert.equal(mockStore.items.length, beforeCount + 1)
+  const serviceChargeTx = mockStore.items.find(item => item.description === 'Bank Service Charge')
+
+  assert.ok(serviceChargeTx)
+  assert.equal(serviceChargeTx?.amount, -150)
+  assert.equal(serviceChargeTx?.accountName, 'Bank Charges Expense')
+  assert.equal(serviceChargeTx?.accountId, 'acct-bdo')
+})
+
+test('saveReconciliation appends a new reconciliation history entry', () => {
+  const before = getReconciliationHistory('acct-bdo').length
+  const saved = saveReconciliation({
+    bankAccountId: 'acct-bdo',
+    statementDate: '2026-04-30',
+    statementBalance: 240125.5,
+    calculatedBalance: 240125.5,
+    clearedTxIds: ['mt-001', 'mt-004'],
+    interestIncome: 125.5,
+  })
+
+  const history = getReconciliationHistory('acct-bdo')
+  assert.equal(history.length, before + 1)
+  assert.equal(history[0]?.id, saved.id)
 })
 
 test('addManualRegisterEntry creates a categorized manual transaction and JE', () => {

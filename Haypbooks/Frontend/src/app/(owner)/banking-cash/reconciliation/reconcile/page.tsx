@@ -1,5 +1,5 @@
-import BankReconciliationPage from '@/components/banking/BankReconciliationPage'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <BankReconciliationPage />
+  redirect('/banking-cash/transactions/reconciliation')
 }
