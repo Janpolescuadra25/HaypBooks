@@ -3,7 +3,20 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft, CheckSquare, ChevronDown, Clock, Download, Filter, Plus, Printer, Trash2, X,
+  ArrowLeft,
+  ArrowLeftRight,
+  CheckSquare,
+  ChevronDown,
+  Clock,
+  Download,
+  FileText,
+  Filter,
+  Link2,
+  Plus,
+  Printer,
+  Scissors,
+  Trash2,
+  X,
 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
@@ -19,8 +32,12 @@ import {
   editTransactionMemo,
   getAuditLogForEntity,
   getRegisterEntries,
+  mockJEs,
+  mockStore,
   toggleReconciliation,
+  undoCategorize,
   type AuditLogEntry,
+  type MockJournalEntry,
   type RegisterEntry,
 } from '../mockGLState'
 
@@ -144,11 +161,85 @@ function getCoaId(tx: RegisterEntry): string {
   return MOCK_COA_ACCOUNTS.find(account => account.name === tx.accountName)?.id ?? ''
 }
 
-function getStatusBadgeClasses(source: string): string {
-  if (source === 'Matched') return 'bg-sky-50 text-sky-700 border-sky-200'
-  if (source === 'Manual') return 'bg-violet-50 text-violet-700 border-violet-200'
-  if (source === 'Transfer') return 'bg-amber-50 text-amber-700 border-amber-200'
-  return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+type StatusIconName = 'file' | 'transfer' | 'split'
+
+function getLinkedJournalEntry(tx: Pick<RegisterEntry, 'journalEntryId' | 'bankRef'>): MockJournalEntry | null {
+  const candidates = [tx.bankRef, tx.journalEntryId].filter((value): value is string => Boolean(value))
+
+  for (const id of candidates) {
+    const entry = mockJEs.find(item => item.id === id)
+    if (entry) return entry
+  }
+
+  return null
+}
+
+function getJournalEntryReference(entry: MockJournalEntry | null, fallbackId?: string): string {
+  return entry?.referenceNo ?? fallbackId?.toUpperCase() ?? '—'
+}
+
+function getReferenceDisplayText(tx: RegisterEntry): string {
+  if (tx.transactionType === 'Bank Transfer') return 'TRANSFER'
+  if (!tx.journalEntryId && !tx.bankRef) return '—'
+  const linkedEntry = getLinkedJournalEntry(tx)
+  return getJournalEntryReference(linkedEntry, tx.bankRef ?? tx.journalEntryId)
+}
+
+function getReferenceSearchText(tx: RegisterEntry): string {
+  const linkedEntry = getLinkedJournalEntry(tx)
+  return [
+    tx.ref,
+    tx.bankRef,
+    tx.journalEntryId,
+    linkedEntry?.referenceNo,
+    linkedEntry?.description,
+    getReferenceDisplayText(tx),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function getJournalEntryMemo(entry: MockJournalEntry | null): string {
+  return entry?.lines.find(line => Boolean(line.memo))?.memo ?? entry?.description ?? '—'
+}
+
+function getOpenRecordLabel(entry: MockJournalEntry | null): string {
+  if (entry?.type === 'Bill') return 'Open Bill →'
+  if (entry?.type === 'Invoice') return 'Open Invoice →'
+  return 'Open Record →'
+}
+
+function getUndoActionLabel(tx: RegisterEntry): string {
+  if (tx.status === 'MATCHED') return 'Undo Match'
+  if (tx.transactionType === 'Split Transaction') return 'Undo Split'
+  if (tx.transactionType === 'Bank Transfer') return 'Undo Transfer'
+  return 'Undo Categorization'
+}
+
+function getTransferParties(tx: RegisterEntry, entry: MockJournalEntry | null): { from: string; to: string } {
+  const currentBank = MOCK_BANK_ACCOUNTS.find(account => account.id === tx.accountId)?.name ?? 'Current Bank Account'
+  const otherBank = entry?.lines.find(line => line.accountName !== currentBank)?.accountName ?? 'Linked Bank Account'
+
+  return tx.amount < 0
+    ? { from: currentBank, to: otherBank }
+    : { from: otherBank, to: currentBank }
+}
+
+function getStatusMeta(tx: RegisterEntry): { label: string; classes: string; icon?: StatusIconName } {
+  if (tx.manualEntry) {
+    return { label: 'Manual', classes: 'bg-slate-100 text-slate-700 border-slate-200' }
+  }
+  if (tx.transactionType === 'Bank Transfer') {
+    return { label: 'Transfer', classes: 'bg-violet-50 text-violet-700 border-violet-200', icon: 'transfer' }
+  }
+  if (tx.transactionType === 'Split Transaction') {
+    return { label: 'Split', classes: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'split' }
+  }
+  if (tx.status === 'MATCHED') {
+    return { label: 'Matched', classes: 'bg-sky-50 text-sky-700 border-sky-200', icon: 'file' }
+  }
+  return { label: 'Categorized', classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
 }
 
 function buildCsv(rows: RegisterEntry[]): string {
@@ -191,10 +282,14 @@ function downloadCsv(filename: string, csv: string): void {
   URL.revokeObjectURL(url)
 }
 
-function StatusBadge({ label }: { label: string }) {
+function StatusBadge({ tx }: { tx: RegisterEntry }) {
+  const meta = getStatusMeta(tx)
+  const Icon = meta.icon === 'file' ? FileText : meta.icon === 'transfer' ? ArrowLeftRight : meta.icon === 'split' ? Scissors : null
+
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadgeClasses(label)}`}>
-      {label}
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.classes}`}>
+      {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+      {meta.label}
     </span>
   )
 }
@@ -267,7 +362,7 @@ export default function RegisterPage() {
         (tx.contactName ?? '').toLowerCase().includes(query) ||
         (tx.accountName ?? '').toLowerCase().includes(query) ||
         (tx.memo ?? '').toLowerCase().includes(query) ||
-        (tx.ref ?? tx.bankRef ?? '').toLowerCase().includes(query),
+        getReferenceSearchText(tx).includes(query),
       )
     }
 
@@ -297,10 +392,24 @@ export default function RegisterPage() {
     [detailTxId, registerEntries],
   )
 
+  const detailJournalEntry = useMemo(
+    () => (detailTx ? getLinkedJournalEntry(detailTx) : null),
+    [detailTx, version],
+  )
+
+  const detailMatchedRecord = useMemo(
+    () => (detailTx?.status === 'MATCHED' ? getLinkedJournalEntry(detailTx) : null),
+    [detailTx, version],
+  )
+
   const detailHistory = useMemo(() => {
     if (!detailTx) return []
     return getAuditLogForEntity(detailTx.id).filter(entry => matchesAuditFilter(entry, detailFilter))
   }, [detailFilter, detailTx, version])
+
+  const detailTransferParties = detailTx?.transactionType === 'Bank Transfer'
+    ? getTransferParties(detailTx, detailJournalEntry)
+    : null
 
   const selectedEntries = useMemo(
     () => visibleEntries.filter(tx => selectedIds.has(tx.id)),
@@ -628,6 +737,41 @@ export default function RegisterPage() {
     showToast('Manual transaction added')
   }
 
+  const openRecord = (journalEntryId?: string, txId?: string, type?: string) => {
+    if (!journalEntryId) {
+      showToast('No journal entry linked')
+      return
+    }
+
+    const params = new URLSearchParams({ id: journalEntryId })
+    if (txId) params.set('txnId', txId)
+    if (type) params.set('type', type.toLowerCase())
+    router.push(`/banking-cash/transactions/view-record?${params.toString()}`)
+  }
+
+  const undoFromDetail = () => {
+    if (!detailTx) return
+
+    const liveTx = mockStore.items.find(item => item.id === detailTx.id)
+    if (!liveTx) return
+
+    const relatedIds = detailTx.transactionType === 'Bank Transfer'
+      ? mockStore.items
+          .filter(item => item.id === detailTx.id || item.transferSourceId === detailTx.id || item.id === detailTx.transferSourceId)
+          .map(item => item.id)
+      : [detailTx.id]
+
+    undoCategorize(liveTx)
+    setSelectedIds(current => {
+      const next = new Set(current)
+      relatedIds.forEach(id => next.delete(id))
+      return next
+    })
+    setDetailTxId(null)
+    setVersion(current => current + 1)
+    showToast('Transaction unmatched — moved back to Bank Transactions')
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="border-b border-slate-200 bg-white print:hidden">
@@ -881,7 +1025,7 @@ export default function RegisterPage() {
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-[1260px] w-full text-left text-sm">
+            <table className="min-w-[1420px] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   <th className="w-10 px-3 py-3">
@@ -893,33 +1037,33 @@ export default function RegisterPage() {
                     />
                   </th>
                   <th className="w-28 px-4 py-3">Date</th>
-                  <th className="min-w-[260px] px-4 py-3">Reference / Description</th>
+                  <th className="w-44 px-4 py-3">Reference</th>
                   <th className="w-48 px-4 py-3">Payee / Name</th>
+                  <th className="min-w-[280px] px-4 py-3">Description</th>
                   <th className="w-48 px-4 py-3">Account / Category</th>
-                  <th className="w-52 px-4 py-3">Memo / Notes</th>
                   <th className="w-32 px-4 py-3 text-right">Withdrawal</th>
                   <th className="w-32 px-4 py-3 text-right">Deposit</th>
-                  <th className="w-36 border-l-2 border-slate-300 px-4 py-3 text-right">Balance</th>
                   <th className="w-40 px-4 py-3">Status</th>
+                  <th className="w-40 px-4 py-3">Reconciled</th>
+                  <th className="w-36 border-l-2 border-slate-300 px-4 py-3 text-right">Balance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {visibleEntries.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-16 text-center text-sm text-slate-400">
+                    <td colSpan={11} className="px-4 py-16 text-center text-sm text-slate-400">
                       No register transactions match the current filters.
                     </td>
                   </tr>
                 ) : (
                   <>
                     <tr className="bg-blue-50/50 font-medium">
-                      <td colSpan={7} className="px-4 py-2 text-sm italic text-blue-700">
+                      <td colSpan={10} className="px-4 py-2 text-sm italic text-blue-700">
                         Opening Balance - {selectedBankAccount?.name}
                       </td>
                       <td className="border-l-2 border-slate-300 px-4 py-2 text-right text-sm font-semibold text-blue-700">
                         {formatMoney(openingBalance)}
                       </td>
-                      <td colSpan={2} />
                     </tr>
 
                     {visibleEntries.map((tx, index) => {
@@ -928,12 +1072,13 @@ export default function RegisterPage() {
                       const isEditingAccount = editingCell?.txId === tx.id && editingCell.field === 'account'
                       const isEditingContact = editingCell?.txId === tx.id && editingCell.field === 'contact'
                       const isEditingMemo = editingCell?.txId === tx.id && editingCell.field === 'memo'
+                      const linkedJe = getLinkedJournalEntry(tx)
 
                       return (
                         <Fragment key={tx.id}>
                           {isNewDate && (
                             <tr className="bg-gray-50">
-                              <td colSpan={10} className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                              <td colSpan={11} className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 {formatLongDate(tx.date)}
                               </td>
                             </tr>
@@ -952,9 +1097,26 @@ export default function RegisterPage() {
                               />
                             </td>
                             <td className="px-4 py-3 align-top font-mono text-sm text-slate-600">{formatShortDate(tx.date)}</td>
-                            <td className="px-4 py-3 align-top">
-                              <div className="font-medium text-slate-800">{tx.description}</div>
-                              <div className="mt-0.5 text-[11px] text-slate-400 font-mono">{tx.ref ?? tx.bankRef ?? 'No reference'}</div>
+                            <td className="px-4 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
+                              {tx.transactionType === 'Bank Transfer' ? (
+                                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-700">
+                                  <ArrowLeftRight className="h-3.5 w-3.5" />
+                                  TRANSFER
+                                </span>
+                              ) : tx.status === 'MATCHED' && (tx.bankRef ?? tx.journalEntryId) ? (
+                                <button
+                                  onClick={() => openRecord(tx.bankRef ?? tx.journalEntryId, tx.id, linkedJe?.type)}
+                                  className="cursor-pointer text-sm font-medium text-blue-600 underline hover:text-blue-800"
+                                >
+                                  {getJournalEntryReference(linkedJe, tx.bankRef ?? tx.journalEntryId)}
+                                </button>
+                              ) : tx.journalEntryId ? (
+                                <span className="font-mono text-xs text-slate-500">
+                                  {getJournalEntryReference(linkedJe, tx.journalEntryId)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
                             </td>
                             <td className="px-4 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
                               {isEditingContact ? (
@@ -980,6 +1142,31 @@ export default function RegisterPage() {
                                 </button>
                               )}
                             </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="font-medium text-slate-800">{tx.description}</div>
+                              <div className="mt-2" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
+                                {isEditingMemo ? (
+                                  <input
+                                    autoFocus
+                                    aria-label={`Edit memo for ${tx.description}`}
+                                    value={editingValue}
+                                    onChange={event => setEditingValue(event.target.value)}
+                                    onBlur={() => saveEdit(tx)}
+                                    onKeyDown={event => {
+                                      if (event.key === 'Enter') saveEdit(tx)
+                                    }}
+                                    className="w-full rounded-md border border-blue-300 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none"
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => beginEdit(tx, 'memo')}
+                                    className="w-full rounded-md border border-transparent px-2 py-1.5 text-left text-sm text-slate-500 hover:border-slate-200 hover:bg-slate-50"
+                                  >
+                                    {tx.memo || <span className="text-slate-300">Add memo</span>}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-4 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
                               {isEditingAccount ? (
                                 <select
@@ -1004,52 +1191,30 @@ export default function RegisterPage() {
                                 </button>
                               )}
                             </td>
-                            <td className="px-4 py-3 align-top" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
-                              {isEditingMemo ? (
-                                <input
-                                  autoFocus
-                                  aria-label={`Edit memo for ${tx.description}`}
-                                  value={editingValue}
-                                  onChange={event => setEditingValue(event.target.value)}
-                                  onBlur={() => saveEdit(tx)}
-                                  onKeyDown={event => {
-                                    if (event.key === 'Enter') saveEdit(tx)
-                                  }}
-                                  className="w-full rounded-md border border-blue-300 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none"
-                                />
-                              ) : (
-                                <button
-                                  onClick={() => beginEdit(tx, 'memo')}
-                                  className="w-full rounded-md border border-transparent px-2 py-1.5 text-left text-sm text-slate-700 hover:border-slate-200 hover:bg-slate-50"
-                                >
-                                  {tx.memo || <span className="text-slate-300">Add memo</span>}
-                                </button>
-                              )}
-                            </td>
                             <td className="px-4 py-3 text-right font-mono text-sm align-top">
                               {tx.amount < 0 ? <span className="font-semibold text-rose-600">{formatMoney(Math.abs(tx.amount))}</span> : <span className="text-slate-300">-</span>}
                             </td>
                             <td className="px-4 py-3 text-right font-mono text-sm align-top">
                               {tx.amount > 0 ? <span className="font-semibold text-emerald-700">{formatMoney(tx.amount)}</span> : <span className="text-slate-300">-</span>}
                             </td>
+                            <td className="px-4 py-3 align-top">
+                              <StatusBadge tx={tx} />
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <button
+                                onClick={event => {
+                                  event.stopPropagation()
+                                  toggleSingleReconciliation(tx)
+                                }}
+                                className={`block rounded-md px-2 py-1 text-xs font-medium ${tx.reconciled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                              >
+                                {tx.reconciled ? 'Reconciled' : 'Mark Reconciled'}
+                              </button>
+                            </td>
                             <td className="border-l-2 border-slate-300 px-4 py-3 text-right font-mono text-sm align-top">
                               <span className={tx.runningBalance < 0 ? 'font-bold text-red-600' : 'text-slate-800'}>
                                 {formatMoney(tx.runningBalance)}
                               </span>
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              <div className="space-y-2">
-                                <StatusBadge label={getTransactionSourceLabel(tx)} />
-                                <button
-                                  onClick={event => {
-                                    event.stopPropagation()
-                                    toggleSingleReconciliation(tx)
-                                  }}
-                                  className={`block rounded-md px-2 py-1 text-xs font-medium ${tx.reconciled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                >
-                                  {tx.reconciled ? 'Reconciled' : 'Mark Reconciled'}
-                                </button>
-                              </div>
                             </td>
                           </tr>
                         </Fragment>
@@ -1152,17 +1317,97 @@ export default function RegisterPage() {
                 <span className="text-slate-800">{detailTx.contactName ?? 'No payee'}</span>
                 <span className="text-slate-500">Category</span>
                 <span className="text-slate-800">{detailTx.accountName ?? 'Unassigned'}</span>
+                <span className="text-slate-500">Reference</span>
+                <span className="font-mono text-xs text-slate-700">{getReferenceDisplayText(detailTx)}</span>
                 <span className="text-slate-500">Amount</span>
                 <span className={detailTx.amount < 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-700'}>
                   {detailTx.amount < 0 ? '-' : '+'}{formatMoney(Math.abs(detailTx.amount))}
                 </span>
                 <span className="text-slate-500">Status</span>
-                <span className="text-slate-800">{getTransactionSourceLabel(detailTx)}</span>
+                <span><StatusBadge tx={detailTx} /></span>
                 <span className="text-slate-500">JE Reference</span>
-                <span className="font-mono text-xs text-slate-700">{detailTx.journalEntryId ?? 'No journal entry'}</span>
+                <span className="font-mono text-xs text-slate-700">{getJournalEntryReference(detailJournalEntry, detailTx.journalEntryId)}</span>
                 <span className="text-slate-500">Memo</span>
                 <span className="text-slate-800">{detailTx.memo ?? 'No memo'}</span>
               </div>
+
+              {detailTx.status === 'MATCHED' && (
+                <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Match Details</div>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-slate-700">
+                    <Link2 className="h-4 w-4 text-blue-500" />
+                    <span>
+                      Matched to <span className="font-medium text-blue-600">{getJournalEntryReference(detailMatchedRecord, detailTx.bankRef ?? detailTx.journalEntryId)}</span>
+                    </span>
+                  </div>
+                  {detailMatchedRecord && (
+                    <div className="mt-3 space-y-1 text-xs text-slate-600">
+                      <div>Source: {detailMatchedRecord.type === 'Bill' || detailMatchedRecord.type === 'Invoice' ? detailMatchedRecord.type : 'Journal Entry'}</div>
+                      <div>Record: {detailMatchedRecord.contactName ? `${detailMatchedRecord.contactName} — ${detailMatchedRecord.description}` : detailMatchedRecord.description}</div>
+                      <div>Memo: {getJournalEntryMemo(detailMatchedRecord)}</div>
+                      <div>Amount: {formatMoney(detailMatchedRecord.totalAmount)}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {detailTx.transactionType === 'Split Transaction' && detailTx.splitLines?.length ? (
+                <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Split Details</div>
+                  <div className="mt-2 text-sm text-slate-700">Split into {detailTx.splitLines.length} lines:</div>
+                  <div className="mt-3 space-y-2 text-xs text-slate-600">
+                    {detailTx.splitLines.map((line, lineIndex) => (
+                      <div key={`${detailTx.id}-split-${lineIndex}`} className="flex items-center justify-between gap-3 rounded-lg bg-white/70 px-3 py-2">
+                        <span>Line {lineIndex + 1}: {line.accountName}</span>
+                        <span className="font-mono text-slate-700">{formatMoney(line.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {detailTx.transactionType === 'Bank Transfer' && detailTransferParties ? (
+                <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transfer Details</div>
+                  <div className="mt-3 space-y-1 text-xs text-slate-600">
+                    <div>From: {detailTransferParties.from}</div>
+                    <div>To: {detailTransferParties.to}</div>
+                    <div>Amount: {formatMoney(Math.abs(detailTx.amount))}</div>
+                  </div>
+                </div>
+              ) : null}
+
+              {detailJournalEntry ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Journal Entry</div>
+                  <div className="mt-2 font-mono text-sm font-semibold text-slate-900">
+                    {getJournalEntryReference(detailJournalEntry, detailTx.journalEntryId)}
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {detailJournalEntry.lines.map((line, lineIndex) => {
+                      const side = line.debit > 0 ? 'DR' : 'CR'
+                      const value = line.debit > 0 ? line.debit : line.credit
+
+                      return (
+                        <div key={`${detailJournalEntry.id}-line-${lineIndex}`} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <div className="flex items-start justify-between gap-3 text-sm">
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{side}</div>
+                              <div className="font-medium text-slate-800">{line.accountName}</div>
+                              {line.memo ? <div className="mt-0.5 text-xs text-slate-500">{line.memo}</div> : null}
+                            </div>
+                            <div className="font-mono text-sm text-slate-700">{formatMoney(value)}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-400">
+                  No journal entry details available for this transaction.
+                </div>
+              )}
 
               <div className="border-t border-slate-100 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -1198,16 +1443,30 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-t border-slate-100 px-6 py-4">
+            <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-6 py-4">
+              {detailTx.status === 'MATCHED' ? (
+                <button
+                  onClick={() => openRecord(detailTx.bankRef ?? detailTx.journalEntryId, detailTx.id, detailMatchedRecord?.type)}
+                  className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  {getOpenRecordLabel(detailMatchedRecord)}
+                </button>
+              ) : null}
               <button
-                onClick={() => showToast(detailTx.journalEntryId ? `Journal Entry ${detailTx.journalEntryId}` : 'No journal entry linked')}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                onClick={() => openRecord(detailTx.journalEntryId, detailTx.id, detailJournalEntry?.type)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                View Journal Entry
+                {detailTx.status === 'MATCHED' ? 'View JE →' : 'View Journal Entry →'}
+              </button>
+              <button
+                onClick={undoFromDetail}
+                className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+              >
+                {getUndoActionLabel(detailTx)}
               </button>
               <button
                 onClick={() => setDetailTxId(null)}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Close
               </button>
