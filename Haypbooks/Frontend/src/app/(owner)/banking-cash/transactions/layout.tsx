@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 
 const TABS = [
   { label: 'Bank Transactions', href: '/banking-cash/transactions' },
-  { label: 'Bank Rules',        href: '/banking-cash/transactions/rules' },
 ]
 
 export default function TransactionsLayout({ children }: { children: React.ReactNode }) {
@@ -26,9 +25,7 @@ export default function TransactionsLayout({ children }: { children: React.React
         <div className="px-6 overflow-x-auto">
           <nav className="flex gap-1 min-w-max" aria-label="Transactions tabs">
             {TABS.map(tab => {
-              const isActive = tab.href === '/banking-cash/transactions'
-                ? pathname === tab.href || pathname.startsWith('/banking-cash/transactions/register')
-                : pathname === tab.href || pathname.startsWith(tab.href + '/')
+              const isActive = pathname.startsWith('/banking-cash/transactions')
               return (
                 <Link
                   key={tab.href}

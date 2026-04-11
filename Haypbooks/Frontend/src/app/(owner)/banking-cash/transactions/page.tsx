@@ -1058,6 +1058,12 @@ export default function BankFeedPage() {
 
         <div className="flex items-center gap-2 shrink-0">
           <button
+            onClick={() => router.push('/banking-cash/transactions/rules')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <GitMerge size={14} /> Bank Rules
+          </button>
+          <button
             onClick={() => router.push('/banking-cash/transactions/register')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
           >
