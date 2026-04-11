@@ -36,6 +36,10 @@ import {
   getBalances,
   getAuditLogForEntity,
 } from './mockGLState'
+import ImportWizardModal, {
+  BANK_TRANSACTIONS_IMPORT_EVENT,
+  type BankTransactionsImportEventDetail,
+} from './ImportWizardModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -422,9 +426,6 @@ export default function BankFeedPage() {
   const [colW, setColW] = useState<Record<string, number>>(DEFAULT_COL_W)
   const resizingRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
 
-  // ── CSV file input ref ─────────────────────────────────────────────────────
-  const csvRef = useRef<HTMLInputElement>(null)
-
   // ── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState('')
   const showToast = useCallback((msg: string) => {
@@ -433,6 +434,7 @@ export default function BankFeedPage() {
 
   // ── Link Account modal ─────────────────────────────────────────────────────
   const [linkAcctOpen, setLinkAcctOpen] = useState(false)
+  const [showImportWizard, setShowImportWizard] = useState(false)
 
   // ── Apply Rules ────────────────────────────────────────────────────────────
   const [applyRulesLoading, setApplyRulesLoading] = useState(false)
@@ -583,6 +585,32 @@ export default function BankFeedPage() {
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
+
+  useEffect(() => {
+    const handleImportEvent = (event: Event) => {
+      const detail = (event as CustomEvent<BankTransactionsImportEventDetail>).detail
+      if (!detail) return
+
+      if (detail.bankAccountId) setSelectedAcct(detail.bankAccountId)
+      setItems(mockStore.items.map(mockTxToBankTx))
+      setUsingMock(true)
+      setStatusFilter('review')
+      setSearch('')
+      setDateFrom('')
+      setDateTo('')
+      setMinAmt('')
+      setMaxAmt('')
+      setMatchFilter('all')
+      setTypeFilter('all')
+      setPage(1)
+      setSelected(new Set())
+      setExpandedId(null)
+      if (detail.toastMessage) showToast(detail.toastMessage)
+    }
+
+    window.addEventListener(BANK_TRANSACTIONS_IMPORT_EVENT, handleImportEvent as EventListener)
+    return () => window.removeEventListener(BANK_TRANSACTIONS_IMPORT_EVENT, handleImportEvent as EventListener)
+  }, [showToast])
 
   // ─── Derived / filtered ────────────────────────────────────────────────────
 
@@ -965,6 +993,23 @@ export default function BankFeedPage() {
     showToast(count > 0 ? `${count} rule${count !== 1 ? 's' : ''} applied` : 'No matching rules found')
   }
 
+  const openImportWizard = () => {
+    setLinkAcctOpen(false)
+    setBatchOpen(false)
+    setQuickMatchConfirm(null)
+    setExpandedId(null)
+    setShowImportWizard(true)
+  }
+
+  const handleImportComplete = (count: number) => {
+    setItems(mockStore.items.map(mockTxToBankTx))
+    setUsingMock(true)
+    setStatusFilter('review')
+    setPage(1)
+    setSelected(new Set())
+    if (count > 0) setExpandedId(null)
+  }
+
   const thClass = 'relative px-3 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide bg-slate-50 border-r border-slate-200 select-none overflow-hidden'
   const tdClass = 'px-3 py-3 text-sm text-slate-700 border-r border-slate-200 overflow-hidden'
 
@@ -1012,8 +1057,6 @@ export default function BankFeedPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <input ref={csvRef} type="file" accept=".csv" className="hidden"
-            onChange={() => showToast('CSV upload coming soon')} />
           <button
             onClick={() => router.push('/banking-cash/transactions/register')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
@@ -1035,7 +1078,7 @@ export default function BankFeedPage() {
             Apply Rules
           </button>
           <button
-            onClick={() => csvRef.current?.click()}
+            onClick={openImportWizard}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <FileUp size={14} /> Upload CSV
@@ -1289,7 +1332,7 @@ export default function BankFeedPage() {
                         <div className="text-slate-400 text-sm">
                           <p className="font-medium text-slate-500 mb-1">No transactions found</p>
                           <p className="text-xs">Upload a bank statement CSV to get started.</p>
-                          <button onClick={() => csvRef.current?.click()}
+                          <button onClick={openImportWizard}
                             className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-emerald-500 text-emerald-600 rounded-lg hover:bg-emerald-50">
                             <FileUp size={14} /> Upload CSV
                           </button>
@@ -2116,6 +2159,12 @@ export default function BankFeedPage() {
       </div>
 
       {/* ── G. (detail panel removed – expandable rows used instead) ── */}
+
+      <ImportWizardModal
+        open={showImportWizard}
+        onClose={() => setShowImportWizard(false)}
+        onImportComplete={handleImportComplete}
+      />
 
       {/* ── Link Account modal ────────────────────────────────────────────── */}
       {linkAcctOpen && (
