@@ -1,10 +1,5 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return (
-    <ComingSoon
-      featureName="History"
-      estimatedTime="Q2 2026"
-    />
-  )
+  redirect('/banking-cash/reconciliation')
 }

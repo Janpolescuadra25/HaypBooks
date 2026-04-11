@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function Page() {
-  redirect('/banking-cash/accounts/bank-accounts')
+  redirect('/banking-cash/transactions')
 }
