@@ -3,13 +3,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
-  ChevronRight, ChevronUp, FileUp, Loader2, RefreshCw, RotateCcw,
-  Search, User, X,
+  ChevronRight, ChevronUp, FileUp, GitMerge, Link2, Loader2, RefreshCw,
+  RotateCcw, Scissors, Search, Sparkles, User, X,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import {
+  MOCK_COA_ACCOUNTS,
+  MOCK_ENTITIES,
+  MOCK_TRANSACTIONS,
+  MOCK_EXISTING_JES,
+  MOCK_RULES,
+  mockJEs,
+  categorizeTransaction  as glCategorize,
+  matchTransaction       as glMatch,
+  splitTransaction       as glSplit,
+  excludeTransaction     as glExclude,
+  undoCategorize         as glUndo,
+  applyRules             as glApplyRules,
+  type MockBankTransaction,
+  type MockJournalEntry,
+  type MockSplitLine,
+} from './mockGLState'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +53,8 @@ interface BankTransaction {
   bankRef?: string
   memo?: string
   createdAt?: string
+  ruleName?: string
+  splitLines?: MockSplitLine[]
 }
 
 interface CoaAccount {
@@ -89,22 +108,31 @@ const DEFAULT_COL_W: Record<string, number> = {
   account: 190, amount: 130, actions: 100,
 }
 
-// ─── Mock fallback data ───────────────────────────────────────────────────────
+// ─── Mock fallback — convert from mockGLState types ───────────────────────────
 
-const MOCK: BankTransaction[] = [
-  { id: 'm1',  date: '2026-04-10', description: 'GRAB PHILIPPINES',          amount:    -250, status: 'PENDING',     contactName: 'Grab' },
-  { id: 'm2',  date: '2026-04-09', description: 'MERALCO PAYMENT',           amount:   -3840, status: 'PENDING',     contactName: 'Meralco' },
-  { id: 'm3',  date: '2026-04-09', description: 'CUSTOMER PAYMENT INV-0041', amount:   15000, status: 'MATCHED',     contactName: 'Acme Corp',          accountName: 'Accounts Receivable' },
-  { id: 'm4',  date: '2026-04-08', description: 'OFFICE DEPOT PURCHASE',     amount:   -1200, status: 'PENDING',     contactName: 'Office Depot' },
-  { id: 'm5',  date: '2026-04-08', description: 'BDO BANK SERVICE CHARGE',   amount:    -150, status: 'CATEGORIZED', accountName: 'Bank Charges & Fees' },
-  { id: 'm6',  date: '2026-04-07', description: 'SHOPEE VENDOR PAYOUT',      amount:    8500, status: 'PENDING' },
-  { id: 'm7',  date: '2026-04-07', description: 'PLDT FIBER MONTHLY',        amount:   -1899, status: 'CATEGORIZED', accountName: 'Telecommunications',   contactName: 'PLDT' },
-  { id: 'm8',  date: '2026-04-06', description: 'SSS CONTRIBUTION',          amount:  -12000, status: 'EXCLUDED' },
-  { id: 'm9',  date: '2026-04-06', description: 'PAYROLL — APRIL 1–15',      amount: -245000, status: 'CATEGORIZED', accountName: 'Salaries & Wages' },
-  { id: 'm10', date: '2026-04-05', description: 'CUSTOMER ADVANCE',          amount:   50000, status: 'PENDING',     contactName: 'GlobalEdge Solutions' },
-  { id: 'm11', date: '2026-04-05', description: 'CREDIT CARD PAYMENT',       amount:  -24800, status: 'CATEGORIZED', accountName: 'Credit Card Payment' },
-  { id: 'm12', date: '2026-04-04', description: 'BIR WITHHOLDING TAX',       amount:  -16240, status: 'CATEGORIZED', accountName: 'Taxes Payable' },
-]
+function mockTxToBankTx(m: MockBankTransaction): BankTransaction {
+  return {
+    id:              m.id,
+    date:            m.date,
+    description:     m.description,
+    contactId:       m.contactId,
+    contactName:     m.contactName,
+    accountId:       m.accountId,
+    accountName:     m.accountName,
+    amount:          m.amount,
+    status:          m.status,
+    transactionType: m.transactionType,
+    journalEntryId:  m.journalEntryId,
+    memo:            m.memo,
+    ruleName:        m.ruleName,
+    splitLines:      m.splitLines,
+  }
+}
+
+const MOCK: BankTransaction[] = MOCK_TRANSACTIONS.map(mockTxToBankTx)
+
+// Track mock state (mutable client-side)
+let mockItems: MockBankTransaction[] = [...MOCK_TRANSACTIONS]
 
 // ─── SkeletonRows ─────────────────────────────────────────────────────────────
 
@@ -345,8 +373,12 @@ export default function BankFeedPage() {
   const batchEntRef = useRef<HTMLDivElement>(null)
 
   // ── COA & entities ─────────────────────────────────────────────────────────
-  const [coa,      setCoa]      = useState<CoaAccount[]>([])
-  const [entities, setEntities] = useState<EntityOption[]>([])
+  const [coa,      setCoa]      = useState<CoaAccount[]>(() =>
+    MOCK_COA_ACCOUNTS.map(a => ({ id: a.id, code: a.code, name: a.name, category: a.type })),
+  )
+  const [entities, setEntities] = useState<EntityOption[]>(() =>
+    MOCK_ENTITIES.map(e => ({ id: e.id, name: e.name, entityType: e.type })),
+  )
 
   // ── Column widths ──────────────────────────────────────────────────────────
   const [colW, setColW] = useState<Record<string, number>>(DEFAULT_COL_W)
@@ -360,6 +392,23 @@ export default function BankFeedPage() {
   const showToast = useCallback((msg: string) => {
     setToast(msg); setTimeout(() => setToast(''), 3500)
   }, [])
+
+  // ── Link Account modal ─────────────────────────────────────────────────────
+  const [linkAcctOpen, setLinkAcctOpen] = useState(false)
+
+  // ── Apply Rules ────────────────────────────────────────────────────────────
+  const [applyRulesLoading, setApplyRulesLoading] = useState(false)
+
+  // ── Find Match panel (inside detail) ───────────────────────────────────────
+  const [findMatchOpen, setFindMatchOpen] = useState(false)
+  const [findMatchSearch, setFindMatchSearch] = useState('')
+
+  // ── Split panel (inside detail) ────────────────────────────────────────────
+  const [splitOpen,   setSplitOpen]   = useState(false)
+  const [splitLines2, setSplitLines2] = useState<Array<{ accountId: string; amount: string; memo: string }>>([
+    { accountId: '', amount: '', memo: '' },
+    { accountId: '', amount: '', memo: '' },
+  ])
 
   // ─── Data loading ──────────────────────────────────────────────────────────
 
@@ -399,10 +448,10 @@ export default function BankFeedPage() {
         createdAt:       t.createdAt,
       }))
       if (mapped.length > 0) { setItems(mapped) }
-      else { setItems(MOCK); setUsingMock(true) }
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load transactions')
-      setItems(MOCK); setUsingMock(true)
+      else { setItems(mockItems.map(mockTxToBankTx)); setUsingMock(true) }
+    } catch {
+      // Fall back to live mock state (which may have been mutated by interactions)
+      setItems(mockItems.map(mockTxToBankTx)); setUsingMock(true)
     } finally { setLoading(false) }
   }, [companyId])
 
@@ -410,12 +459,12 @@ export default function BankFeedPage() {
     if (!companyId) return
     try {
       const r = await apiClient.get(`/companies/${companyId}/accounts`)
-      setCoa(
-        (Array.isArray(r.data) ? r.data : r.data?.accounts ?? []).map((a: any): CoaAccount => ({
-          id: a.id, code: a.code ?? '', name: a.name, category: a.category ?? a.accountType,
-        })),
-      )
-    } catch { /* non-fatal */ }
+      const fetched = (Array.isArray(r.data) ? r.data : r.data?.accounts ?? []).map((a: any): CoaAccount => ({
+        id: a.id, code: a.code ?? '', name: a.name, category: a.category ?? a.accountType,
+      }))
+      if (fetched.length > 0) setCoa(fetched)
+      // else keep the mock COA that was set as initial state
+    } catch { /* keep mock COA */ }
   }, [companyId])
 
   const loadEntities = useCallback(async () => {
@@ -439,9 +488,19 @@ export default function BankFeedPage() {
         const rows: any[] = Array.isArray(e.value.data) ? e.value.data : e.value.data?.employees ?? []
         rows.forEach(r => out.push({ id: r.id, name: r.displayName ?? r.name ?? (`${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || r.id), entityType: 'Employee' }))
       }
-      setEntities(out)
-    } catch { /* non-fatal */ }
+      if (out.length > 0) setEntities(out)
+      // else keep mock entities that were set as initial state
+    } catch { /* keep mock entities */ }
   }, [companyId])
+
+  // Initialize items immediately from mock (don't wait for API)
+  useEffect(() => {
+    if (!loading && items.length === 0) {
+      setItems(mockItems.map(mockTxToBankTx))
+      setUsingMock(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (companyId) { loadAccounts(); loadCoa(); loadEntities() } }, [companyId])
@@ -565,52 +624,98 @@ export default function BankFeedPage() {
   }
 
   const saveInline = async () => {
-    if (!companyId || !expandedId) return
+    if (!expandedId) return
     setInlineSaving(true)
+    const tx = items.find(t => t.id === expandedId)
+    if (!tx) { setInlineSaving(false); return }
+
+    // Update mock state
+    const mockTx = mockItems.find(m => m.id === expandedId)
+    if (mockTx) {
+      const coaAcct = coa.find(c => c.id === inlineCoa)
+      const entOpt  = entities.find(e => e.id === inlineEnt)
+      const updated = glCategorize(mockTx, inlineCoa, coaAcct?.name ?? '', inlineEnt || undefined, entOpt?.name, inlineMemo || undefined)
+      mockItems = mockItems.map(m => m.id === expandedId ? updated : m)
+    }
+
+    // Try real API
     try {
-      await apiClient.patch(
-        `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${expandedId}`,
-        { status: 'CATEGORIZED', accountId: inlineCoa || undefined, contactId: inlineEnt || undefined, memo: inlineMemo || undefined, transactionType: 'Bank Transaction' },
-      )
-      setItems(prev => prev.map(t => t.id !== expandedId ? t : {
-        ...t, status: 'CATEGORIZED',
-        accountId: inlineCoa || t.accountId,
-        accountName: coa.find(c => c.id === inlineCoa)?.name ?? t.accountName,
-        contactId: inlineEnt || t.contactId,
-        contactName: entities.find(e => e.id === inlineEnt)?.name ?? t.contactName,
-        memo: inlineMemo || t.memo,
-      }))
-      setExpandedId(null)
-      showToast('Transaction categorized')
-    } catch (e: any) {
-      showToast(e?.response?.data?.message ?? 'Failed to categorize')
-    } finally { setInlineSaving(false) }
+      if (companyId) {
+        await apiClient.patch(
+          `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${expandedId}`,
+          { status: 'CATEGORIZED', accountId: inlineCoa || undefined, contactId: inlineEnt || undefined, memo: inlineMemo || undefined, transactionType: 'Bank Transaction' },
+        )
+      }
+    } catch { /* ignore for mock mode */ }
+
+    setItems(prev => prev.map(t => t.id !== expandedId ? t : {
+      ...t, status: 'CATEGORIZED',
+      transactionType: t.amount < 0 ? 'Bank Payment' : 'Bank Receipt',
+      accountId:   inlineCoa || t.accountId,
+      accountName: coa.find(c => c.id === inlineCoa)?.name ?? t.accountName,
+      contactId:   inlineEnt || t.contactId,
+      contactName: entities.find(e => e.id === inlineEnt)?.name ?? t.contactName,
+      memo:        inlineMemo || t.memo,
+    }))
+    setExpandedId(null)
+    showToast('Transaction categorized')
+    setInlineSaving(false)
   }
 
   // ─── Undo ─────────────────────────────────────────────────────────────────
   const undoTransaction = async (tx: BankTransaction) => {
-    if (!companyId) return
+    // Update mock state
+    const mockTx = mockItems.find(m => m.id === tx.id)
+    if (mockTx) {
+      const updated = glUndo(mockTx)
+      mockItems = mockItems.map(m => m.id === tx.id ? updated : m)
+    }
+    // Try real API
     try {
-      await apiClient.patch(
-        `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${tx.id}`,
-        { status: 'PENDING' },
-      )
-      setItems(prev => prev.map(t => t.id === tx.id ? { ...t, status: 'PENDING' } : t))
-      showToast('Reset to For Review')
-    } catch { showToast('Failed to undo') }
+      if (companyId) {
+        await apiClient.patch(
+          `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${tx.id}`,
+          { status: 'PENDING' },
+        )
+      }
+    } catch { /* ignore for mock mode */ }
+
+    const typeLabel =
+      tx.transactionType === 'Bank Payment' ? 'Bank Payment' :
+      tx.transactionType === 'Bank Receipt' ? 'Bank Receipt' :
+      tx.transactionType === 'Split Transaction' ? 'Split' :
+      tx.status === 'MATCHED' ? 'Match' : 'Categorize'
+
+    setItems(prev => prev.map(t => t.id === tx.id ? {
+      ...t, status: 'PENDING', transactionType: undefined, journalEntryId: undefined,
+      accountId: undefined, accountName: undefined, contactId: undefined, contactName: undefined,
+      memo: undefined, ruleName: undefined, splitLines: undefined,
+    } : t))
+    showToast(`${typeLabel} undone — moved back to For Review`)
   }
 
   // ─── Exclude ─────────────────────────────────────────────────────────────
   const excludeRows = async (ids: string[]) => {
-    if (!companyId) return
+    // Update mock state
+    ids.forEach(id => {
+      const mockTx = mockItems.find(m => m.id === id)
+      if (mockTx) {
+        const updated = glExclude(mockTx)
+        mockItems = mockItems.map(m => m.id === id ? updated : m)
+      }
+    })
+    // Try real API
     try {
-      await Promise.all(ids.map(id =>
-        apiClient.patch(`/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${id}`, { status: 'EXCLUDED' }),
-      ))
-      setItems(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'EXCLUDED' } : t))
-      setSelected(new Set())
-      showToast(`${ids.length} transaction${ids.length !== 1 ? 's' : ''} excluded`)
-    } catch { showToast('Failed to exclude') }
+      if (companyId) {
+        await Promise.all(ids.map(id =>
+          apiClient.patch(`/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${id}`, { status: 'EXCLUDED' }),
+        ))
+      }
+    } catch { /* ignore for mock mode */ }
+
+    setItems(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'EXCLUDED' } : t))
+    setSelected(new Set())
+    showToast(`${ids.length} transaction${ids.length !== 1 ? 's' : ''} excluded`)
   }
 
   // ─── Detail panel ─────────────────────────────────────────────────────────
@@ -618,29 +723,45 @@ export default function BankFeedPage() {
     setDetailTx(tx); setDetailCoa(tx.accountId ?? ''); setDetailEnt(tx.contactId ?? '')
     setDetailMemo(tx.memo ?? ''); setDetailCoaSearch(''); setDetailEntSearch('')
     setDetailCoaOpen(false); setDetailEntOpen(false); setDetailSaving(false)
+    setFindMatchOpen(false); setFindMatchSearch('')
+    setSplitOpen(false)
+    setSplitLines2([{ accountId: '', amount: '', memo: '' }, { accountId: '', amount: '', memo: '' }])
     setDetailOpen(true)
   }
 
   const saveDetail = async () => {
-    if (!companyId || !detailTx) return
+    if (!detailTx) return
     setDetailSaving(true)
+    const coaAcct = coa.find(c => c.id === detailCoa)
+    const entOpt  = entities.find(e => e.id === detailEnt)
+
+    // Update mock state
+    const mockTx = mockItems.find(m => m.id === detailTx.id)
+    if (mockTx) {
+      const updated = glCategorize(mockTx, detailCoa, coaAcct?.name ?? '', detailEnt || undefined, entOpt?.name, detailMemo || undefined)
+      mockItems = mockItems.map(m => m.id === detailTx.id ? updated : m)
+    }
+    // Try real API
     try {
-      await apiClient.patch(
-        `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${detailTx.id}`,
-        { status: 'CATEGORIZED', accountId: detailCoa || undefined, contactId: detailEnt || undefined, memo: detailMemo || undefined, transactionType: 'Bank Transaction' },
-      )
-      setItems(prev => prev.map(t => t.id !== detailTx.id ? t : {
-        ...t, status: 'CATEGORIZED',
-        accountId: detailCoa || t.accountId,
-        accountName: coa.find(c => c.id === detailCoa)?.name ?? t.accountName,
-        contactId: detailEnt || t.contactId,
-        contactName: entities.find(e => e.id === detailEnt)?.name ?? t.contactName,
-        memo: detailMemo || t.memo,
-      }))
-      setDetailOpen(false); showToast('Transaction categorized')
-    } catch (e: any) {
-      showToast(e?.response?.data?.message ?? 'Failed to categorize')
-    } finally { setDetailSaving(false) }
+      if (companyId) {
+        await apiClient.patch(
+          `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/${detailTx.id}`,
+          { status: 'CATEGORIZED', accountId: detailCoa || undefined, contactId: detailEnt || undefined, memo: detailMemo || undefined, transactionType: 'Bank Transaction' },
+        )
+      }
+    } catch { /* ignore for mock mode */ }
+
+    setItems(prev => prev.map(t => t.id !== detailTx.id ? t : {
+      ...t, status: 'CATEGORIZED',
+      transactionType: t.amount < 0 ? 'Bank Payment' : 'Bank Receipt',
+      accountId:   detailCoa || t.accountId,
+      accountName: coaAcct?.name ?? t.accountName,
+      contactId:   detailEnt || t.contactId,
+      contactName: entOpt?.name ?? t.contactName,
+      memo:        detailMemo || t.memo,
+    }))
+    setDetailOpen(false); showToast('Transaction categorized')
+    setDetailSaving(false)
   }
 
   // ─── Batch categorize ─────────────────────────────────────────────────────
@@ -651,39 +772,116 @@ export default function BankFeedPage() {
   }
 
   const submitBatch = async () => {
-    if (!companyId || !batchCoa) return
+    if (!batchCoa) return
     const count = selected.size
     setBatchLoading(true); setBatchError('')
+    const coaAcct = coa.find(a => a.id === batchCoa)
+    const entOpt  = entities.find(e => e.id === batchEnt)
+
+    // Update mock state for each selected pending tx
+    selected.forEach(id => {
+      const mockTx = mockItems.find(m => m.id === id)
+      if (mockTx && mockTx.status === 'PENDING') {
+        const updated = glCategorize(mockTx, batchCoa, coaAcct?.name ?? '', batchEnt || undefined, entOpt?.name)
+        mockItems = mockItems.map(m => m.id === id ? updated : m)
+      }
+    })
+
+    // Try real API
     try {
-      const coaAcct = coa.find(a => a.id === batchCoa)
-      await apiClient.post(
-        `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/batch-categorize`,
-        {
-          transactionIds: [...selected],
-          accountId: batchCoa,
-          contactId: batchEnt || undefined,
-          category: coaAcct ? `${coaAcct.code} ${coaAcct.name}` : undefined,
-          transactionType: 'Bank Transaction',
-        },
-      )
-      setItems(prev => prev.map(t => !selected.has(t.id) ? t : {
-        ...t, status: 'CATEGORIZED',
-        accountId: batchCoa,
-        accountName: coaAcct?.name,
-        contactId: batchEnt || t.contactId,
-        contactName: entities.find(e => e.id === batchEnt)?.name ?? t.contactName,
-      }))
-      setSelected(new Set()); setBatchOpen(false)
-      showToast(`${count} transaction${count !== 1 ? 's' : ''} categorized`)
-    } catch (e: any) {
-      setBatchError(e?.response?.data?.message ?? 'Batch categorize failed')
-    } finally { setBatchLoading(false) }
+      if (companyId) {
+        await apiClient.post(
+          `/companies/${companyId}/banking/accounts/${selectedAcct}/transactions/batch-categorize`,
+          {
+            transactionIds: [...selected],
+            accountId: batchCoa,
+            contactId: batchEnt || undefined,
+            category: coaAcct ? `${coaAcct.code} ${coaAcct.name}` : undefined,
+            transactionType: 'Bank Transaction',
+          },
+        )
+      }
+    } catch { /* ignore for mock mode */ }
+
+    setItems(prev => prev.map(t => !selected.has(t.id) ? t : {
+      ...t, status: 'CATEGORIZED',
+      transactionType: t.amount < 0 ? 'Bank Payment' : 'Bank Receipt',
+      accountId:   batchCoa,
+      accountName: coaAcct?.name,
+      contactId:   batchEnt || t.contactId,
+      contactName: entOpt?.name ?? t.contactName,
+    }))
+    setSelected(new Set()); setBatchOpen(false)
+    showToast(`${count} transaction${count !== 1 ? 's' : ''} categorized`)
+    setBatchLoading(false)
   }
 
   // ─── Misc ─────────────────────────────────────────────────────────────────
   const hasFilters = !!(search || dateFrom || dateTo || minAmt || maxAmt)
   const clearFilters = () => { setSearch(''); setDateFrom(''); setDateTo(''); setMinAmt(''); setMaxAmt('') }
   const acctObj = accounts.find(a => a.id === selectedAcct)
+
+  // ─── Apply Rules ──────────────────────────────────────────────────────────
+  const handleApplyRules = async () => {
+    setApplyRulesLoading(true)
+    const updated = glApplyRules(mockItems)
+    let count = 0
+    updated.forEach(u => {
+      mockItems = mockItems.map(m => m.id === u.id ? u : m)
+      count++
+    })
+    setItems(mockItems.map(mockTxToBankTx))
+    setApplyRulesLoading(false)
+    showToast(count > 0 ? `${count} rule${count !== 1 ? 's' : ''} applied` : 'No matching rules found')
+  }
+
+  // ─── Find Match ───────────────────────────────────────────────────────────
+  const handleFindMatch = (jeId: string) => {
+    if (!detailTx) return
+    const mockTx = mockItems.find(m => m.id === detailTx.id)
+    const matchType = (detailTx.amount < 0 ? 'Bank Payment' : 'Bank Receipt') as 'Bank Payment' | 'Bank Receipt'
+    if (mockTx) {
+      const updated = glMatch(mockTx, jeId, matchType)
+      mockItems = mockItems.map(m => m.id === detailTx.id ? updated : m)
+    }
+    const je = mockJEs.find(j => j.id === jeId)
+    const expLine = je?.lines.find(l => l.debit > 0)
+    setItems(prev => prev.map(t => t.id !== detailTx.id ? t : {
+      ...t, status: 'MATCHED', transactionType: matchType,
+      journalEntryId: jeId, accountName: expLine?.accountName,
+      contactName: je?.contactName,
+    }))
+    setFindMatchOpen(false)
+    setDetailOpen(false)
+    showToast('Transaction matched to Journal Entry')
+  }
+
+  // ─── Split ────────────────────────────────────────────────────────────────
+  const handleSaveSplit = () => {
+    if (!detailTx) return
+    const validLines = splitLines2.filter(l => l.accountId && parseFloat(l.amount) > 0)
+    if (validLines.length < 2) { showToast('Add at least 2 split lines'); return }
+    const total = validLines.reduce((s, l) => s + parseFloat(l.amount), 0)
+    const abs = Math.abs(detailTx.amount)
+    if (Math.abs(total - abs) > 0.01) {
+      showToast(`Split total ₱${total.toFixed(2)} must equal ₱${abs.toFixed(2)}`); return
+    }
+    const splits = validLines.map(l => ({
+      accountId:   l.accountId,
+      accountName: coa.find(c => c.id === l.accountId)?.name ?? '',
+      amount:      parseFloat(l.amount),
+      memo:        l.memo || undefined,
+    }))
+    const mockTx = mockItems.find(m => m.id === detailTx.id)
+    if (mockTx) {
+      const updated = glSplit(mockTx, splits)
+      mockItems = mockItems.map(m => m.id === detailTx.id ? updated : m)
+      setItems(prev => prev.map(t => t.id !== detailTx.id ? t : mockTxToBankTx(updated)))
+    }
+    setSplitOpen(false)
+    setDetailOpen(false)
+    showToast(`Transaction split into ${validLines.length} lines`)
+  }
 
   const thClass = 'relative px-3 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide bg-slate-50 border-r border-slate-200 select-none overflow-hidden'
   const tdClass = 'px-3 py-3 text-sm text-slate-700 border-r border-slate-200 overflow-hidden'
@@ -734,6 +932,20 @@ export default function BankFeedPage() {
         <div className="flex items-center gap-2 shrink-0">
           <input ref={csvRef} type="file" accept=".csv" className="hidden"
             onChange={() => showToast('CSV upload coming soon')} />
+          <button
+            onClick={() => setLinkAcctOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Link2 size={14} /> Link Account
+          </button>
+          <button
+            onClick={handleApplyRules}
+            disabled={applyRulesLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-emerald-500 rounded-lg text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-60"
+          >
+            {applyRulesLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            Apply Rules
+          </button>
           <button
             onClick={() => csvRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
@@ -1009,14 +1221,29 @@ export default function BankFeedPage() {
                           </button>
                         )}
                         {(tx.status === 'CATEGORIZED' || tx.status === 'MATCHED') && (
-                          <div className="flex items-center gap-2">
-                            <Check size={14} className="text-emerald-600 shrink-0" />
-                            <button
-                              onClick={() => undoTransaction(tx)}
-                              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
-                            >
-                              <RotateCcw size={11} /> Undo
-                            </button>
+                          <div className="flex flex-col items-start gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <Check size={12} className="text-emerald-600 shrink-0" />
+                              <button
+                                onClick={() => undoTransaction(tx)}
+                                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
+                              >
+                                <RotateCcw size={11} /> Undo
+                              </button>
+                            </div>
+                            {tx.transactionType && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                tx.transactionType === 'Bank Payment'      ? 'bg-red-50 text-red-600' :
+                                tx.transactionType === 'Bank Receipt'      ? 'bg-emerald-50 text-emerald-700' :
+                                tx.transactionType === 'Split Transaction' ? 'bg-purple-50 text-purple-700' :
+                                'bg-blue-50 text-blue-700'
+                              }`}>
+                                {tx.transactionType === 'Bank Payment'      ? 'Payment' :
+                                 tx.transactionType === 'Bank Receipt'      ? 'Receipt' :
+                                 tx.transactionType === 'Split Transaction' ? 'Split' :
+                                 tx.status === 'MATCHED'                   ? 'Matched' : tx.transactionType}
+                              </span>
+                            )}
                           </div>
                         )}
                         {tx.status === 'EXCLUDED' && (
@@ -1176,6 +1403,24 @@ export default function BankFeedPage() {
             {/* Detail content (scrollable) */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
+              {/* ── Match banner (MATCHED transactions) ── */}
+              {detailTx.status === 'MATCHED' && detailTx.journalEntryId && (() => {
+                const je = mockJEs.find(j => j.id === detailTx.journalEntryId)
+                return je ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm">
+                    <div className="flex items-center gap-2 text-blue-700 font-semibold mb-1">
+                      <GitMerge size={14} /> Matched to {je.type === 'Bill' ? 'Bill' : 'Invoice'}
+                    </div>
+                    <div className="text-xs text-blue-600 space-y-0.5">
+                      <div><span className="text-blue-400">Ref:</span> {je.referenceNo ?? je.id.slice(0, 8)}</div>
+                      <div><span className="text-blue-400">Date:</span> {fmtDate(je.date)}</div>
+                      {je.contactName && <div><span className="text-blue-400">Party:</span> {je.contactName}</div>}
+                      <div><span className="text-blue-400">Amount:</span> {fmt(je.totalAmount)}</div>
+                    </div>
+                  </div>
+                ) : null
+              })()}
+
               {/* Transaction info */}
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -1217,6 +1462,34 @@ export default function BankFeedPage() {
               </div>
 
               <hr className="border-slate-100" />
+
+              {/* ── Split summary ── */}
+              {detailTx.transactionType === 'Split Transaction' && detailTx.splitLines && (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                      <Scissors size={12} /> Split Lines
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      {detailTx.splitLines.map((sl, i) => (
+                        <div key={i} className="flex justify-between items-center px-3 py-1.5 bg-slate-50 rounded-lg">
+                          <span className="text-slate-700 font-medium">{sl.accountName}</span>
+                          <span className="font-mono font-semibold text-slate-800">{fmt(sl.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <hr className="border-slate-100" />
+                </>
+              )}
+
+              {/* ── Rule attribution ── */}
+              {detailTx.ruleName && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                  <Sparkles size={12} />
+                  <span>Auto-categorized by rule: <span className="font-semibold">{detailTx.ruleName}</span></span>
+                </div>
+              )}
 
               {/* Categorization fields */}
               <div className="space-y-3">
@@ -1274,7 +1547,7 @@ export default function BankFeedPage() {
                       <div className="flex justify-between items-center">
                         <span>Journal Entry</span>
                         <span className="text-emerald-700 font-medium">
-                          {detailTx.journalEntryRef ?? detailTx.journalEntryId.slice(0, 8)}
+                          {detailTx.journalEntryRef ?? detailTx.journalEntryId.slice(0, 12)}
                         </span>
                       </div>
                     )}
@@ -1288,8 +1561,8 @@ export default function BankFeedPage() {
                 </>
               )}
 
-              {/* Categorize button */}
-              {(detailTx.status === 'PENDING' || detailCoa !== detailTx.accountId) && (
+              {/* Categorize button (only for PENDING or when account changed) */}
+              {detailTx.status === 'PENDING' && !splitOpen && !findMatchOpen && (
                 <button
                   onClick={saveDetail}
                   disabled={detailSaving || !detailCoa}
@@ -1300,19 +1573,205 @@ export default function BankFeedPage() {
                 </button>
               )}
 
+              {/* Find Match + Split buttons (PENDING only) */}
+              {detailTx.status === 'PENDING' && !splitOpen && !findMatchOpen && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setFindMatchOpen(true); setSplitOpen(false) }}
+                    className="flex-1 py-2 text-xs font-medium border border-blue-400 text-blue-700 rounded-lg hover:bg-blue-50 flex items-center justify-center gap-1.5"
+                  >
+                    <GitMerge size={13} /> Find Match
+                  </button>
+                  <button
+                    onClick={() => { setSplitOpen(true); setFindMatchOpen(false) }}
+                    className="flex-1 py-2 text-xs font-medium border border-purple-400 text-purple-700 rounded-lg hover:bg-purple-50 flex items-center justify-center gap-1.5"
+                  >
+                    <Scissors size={13} /> Split
+                  </button>
+                </div>
+              )}
+
+              {/* ── Find Match sub-panel ── */}
+              {findMatchOpen && (
+                <div className="border border-blue-200 rounded-xl overflow-hidden">
+                  <div className="bg-blue-50 px-3 py-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-blue-700 flex items-center gap-1.5"><GitMerge size={12} /> Match to Existing Bill / Invoice</span>
+                    <button onClick={() => setFindMatchOpen(false)} className="text-blue-400 hover:text-blue-600"><X size={14} /></button>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <input
+                      value={findMatchSearch}
+                      onChange={e => setFindMatchSearch(e.target.value)}
+                      placeholder="Search bills and invoices…"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {mockJEs
+                        .filter(j => (j.type === 'Bill' || j.type === 'Invoice') &&
+                          (!findMatchSearch || j.description.toLowerCase().includes(findMatchSearch.toLowerCase()) ||
+                           (j.contactName ?? '').toLowerCase().includes(findMatchSearch.toLowerCase())))
+                        .map(je => {
+                          const amtMatch = Math.abs(je.totalAmount - Math.abs(detailTx.amount)) < 1
+                          return (
+                            <button
+                              key={je.id}
+                              onClick={() => handleFindMatch(je.id)}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${amtMatch ? 'bg-blue-50 border border-blue-300' : 'hover:bg-slate-50 border border-transparent'}`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <span className={`inline-block px-1 py-0.5 rounded text-[10px] font-semibold mr-1.5 ${je.type === 'Bill' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    {je.type}
+                                  </span>
+                                  <span className="text-slate-700 font-medium">{je.referenceNo}</span>
+                                  {amtMatch && <span className="ml-1.5 text-[10px] text-blue-600 font-semibold">✓ Amount match</span>}
+                                </div>
+                                <span className="font-mono font-semibold text-slate-800">{fmt(je.totalAmount)}</span>
+                              </div>
+                              <div className="text-slate-500 mt-0.5">{je.contactName} · {fmtDate(je.date)}</div>
+                            </button>
+                          )
+                        })
+                      }
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Split sub-panel ── */}
+              {splitOpen && (
+                <div className="border border-purple-200 rounded-xl overflow-hidden">
+                  <div className="bg-purple-50 px-3 py-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-purple-700 flex items-center gap-1.5">
+                      <Scissors size={12} /> Split Transaction
+                      <span className="text-purple-400 font-normal ml-1">Total: {fmtAmt(detailTx.amount)}</span>
+                    </span>
+                    <button onClick={() => setSplitOpen(false)} className="text-purple-400 hover:text-purple-600"><X size={14} /></button>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {splitLines2.map((line, i) => {
+                      const remaining = Math.abs(detailTx.amount) -
+                        splitLines2.filter((_, j) => j !== i).reduce((s, l) => s + (parseFloat(l.amount) || 0), 0)
+                      return (
+                        <div key={i} className="grid grid-cols-[1fr_88px_24px] gap-1.5 items-start">
+                          <div className="relative">
+                            <select
+                              value={line.accountId}
+                              onChange={e => setSplitLines2(prev => prev.map((l, j) => j === i ? { ...l, accountId: e.target.value } : l))}
+                              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 bg-white"
+                            >
+                              <option value="">Select account…</option>
+                              {coa.map(a => <option key={a.id} value={a.id}>{a.code} {a.name}</option>)}
+                            </select>
+                          </div>
+                          <input
+                            type="number"
+                            value={line.amount}
+                            onChange={e => setSplitLines2(prev => prev.map((l, j) => j === i ? { ...l, amount: e.target.value } : l))}
+                            onFocus={e => { if (!e.target.value) setSplitLines2(prev => prev.map((l, j) => j === i ? { ...l, amount: remaining > 0 ? remaining.toFixed(2) : '' } : l)) }}
+                            placeholder="0.00"
+                            className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 text-right font-mono"
+                          />
+                          <button
+                            onClick={() => setSplitLines2(prev => prev.filter((_, j) => j !== i))}
+                            disabled={splitLines2.length <= 2}
+                            className="p-1.5 text-slate-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {/* Running total */}
+                    <div className="flex justify-between text-xs px-1 mt-1">
+                      <span className="text-slate-500">Allocated</span>
+                      <span className={`font-mono font-semibold ${
+                        Math.abs(splitLines2.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0) - Math.abs(detailTx.amount)) < 0.01
+                          ? 'text-emerald-600' : 'text-red-500'
+                      }`}>
+                        {fmt(splitLines2.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))} / {fmt(Math.abs(detailTx.amount))}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => setSplitLines2(prev => [...prev, { accountId: '', amount: '', memo: '' }])}
+                        className="text-xs text-purple-600 hover:underline"
+                      >
+                        + Add line
+                      </button>
+                      <button
+                        onClick={handleSaveSplit}
+                        className="ml-auto px-3 py-1.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-1"
+                      >
+                        <Check size={12} /> Save Split
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Undo */}
               {(detailTx.status === 'CATEGORIZED' || detailTx.status === 'MATCHED') && (
                 <button
                   onClick={async () => { await undoTransaction(detailTx); setDetailOpen(false) }}
                   className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1.5 border border-slate-200 rounded-lg hover:bg-slate-50"
                 >
-                  <RotateCcw size={13} /> Undo Categorize
+                  <RotateCcw size={13} />
+                  {detailTx.status === 'MATCHED'                    ? 'Undo Match' :
+                   detailTx.transactionType === 'Split Transaction'  ? 'Undo Split' :
+                   detailTx.transactionType === 'Bank Payment'       ? 'Undo Bank Payment' :
+                   detailTx.transactionType === 'Bank Receipt'       ? 'Undo Bank Receipt' :
+                   'Undo Categorize'}
                 </button>
               )}
             </div>
           </>
         )}
       </div>
+
+      {/* ── Link Account modal ────────────────────────────────────────────── */}
+      {linkAcctOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Link2 size={16} className="text-emerald-600" /> Link Bank Account
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">Choose a Philippine bank to connect via Open Finance</p>
+              </div>
+              <button onClick={() => setLinkAcctOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+            </div>
+            <div className="p-5 grid grid-cols-3 gap-3">
+              {[
+                { name: 'BDO Unibank',     abbr: 'BDO',  color: 'bg-blue-600' },
+                { name: 'BPI',             abbr: 'BPI',  color: 'bg-red-600'  },
+                { name: 'Metrobank',       abbr: 'MBK',  color: 'bg-yellow-600' },
+                { name: 'Security Bank',   abbr: 'SBC',  color: 'bg-orange-600' },
+                { name: 'PNB',             abbr: 'PNB',  color: 'bg-green-700' },
+                { name: 'Land Bank',       abbr: 'LBP',  color: 'bg-emerald-700' },
+                { name: 'China Bank',      abbr: 'CBC',  color: 'bg-red-800'  },
+                { name: 'UnionBank',       abbr: 'UBP',  color: 'bg-indigo-600' },
+                { name: 'Maybank PH',      abbr: 'MAY',  color: 'bg-yellow-500' },
+              ].map(bank => (
+                <button
+                  key={bank.abbr}
+                  onClick={() => { showToast(`${bank.name} — connection coming soon`); setLinkAcctOpen(false) }}
+                  className="flex flex-col items-center gap-2 p-4 border border-slate-200 rounded-xl hover:border-emerald-400 hover:shadow-sm transition-all group"
+                >
+                  <div className={`w-10 h-10 ${bank.color} rounded-full flex items-center justify-center text-white text-xs font-bold`}>
+                    {bank.abbr}
+                  </div>
+                  <span className="text-xs text-slate-600 text-center font-medium leading-tight">{bank.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="px-5 pb-4 text-center text-xs text-slate-400">
+              Connections use BSP Open Finance Framework. Bank data is read-only.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── H. Batch categorize modal ──────────────────────────────────────── */}
       {batchOpen && (
