@@ -102,10 +102,8 @@ export const navigationData: NavSection[] = [
             title: 'Bank Feed',
             path: '/banking-cash/transactions',
             tabs: [
-              { label: 'For Review',  value: 'for-review',  status: 'existing' },
-              { label: 'Categorized', value: 'categorized', status: 'existing' },
-              { label: 'Excluded',    value: 'excluded',    status: 'existing' },
-              { label: 'Register',    value: 'register',    status: 'existing' },
+              { label: 'Bank Feed', value: 'transactions', status: 'existing' },
+              { label: 'Register',  value: 'register',     status: 'existing' },
             ],
           },
           {
