@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 const TABS = [
   { label: 'Bank Feed',  href: '/banking-cash/transactions',          exact: true  },
   { label: 'Register',   href: '/banking-cash/transactions/register', exact: false },
-  { label: 'Transfer',   href: '/banking-cash/transactions/transfer', exact: false },
   { label: 'Bank Rules', href: '/banking-cash/transactions/rules',    exact: false },
 ]
 
@@ -17,7 +16,6 @@ export default function TransactionsLayout({ children }: { children: React.React
   const isFullScreen =
     pathname.startsWith('/banking-cash/transactions/match') ||
     pathname.startsWith('/banking-cash/transactions/split') ||
-    pathname.startsWith('/banking-cash/transactions/transfer') ||
     pathname.startsWith('/banking-cash/transactions/view-record')
 
   if (isFullScreen) return <>{children}</>

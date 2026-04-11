@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  AlertCircle, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
+  AlertCircle, ArrowLeftRight, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
   ChevronRight, ChevronUp, FileUp, GitMerge, Link2, Loader2, RefreshCw,
   RotateCcw, Scissors, Search, Sparkles, User, X,
 } from 'lucide-react'
@@ -15,6 +15,7 @@ import {
   MOCK_COA_ACCOUNTS,
   MOCK_ENTITIES,
   MOCK_TRANSACTIONS,
+  MOCK_BANK_ACCOUNTS,
   mockJEs,
   mockStore,
   categorizeTransaction  as glCategorize,
@@ -22,6 +23,7 @@ import {
   undoCategorize         as glUndo,
   applyRules             as glApplyRules,
   matchTransaction       as glMatch,
+  transferTransaction    as glTransfer,
   detectAutoMatches,
   findHistoryMatch,
   addToHistory,
@@ -339,6 +341,7 @@ export default function BankFeedPage() {
 
   // ── Expandable row ─────────────────────────────────────────────────────────
   const [expandedId,      setExpandedId]      = useState<string | null>(null)
+  const [expandedTab,     setExpandedTab]     = useState<'categorize' | 'match' | 'split' | 'transfer'>('categorize')
   const [editMode,        setEditMode]        = useState(false)
   const [inlineCoa,       setInlineCoa]       = useState('')
   const [inlineEnt,       setInlineEnt]       = useState('')
@@ -351,6 +354,13 @@ export default function BankFeedPage() {
   const [quickMatchConfirm, setQuickMatchConfirm] = useState<{ txId: string; jeId: string; matchType: 'Bank Payment' | 'Bank Receipt'; jeRef: string; jeAmount: number } | null>(null)
   const inlineCoaRef = useRef<HTMLDivElement>(null)
   const inlineEntRef = useRef<HTMLDivElement>(null)
+
+  // ── Transfer form (inline expanded) ───────────────────────────────────────
+  const [transferDirection,  setTransferDirection]  = useState<'to' | 'from'>('to')
+  const [transferOtherAcct,  setTransferOtherAcct]  = useState('')
+  const [transferDate,       setTransferDate]       = useState('')
+  const [transferMemo,       setTransferMemo]       = useState('')
+  const [transferSaving,     setTransferSaving]     = useState(false)
 
   // ── Router ──────────────────────────────────────────────────────────────────
   const router = useRouter()
@@ -623,6 +633,12 @@ export default function BankFeedPage() {
       setExpandedId(null); setEditMode(false)
     } else {
       setExpandedId(id); setEditMode(false)
+      setExpandedTab('categorize')
+      // Reset transfer form
+      setTransferDirection(tx.amount < 0 ? 'to' : 'from')
+      setTransferOtherAcct('')
+      setTransferDate(tx.date)
+      setTransferMemo('')
       // Pre-fill from existing categorization, or from history if PENDING
       let coaId  = tx.accountId ?? ''
       let entId  = tx.contactId ?? ''
@@ -758,24 +774,49 @@ export default function BankFeedPage() {
         const mType: 'Bank Payment' | 'Bank Receipt' = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt'
         const jeRef = je.referenceNo ?? je.id.slice(0, 8)
         if (Math.abs(tx.amount) > 50000) {
-          // Large amount — expand so user can confirm via card UI
+          // Large amount — expand so user can confirm via match tab
           toggleExpand(tx.id, tx)
-          setTimeout(() => {
-            document.getElementById(`match-cards-${tx.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-          }, 120)
+          setExpandedTab('match')
         } else {
           handleQuickMatch(tx, je.id, mType, jeRef)
         }
         return
       }
     }
-    // 2+ matches — expand row and scroll to match cards
+    // 2+ matches — expand row and show match tab
     toggleExpand(tx.id, tx)
-    setTimeout(() => {
-      document.getElementById(`match-cards-${tx.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    }, 120)
+    setExpandedTab('match')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchSuggestions])
+
+  // ─── Handle Transfer ──────────────────────────────────────────────────
+  const handleTransfer = (tx: BankTransaction) => {
+    if (!transferOtherAcct) return
+    setTransferSaving(true)
+    const result = glTransfer(tx.id, transferOtherAcct, transferDirection, transferDate || tx.date, transferMemo || undefined)
+    if (result) {
+      setItems(prev => [
+        ...prev.map(t => t.id === tx.id
+          ? { ...t, status: 'CATEGORIZED', transactionType: 'Bank Transfer', accountName: 'Bank Transfers', memo: result.tx.memo }
+          : t),
+        {
+          id:              result.mirrorTx.id,
+          date:            result.mirrorTx.date,
+          description:     result.mirrorTx.description,
+          amount:          result.mirrorTx.amount,
+          status:          result.mirrorTx.status,
+          transactionType: result.mirrorTx.transactionType,
+          accountName:     result.mirrorTx.accountName,
+          memo:            result.mirrorTx.memo,
+        },
+      ])
+      setExpandedId(null); setEditMode(false)
+      showToast('Transaction marked as Bank Transfer')
+    } else {
+      showToast('Transfer failed — check account selection')
+    }
+    setTransferSaving(false)
+  }
 
   // ─── Exclude ─────────────────────────────────────────────────────────────
   const excludeRows = async (ids: string[]) => {
@@ -1018,55 +1059,25 @@ export default function BankFeedPage() {
 
         {/* Match filter */}
         <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <span className="text-xs text-slate-400 font-medium w-14 shrink-0">Match:</span>
-          {(
-            [
-              { key: 'all',            label: 'All' },
-              { key: 'has-suggestion', label: 'Has Suggestion' },
-              { key: 'no-suggestion',  label: 'No Suggestion' },
-              { key: 'matched',        label: 'Matched' },
-            ] as const
-          ).map(f => (
-            <button
-              key={f.key}
-              onClick={() => { setMatchFilter(f.key); setPage(1) }}
-              className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-                matchFilter === f.key
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-blue-600 border-blue-400 hover:bg-blue-50'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Type filter */}
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <span className="text-xs text-slate-400 font-medium w-14 shrink-0">Type:</span>
-          {(
-            [
-              { key: 'all',        label: 'All' },
-              { key: 'withdrawal', label: 'Withdrawal' },
-              { key: 'deposit',    label: 'Deposit' },
-            ] as const
-          ).map(f => (
-            <button
-              key={f.key}
-              onClick={() => { setTypeFilter(f.key); setPage(1) }}
-              className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-                typeFilter === f.key
-                  ? 'bg-slate-700 text-white border-slate-700'
-                  : 'bg-white text-slate-600 border-slate-400 hover:bg-slate-50'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Search + date + amount */}
-        <div className="flex items-center gap-3 mt-3 flex-wrap">
+          <select
+            value={matchFilter}
+            onChange={e => { setMatchFilter(e.target.value as typeof matchFilter); setPage(1) }}
+            className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Match: All</option>
+            <option value="has-suggestion">Has Suggestion</option>
+            <option value="no-suggestion">No Suggestion</option>
+            <option value="matched">Matched</option>
+          </select>
+          <select
+            value={typeFilter}
+            onChange={e => { setTypeFilter(e.target.value as typeof typeFilter); setPage(1) }}
+            className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Type: All</option>
+            <option value="withdrawal">Withdrawal</option>
+            <option value="deposit">Deposit</option>
+          </select>
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
@@ -1078,18 +1089,18 @@ export default function BankFeedPage() {
           </div>
           <input type="date" aria-label="Date from" value={dateFrom}
             onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-            className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+            className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
           <span className="text-slate-400 text-xs">→</span>
           <input type="date" aria-label="Date to" value={dateTo}
             onChange={e => { setDateTo(e.target.value); setPage(1) }}
-            className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+            className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
           <input type="number" placeholder="Min ₱" value={minAmt}
             onChange={e => { setMinAmt(e.target.value); setPage(1) }}
-            className="w-24 px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+            className="w-24 h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
           <span className="text-slate-400 text-xs">→</span>
           <input type="number" placeholder="Max ₱" value={maxAmt}
             onChange={e => { setMaxAmt(e.target.value); setPage(1) }}
-            className="w-24 px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+            className="w-24 h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
           <span className="ml-auto text-xs text-slate-400">{filtered.length} records</span>
         </div>
       </div>
@@ -1284,21 +1295,32 @@ export default function BankFeedPage() {
                       <td className={tdClass} style={{ width: colW.actions }}
                           onClick={e => e.stopPropagation()}>
                         {tx.status === 'PENDING' && (
-                          (matchSuggestions[tx.id] ?? 0) > 0 ? (
-                            <button
-                              onClick={e => { e.stopPropagation(); smartMatchAction(tx) }}
-                              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                            >
-                              <GitMerge size={11} /> Match ({matchSuggestions[tx.id]})
-                            </button>
-                          ) : (
-                            <button
-                              onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
-                              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                            >
-                              Add
-                            </button>
-                          )
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {(matchSuggestions[tx.id] ?? 0) > 0 ? (
+                              <button
+                                onClick={e => { e.stopPropagation(); smartMatchAction(tx) }}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                              >
+                                <GitMerge size={11} /> Match ({matchSuggestions[tx.id]})
+                              </button>
+                            ) : (
+                              <button
+                                onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx) }}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                              >
+                                Add
+                              </button>
+                            )}
+                            {tx.amount < 0 && /transfer|wire|fund.transfer|to\s+bdo|to\s+bpi/i.test(tx.description) && (
+                              <button
+                                title="Transfer"
+                                onClick={e => { e.stopPropagation(); toggleExpand(tx.id, tx); setExpandedTab('transfer') }}
+                                className="flex items-center px-1.5 py-1 text-xs font-medium rounded-md border border-indigo-400 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              >
+                                <ArrowLeftRight size={11} />
+                              </button>
+                            )}
+                          </div>
                         )}
                         {tx.status === 'CATEGORIZED' && tx.transactionType === 'Split Transaction' && (
                           <div className="flex flex-col items-start gap-1">
@@ -1358,19 +1380,92 @@ export default function BankFeedPage() {
                           {/* PENDING */}
                           {tx.status === 'PENDING' && (
                             <div className="px-6 py-4 bg-emerald-50/60 border-l-4 border-emerald-400">
-                              {/* ── Suggested match cards ── */}
-                              {matchSuggestions[tx.id] > 0 && (() => {
+                              {/* ── Mini tab bar ── */}
+                              {(() => {
+                                const tabs: { key: 'categorize' | 'match' | 'split' | 'transfer'; label: React.ReactNode }[] = [
+                                  { key: 'categorize', label: 'Categorize' },
+                                  ...((matchSuggestions[tx.id] ?? 0) > 0
+                                    ? [{ key: 'match' as const, label: <span className="flex items-center gap-1">Match <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full bg-blue-600 text-white font-bold">{matchSuggestions[tx.id]}</span></span> }]
+                                    : []),
+                                  { key: 'split',    label: <span className="flex items-center gap-1"><Scissors size={11} /> Split</span> },
+                                  { key: 'transfer', label: <span className="flex items-center gap-1"><ArrowLeftRight size={11} /> Transfer</span> },
+                                ]
+                                return (
+                                  <div className="flex items-center gap-0 border-b border-slate-200 mb-4 -mx-6 px-6">
+                                    {tabs.map(tab => (
+                                      <button
+                                        key={tab.key}
+                                        onClick={e => { e.stopPropagation(); setExpandedTab(tab.key) }}
+                                        className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap -mb-px ${
+                                          expandedTab === tab.key
+                                            ? 'border-emerald-600 text-emerald-700'
+                                            : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                        }`}
+                                      >
+                                        {tab.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )
+                              })()}
+
+                              {/* ── Tab: Categorize ── */}
+                              {expandedTab === 'categorize' && (
+                                <div className="max-w-2xl space-y-3">
+                                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                    Categorize: <span className="normal-case font-normal text-slate-700">{tx.description}</span>
+                                    <span className={`ml-2 font-semibold ${tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{fmtAmt(tx.amount)}</span>
+                                  </p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-500 mb-1">Account (COA)</label>
+                                      <CoaDropdown
+                                        open={inlineCoaOpen} onToggle={() => { setInlineCoaOpen(o => !o); setInlineEntOpen(false) }}
+                                        searchVal={inlineCoaSearch} onSearch={setInlineCoaSearch}
+                                        value={inlineCoa} onChange={setInlineCoa}
+                                        accounts={coa} topClose={() => setInlineEntOpen(false)} dropRef={inlineCoaRef}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
+                                      <EntityDropdown
+                                        open={inlineEntOpen} onToggle={() => { setInlineEntOpen(o => !o); setInlineCoaOpen(false) }}
+                                        searchVal={inlineEntSearch} onSearch={setInlineEntSearch}
+                                        value={inlineEnt} onChange={setInlineEnt}
+                                        options={entities} topClose={() => setInlineCoaOpen(false)} dropRef={inlineEntRef}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
+                                    <input value={inlineMemo} onChange={e => setInlineMemo(e.target.value)}
+                                      placeholder="Optional memo…"
+                                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+                                    <button onClick={() => { setExpandedId(null); setEditMode(false) }}
+                                      className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                                    <button onClick={saveInline} disabled={inlineSaving || !inlineCoa}
+                                      className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 flex items-center gap-1.5">
+                                      {inlineSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Categorize
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* ── Tab: Match ── */}
+                              {expandedTab === 'match' && (matchSuggestions[tx.id] ?? 0) > 0 && (() => {
                                 const allMatches = (() => {
-                                  const result: { je: import('./mockGLState').MatchSuggestion['je']; diff: number; isExact: boolean }[] = []
                                   const scanned = detectAutoMatches([mockStore.items.find(m => m.id === tx.id)!].filter(Boolean))
                                   return scanned[tx.id] ?? []
                                 })()
                                 return (
-                                  <div id={`match-cards-${tx.id}`} className="mb-4">
+                                  <div id={`match-cards-${tx.id}`} className="max-w-2xl">
                                     <p className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
                                       <GitMerge size={12} /> {allMatches.length} suggested match{allMatches.length !== 1 ? 'es' : ''} found
                                     </p>
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1.5 mb-3">
                                       {allMatches.map(({ je, isExact }) => {
                                         const matchType: 'Bank Payment' | 'Bank Receipt' = tx.amount < 0 ? 'Bank Payment' : 'Bank Receipt'
                                         const jeRef = je.referenceNo ?? je.id.slice(0, 8)
@@ -1414,63 +1509,136 @@ export default function BankFeedPage() {
                                         )
                                       })}
                                     </div>
-                                    <div className="flex items-center gap-2 my-3">
-                                      <div className="flex-1 border-t border-slate-200" />
-                                      <span className="text-[11px] text-slate-400">or categorize manually</span>
-                                      <div className="flex-1 border-t border-slate-200" />
+                                    <button
+                                      onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/match?txnId=${tx.id}`) }}
+                                      className="px-3 py-1.5 text-xs font-medium border border-blue-400 text-blue-700 rounded-lg hover:bg-blue-50 flex items-center gap-1.5"
+                                    >
+                                      <GitMerge size={12} /> Search All Documents…
+                                    </button>
+                                  </div>
+                                )
+                              })()}
+
+                              {/* ── Tab: Split ── */}
+                              {expandedTab === 'split' && (
+                                <div className="max-w-2xl">
+                                  <p className="text-xs text-slate-500 mb-3">
+                                    Split this transaction across multiple GL accounts.
+                                    <span className={`ml-1 font-semibold ${tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{fmtAmt(tx.amount)}</span>
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/split?txnId=${tx.id}`) }}
+                                      className="px-3 py-1.5 text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-1.5"
+                                    >
+                                      <Scissors size={13} /> Open Split Editor
+                                    </button>
+                                    <button onClick={() => { setExpandedId(null); setEditMode(false) }}
+                                      className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* ── Tab: Transfer ── */}
+                              {expandedTab === 'transfer' && (() => {
+                                const currentBankId = mockStore.items.find(m => m.id === tx.id)?.accountId ?? selectedAcct
+                                const otherAccounts = MOCK_BANK_ACCOUNTS.filter(a => a.id !== currentBankId)
+                                const currentBank   = MOCK_BANK_ACCOUNTS.find(a => a.id === currentBankId)
+                                return (
+                                  <div className="max-w-2xl space-y-3">
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                      Bank Transfer: <span className="normal-case font-normal text-slate-700">{tx.description}</span>
+                                      <span className={`ml-2 font-semibold ${tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{fmtAmt(tx.amount)}</span>
+                                    </p>
+                                    {/* Direction */}
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-500 mb-1.5">Direction</label>
+                                      <div className="flex items-center gap-4">
+                                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                          <input type="radio" name={`tdir-${tx.id}`} value="to"
+                                            checked={transferDirection === 'to'}
+                                            onChange={() => setTransferDirection('to')}
+                                            className="text-emerald-600 focus:ring-emerald-500"
+                                          />
+                                          <span>Transfer <strong>TO</strong> another account</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                          <input type="radio" name={`tdir-${tx.id}`} value="from"
+                                            checked={transferDirection === 'from'}
+                                            onChange={() => setTransferDirection('from')}
+                                            className="text-emerald-600 focus:ring-emerald-500"
+                                          />
+                                          <span>Transfer <strong>FROM</strong> another account</span>
+                                        </label>
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      {/* Other Account */}
+                                      <div>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">
+                                          {transferDirection === 'to' ? 'Transfer To' : 'Transfer From'}
+                                        </label>
+                                        <select
+                                          value={transferOtherAcct}
+                                          onChange={e => setTransferOtherAcct(e.target.value)}
+                                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        >
+                                          <option value="">Select account…</option>
+                                          {otherAccounts.map(a => (
+                                            <option key={a.id} value={a.id}>{a.name} {a.accountNumber}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      {/* Amount (read-only) */}
+                                      <div>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">Amount (fixed)</label>
+                                        <input
+                                          readOnly
+                                          value={fmt(Math.abs(tx.amount))}
+                                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed"
+                                        />
+                                      </div>
+                                      {/* Date */}
+                                      <div>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">Date</label>
+                                        <input
+                                          type="date"
+                                          value={transferDate || tx.date}
+                                          onChange={e => setTransferDate(e.target.value)}
+                                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                      {/* Memo */}
+                                      <div>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
+                                        <input
+                                          value={transferMemo}
+                                          onChange={e => setTransferMemo(e.target.value)}
+                                          placeholder={`Transfer ${transferDirection === 'to' ? 'to' : 'from'} ${otherAccounts.find(a => a.id === transferOtherAcct)?.name ?? '…'}`}
+                                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                    </div>
+                                    {currentBank && (
+                                      <p className="text-xs text-slate-400">
+                                        Current account: <span className="font-medium text-slate-600">{currentBank.name}</span>
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+                                      <button onClick={() => { setExpandedId(null); setEditMode(false) }}
+                                        className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                                      <button
+                                        onClick={() => handleTransfer(tx)}
+                                        disabled={transferSaving || !transferOtherAcct}
+                                        className="px-4 py-1.5 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-60 flex items-center gap-1.5"
+                                      >
+                                        {transferSaving ? <Loader2 size={13} className="animate-spin" /> : <ArrowLeftRight size={13} />}
+                                        Save Transfer
+                                      </button>
                                     </div>
                                   </div>
                                 )
                               })()}
-                              <div className="max-w-2xl space-y-3">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                                  Categorize: <span className="normal-case font-normal text-slate-700">{tx.description}</span>
-                                  <span className={`ml-2 font-semibold ${tx.amount < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{fmtAmt(tx.amount)}</span>
-                                </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Account (COA)</label>
-                                    <CoaDropdown
-                                      open={inlineCoaOpen} onToggle={() => { setInlineCoaOpen(o => !o); setInlineEntOpen(false) }}
-                                      searchVal={inlineCoaSearch} onSearch={setInlineCoaSearch}
-                                      value={inlineCoa} onChange={setInlineCoa}
-                                      accounts={coa} topClose={() => setInlineEntOpen(false)} dropRef={inlineCoaRef}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
-                                    <EntityDropdown
-                                      open={inlineEntOpen} onToggle={() => { setInlineEntOpen(o => !o); setInlineCoaOpen(false) }}
-                                      searchVal={inlineEntSearch} onSearch={setInlineEntSearch}
-                                      value={inlineEnt} onChange={setInlineEnt}
-                                      options={entities} topClose={() => setInlineCoaOpen(false)} dropRef={inlineEntRef}
-                                    />
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-slate-500 mb-1">Memo</label>
-                                  <input value={inlineMemo} onChange={e => setInlineMemo(e.target.value)}
-                                    placeholder="Optional memo…"
-                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                  />
-                                </div>
-                                <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
-                                  <button onClick={() => { setExpandedId(null); setEditMode(false) }}
-                                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
-                                  <button onClick={saveInline} disabled={inlineSaving || !inlineCoa}
-                                    className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 flex items-center gap-1.5">
-                                    {inlineSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Categorize
-                                  </button>
-                                  <button onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/match?txnId=${tx.id}`) }}
-                                    className="px-3 py-1.5 text-xs font-medium border border-blue-400 text-blue-700 rounded-lg hover:bg-blue-50 flex items-center gap-1.5">
-                                    <GitMerge size={12} /> Find Match…
-                                  </button>
-                                  <button onClick={e => { e.stopPropagation(); router.push(`/banking-cash/transactions/split?txnId=${tx.id}`) }}
-                                    className="px-3 py-1.5 text-xs font-medium border border-purple-400 text-purple-700 rounded-lg hover:bg-purple-50 flex items-center gap-1.5">
-                                    <Scissors size={12} /> Split
-                                  </button>
-                                </div>
-                              </div>
                             </div>
                           )}
 
