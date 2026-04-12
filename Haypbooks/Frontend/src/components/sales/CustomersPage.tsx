@@ -304,21 +304,21 @@ export default function CustomersPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-white rounded-xl border border-gray-200 p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input type="text" placeholder="Search customers…" value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(0); }}
-          className="px-3 py-2 text-sm border border-emerald-100 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-emerald-700">
+          className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-gray-700">
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
           <option value="ALL">All Status</option>
         </select>
         {groups.length > 0 && (
           <select value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(0); }}
-            className="px-3 py-2 text-sm border border-emerald-100 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-emerald-700">
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-gray-700">
             <option value="">All Groups</option>
             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
