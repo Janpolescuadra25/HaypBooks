@@ -470,4 +470,70 @@ export class ArController {
     ) {
         return this.svc.getArAging(req.user.userId, companyId)
     }
+
+    // ─── Price Lists ──────────────────────────────────────────────────────────
+
+    @Post('price-lists')
+    createPriceList(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createPriceList(req.user.userId, companyId, body)
+    }
+
+    @Get('price-lists/export')
+    async exportPriceLists(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.exportPriceListsCsv(req.user.userId, companyId)
+    }
+
+    @Post('price-lists/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeletePriceLists(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.batchDeletePriceLists(req.user.userId, companyId, body.ids)
+    }
+
+    @Get('price-lists')
+    listPriceLists(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.listPriceLists(req.user.userId, companyId, query)
+    }
+
+    @Get('price-lists/:id')
+    getPriceList(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.getPriceList(req.user.userId, companyId, id)
+    }
+
+    @Put('price-lists/:id')
+    updatePriceList(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updatePriceList(req.user.userId, companyId, id, body)
+    }
+
+    @Delete('price-lists/:id')
+    deletePriceList(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.deletePriceList(req.user.userId, companyId, id)
+    }
 }

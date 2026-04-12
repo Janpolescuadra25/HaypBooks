@@ -1023,4 +1023,135 @@ export class ArRepository {
             return updated
         })
     }
+
+    // ─── Price Lists ──────────────────────────────────────────────────────────
+
+    async findPriceLists(workspaceId: string, opts: { search?: string; status?: string; limit?: number; offset?: number } = {}) {
+        const where: any = {
+            workspaceId,
+            ...(opts.status ? { status: opts.status } : {}),
+            ...(opts.search ? { name: { contains: opts.search, mode: 'insensitive' } } : {}),
+        }
+        const [data, total] = await Promise.all([
+            this.prisma.priceList.findMany({
+                where,
+                include: {
+                    customerGroup: { select: { id: true, name: true } },
+                    _count: { select: { entries: true } },
+                },
+                orderBy: { name: 'asc' },
+                take: opts.limit ?? 50,
+                skip: opts.offset ?? 0,
+            }),
+            this.prisma.priceList.count({ where }),
+        ])
+        return {
+            data: data.map(pl => ({
+                id: pl.id, name: pl.name, currency: pl.currency, isDefault: pl.isDefault,
+                description: pl.description, status: pl.status, startDate: pl.startDate,
+                endDate: pl.endDate, customerGroup: pl.customerGroup, entryCount: pl._count.entries,
+                createdAt: pl.createdAt, updatedAt: pl.updatedAt,
+            })),
+            total,
+        }
+    }
+
+    async findPriceListById(workspaceId: string, id: string) {
+        return this.prisma.priceList.findFirst({
+            where: { id, workspaceId },
+            include: {
+                customerGroup: { select: { id: true, name: true } },
+                entries: {
+                    include: { item: { select: { id: true, name: true, sku: true, salesPrice: true } } },
+                    orderBy: { createdAt: 'asc' },
+                },
+            },
+        })
+    }
+
+    async createPriceList(workspaceId: string, data: {
+        name: string; currency: string; description?: string; isDefault?: boolean;
+        status?: string; startDate?: string | null; endDate?: string | null; customerGroupId?: string | null;
+        entries?: Array<{ itemId: string; unitPrice: number; discountPct?: number; minQuantity?: number }>;
+    }) {
+        const { entries, ...rest } = data
+        return this.prisma.priceList.create({
+            data: {
+                workspaceId, name: rest.name, currency: rest.currency,
+                description: rest.description ?? null, isDefault: rest.isDefault ?? false,
+                status: rest.status ?? 'ACTIVE',
+                startDate: rest.startDate ? new Date(rest.startDate) : null,
+                endDate: rest.endDate ? new Date(rest.endDate) : null,
+                customerGroupId: rest.customerGroupId ?? null,
+                entries: entries?.length ? {
+                    create: entries.map(e => ({
+                        itemId: e.itemId, unitPrice: e.unitPrice,
+                        discountPct: e.discountPct ?? 0, minQuantity: e.minQuantity ?? 1,
+                    })),
+                } : undefined,
+            },
+            include: {
+                customerGroup: { select: { id: true, name: true } },
+                entries: { include: { item: { select: { id: true, name: true, sku: true, salesPrice: true } } } },
+            },
+        })
+    }
+
+    async updatePriceList(workspaceId: string, id: string, data: {
+        name?: string; currency?: string; description?: string; isDefault?: boolean;
+        status?: string; startDate?: string | null; endDate?: string | null; customerGroupId?: string | null;
+        entries?: Array<{ itemId: string; unitPrice: number; discountPct?: number; minQuantity?: number }>;
+    }) {
+        const { entries, ...rest } = data
+        if (entries !== undefined) {
+            await this.prisma.priceListEntry.deleteMany({ where: { priceListId: id } })
+            if (entries.length > 0) {
+                await this.prisma.priceListEntry.createMany({
+                    data: entries.map(e => ({
+                        priceListId: id, itemId: e.itemId, unitPrice: e.unitPrice,
+                        discountPct: e.discountPct ?? 0, minQuantity: e.minQuantity ?? 1,
+                    })),
+                })
+            }
+        }
+        return this.prisma.priceList.update({
+            where: { id },
+            data: {
+                ...(rest.name !== undefined ? { name: rest.name } : {}),
+                ...(rest.currency !== undefined ? { currency: rest.currency } : {}),
+                ...(rest.description !== undefined ? { description: rest.description } : {}),
+                ...(rest.isDefault !== undefined ? { isDefault: rest.isDefault } : {}),
+                ...(rest.status !== undefined ? { status: rest.status } : {}),
+                ...(rest.startDate !== undefined ? { startDate: rest.startDate ? new Date(rest.startDate) : null } : {}),
+                ...(rest.endDate !== undefined ? { endDate: rest.endDate ? new Date(rest.endDate) : null } : {}),
+                ...(rest.customerGroupId !== undefined ? { customerGroupId: rest.customerGroupId } : {}),
+            },
+            include: {
+                customerGroup: { select: { id: true, name: true } },
+                entries: { include: { item: { select: { id: true, name: true, sku: true, salesPrice: true } } } },
+            },
+        })
+    }
+
+    async deletePriceList(workspaceId: string, id: string) {
+        // PriceListItem has no cascade — clear any legacy items before delete
+        await this.prisma.priceListItem.deleteMany({ where: { priceListId: id } })
+        return this.prisma.priceList.delete({ where: { id } })
+    }
+
+    async batchDeletePriceLists(workspaceId: string, ids: string[]) {
+        await this.prisma.priceListItem.deleteMany({ where: { priceListId: { in: ids } } })
+        return this.prisma.priceList.deleteMany({ where: { id: { in: ids }, workspaceId } })
+    }
+
+    async exportPriceLists(workspaceId: string) {
+        return this.prisma.priceList.findMany({
+            where: { workspaceId },
+            include: {
+                customerGroup: { select: { name: true } },
+                _count: { select: { entries: true } },
+            },
+            orderBy: { name: 'asc' },
+        })
+    }
 }

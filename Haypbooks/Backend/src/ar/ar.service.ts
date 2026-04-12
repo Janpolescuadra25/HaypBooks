@@ -722,4 +722,76 @@ export class ArService {
             customers: Array.from(customerMap.values()),
         }
     }
+
+    // ─── Price Lists ──────────────────────────────────────────────────────────
+
+    async listPriceLists(userId: string, companyId: string, opts: any = {}) {
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.findPriceLists(wid, {
+            search: opts.search,
+            status: opts.status,
+            limit: opts.limit ? parseInt(opts.limit) : 50,
+            offset: opts.offset ? parseInt(opts.offset) : 0,
+        })
+    }
+
+    async getPriceList(userId: string, companyId: string, id: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        const pl = await this.repo.findPriceListById(wid, id)
+        if (!pl) throw new NotFoundException('Price list not found')
+        return pl
+    }
+
+    async createPriceList(userId: string, companyId: string, data: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.createPriceList(wid, data)
+        await this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'PriceList', recordId: result.id, changes: { name: result.name } },
+        })
+        return result
+    }
+
+    async updatePriceList(userId: string, companyId: string, id: string, data: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        const existing = await this.repo.findPriceListById(wid, id)
+        if (!existing) throw new NotFoundException('Price list not found')
+        const result = await this.repo.updatePriceList(wid, id, data)
+        await this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'PriceList', recordId: id, changes: data },
+        })
+        return result
+    }
+
+    async deletePriceList(userId: string, companyId: string, id: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        const existing = await this.repo.findPriceListById(wid, id)
+        if (!existing) throw new NotFoundException('Price list not found')
+        await this.repo.deletePriceList(wid, id)
+        await this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'PriceList', recordId: id, changes: { name: existing.name } },
+        })
+        return { success: true }
+    }
+
+    async batchDeletePriceLists(userId: string, companyId: string, ids: string[]) {
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.batchDeletePriceLists(wid, ids)
+    }
+
+    async exportPriceListsCsv(userId: string, companyId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        const priceLists = await this.repo.exportPriceLists(wid)
+        const header = 'Name,Currency,Status,Is Default,Customer Group,Products,Start Date,End Date'
+        const rows = priceLists.map(pl => [
+            `"${(pl.name ?? '').replace(/"/g, '""')}"`,
+            pl.currency ?? '',
+            pl.status ?? '',
+            pl.isDefault ? 'Yes' : 'No',
+            `"${((pl.customerGroup as any)?.name ?? '').replace(/"/g, '""')}"`,
+            (pl as any)._count?.entries ?? 0,
+            pl.startDate ? new Date(pl.startDate).toLocaleDateString() : '',
+            pl.endDate ? new Date(pl.endDate).toLocaleDateString() : '',
+        ].join(','))
+        return [header, ...rows].join('\n')
+    }
 }

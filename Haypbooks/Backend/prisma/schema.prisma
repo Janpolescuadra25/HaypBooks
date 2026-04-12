@@ -5769,6 +5769,7 @@ model Item {
   inventoryLines            InventoryTransactionLine[]
   costLayers                InventoryCostLayer[]
   priceListItems            PriceListItem[]
+  priceListEntries          PriceListEntry[] @relation("PriceListEntryItem")
   // Assembly relations
   assemblyBuilds            AssemblyBuild[]            @relation("ItemBuilt")
 
@@ -5806,13 +5807,23 @@ model PriceList {
   currency    String
   isDefault   Boolean @default(false)
 
-  workspace Workspace        @relation(fields: [workspaceId], references: [id])
-  items     PriceListItem[]
-  entries   PriceListEntry[] @relation("PriceListEntries")
-  customers Customer[]
+  description     String?
+  status          String    @default("ACTIVE")
+  startDate       DateTime?
+  endDate         DateTime?
+  customerGroupId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id])
+  customerGroup CustomerGroup?  @relation("PriceListCustomerGroup", fields: [customerGroupId], references: [id])
+  items         PriceListItem[]
+  entries       PriceListEntry[] @relation("PriceListEntries")
+  customers     Customer[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
+  @@index([status])
 }
 
 model PriceListItem {
@@ -10666,6 +10677,7 @@ model PriceListEntry {
   updatedAt   DateTime @updatedAt
 
   priceList PriceList @relation("PriceListEntries", fields: [priceListId], references: [id], onDelete: Cascade)
+  item      Item      @relation("PriceListEntryItem", fields: [itemId], references: [id])
 
   @@unique([priceListId, itemId])
   @@index([priceListId])
@@ -11529,9 +11541,10 @@ model CustomerGroup {
   name        String
   description String?
 
-  workspace Workspace  @relation(fields: [workspaceId], references: [id])
-  company   Company    @relation(fields: [companyId], references: [id])
-  customers Customer[]
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id])
+  company    Company     @relation(fields: [companyId], references: [id])
+  customers  Customer[]
+  priceLists PriceList[] @relation("PriceListCustomerGroup")
 
   @@unique([companyId, name])
   @@index([workspaceId])
