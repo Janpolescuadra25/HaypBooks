@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   AlertCircle, ArrowLeftRight, BookOpen, Briefcase, Building2, Check, ChevronDown, ChevronLeft,
   ChevronRight, ChevronUp, Clock, FileUp, GitMerge, Link2, Loader2, RefreshCw,
-  RotateCcw, Scissors, Search, Settings, Sparkles, User, X,
+  RotateCcw, Scissors, Search, Sparkles, User, X,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -1076,12 +1076,6 @@ export default function BankFeedPage() {
           >
             {applyRulesLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
             Apply Rules
-          </button>
-          <button
-            onClick={() => router.push('/banking-cash/transactions/rules')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <Settings size={14} /> Bank Rules
           </button>
           <button
             onClick={openImportWizard}
