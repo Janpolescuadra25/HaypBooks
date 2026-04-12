@@ -128,9 +128,10 @@ export default function CustomerGroupsPage() {
     dragRef.current = { col, startX: e.clientX, startW: colWidths[col] }
     const onMove = (mv: MouseEvent) => {
       if (!dragRef.current) return
-      const newW = Math.max(80, dragRef.current.startW + mv.clientX - dragRef.current.startX)
+      const { col: dragCol, startW, startX } = dragRef.current
+      const newW = Math.max(80, startW + mv.clientX - startX)
       setColWidths(prev => {
-        const next = { ...prev, [dragRef.current!.col]: newW }
+        const next = { ...prev, [dragCol]: newW }
         localStorage.setItem(LS_WIDTHS, JSON.stringify(next))
         return next
       })
