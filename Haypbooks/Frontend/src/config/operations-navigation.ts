@@ -99,7 +99,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         id: 'customers',
         label: 'Customers',
         tabs: [
-          { id: 'customers',            label: 'Customers',            path: '/sales/customers/customers' },
+          { id: 'customers',            label: 'Customers',            path: '/sales/customers' },
           { id: 'customer-groups',      label: 'Customer Groups',      path: '/sales/customers/groups' },
           { id: 'price-lists',          label: 'Price Lists',          path: '/sales/customers/price-lists' },
           { id: 'customer-portal',      label: 'Customer Portal',      path: '/sales/customers/portal' },

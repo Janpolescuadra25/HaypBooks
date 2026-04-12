@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 interface Tab {
   label: string
   value: string
+  path?: string  // optional full path override
 }
 
 interface ModuleTabsProps {
@@ -21,9 +22,10 @@ export default function ModuleTabs({ tabs, basePath }: ModuleTabsProps) {
       <div className="px-6 overflow-x-auto">
         <nav className="flex gap-1 min-w-max" aria-label="Module tabs">
           {tabs.map((tab) => {
-            const href = `${basePath}/${tab.value}`
-            const isActive =
-              pathname === href || pathname.startsWith(`${href}/`)
+            const href = tab.path ?? `${basePath}/${tab.value}`
+            const isActive = tab.path
+              ? pathname === tab.path
+              : pathname === href || pathname.startsWith(`${href}/`)
             return (
               <Link
                 key={tab.value}
