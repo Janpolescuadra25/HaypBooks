@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common'
 import { ArRepository } from './ar.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { SubLedgerService } from '../shared/sub-ledger.service'
@@ -70,6 +70,23 @@ export class ArService {
         }
     }
 
+    private normalizeQuote(q: any) {
+        return {
+            ...q,
+            quoteNumber: q.quoteNumber ?? `QT-${q.id?.slice(0, 8)}`,
+            customer: q.customer?.contact?.displayName ?? q.customerName ?? '',
+            customerId: q.customer?.id ?? q.customerId ?? '',
+            date: q.issuedAt ?? q.date ?? null,
+            expiryDate: q.expiryDate ?? null,
+            amount: Number(q.totalAmount ?? 0),
+            totalAmount: Number(q.totalAmount ?? 0),
+            status: q.status ?? 'DRAFT',
+            lineCount: q.lines?.length ?? 0,
+            convertedToInvoiceId: q.convertedToInvoiceId ?? null,
+            createdAt: q.createdAt ?? null,
+        }
+    }
+
     // ─── Customers ────────────────────────────────────────────────────────────
 
     async listCustomers(userId: string, companyId: string, opts: any) {
@@ -128,19 +145,20 @@ export class ArService {
 
     async listQuotes(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
-        return this.repo.findQuotes(companyId, {
+        const quotes = await this.repo.findQuotes(companyId, {
             customerId: opts.customerId,
             status: opts.status,
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
         })
+        return quotes.map((q: any) => this.normalizeQuote(q))
     }
 
     async getQuote(userId: string, companyId: string, quoteId: string) {
         await this.assertAccess(userId, companyId)
         const q = await this.repo.findQuoteById(companyId, quoteId)
         if (!q) throw new NotFoundException('Quote not found')
-        return q
+        return this.normalizeQuote(q)
     }
 
     async createQuote(userId: string, companyId: string, data: any) {
@@ -148,13 +166,15 @@ export class ArService {
         const workspaceId = await this.getWorkspaceId(companyId)
         if (!data.customerId) throw new BadRequestException('customerId is required')
         if (!data.lines?.length) throw new BadRequestException('At least one line item is required')
-        return this.repo.createQuote({ workspaceId, companyId, ...data })
+        const quote = await this.repo.createQuote({ workspaceId, companyId, ...data })
+        return this.normalizeQuote(quote)
     }
 
     async updateQuoteStatus(userId: string, companyId: string, quoteId: string, status: string) {
         await this.assertAccess(userId, companyId)
         const q = await this.repo.findQuoteById(companyId, quoteId)
         if (!q) throw new NotFoundException('Quote not found')
+        if (q.convertedToInvoiceId) throw new ConflictException('Cannot change status of a converted quote')
         const allowed = ['SENT', 'ACCEPTED', 'REJECTED', 'EXPIRED']
         if (!allowed.includes(status)) throw new BadRequestException(`Invalid status: ${status}`)
         return this.repo.updateQuoteStatus(companyId, quoteId, status)

@@ -208,12 +208,15 @@ export class ArRepository {
     async createQuote(data: {
         workspaceId: string, companyId: string, customerId: string, expiryDate?: Date, lines: any[]
     }) {
+        const count = await this.prisma.quote.count({ where: { companyId: data.companyId } })
+        const quoteNumber = `QT-${String(count + 1).padStart(4, '0')}`
         const totalAmount = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? 0), 0)
         return this.prisma.quote.create({
             data: {
                 workspaceId: data.workspaceId,
                 companyId: data.companyId,
                 customerId: data.customerId,
+                quoteNumber,
                 totalAmount,
                 expiryDate: data.expiryDate ?? null,
                 lines: {
@@ -243,6 +246,8 @@ export class ArRepository {
         if (!quote) return null
 
         return this.prisma.$transaction(async (tx) => {
+            const invoiceDate = new Date()
+            const dueDate = quote.expiryDate ?? new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000)
             const invoice = await tx.invoice.create({
                 data: {
                     workspaceId,
@@ -250,7 +255,8 @@ export class ArRepository {
                     customerId: quote.customerId,
                     totalAmount: quote.totalAmount,
                     balance: quote.totalAmount,
-                    date: new Date(),
+                    date: invoiceDate,
+                    dueDate,
                     status: 'DRAFT',
                     postingStatus: 'DRAFT',
                     createdById,
