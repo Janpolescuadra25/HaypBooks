@@ -56,4 +56,30 @@ export class SalesService {
   async getPayment(userId: string, companyId: string, paymentId: string) {
     return this.arService.getPayment(userId, companyId, paymentId)
   }
+
+  async sendInvoice(userId: string, companyId: string, invoiceId: string, opts?: { subject?: string; body?: string }) {
+    return this.arService.sendInvoice(userId, companyId, invoiceId, opts)
+  }
+
+  async voidInvoice(userId: string, companyId: string, invoiceId: string) {
+    return this.arService.voidInvoice(userId, companyId, invoiceId)
+  }
+
+  // ─── Quotes (facade to AR service) ───────────────────────────────────────
+
+  async listQuotes(userId: string, companyId: string, query: any) {
+    return this.arService.listQuotes(userId, companyId, query)
+  }
+
+  async createQuote(userId: string, companyId: string, data: any) {
+    return this.arService.createQuote(userId, companyId, data)
+  }
+
+  async getQuote(userId: string, companyId: string, quoteId: string) {
+    return this.arService.getQuote(userId, companyId, quoteId)
+  }
+
+  async convertQuoteToInvoice(userId: string, companyId: string, quoteId: string) {
+    return this.arService.convertToInvoice(userId, companyId, quoteId)
+  }
 }

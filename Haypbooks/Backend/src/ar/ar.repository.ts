@@ -367,13 +367,14 @@ export class ArRepository {
     // ─── Payments Received ────────────────────────────────────────────────────
 
     async findPayments(companyId: string, opts: {
-        customerId?: string, from?: Date, to?: Date, limit?: number, offset?: number
+        customerId?: string, invoiceId?: string, from?: Date, to?: Date, limit?: number, offset?: number
     } = {}) {
         return this.prisma.paymentReceived.findMany({
             where: {
                 companyId,
                 deletedAt: null,
                 ...(opts.customerId ? { customerId: opts.customerId } : {}),
+                ...(opts.invoiceId ? { InvoicePaymentApplication: { some: { invoiceId: opts.invoiceId } } } : {}),
                 ...(opts.from || opts.to ? {
                     paymentDate: {
                         ...(opts.from ? { gte: opts.from } : {}),

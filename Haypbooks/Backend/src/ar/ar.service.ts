@@ -237,6 +237,7 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         const payments = await this.repo.findPayments(companyId, {
             customerId: opts.customerId,
+            invoiceId: opts.invoiceId,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
