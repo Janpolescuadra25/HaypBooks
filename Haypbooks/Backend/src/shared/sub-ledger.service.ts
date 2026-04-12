@@ -523,4 +523,109 @@ export class SubLedgerService {
       this.logger.error(`[SubLedger] Failed to post vendor refund ${refundId}: ${err?.message}`)
     }
   }
+
+  // ─── AR: Credit Note Issued (DR: Sales Returns & Allowances  CR: AR) ──────
+
+  /**
+   * Called when a CreditNote is created.
+   * Creates a POSTED JournalEntry:
+   *   DR Sales Returns and Allowances  (4040 — contra-revenue)
+   *   CR Accounts Receivable           (1100)
+   */
+  async postCreditNoteToGL(creditNoteId: string, postedById?: string): Promise<void> {
+    try {
+      const cn = await this.prisma.creditNote.findUnique({ where: { id: creditNoteId } })
+      if (!cn) return
+      if (cn.journalEntryId) return // already posted
+
+      const company = await this.prisma.company.findUnique({
+        where: { id: cn.companyId },
+        select: { workspaceId: true, currency: true },
+      })
+      if (!company) return
+
+      const arAccountId = await this.findAccountByCode(cn.companyId, '1100')
+      const salesReturnsId = await this.findAccountByCode(cn.companyId, '4040')
+
+      if (!arAccountId || !salesReturnsId) {
+        this.logger.warn(`[SubLedger] Cannot post credit note ${creditNoteId}: AR (1100) or Sales Returns (4040) account not found`)
+        return
+      }
+
+      const amount = Number(cn.totalAmount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(cn.companyId, 'CN')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: company.workspaceId,
+          companyId: cn.companyId,
+          date: cn.issuedAt ?? new Date(),
+          description: `Credit Note ${cn.creditNoteNumber}`,
+          currency: company.currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: salesReturnsId, debit: amount, credit: 0, memo: 'Sales returns and allowances' },
+            { accountId: arAccountId, debit: 0, credit: amount, memo: 'Accounts Receivable reduction' },
+          ],
+        })
+
+        if (je) {
+          await tx.creditNote.update({ where: { id: creditNoteId }, data: { journalEntryId: je.id } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post credit note ${creditNoteId}: ${err?.message}`)
+    }
+  }
+
+  // ─── AR: Credit Note Voided (DR: AR  CR: Sales Returns & Allowances) ───────
+
+  /**
+   * Called when a CreditNote is voided.
+   * Reverses the original credit note GL entry:
+   *   DR Accounts Receivable          (1100)
+   *   CR Sales Returns and Allowances (4040)
+   */
+  async reverseCreditNoteGL(creditNoteId: string, postedById?: string): Promise<void> {
+    try {
+      const cn = await this.prisma.creditNote.findUnique({ where: { id: creditNoteId } })
+      if (!cn) return
+
+      const company = await this.prisma.company.findUnique({
+        where: { id: cn.companyId },
+        select: { workspaceId: true, currency: true },
+      })
+      if (!company) return
+
+      const arAccountId = await this.findAccountByCode(cn.companyId, '1100')
+      const salesReturnsId = await this.findAccountByCode(cn.companyId, '4040')
+
+      if (!arAccountId || !salesReturnsId) {
+        this.logger.warn(`[SubLedger] Cannot reverse credit note ${creditNoteId}: required accounts not found`)
+        return
+      }
+
+      const amount = Number(cn.totalAmount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(cn.companyId, 'CNV')
+        await this.createPostedJE(tx, {
+          workspaceId: company.workspaceId,
+          companyId: cn.companyId,
+          date: new Date(),
+          description: `Credit Note Void ${cn.creditNoteNumber}`,
+          currency: company.currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: arAccountId, debit: amount, credit: 0, memo: 'AR reversal (credit note voided)' },
+            { accountId: salesReturnsId, debit: 0, credit: amount, memo: 'Sales returns reversal' },
+          ],
+        })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to reverse credit note ${creditNoteId}: ${err?.message}`)
+    }
+  }
 }

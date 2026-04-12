@@ -415,6 +415,8 @@ export class ArService {
             reason: data.reason ?? data.memo,
             totalAmount: Number(data.totalAmount ?? data.amount ?? 0),
         })
+        // Post GL entry: DR Sales Returns & Allowances (4040), CR Accounts Receivable (1100)
+        await this.subLedger.postCreditNoteToGL(cn.id, userId)
         return this.normalizeCreditNote(cn)
     }
 
@@ -422,6 +424,8 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         const result = await this.repo.voidCreditNote(companyId, creditNoteId)
         if (!result) throw new NotFoundException('Credit note not found')
+        // Reverse GL entry: DR Accounts Receivable (1100), CR Sales Returns & Allowances (4040)
+        await this.subLedger.reverseCreditNoteGL(creditNoteId, userId)
         return { success: true, id: creditNoteId, status: 'VOID' }
     }
 
