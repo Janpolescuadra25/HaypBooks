@@ -39,6 +39,35 @@ export class SubLedgerService {
     return this.findAccountByCode(companyId, fallbackCode)
   }
 
+  private roundMoney(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100
+  }
+
+  private async findTaxLiabilityAccount(companyId: string): Promise<string | null> {
+    const commonTaxLiabilityCodes = ['2050', '2051', '2205', '2200']
+    for (const code of commonTaxLiabilityCodes) {
+      const accountId = await this.findAccountByCode(companyId, code)
+      if (accountId) return accountId
+    }
+
+    const fallback = await this.prisma.account.findFirst({
+      where: {
+        companyId,
+        deletedAt: null,
+        isActive: true,
+        OR: [
+          { name: { contains: 'Output VAT', mode: 'insensitive' } },
+          { name: { contains: 'VAT Payable', mode: 'insensitive' } },
+          { name: { contains: 'Sales Tax Payable', mode: 'insensitive' } },
+          { name: { contains: 'Tax Payable', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+      orderBy: [{ isSystem: 'desc' }, { code: 'asc' }],
+    })
+    return fallback?.id ?? null
+  }
+
   // ─── Entry Number Generator ───────────────────────────────────────────────
 
   private async nextEntryNumber(companyId: string, prefix: string): Promise<string> {
@@ -120,14 +149,14 @@ export class SubLedgerService {
     try {
       const invoice = await this.prisma.invoice.findUnique({
         where: { id: invoiceId },
-        include: { lines: true },
+        include: { lines: { include: { LineTax: true } } },
       })
       if (!invoice) return
       if (invoice.journalEntryId) return // already posted
 
       const arAccountId = await this.findAccountByCode(invoice.companyId, '1100')
       const revenueAccountFallbackId = await this.findAccountByCode(invoice.companyId, '4010')
-      const vatOutputAccountId = await this.findAccountByCode(invoice.companyId, '2050')
+      const vatOutputAccountId = await this.findTaxLiabilityAccount(invoice.companyId)
 
       if (!arAccountId || !revenueAccountFallbackId) {
         this.logger.warn(`[SubLedger] Cannot post invoice ${invoiceId}: AR or Revenue account not found`)
@@ -135,35 +164,62 @@ export class SubLedgerService {
       }
 
       const lines = invoice.lines as any[]
-      const grossTotal = Number(invoice.totalAmount ?? 0)
+      const grossTotal = this.roundMoney(Number(invoice.totalAmount ?? 0))
 
       // Build credit lines — one per invoice line
       const creditLines: Array<{ accountId: string; debit: number; credit: number; memo?: string }> = []
-      let totalCreditedRevenue = 0
-      let totalVat = 0
+      let totalVatFromLineTaxes = 0
+      let lineGrossTotal = 0
 
       for (const line of lines) {
-        const amount = Number(line.totalPrice ?? line.amount ?? 0)
-        const vatRate = Number(line.vatRate ?? 0)
-        const vatAmount = vatRate > 0 ? Math.round(amount * vatRate / (1 + vatRate) * 100) / 100 : 0
-        const netRevenue = amount - vatAmount
+        const lineAmount = this.roundMoney(Number(line.totalPrice ?? line.amount ?? 0))
+        lineGrossTotal += lineAmount
+
+        const lineTaxAmount = this.roundMoney(
+          Array.isArray(line.LineTax)
+            ? line.LineTax.reduce((sum: number, tax: any) => sum + Number(tax.amount ?? 0), 0)
+            : 0,
+        )
+        const lineNetRevenue = Math.max(0, this.roundMoney(lineAmount - lineTaxAmount))
 
         const revenueAccountId = await this.resolveAccount(invoice.companyId, line.accountId, '4010')
         if (!revenueAccountId) continue
 
-        creditLines.push({ accountId: revenueAccountId, debit: 0, credit: netRevenue, memo: line.description })
-        totalCreditedRevenue += netRevenue
-        totalVat += vatAmount
+        if (lineNetRevenue > 0.005) {
+          creditLines.push({ accountId: revenueAccountId, debit: 0, credit: lineNetRevenue, memo: line.description })
+        }
+        totalVatFromLineTaxes += lineTaxAmount
       }
 
-      // If VAT is non-zero and we have a VAT Output account, add the VAT credit line
-      if (totalVat > 0.005 && vatOutputAccountId) {
-        creditLines.push({ accountId: vatOutputAccountId, debit: 0, credit: totalVat, memo: 'Output VAT' })
+      // Fallback in case no lines were credited (safety for malformed input)
+      if (creditLines.length === 0) {
+        creditLines.push({ accountId: revenueAccountFallbackId, debit: 0, credit: grossTotal, memo: 'Revenue' })
+      }
+
+      // Prefer tax from line-level tax records. If unavailable, infer from invoice header delta.
+      let totalVat = this.roundMoney(totalVatFromLineTaxes)
+      if (totalVat <= 0.005) {
+        const inferredVat = this.roundMoney(grossTotal - this.roundMoney(lineGrossTotal))
+        if (inferredVat > 0.005) totalVat = inferredVat
+      }
+
+      if (totalVat > 0.005) {
+        if (vatOutputAccountId) {
+          creditLines.push({ accountId: vatOutputAccountId, debit: 0, credit: totalVat, memo: 'Sales tax liability' })
+        } else {
+          this.logger.warn(`[SubLedger] Invoice ${invoiceId} has tax amount ${totalVat} but no tax liability account was found`)
+        }
+      }
+
+      // Keep the JE balanced to the invoice gross amount.
+      let totalCredit = this.roundMoney(creditLines.reduce((s, l) => s + l.credit, 0))
+      const delta = this.roundMoney(grossTotal - totalCredit)
+      if (Math.abs(delta) > 0.005) {
+        creditLines[0].credit = this.roundMoney(creditLines[0].credit + delta)
+        totalCredit = this.roundMoney(creditLines.reduce((s, l) => s + l.credit, 0))
       }
 
       // DR Accounts Receivable for the full gross amount
-      const totalCredit = creditLines.reduce((s, l) => s + l.credit, 0)
-
       await this.prisma.$transaction(async (tx) => {
         const entryNumber = await this.nextEntryNumber(invoice.companyId, 'AR')
         const je = await this.createPostedJE(tx, {
@@ -181,11 +237,64 @@ export class SubLedgerService {
         })
 
         if (je) {
-          await tx.invoice.update({ where: { id: invoiceId }, data: { journalEntryId: je.id } })
+          await tx.invoice.update({ where: { id: invoiceId }, data: { journalEntryId: je.id, postingStatus: 'POSTED' as any } })
         }
       })
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post invoice ${invoiceId}: ${err?.message}`)
+    }
+  }
+
+  // ─── AR: Invoice Reversed (DR: Revenue/Tax  CR: AR) ─────────────────────
+
+  async reverseInvoiceGL(invoiceId: string, postedById?: string): Promise<void> {
+    try {
+      const invoice = await this.prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        select: {
+          id: true,
+          companyId: true,
+          workspaceId: true,
+          invoiceNumber: true,
+          currency: true,
+          journalEntryId: true,
+        },
+      })
+      if (!invoice?.journalEntryId) return
+
+      const originalJE = await this.prisma.journalEntry.findUnique({
+        where: { id: invoice.journalEntryId },
+        include: { lines: true },
+      })
+      if (!originalJE || !originalJE.lines.length) return
+
+      const reversalLines = originalJE.lines.map((line: any) => ({
+        accountId: line.accountId,
+        debit: Number(line.credit ?? 0),
+        credit: Number(line.debit ?? 0),
+        memo: line.description ? `Reversal: ${line.description}` : 'Invoice reversal',
+      }))
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(invoice.companyId, 'ARV')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: invoice.workspaceId,
+          companyId: invoice.companyId,
+          date: new Date(),
+          description: `Invoice reversal ${invoice.invoiceNumber ?? invoice.id}`,
+          currency: invoice.currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: reversalLines,
+        })
+
+        if (je) {
+          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' as any } })
+          await tx.invoice.update({ where: { id: invoiceId }, data: { journalEntryId: null } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to reverse invoice ${invoiceId}: ${err?.message}`)
     }
   }
 

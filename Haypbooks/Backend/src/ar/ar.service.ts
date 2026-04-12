@@ -94,6 +94,118 @@ export class ArService {
         }
     }
 
+    private titleCase(value: string | null | undefined) {
+        if (!value) return ''
+        return value
+            .toLowerCase()
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (m) => m.toUpperCase())
+    }
+
+    private formatRecognitionMethod(method: string | null | undefined) {
+        const m = String(method ?? '').toUpperCase()
+        if (m === 'STRAIGHT_LINE' || m === 'STRAIGHT-LINE') return 'Straight-Line'
+        if (m === 'MILESTONE') return 'Milestone'
+        if (m === 'PERCENTAGE_OF_COMPLETION' || m === 'PERCENTAGE OF COMPLETION') return 'Percentage of Completion'
+        if (m === 'EVENT_BASED' || m === 'EVENT-BASED') return 'Event-Based'
+        return this.titleCase(m) || 'Straight-Line'
+    }
+
+    private formatRecognitionStatus(status: string | null | undefined): 'Active' | 'Completed' | 'On Hold' {
+        const s = String(status ?? '').toUpperCase()
+        if (s === 'COMPLETED') return 'Completed'
+        if (s === 'ON_HOLD' || s === 'HOLD') return 'On Hold'
+        return 'Active'
+    }
+
+    private formatDeferredFrequency(frequency: string | null | undefined): 'Monthly' | 'Quarterly' | 'Annual' | 'One-Time' {
+        const f = String(frequency ?? '').toUpperCase()
+        if (f === 'QUARTERLY') return 'Quarterly'
+        if (f === 'ANNUAL' || f === 'YEARLY') return 'Annual'
+        if (f === 'ONE_TIME' || f === 'ONE-TIME') return 'One-Time'
+        return 'Monthly'
+    }
+
+    private formatDeferredStatus(status: string | null | undefined): 'Active' | 'Completed' | 'Cancelled' {
+        const s = String(status ?? '').toUpperCase()
+        if (s === 'COMPLETED') return 'Completed'
+        if (s === 'CANCELLED' || s === 'CANCELED') return 'Cancelled'
+        return 'Active'
+    }
+
+    private formatPaymentLinkStatus(status: string | null | undefined): 'Active' | 'Paid' | 'Expired' {
+        const s = String(status ?? '').toUpperCase()
+        if (s === 'PAID') return 'Paid'
+        if (s === 'EXPIRED' || s === 'CANCELLED' || s === 'CANCELED') return 'Expired'
+        return 'Active'
+    }
+
+    private normalizeRevenueRecognitionRow(row: any, customerName: string) {
+        const totalContractValue = Number(row.totalContractValue ?? 0)
+        const recognizedToDate = Number(row.recognizedToDate ?? 0)
+        const remaining = Math.max(0, Number((totalContractValue - recognizedToDate).toFixed(2)))
+        return {
+            id: row.id,
+            contractId: row.contractId,
+            customer: customerName,
+            description: row.description ?? '',
+            totalContractValue,
+            recognizedToDate,
+            remaining,
+            startDate: row.startDate instanceof Date ? row.startDate.toISOString().split('T')[0] : row.startDate,
+            endDate: row.endDate instanceof Date ? row.endDate.toISOString().split('T')[0] : row.endDate,
+            method: this.formatRecognitionMethod(row.method),
+            status: this.formatRecognitionStatus(row.status),
+            journalEntryId: row.journalEntryId ?? null,
+        }
+    }
+
+    private normalizeDeferredRevenueRow(row: any, customerName: string) {
+        return {
+            id: row.id,
+            contractId: row.contractId,
+            customer: customerName,
+            description: row.description ?? '',
+            totalDeferredAmount: Number(row.totalDeferredAmount ?? 0),
+            recognizedAmount: Number(row.recognizedAmount ?? 0),
+            remainingDeferred: Number(row.remainingDeferred ?? 0),
+            startDate: row.startDate instanceof Date ? row.startDate.toISOString().split('T')[0] : row.startDate,
+            endDate: row.endDate instanceof Date ? row.endDate.toISOString().split('T')[0] : row.endDate,
+            nextRecognitionDate: row.nextRecognitionDate instanceof Date
+                ? row.nextRecognitionDate.toISOString().split('T')[0]
+                : (row.nextRecognitionDate ?? '-'),
+            frequency: this.formatDeferredFrequency(row.frequency),
+            status: this.formatDeferredStatus(row.status),
+            journalEntryId: row.journalEntryId ?? null,
+        }
+    }
+
+    private normalizePaymentLinkRow(row: any) {
+        const expiresAt = row.expiresAt instanceof Date
+            ? row.expiresAt.toISOString().split('T')[0]
+            : (row.expiresAt ?? '-')
+        const isExpired = row.expiresAt ? new Date(row.expiresAt).getTime() < Date.now() : false
+        const effectiveStatus = isExpired && String(row.status ?? '').toUpperCase() === 'ACTIVE'
+            ? 'EXPIRED'
+            : row.status
+
+        return {
+            id: row.id,
+            linkId: row.linkId,
+            description: row.description ?? '',
+            amount: Number(row.amount ?? 0),
+            currency: row.currency ?? 'PHP',
+            createdDate: row.createdAt instanceof Date ? row.createdAt.toISOString().split('T')[0] : row.createdAt,
+            expiryDate: expiresAt,
+            views: Number(row.viewCount ?? 0),
+            status: this.formatPaymentLinkStatus(effectiveStatus),
+            token: row.token,
+            url: `/pay/${row.token}`,
+            invoiceId: row.invoiceId ?? null,
+            customerId: row.customerId ?? null,
+        }
+    }
+
     // ─── Customers ────────────────────────────────────────────────────────────
 
     async listCustomers(userId: string, companyId: string, opts: any) {
@@ -537,6 +649,9 @@ export class ArService {
         if (Number(inv.totalAmount) - Number(inv.balance) > 0) {
             throw new BadRequestException('Cannot void an invoice that has payments applied. Void the payments first.')
         }
+
+        // Reverse the invoice posting JE before marking the invoice as void.
+        await this.subLedger.reverseInvoiceGL(invoiceId, userId)
         return this.repo.voidInvoice(companyId, invoiceId)
     }
 
@@ -625,6 +740,215 @@ export class ArService {
     async getAging(userId: string, companyId: string) {
         await this.assertAccess(userId, companyId)
         return []
+    }
+
+    // ─── Revenue Recognition ───────────────────────────────────────────────
+
+    async listRevenueRecognition(userId: string, companyId: string, opts: any = {}) {
+        await this.assertAccess(userId, companyId)
+        const rows = await this.repo.findRevenueRecognitions(companyId, {
+            search: opts.search,
+            status: opts.status,
+        })
+
+        const customerIds = Array.from(new Set(rows.map((r: any) => r.customerId).filter(Boolean))) as string[]
+        const customers = customerIds.length
+            ? await this.prisma.customer.findMany({
+                where: { contactId: { in: customerIds } },
+                include: { contact: { select: { displayName: true } } },
+            })
+            : []
+        const customerMap = new Map(customers.map((c: any) => [c.contactId, c.contact?.displayName ?? '']))
+
+        return rows.map((row: any) => this.normalizeRevenueRecognitionRow(row, customerMap.get(row.customerId ?? '') ?? ''))
+    }
+
+    async createRevenueRecognition(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        const total = Number(data.totalContractValue ?? data.amount ?? 0)
+        if (total <= 0) throw new BadRequestException('totalContractValue must be greater than 0')
+        if (!data.description) throw new BadRequestException('description is required')
+
+        const created = await this.repo.createRevenueRecognition(workspaceId, companyId, {
+            ...data,
+            createdById: userId,
+        })
+
+        const customerName = created.customerId
+            ? (await this.prisma.customer.findFirst({
+                where: { contactId: created.customerId },
+                include: { contact: { select: { displayName: true } } },
+            }))?.contact?.displayName ?? ''
+            : ''
+
+        return this.normalizeRevenueRecognitionRow(created, customerName)
+    }
+
+    async recognizeRevenue(userId: string, companyId: string, id: string, data: any = {}) {
+        await this.assertAccess(userId, companyId)
+
+        const amount = data.amount != null ? Number(data.amount) : undefined
+        if (amount != null && (!Number.isFinite(amount) || amount < 0)) {
+            throw new BadRequestException('amount must be a non-negative number')
+        }
+
+        const result = await this.repo.recognizeRevenue(companyId, id, {
+            amount,
+            recognitionDate: data.recognitionDate ? new Date(data.recognitionDate) : new Date(),
+        })
+        if (!result) throw new NotFoundException('Revenue recognition contract not found')
+
+        const recognizedAmount = Number(result.recognizedAmount ?? 0)
+        let journalEntryId: string | null = result.record.journalEntryId ?? null
+        if (recognizedAmount > 0.005) {
+            const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+            const jeId = await this.subLedger.postRevenueRecognitionToGL({
+                workspaceId: result.record.workspaceId,
+                companyId,
+                amount: recognizedAmount,
+                recognitionId: result.record.id,
+                description: `Revenue recognition ${result.record.contractId}`,
+                currency: company?.currency ?? 'PHP',
+                postedById: userId,
+            })
+            if (jeId) {
+                journalEntryId = jeId
+                await this.prisma.revenueRecognition.update({ where: { id }, data: { journalEntryId: jeId } })
+            }
+        }
+
+        const customerName = result.record.customerId
+            ? (await this.prisma.customer.findFirst({
+                where: { contactId: result.record.customerId },
+                include: { contact: { select: { displayName: true } } },
+            }))?.contact?.displayName ?? ''
+            : ''
+
+        return {
+            ...this.normalizeRevenueRecognitionRow({ ...result.record, journalEntryId }, customerName),
+            recognizedAmount,
+            journalEntryId,
+        }
+    }
+
+    // ─── Deferred Revenue ──────────────────────────────────────────────────
+
+    async listDeferredRevenue(userId: string, companyId: string, opts: any = {}) {
+        await this.assertAccess(userId, companyId)
+        const rows = await this.repo.findDeferredRevenue(companyId, {
+            search: opts.search,
+            status: opts.status,
+        })
+
+        const customerIds = Array.from(new Set(rows.map((r: any) => r.customerId).filter(Boolean))) as string[]
+        const customers = customerIds.length
+            ? await this.prisma.customer.findMany({
+                where: { contactId: { in: customerIds } },
+                include: { contact: { select: { displayName: true } } },
+            })
+            : []
+        const customerMap = new Map(customers.map((c: any) => [c.contactId, c.contact?.displayName ?? '']))
+
+        return rows.map((row: any) => this.normalizeDeferredRevenueRow(row, customerMap.get(row.customerId ?? '') ?? ''))
+    }
+
+    async createDeferredRevenue(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        const total = Number(data.totalDeferredAmount ?? data.amount ?? 0)
+        if (total <= 0) throw new BadRequestException('totalDeferredAmount must be greater than 0')
+        if (!data.description) throw new BadRequestException('description is required')
+
+        const created = await this.repo.createDeferredRevenue(workspaceId, companyId, {
+            ...data,
+            createdById: userId,
+        })
+
+        const customerName = created.customerId
+            ? (await this.prisma.customer.findFirst({
+                where: { contactId: created.customerId },
+                include: { contact: { select: { displayName: true } } },
+            }))?.contact?.displayName ?? ''
+            : ''
+
+        return this.normalizeDeferredRevenueRow(created, customerName)
+    }
+
+    async recognizeDeferredRevenue(userId: string, companyId: string, id: string, data: any = {}) {
+        await this.assertAccess(userId, companyId)
+
+        const amount = data.amount != null ? Number(data.amount) : undefined
+        if (amount != null && (!Number.isFinite(amount) || amount < 0)) {
+            throw new BadRequestException('amount must be a non-negative number')
+        }
+
+        const result = await this.repo.recognizeDeferredRevenue(companyId, id, {
+            amount,
+            recognitionDate: data.recognitionDate ? new Date(data.recognitionDate) : new Date(),
+        })
+        if (!result) throw new NotFoundException('Deferred revenue schedule not found')
+
+        const recognizedAmount = Number(result.recognizedAmount ?? 0)
+        let journalEntryId: string | null = result.record.journalEntryId ?? null
+        if (recognizedAmount > 0.005) {
+            const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+            const jeId = await this.subLedger.postRevenueRecognitionToGL({
+                workspaceId: result.record.workspaceId,
+                companyId,
+                amount: recognizedAmount,
+                recognitionId: result.record.id,
+                description: `Deferred revenue recognition ${result.record.contractId}`,
+                currency: company?.currency ?? 'PHP',
+                postedById: userId,
+            })
+            if (jeId) {
+                journalEntryId = jeId
+                await this.prisma.deferredRevenue.update({ where: { id }, data: { journalEntryId: jeId } })
+            }
+        }
+
+        const customerName = result.record.customerId
+            ? (await this.prisma.customer.findFirst({
+                where: { contactId: result.record.customerId },
+                include: { contact: { select: { displayName: true } } },
+            }))?.contact?.displayName ?? ''
+            : ''
+
+        return {
+            ...this.normalizeDeferredRevenueRow({ ...result.record, journalEntryId }, customerName),
+            recognizedAmount,
+            journalEntryId,
+        }
+    }
+
+    // ─── Payment Links ─────────────────────────────────────────────────────
+
+    async listPaymentLinks(userId: string, companyId: string, opts: any = {}) {
+        await this.assertAccess(userId, companyId)
+        const rows = await this.repo.findPaymentLinks(companyId, {
+            search: opts.search,
+            status: opts.status,
+        })
+        return rows.map((row: any) => this.normalizePaymentLinkRow(row))
+    }
+
+    async createPaymentLink(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        if (!data.invoiceId && (data.amount == null || Number(data.amount) <= 0)) {
+            throw new BadRequestException('amount is required when invoiceId is not provided')
+        }
+
+        const created = await this.repo.createPaymentLink(workspaceId, companyId, {
+            ...data,
+            createdById: userId,
+        })
+
+        return this.normalizePaymentLinkRow(created)
     }
 
     private normalizeCollection(c: any) {

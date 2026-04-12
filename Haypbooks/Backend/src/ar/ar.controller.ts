@@ -425,6 +425,88 @@ export class ArController {
         return this.svc.voidPayment(req.user.userId, companyId, paymentId)
     }
 
+    // ─── Revenue Recognition ───────────────────────────────────────────────
+
+    @Get('revenue-recognition')
+    listRevenueRecognition(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.listRevenueRecognition(req.user.userId, companyId, query)
+    }
+
+    @Post('revenue-recognition')
+    createRevenueRecognition(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createRevenueRecognition(req.user.userId, companyId, body)
+    }
+
+    @Post('revenue-recognition/:id/recognize')
+    @HttpCode(HttpStatus.OK)
+    recognizeRevenue(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: any,
+    ) {
+        return this.svc.recognizeRevenue(req.user.userId, companyId, id, body)
+    }
+
+    // ─── Deferred Revenue ──────────────────────────────────────────────────
+
+    @Get('deferred-revenue')
+    listDeferredRevenue(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.listDeferredRevenue(req.user.userId, companyId, query)
+    }
+
+    @Post('deferred-revenue')
+    createDeferredRevenue(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createDeferredRevenue(req.user.userId, companyId, body)
+    }
+
+    @Post('deferred-revenue/:id/recognize')
+    @HttpCode(HttpStatus.OK)
+    recognizeDeferredRevenue(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: any,
+    ) {
+        return this.svc.recognizeDeferredRevenue(req.user.userId, companyId, id, body)
+    }
+
+    // ─── Payment Links ─────────────────────────────────────────────────────
+
+    @Get('payment-links')
+    listPaymentLinks(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.listPaymentLinks(req.user.userId, companyId, query)
+    }
+
+    @Post('payment-links')
+    createPaymentLink(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createPaymentLink(req.user.userId, companyId, body)
+    }
+
     @Get('aging')
     getAging(
         @Req() req: any,

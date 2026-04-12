@@ -73,12 +73,36 @@ export class SalesService {
     return []
   }
 
-  async listRevenueRecognition(userId: string, companyId: string) {
-    return []
+  async listRevenueRecognition(userId: string, companyId: string, query: any = {}) {
+    return this.arService.listRevenueRecognition(userId, companyId, query)
   }
 
-  async listDeferredRevenue(userId: string, companyId: string) {
-    return []
+  async createRevenueRecognition(userId: string, companyId: string, data: any) {
+    return this.arService.createRevenueRecognition(userId, companyId, data)
+  }
+
+  async recognizeRevenue(userId: string, companyId: string, id: string, data: any) {
+    return this.arService.recognizeRevenue(userId, companyId, id, data)
+  }
+
+  async listDeferredRevenue(userId: string, companyId: string, query: any = {}) {
+    return this.arService.listDeferredRevenue(userId, companyId, query)
+  }
+
+  async createDeferredRevenue(userId: string, companyId: string, data: any) {
+    return this.arService.createDeferredRevenue(userId, companyId, data)
+  }
+
+  async recognizeDeferredRevenue(userId: string, companyId: string, id: string, data: any) {
+    return this.arService.recognizeDeferredRevenue(userId, companyId, id, data)
+  }
+
+  async listPaymentLinks(userId: string, companyId: string, query: any = {}) {
+    return this.arService.listPaymentLinks(userId, companyId, query)
+  }
+
+  async createPaymentLink(userId: string, companyId: string, data: any) {
+    return this.arService.createPaymentLink(userId, companyId, data)
   }
 
   // ─── Quotes (facade to AR service) ───────────────────────────────────────

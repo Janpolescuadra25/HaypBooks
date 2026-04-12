@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { randomUUID } from 'crypto'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
 
@@ -740,31 +741,9 @@ export class ArRepository {
         })
         if (!invoice) return null
         const invoiceNumber = invoice.invoiceNumber ?? `INV-${Date.now()}`
-
-        return this.prisma.$transaction(async (tx) => {
-            // Resolve system accounts
-            const arAcct  = await resolveAccount(tx, companyId, SYSTEM_ACCOUNTS.ACCOUNTS_RECEIVABLE)
-            const revAcct = await resolveAccount(tx, companyId, SYSTEM_ACCOUNTS.SERVICE_REVENUE)
-
-            const total = Number(invoice.totalAmount)
-
-            // Create & post JE: Dr Accounts Receivable, Cr Revenue
-            const jeId = await createAndPostJE(tx, {
-                workspaceId: invoice.workspaceId,
-                companyId,
-                date: invoice.date ?? new Date(),
-                description: `Invoice ${invoiceNumber}`,
-                createdById: invoice.createdById ?? 'system',
-                lines: [
-                    { accountId: arAcct.id,  debit: total, credit: 0, description: `AR – ${invoiceNumber}` },
-                    { accountId: revAcct.id, debit: 0, credit: total, description: `Revenue – ${invoiceNumber}` },
-                ],
-            })
-
-            return tx.invoice.update({
-                where: { id: invoiceId },
-                data: { status: 'SENT', invoiceNumber, journalEntryId: jeId, postingStatus: 'POSTED' },
-            })
+        return this.prisma.invoice.update({
+            where: { id: invoiceId },
+            data: { status: 'SENT', invoiceNumber },
         })
     }
 
@@ -772,15 +751,9 @@ export class ArRepository {
         const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId } })
         if (!invoice) return null
 
-        return this.prisma.$transaction(async (tx) => {
-            // Reverse the JE if one was posted
-            if (invoice.journalEntryId) {
-                await createReversingJE(tx, companyId, invoice.journalEntryId, `Void invoice ${invoice.invoiceNumber ?? invoiceId}`)
-            }
-            return tx.invoice.update({
-                where: { id: invoiceId },
-                data: { status: 'VOID', postingStatus: 'VOIDED', deletedAt: new Date() },
-            })
+        return this.prisma.invoice.update({
+            where: { id: invoiceId },
+            data: { status: 'VOID', postingStatus: 'VOIDED', deletedAt: new Date(), journalEntryId: null },
         })
     }
 
@@ -1634,5 +1607,249 @@ export class ArRepository {
             return `${c.caseNumber},${c.customerId ?? ''},${JSON.stringify(c.subject ?? '')},${c.status},${c.priority},${c.assignedTo ?? ''},${c.promisedAmount ?? ''},${date},${JSON.stringify(c.notes ?? '')},${created}`
         })
         return [header, ...lines].join('\n')
+    }
+
+    // ─── Revenue Recognition ───────────────────────────────────────────────
+
+    async findRevenueRecognitions(companyId: string, opts: { search?: string; status?: string } = {}) {
+        const where: any = { companyId }
+        if (opts.status && opts.status !== 'ALL') where.status = String(opts.status).toUpperCase()
+        if (opts.search) {
+            where.OR = [
+                { contractId: { contains: opts.search, mode: 'insensitive' } },
+                { description: { contains: opts.search, mode: 'insensitive' } },
+            ]
+        }
+        return this.prisma.revenueRecognition.findMany({ where, orderBy: { createdAt: 'desc' } })
+    }
+
+    async createRevenueRecognition(workspaceId: string, companyId: string, data: any) {
+        const count = await this.prisma.revenueRecognition.count({ where: { companyId } })
+        const contractId = data.contractId?.trim() || `RC-${String(count + 1).padStart(4, '0')}`
+        const totalContractValue = Number(data.totalContractValue ?? data.totalDeferredAmount ?? data.amount ?? 0)
+        const recognizedToDate = Number(data.recognizedToDate ?? 0)
+
+        return this.prisma.revenueRecognition.create({
+            data: {
+                workspaceId,
+                companyId,
+                customerId: data.customerId ?? null,
+                invoiceId: data.invoiceId ?? null,
+                contractId,
+                description: data.description ?? '',
+                method: String(data.method ?? 'STRAIGHT_LINE').toUpperCase(),
+                totalContractValue,
+                recognizedToDate,
+                startDate: data.startDate ? new Date(data.startDate) : new Date(),
+                endDate: data.endDate ? new Date(data.endDate) : new Date(),
+                nextRecognitionDate: data.nextRecognitionDate
+                    ? new Date(data.nextRecognitionDate)
+                    : (data.startDate ? new Date(data.startDate) : new Date()),
+                status: String(data.status ?? 'ACTIVE').toUpperCase(),
+                createdById: data.createdById ?? null,
+            },
+        })
+    }
+
+    private addMonths(from: Date, months: number) {
+        const d = new Date(from)
+        d.setMonth(d.getMonth() + months)
+        return d
+    }
+
+    async recognizeRevenue(companyId: string, id: string, data: { amount?: number; recognitionDate?: Date } = {}) {
+        const row = await this.prisma.revenueRecognition.findFirst({ where: { id, companyId } })
+        if (!row) return null
+
+        const currentStatus = String(row.status ?? 'ACTIVE').toUpperCase()
+        if (currentStatus === 'COMPLETED' || currentStatus === 'CANCELLED') {
+            return { record: row, recognizedAmount: 0 }
+        }
+
+        const total = Number(row.totalContractValue ?? 0)
+        const recognized = Number(row.recognizedToDate ?? 0)
+        const remaining = Math.max(0, total - recognized)
+
+        let recognizeAmount = Number(data.amount ?? 0)
+        if (recognizeAmount <= 0) {
+            const totalMonths = Math.max(1, Math.ceil((new Date(row.endDate).getTime() - new Date(row.startDate).getTime()) / (30 * 24 * 60 * 60 * 1000)))
+            recognizeAmount = Math.min(remaining, Number((total / totalMonths).toFixed(2)))
+            if (recognizeAmount <= 0) recognizeAmount = remaining
+        }
+
+        recognizeAmount = Math.min(remaining, Math.max(0, recognizeAmount))
+        const nextRecognizedToDate = Number((recognized + recognizeAmount).toFixed(4))
+        const isCompleted = nextRecognizedToDate >= total - 0.005
+
+        const updated = await this.prisma.revenueRecognition.update({
+            where: { id },
+            data: {
+                recognizedToDate: nextRecognizedToDate,
+                status: isCompleted ? 'COMPLETED' : 'ACTIVE',
+                lastRecognizedAt: data.recognitionDate ?? new Date(),
+                nextRecognitionDate: isCompleted ? null : this.addMonths(row.nextRecognitionDate ?? row.startDate, 1),
+            },
+        })
+
+        return { record: updated, recognizedAmount: recognizeAmount }
+    }
+
+    // ─── Deferred Revenue ──────────────────────────────────────────────────
+
+    async findDeferredRevenue(companyId: string, opts: { search?: string; status?: string } = {}) {
+        const where: any = { companyId }
+        if (opts.status && opts.status !== 'ALL') where.status = String(opts.status).toUpperCase()
+        if (opts.search) {
+            where.OR = [
+                { contractId: { contains: opts.search, mode: 'insensitive' } },
+                { description: { contains: opts.search, mode: 'insensitive' } },
+            ]
+        }
+        return this.prisma.deferredRevenue.findMany({ where, orderBy: { createdAt: 'desc' } })
+    }
+
+    async createDeferredRevenue(workspaceId: string, companyId: string, data: any) {
+        const count = await this.prisma.deferredRevenue.count({ where: { companyId } })
+        const contractId = data.contractId?.trim() || `DR-${String(count + 1).padStart(4, '0')}`
+        const totalDeferredAmount = Number(data.totalDeferredAmount ?? data.totalContractValue ?? data.amount ?? 0)
+        const recognizedAmount = Number(data.recognizedAmount ?? 0)
+        const remainingDeferred = Math.max(0, Number((totalDeferredAmount - recognizedAmount).toFixed(4)))
+
+        return this.prisma.deferredRevenue.create({
+            data: {
+                workspaceId,
+                companyId,
+                customerId: data.customerId ?? null,
+                invoiceId: data.invoiceId ?? null,
+                recognitionId: data.recognitionId ?? null,
+                contractId,
+                description: data.description ?? '',
+                totalDeferredAmount,
+                recognizedAmount,
+                remainingDeferred,
+                startDate: data.startDate ? new Date(data.startDate) : new Date(),
+                endDate: data.endDate ? new Date(data.endDate) : new Date(),
+                nextRecognitionDate: data.nextRecognitionDate
+                    ? new Date(data.nextRecognitionDate)
+                    : (data.startDate ? new Date(data.startDate) : new Date()),
+                frequency: String(data.frequency ?? 'MONTHLY').toUpperCase(),
+                status: String(data.status ?? 'ACTIVE').toUpperCase(),
+                createdById: data.createdById ?? null,
+            },
+        })
+    }
+
+    async recognizeDeferredRevenue(companyId: string, id: string, data: { amount?: number; recognitionDate?: Date } = {}) {
+        const row = await this.prisma.deferredRevenue.findFirst({ where: { id, companyId } })
+        if (!row) return null
+
+        const currentStatus = String(row.status ?? 'ACTIVE').toUpperCase()
+        if (currentStatus === 'COMPLETED' || currentStatus === 'CANCELLED') {
+            return { record: row, recognizedAmount: 0 }
+        }
+
+        const total = Number(row.totalDeferredAmount ?? 0)
+        const recognized = Number(row.recognizedAmount ?? 0)
+        const remaining = Number(row.remainingDeferred ?? Math.max(0, total - recognized))
+
+        let recognizeAmount = Number(data.amount ?? 0)
+        if (recognizeAmount <= 0) {
+            const frequency = String(row.frequency ?? 'MONTHLY').toUpperCase()
+            const frequencyToMonths: Record<string, number> = {
+                MONTHLY: 1,
+                QUARTERLY: 3,
+                ANNUAL: 12,
+                ONE_TIME: 999,
+            }
+            const monthsStep = frequencyToMonths[frequency] ?? 1
+            if (monthsStep >= 999) {
+                recognizeAmount = remaining
+            } else {
+                const totalMonths = Math.max(1, Math.ceil((new Date(row.endDate).getTime() - new Date(row.startDate).getTime()) / (30 * 24 * 60 * 60 * 1000)))
+                const periods = Math.max(1, Math.ceil(totalMonths / monthsStep))
+                recognizeAmount = Math.min(remaining, Number((total / periods).toFixed(2)))
+            }
+            if (recognizeAmount <= 0) recognizeAmount = remaining
+        }
+
+        recognizeAmount = Math.min(remaining, Math.max(0, recognizeAmount))
+        const nextRecognized = Number((recognized + recognizeAmount).toFixed(4))
+        const nextRemaining = Math.max(0, Number((remaining - recognizeAmount).toFixed(4)))
+        const isCompleted = nextRemaining <= 0.005
+        const frequency = String(row.frequency ?? 'MONTHLY').toUpperCase()
+        const monthsStep = frequency === 'QUARTERLY' ? 3 : frequency === 'ANNUAL' ? 12 : frequency === 'ONE_TIME' ? 1200 : 1
+
+        const updated = await this.prisma.deferredRevenue.update({
+            where: { id },
+            data: {
+                recognizedAmount: nextRecognized,
+                remainingDeferred: nextRemaining,
+                status: isCompleted ? 'COMPLETED' : 'ACTIVE',
+                lastRecognizedAt: data.recognitionDate ?? new Date(),
+                nextRecognitionDate: isCompleted ? null : this.addMonths(row.nextRecognitionDate ?? row.startDate, monthsStep),
+            },
+        })
+
+        return { record: updated, recognizedAmount: recognizeAmount }
+    }
+
+    // ─── Payment Links ─────────────────────────────────────────────────────
+
+    async findPaymentLinks(companyId: string, opts: { search?: string; status?: string } = {}) {
+        const where: any = { companyId }
+        if (opts.status && opts.status !== 'ALL') where.status = String(opts.status).toUpperCase()
+        if (opts.search) {
+            where.OR = [
+                { linkId: { contains: opts.search, mode: 'insensitive' } },
+                { description: { contains: opts.search, mode: 'insensitive' } },
+            ]
+        }
+        return this.prisma.paymentLink.findMany({ where, orderBy: { createdAt: 'desc' } })
+    }
+
+    async createPaymentLink(workspaceId: string, companyId: string, data: any) {
+        let amount = Number(data.amount ?? 0)
+        let customerId = data.customerId ?? null
+        let description = data.description ?? ''
+        let currency = data.currency ?? 'PHP'
+        const invoiceId = data.invoiceId ?? null
+
+        if (invoiceId) {
+            const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId } })
+            if (invoice) {
+                if (amount <= 0) amount = Number(invoice.balance ?? invoice.totalAmount ?? 0)
+                if (!customerId) customerId = invoice.customerId
+                if (!description) description = `Invoice ${invoice.invoiceNumber ?? invoice.id}`
+                if (invoice.currency) currency = invoice.currency
+            }
+        }
+
+        if (amount <= 0) {
+            throw new Error('amount must be greater than 0')
+        }
+
+        const count = await this.prisma.paymentLink.count({ where: { companyId } })
+        const linkId = data.linkId?.trim() || `PL-${String(count + 1).padStart(6, '0')}`
+        const token = randomUUID().replace(/-/g, '')
+        const expiresAt = data.expiresAt
+            ? new Date(data.expiresAt)
+            : (data.expiryDate ? new Date(data.expiryDate) : null)
+
+        return this.prisma.paymentLink.create({
+            data: {
+                workspaceId,
+                companyId,
+                customerId,
+                invoiceId,
+                linkId,
+                token,
+                description: description || null,
+                amount,
+                currency,
+                status: String(data.status ?? 'ACTIVE').toUpperCase(),
+                expiresAt,
+                createdById: data.createdById ?? null,
+            },
+        })
     }
 }

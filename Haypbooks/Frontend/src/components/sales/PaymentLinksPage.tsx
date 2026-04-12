@@ -4,39 +4,46 @@ import { useMemo, useState, useCallback, useEffect } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { formatCurrency } from '@/lib/format'
 
 type PaymentLinkRow = {
   id: string
   linkId: string
   description: string
-  amount: string
+  amount: number
+  currency?: string
   createdDate: string
   expiryDate: string
   views: number
+  url: string
   status: 'Active' | 'Paid' | 'Expired'
+}
+
+type NewPaymentLinkForm = {
+  description: string
+  amount: string
+  invoiceId: string
+  expiryDate: string
 }
 
 export default function PaymentLinksPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [items, setItems] = useState<any[]>([])
+  const [items, setItems] = useState<PaymentLinkRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
     setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/payment-links`)
+      const { data } = await apiClient.get(`/companies/${companyId}/payment-links`)
       setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
     } catch (err: any) {
-      // 404 expected until PaymentLink model is built — show empty table, not an error
-      if (err?.response?.status === 404) {
-        setItems([])
-      } else {
-        setError(err?.response?.data?.message || 'Failed to load payment links')
-      }
+      setError(err?.response?.data?.message || 'Failed to load payment links')
     } finally {
       setLoading(false)
     }
@@ -45,6 +52,44 @@ export default function PaymentLinksPage() {
   useEffect(() => { fetchData() }, [fetchData])
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [form, setForm] = useState<NewPaymentLinkForm>({
+    description: '',
+    amount: '',
+    invoiceId: '',
+    expiryDate: '',
+  })
+
+  const createLink = useCallback(async () => {
+    if (!companyId) return
+    const amount = Number(form.amount)
+    if (!form.invoiceId && (!Number.isFinite(amount) || amount <= 0)) {
+      setError('Enter an amount greater than 0, or provide an invoice ID')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/payment-links`, {
+        description: form.description || undefined,
+        amount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
+        invoiceId: form.invoiceId || undefined,
+        expiryDate: form.expiryDate || undefined,
+      })
+      setShowCreate(false)
+      setForm({ description: '', amount: '', invoiceId: '', expiryDate: '' })
+      await fetchData()
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to create payment link')
+    } finally {
+      setSaving(false)
+    }
+  }, [companyId, form, fetchData])
+
+  const copyLink = useCallback(async (relativeUrl: string) => {
+    const absolute = `${window.location.origin}${relativeUrl}`
+    await navigator.clipboard.writeText(absolute)
+  }, [])
 
   // Data fetched from API (see fetchData above)
 
@@ -70,7 +115,12 @@ export default function PaymentLinksPage() {
             <p className="text-sm text-slate-500 mt-1">Create shareable payment links for customers</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">Create Link</button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+            >
+              Create Link
+            </button>
             <button onClick={() => setHelpOpen((cur) => !cur)} type="button" aria-label="Open documentation for Payment Links" className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold">?</button>
           </div>
         </div>
@@ -99,6 +149,7 @@ export default function PaymentLinksPage() {
                 <th className="text-left px-4 py-3">Expiry Date</th>
                 <th className="text-left px-4 py-3">Views</th>
                 <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -118,14 +169,14 @@ export default function PaymentLinksPage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No payment links found.</td>
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">No payment links found.</td>
                 </tr>
               ) : (
                 filtered.map((row) => (
                   <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-900">{row.linkId}</td>
                     <td className="px-4 py-3 text-slate-600">{row.description}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.amount}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatCurrency(row.amount, row.currency ?? currency)}</td>
                     <td className="px-4 py-3 text-slate-600">{row.createdDate}</td>
                     <td className="px-4 py-3 text-slate-600">{row.expiryDate}</td>
                     <td className="px-4 py-3 text-slate-600">{row.views}</td>
@@ -134,6 +185,14 @@ export default function PaymentLinksPage() {
                       row.status === 'Paid' ? 'text-sky-700' :
                       'text-rose-700'
                     }`}>{row.status}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => copyLink(row.url)}
+                        className="px-3 py-1.5 text-xs font-medium text-emerald-700 border border-emerald-300 rounded-md hover:bg-emerald-50"
+                      >
+                        Copy Link
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -141,6 +200,68 @@ export default function PaymentLinksPage() {
           </table>
         </div>
       </div>
+
+      {showCreate && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white rounded-xl border border-slate-200 shadow-xl">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Create Payment Link</h2>
+              <button onClick={() => setShowCreate(false)} className="text-slate-500 hover:text-slate-700">Close</button>
+            </div>
+            <div className="p-5 grid grid-cols-1 gap-4">
+              <label className="text-sm text-slate-700">
+                Description
+                <input
+                  value={form.description}
+                  onChange={(e) => setForm((cur) => ({ ...cur, description: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  placeholder="Invoice payment, deposit request, or service fee"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                Amount
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={(e) => setForm((cur) => ({ ...cur, amount: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  placeholder="0.00"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                Invoice ID (optional)
+                <input
+                  value={form.invoiceId}
+                  onChange={(e) => setForm((cur) => ({ ...cur, invoiceId: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  placeholder="Link this payment to an existing invoice"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                Expiry Date (optional)
+                <input
+                  type="date"
+                  value={form.expiryDate}
+                  onChange={(e) => setForm((cur) => ({ ...cur, expiryDate: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </label>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-200 flex justify-end gap-2">
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700">Cancel</button>
+              <button
+                onClick={createLink}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50"
+              >
+                {saving ? 'Creating…' : 'Create Link'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {helpOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

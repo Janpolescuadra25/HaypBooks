@@ -102,13 +102,55 @@ export class SalesController {
   }
 
   @Get('revenue-recognition')
-  async listRevenueRecognition(@Req() req: any, @Param('companyId') companyId: string) {
-    return this.salesService.listRevenueRecognition(req.user.userId, companyId)
+  async listRevenueRecognition(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
+    return this.salesService.listRevenueRecognition(req.user.userId, companyId, query)
+  }
+
+  @Post('revenue-recognition')
+  async createRevenueRecognition(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
+    return this.salesService.createRevenueRecognition(req.user.userId, companyId, body)
+  }
+
+  @Post('revenue-recognition/:id/recognize')
+  @HttpCode(HttpStatus.OK)
+  async recognizeRevenue(
+    @Req() req: any,
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    return this.salesService.recognizeRevenue(req.user.userId, companyId, id, body)
   }
 
   @Get('deferred-revenue')
-  async listDeferredRevenue(@Req() req: any, @Param('companyId') companyId: string) {
-    return this.salesService.listDeferredRevenue(req.user.userId, companyId)
+  async listDeferredRevenue(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
+    return this.salesService.listDeferredRevenue(req.user.userId, companyId, query)
+  }
+
+  @Post('deferred-revenue')
+  async createDeferredRevenue(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
+    return this.salesService.createDeferredRevenue(req.user.userId, companyId, body)
+  }
+
+  @Post('deferred-revenue/:id/recognize')
+  @HttpCode(HttpStatus.OK)
+  async recognizeDeferredRevenue(
+    @Req() req: any,
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    return this.salesService.recognizeDeferredRevenue(req.user.userId, companyId, id, body)
+  }
+
+  @Get('payment-links')
+  async listPaymentLinks(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
+    return this.salesService.listPaymentLinks(req.user.userId, companyId, query)
+  }
+
+  @Post('payment-links')
+  async createPaymentLink(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
+    return this.salesService.createPaymentLink(req.user.userId, companyId, body)
   }
 
   // ─── Invoices (Sales facade) ────────────────────────────────────────────

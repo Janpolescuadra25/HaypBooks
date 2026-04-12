@@ -17,14 +17,30 @@ type DeferredRevenueRow = {
   startDate: string
   endDate: string
   nextRecognitionDate: string
+  journalEntryId?: string | null
   frequency: 'Monthly' | 'Quarterly' | 'Annual' | 'One-Time'
   status: 'Active' | 'Completed' | 'Cancelled'
+}
+
+type NewDeferredForm = {
+  contractId: string
+  description: string
+  totalDeferredAmount: string
+  startDate: string
+  endDate: string
+  frequency: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'ONE_TIME'
 }
 
 const STATUS_STYLES: Record<string, string> = {
   Active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Completed: 'bg-blue-50 text-blue-700 border-blue-200',
   Cancelled: 'bg-gray-50 text-gray-500 border-gray-200',
+}
+
+function dateISO(offsetDays = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return d.toISOString().split('T')[0]
 }
 
 export default function DeferredRevenuePage() {
@@ -35,6 +51,18 @@ export default function DeferredRevenuePage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [showCreate, setShowCreate] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [recognizing, setRecognizing] = useState(false)
+  const [recognizingId, setRecognizingId] = useState<string | null>(null)
+  const [form, setForm] = useState<NewDeferredForm>({
+    contractId: '',
+    description: '',
+    totalDeferredAmount: '',
+    startDate: dateISO(0),
+    endDate: dateISO(30),
+    frequency: 'MONTHLY',
+  })
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
@@ -51,6 +79,77 @@ export default function DeferredRevenuePage() {
   }, [companyId])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const recognizeOne = useCallback(async (id: string) => {
+    if (!companyId) return
+    setRecognizingId(id)
+    setError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/deferred-revenue/${id}/recognize`, {})
+      await fetchData()
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to process deferred revenue recognition')
+    } finally {
+      setRecognizingId(null)
+    }
+  }, [companyId, fetchData])
+
+  const processRecognition = useCallback(async () => {
+    if (!companyId) return
+    const activeRows = items.filter((row) => row.status === 'Active' && row.remainingDeferred > 0)
+    if (!activeRows.length) return
+
+    setRecognizing(true)
+    setError('')
+    try {
+      await Promise.all(activeRows.map((row) => apiClient.post(`/companies/${companyId}/deferred-revenue/${row.id}/recognize`, {})))
+      await fetchData()
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to process deferred revenue')
+    } finally {
+      setRecognizing(false)
+    }
+  }, [companyId, items, fetchData])
+
+  const createSchedule = useCallback(async () => {
+    if (!companyId) return
+    const total = Number(form.totalDeferredAmount)
+    if (!Number.isFinite(total) || total <= 0) {
+      setError('Enter a valid deferred amount greater than 0')
+      return
+    }
+    if (!form.description.trim()) {
+      setError('Description is required')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/deferred-revenue`, {
+        contractId: form.contractId || undefined,
+        description: form.description,
+        totalDeferredAmount: total,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        frequency: form.frequency,
+      })
+      setShowCreate(false)
+      setForm({
+        contractId: '',
+        description: '',
+        totalDeferredAmount: '',
+        startDate: dateISO(0),
+        endDate: dateISO(30),
+        frequency: 'MONTHLY',
+      })
+      await fetchData()
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to create deferred revenue schedule')
+    } finally {
+      setSaving(false)
+    }
+  }, [companyId, form, fetchData])
 
   const filtered = useMemo(() => {
     let list = items
@@ -79,10 +178,17 @@ export default function DeferredRevenuePage() {
             <p className="text-sm text-slate-500 mt-1">Track unearned revenue and recognition schedules</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-sm">
-              Process Recognition
+            <button
+              onClick={processRecognition}
+              disabled={recognizing || loading || !items.some((row) => row.status === 'Active' && row.remainingDeferred > 0)}
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {recognizing ? 'Processing…' : 'Process Recognition'}
             </button>
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+            >
               New Schedule
             </button>
           </div>
@@ -163,7 +269,7 @@ export default function DeferredRevenuePage() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {['Contract ID', 'Customer', 'Description', 'Frequency', 'Total Deferred', 'Recognized', 'Remaining', 'Next Recognition', 'Status'].map((h) => (
+                    {['Contract ID', 'Customer', 'Description', 'Frequency', 'Total Deferred', 'Recognized', 'Remaining', 'Next Recognition', 'Status', 'Actions'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
                         {h}
                       </th>
@@ -176,7 +282,7 @@ export default function DeferredRevenuePage() {
                       ? Math.round((row.recognizedAmount / row.totalDeferredAmount) * 100)
                       : 0
                     return (
-                      <tr key={row.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
+                      <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 font-medium text-slate-800">{row.contractId}</td>
                         <td className="px-4 py-3 text-slate-700">{row.customer}</td>
                         <td className="px-4 py-3 text-slate-600 max-w-[180px] truncate">{row.description}</td>
@@ -195,6 +301,15 @@ export default function DeferredRevenuePage() {
                             {row.status}
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => recognizeOne(row.id)}
+                            disabled={row.status !== 'Active' || row.remainingDeferred <= 0 || recognizingId === row.id}
+                            className="px-3 py-1.5 text-xs font-medium text-emerald-700 border border-emerald-300 rounded-md hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {recognizingId === row.id ? 'Processing…' : 'Recognize'}
+                          </button>
+                        </td>
                       </tr>
                     )
                   })}
@@ -204,6 +319,88 @@ export default function DeferredRevenuePage() {
           )}
         </div>
       </div>
+
+      {showCreate && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-white rounded-xl border border-slate-200 shadow-xl">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">New Deferred Revenue Schedule</h2>
+              <button onClick={() => setShowCreate(false)} className="text-slate-500 hover:text-slate-700">Close</button>
+            </div>
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="text-sm text-slate-700">
+                Contract ID (optional)
+                <input
+                  value={form.contractId}
+                  onChange={(e) => setForm((cur) => ({ ...cur, contractId: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                Frequency
+                <select
+                  value={form.frequency}
+                  onChange={(e) => setForm((cur) => ({ ...cur, frequency: e.target.value as NewDeferredForm['frequency'] }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                >
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="QUARTERLY">Quarterly</option>
+                  <option value="ANNUAL">Annual</option>
+                  <option value="ONE_TIME">One-Time</option>
+                </select>
+              </label>
+              <label className="text-sm text-slate-700 sm:col-span-2">
+                Description
+                <input
+                  value={form.description}
+                  onChange={(e) => setForm((cur) => ({ ...cur, description: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                Total Deferred Amount
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.totalDeferredAmount}
+                  onChange={(e) => setForm((cur) => ({ ...cur, totalDeferredAmount: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </label>
+              <div />
+              <label className="text-sm text-slate-700">
+                Start Date
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => setForm((cur) => ({ ...cur, startDate: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                End Date
+                <input
+                  type="date"
+                  value={form.endDate}
+                  onChange={(e) => setForm((cur) => ({ ...cur, endDate: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </label>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-200 flex justify-end gap-2">
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700">Cancel</button>
+              <button
+                onClick={createSchedule}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Create Schedule'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

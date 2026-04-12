@@ -7150,6 +7150,96 @@ model RevenueSchedule {
   @@index([invoiceLineId])
 }
 
+model RevenueRecognition {
+  id                  String   @id @default(uuid())
+  workspaceId         String
+  companyId           String
+  customerId          String?
+  invoiceId           String?
+  contractId          String
+  description         String
+  method              String   @default("STRAIGHT_LINE")
+  totalContractValue  Decimal  @db.Decimal(19, 4)
+  recognizedToDate    Decimal  @default(0) @db.Decimal(19, 4)
+  startDate           DateTime
+  endDate             DateTime
+  nextRecognitionDate DateTime?
+  status              String   @default("ACTIVE")
+  lastRecognizedAt    DateTime?
+  journalEntryId      String?
+  createdById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([companyId, contractId])
+  @@index([workspaceId, companyId])
+  @@index([companyId, status, nextRecognitionDate])
+  @@index([invoiceId])
+  @@index([customerId])
+  @@map("revenue_recognitions")
+}
+
+model DeferredRevenue {
+  id                  String   @id @default(uuid())
+  workspaceId         String
+  companyId           String
+  customerId          String?
+  invoiceId           String?
+  recognitionId       String?
+  contractId          String
+  description         String
+  totalDeferredAmount Decimal  @db.Decimal(19, 4)
+  recognizedAmount    Decimal  @default(0) @db.Decimal(19, 4)
+  remainingDeferred   Decimal  @db.Decimal(19, 4)
+  startDate           DateTime
+  endDate             DateTime
+  nextRecognitionDate DateTime?
+  frequency           String   @default("MONTHLY")
+  status              String   @default("ACTIVE")
+  lastRecognizedAt    DateTime?
+  journalEntryId      String?
+  createdById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([companyId, contractId])
+  @@index([workspaceId, companyId])
+  @@index([companyId, status, nextRecognitionDate])
+  @@index([invoiceId])
+  @@index([customerId])
+  @@index([recognitionId])
+  @@map("deferred_revenues")
+}
+
+model PaymentLink {
+  id                String   @id @default(uuid())
+  workspaceId       String
+  companyId         String
+  customerId        String?
+  invoiceId         String?
+  paymentReceivedId String?
+  linkId            String   @unique
+  token             String   @unique
+  description       String?
+  amount            Decimal  @db.Decimal(19, 4)
+  currency          String   @default("PHP")
+  status            String   @default("ACTIVE")
+  expiresAt         DateTime?
+  paidAt            DateTime?
+  viewCount         Int      @default(0)
+  lastViewedAt      DateTime?
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([workspaceId, companyId])
+  @@index([companyId, status, expiresAt])
+  @@index([invoiceId])
+  @@index([customerId])
+  @@index([paymentReceivedId])
+  @@map("payment_links")
+}
+
 model TaxCodeAccount {
   id        String @id @default(uuid())
   companyId String
