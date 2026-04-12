@@ -251,6 +251,17 @@ export class ArController {
         return this.svc.listRefunds(req.user.userId, companyId)
     }
 
+    // ─── Credit Notes ─────────────────────────────────────────────────────────
+
+    @Get('credit-notes')
+    listCreditNotes(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.listCreditNotes(req.user.userId, companyId, query)
+    }
+
     @Post('credit-notes')
     createCreditNote(
         @Req() req: any,
@@ -258,6 +269,36 @@ export class ArController {
         @Body() body: any,
     ) {
         return this.svc.createCreditNote(req.user.userId, companyId, body)
+    }
+
+    @Get('credit-notes/:creditNoteId')
+    getCreditNote(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('creditNoteId') creditNoteId: string,
+    ) {
+        return this.svc.getCreditNote(req.user.userId, companyId, creditNoteId)
+    }
+
+    @Post('credit-notes/:creditNoteId/void')
+    @HttpCode(HttpStatus.OK)
+    voidCreditNote(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('creditNoteId') creditNoteId: string,
+    ) {
+        return this.svc.voidCreditNote(req.user.userId, companyId, creditNoteId)
+    }
+
+    @Post('credit-notes/:creditNoteId/apply')
+    @HttpCode(HttpStatus.OK)
+    applyCreditNote(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('creditNoteId') creditNoteId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.applyCreditNote(req.user.userId, companyId, creditNoteId, body)
     }
 
     // ─── AR Aging Report ──────────────────────────────────────────────────────

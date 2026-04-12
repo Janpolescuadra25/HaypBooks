@@ -658,4 +658,102 @@ export class ArRepository {
 
         return { rows, buckets, generatedAt: today.toISOString() }
     }
+
+    // ─── Credit Notes ─────────────────────────────────────────────────────────
+
+    async findCreditNotes(companyId: string, opts: {
+        status?: string; search?: string; limit?: number; offset?: number
+    } = {}) {
+        return this.prisma.creditNote.findMany({
+            where: {
+                companyId,
+                ...(opts.status ? { status: opts.status as any } : {}),
+                ...(opts.search ? {
+                    OR: [
+                        { creditNoteNumber: { contains: opts.search, mode: 'insensitive' } },
+                        { reason: { contains: opts.search, mode: 'insensitive' } },
+                        { customer: { contact: { displayName: { contains: opts.search, mode: 'insensitive' } } } },
+                    ],
+                } : {}),
+            },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                invoice: { select: { id: true, invoiceNumber: true } },
+            },
+            orderBy: { issuedAt: 'desc' },
+            take: opts.limit ?? 50,
+            skip: opts.offset ?? 0,
+        })
+    }
+
+    async findCreditNoteById(companyId: string, creditNoteId: string) {
+        return this.prisma.creditNote.findFirst({
+            where: { id: creditNoteId, companyId },
+            include: {
+                customer: { include: { contact: true } },
+                invoice: { select: { id: true, invoiceNumber: true, balance: true, totalAmount: true } },
+            },
+        })
+    }
+
+    async createCreditNote(companyId: string, data: {
+        customerId: string
+        invoiceId?: string
+        reason: string
+        totalAmount: number
+        status?: string
+    }) {
+        const count = await this.prisma.creditNote.count({ where: { companyId } })
+        const creditNoteNumber = `CN-${String(count + 1).padStart(4, '0')}`
+        return this.prisma.creditNote.create({
+            data: {
+                companyId,
+                customerId: data.customerId,
+                invoiceId: data.invoiceId ?? null,
+                creditNoteNumber,
+                reason: data.reason,
+                totalAmount: data.totalAmount,
+                status: (data.status ?? 'DRAFT') as any,
+            },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                invoice: { select: { id: true, invoiceNumber: true } },
+            },
+        })
+    }
+
+    async voidCreditNote(companyId: string, creditNoteId: string) {
+        const cn = await this.prisma.creditNote.findFirst({ where: { id: creditNoteId, companyId } })
+        if (!cn) return null
+        return this.prisma.creditNote.update({
+            where: { id: creditNoteId },
+            data: { status: 'VOID' as any },
+        })
+    }
+
+    async applyCreditNoteToInvoice(companyId: string, creditNoteId: string, invoiceId: string, amount: number) {
+        const cn = await this.prisma.creditNote.findFirst({ where: { id: creditNoteId, companyId } })
+        if (!cn) return null
+        const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId, deletedAt: null } })
+        if (!invoice) return null
+
+        const applyAmt = Math.min(amount, Number(invoice.balance), Number(cn.totalAmount))
+
+        return this.prisma.$transaction(async (tx) => {
+            const newBalance = Math.max(0, Number(invoice.balance) - applyAmt)
+            await tx.invoice.update({
+                where: { id: invoiceId },
+                data: {
+                    balance: newBalance,
+                    status: newBalance <= 0 ? 'PAID' as any : invoice.status,
+                },
+            })
+            const updated = await tx.creditNote.update({
+                where: { id: creditNoteId },
+                data: { status: 'APPLIED' as any, invoiceId },
+                include: { customer: { include: { contact: { select: { displayName: true } } } }, invoice: { select: { id: true, invoiceNumber: true } } },
+            })
+            return updated
+        })
+    }
 }

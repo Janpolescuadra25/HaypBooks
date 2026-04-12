@@ -369,9 +369,69 @@ export class ArService {
         return []
     }
 
+    // ─── Credit Notes ─────────────────────────────────────────────────────────
+
+    private normalizeCreditNote(cn: any) {
+        return {
+            ...cn,
+            creditNoteNumber: cn.creditNoteNumber ?? `CN-${cn.id?.slice(0, 8)}`,
+            customer: cn.customer?.contact?.displayName ?? cn.customerName ?? '',
+            customerId: cn.customerId ?? '',
+            date: cn.issuedAt ?? cn.date ?? null,
+            amount: Number(cn.totalAmount ?? 0),
+            status: cn.status ?? 'DRAFT',
+            memo: cn.reason ?? '',
+            invoiceId: cn.invoiceId ?? null,
+            invoiceNumber: cn.invoice?.invoiceNumber ?? null,
+        }
+    }
+
+    async listCreditNotes(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const items = await this.repo.findCreditNotes(companyId, {
+            status: opts.status,
+            search: opts.search,
+            limit: opts.limit ? parseInt(opts.limit) : 50,
+            offset: opts.offset ? parseInt(opts.offset) : 0,
+        })
+        return items.map((cn: any) => this.normalizeCreditNote(cn))
+    }
+
+    async getCreditNote(userId: string, companyId: string, creditNoteId: string) {
+        await this.assertAccess(userId, companyId)
+        const cn = await this.repo.findCreditNoteById(companyId, creditNoteId)
+        if (!cn) throw new NotFoundException('Credit note not found')
+        return this.normalizeCreditNote(cn)
+    }
+
     async createCreditNote(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        return { success: true, id: 'stub-id' }
+        if (!data.customerId) throw new BadRequestException('customerId is required')
+        if (!data.reason && !data.memo) throw new BadRequestException('reason or memo is required')
+        if (data.totalAmount == null && !data.amount) throw new BadRequestException('totalAmount is required')
+        const cn = await this.repo.createCreditNote(companyId, {
+            customerId: data.customerId,
+            invoiceId: data.invoiceId,
+            reason: data.reason ?? data.memo,
+            totalAmount: Number(data.totalAmount ?? data.amount ?? 0),
+        })
+        return this.normalizeCreditNote(cn)
+    }
+
+    async voidCreditNote(userId: string, companyId: string, creditNoteId: string) {
+        await this.assertAccess(userId, companyId)
+        const result = await this.repo.voidCreditNote(companyId, creditNoteId)
+        if (!result) throw new NotFoundException('Credit note not found')
+        return { success: true, id: creditNoteId, status: 'VOID' }
+    }
+
+    async applyCreditNote(userId: string, companyId: string, creditNoteId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        if (!data.invoiceId) throw new BadRequestException('invoiceId is required')
+        if (data.amount == null) throw new BadRequestException('amount is required')
+        const result = await this.repo.applyCreditNoteToInvoice(companyId, creditNoteId, data.invoiceId, Number(data.amount))
+        if (!result) throw new NotFoundException('Credit note or invoice not found')
+        return this.normalizeCreditNote(result)
     }
 
     // ─── AR Aging ─────────────────────────────────────────────────────────────
