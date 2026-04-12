@@ -3,57 +3,57 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { SalesService } from './sales.service'
 
-// ─── Philippine mock data used as stub fallback ───────────────────────────────
-const PH_MOCK_INVOICES = [
+// ─── Generic mock data used as stub fallback for international sales workflows ───
+const GENERIC_MOCK_INVOICES = [
   {
-    id: 'ph-inv-001', invoiceNumber: 'INV-2024-001', customerId: 'ph-cust-001',
-    customerName: 'Mercury Drug Corporation', date: '2024-01-10', dueDate: '2024-02-10',
-    status: 'SENT', total: 125000, amountDue: 125000, currency: 'PHP',
+    id: 'mock-inv-001', invoiceNumber: 'INV-2024-001', customerId: 'cust-001',
+    customerName: 'Acme Corporation', date: '2024-01-10', dueDate: '2024-02-10',
+    status: 'SENT', total: 125000, amountDue: 125000, currency: 'USD',
     items: [{ description: 'Office Supplies', quantity: 50, unitPrice: 2500, amount: 125000, accountId: null }],
   },
   {
-    id: 'ph-inv-002', invoiceNumber: 'INV-2024-002', customerId: 'ph-cust-002',
-    customerName: 'Jollibee Foods Corporation', date: '2024-01-15', dueDate: '2024-02-15',
-    status: 'PAID', total: 380000, amountDue: 0, currency: 'PHP',
+    id: 'mock-inv-002', invoiceNumber: 'INV-2024-002', customerId: 'cust-002',
+    customerName: 'Global Tech Solutions', date: '2024-01-15', dueDate: '2024-02-15',
+    status: 'PAID', total: 380000, amountDue: 0, currency: 'USD',
     items: [{ description: 'Consulting Services', quantity: 20, unitPrice: 19000, amount: 380000, accountId: null }],
   },
   {
-    id: 'ph-inv-003', invoiceNumber: 'INV-2024-003', customerId: 'ph-cust-003',
-    customerName: 'San Miguel Corporation', date: '2024-01-20', dueDate: '2024-02-20',
-    status: 'OVERDUE', total: 560000, amountDue: 560000, currency: 'PHP',
+    id: 'mock-inv-003', invoiceNumber: 'INV-2024-003', customerId: 'cust-003',
+    customerName: 'Pacific Trading Co.', date: '2024-01-20', dueDate: '2024-02-20',
+    status: 'OVERDUE', total: 560000, amountDue: 560000, currency: 'USD',
     items: [{ description: 'IT Infrastructure Services', quantity: 1, unitPrice: 560000, amount: 560000, accountId: null }],
   },
   {
-    id: 'ph-inv-004', invoiceNumber: 'INV-2024-004', customerId: 'ph-cust-004',
-    customerName: 'Ayala Land Inc.', date: '2024-01-25', dueDate: '2024-03-25',
-    status: 'DRAFT', total: 210000, amountDue: 210000, currency: 'PHP',
+    id: 'mock-inv-004', invoiceNumber: 'INV-2024-004', customerId: 'cust-004',
+    customerName: 'Northern Industries Ltd.', date: '2024-01-25', dueDate: '2024-03-25',
+    status: 'DRAFT', total: 210000, amountDue: 210000, currency: 'USD',
     items: [{ description: 'Project Management Consulting', quantity: 3, unitPrice: 70000, amount: 210000, accountId: null }],
   },
   {
-    id: 'ph-inv-005', invoiceNumber: 'INV-2024-005', customerId: 'ph-cust-005',
-    customerName: 'SM Prime Holdings', date: '2024-02-01', dueDate: '2024-03-01',
-    status: 'PARTIAL', total: 95000, amountDue: 47500, currency: 'PHP',
+    id: 'mock-inv-005', invoiceNumber: 'INV-2024-005', customerId: 'cust-005',
+    customerName: 'Summit Consulting Group', date: '2024-02-01', dueDate: '2024-03-01',
+    status: 'PARTIAL', total: 95000, amountDue: 47500, currency: 'USD',
     items: [{ description: 'Software Licenses', quantity: 10, unitPrice: 9500, amount: 95000, accountId: null }],
   },
 ]
 
-const PH_MOCK_QUOTES = [
+const GENERIC_MOCK_QUOTES = [
   {
-    id: 'ph-quot-001', quoteNumber: 'QTE-2024-001', customerId: 'ph-cust-001',
-    customer: 'Mercury Drug Corporation', date: '2024-01-05', expiryDate: '2024-02-05',
-    amount: '₱148,000.00', status: 'Sent',
+    id: 'mock-quot-001', quoteNumber: 'QTE-2024-001', customerId: 'cust-001',
+    customer: 'Acme Corporation', date: '2024-01-05', expiryDate: '2024-02-05',
+    amount: 148000, status: 'Sent',
     lines: [{ description: 'Medical Supplies Procurement Advisory', quantity: 4, unitPrice: 37000, amount: 148000 }],
   },
   {
-    id: 'ph-quot-002', quoteNumber: 'QTE-2024-002', customerId: 'ph-cust-002',
-    customer: 'Jollibee Foods Corporation', date: '2024-01-12', expiryDate: '2024-02-12',
-    amount: '₱225,000.00', status: 'Accepted',
+    id: 'mock-quot-002', quoteNumber: 'QTE-2024-002', customerId: 'cust-002',
+    customer: 'Global Tech Solutions', date: '2024-01-12', expiryDate: '2024-02-12',
+    amount: 225000, status: 'Accepted',
     lines: [{ description: 'Digital Transformation Consulting', quantity: 15, unitPrice: 15000, amount: 225000 }],
   },
   {
-    id: 'ph-quot-003', quoteNumber: 'QTE-2024-003', customerId: 'ph-cust-003',
-    customer: 'San Miguel Corporation', date: '2024-01-18', expiryDate: '2024-02-18',
-    amount: '₱890,000.00', status: 'Draft',
+    id: 'mock-quot-003', quoteNumber: 'QTE-2024-003', customerId: 'cust-003',
+    customer: 'Pacific Trading Co.', date: '2024-01-18', expiryDate: '2024-02-18',
+    amount: 890000, status: 'Draft',
     lines: [{ description: 'Enterprise Resource Planning Implementation', quantity: 1, unitPrice: 890000, amount: 890000 }],
   },
 ]
@@ -97,7 +97,7 @@ export class SalesController {
       return await this.salesService.listInvoices(req.user.userId, companyId, query)
     } catch (e) {
       this.logger.warn(`listInvoices fallback to mock data: ${(e as Error).message}`)
-      return PH_MOCK_INVOICES
+      return GENERIC_MOCK_INVOICES
     }
   }
 
@@ -112,7 +112,7 @@ export class SalesController {
       return await this.salesService.getInvoice(req.user.userId, companyId, invoiceId)
     } catch (e) {
       this.logger.warn(`getInvoice fallback to mock data: ${(e as Error).message}`)
-      return PH_MOCK_INVOICES.find(i => i.id === invoiceId) ?? PH_MOCK_INVOICES[0]
+      return GENERIC_MOCK_INVOICES.find(i => i.id === invoiceId) ?? GENERIC_MOCK_INVOICES[0]
     }
   }
 
@@ -133,7 +133,7 @@ export class SalesController {
       return await this.salesService.sendInvoice(req.user.userId, companyId, invoiceId, body)
     } catch (e) {
       this.logger.warn(`sendInvoice fallback: ${(e as Error).message}`)
-      const inv = PH_MOCK_INVOICES.find(i => i.id === invoiceId) ?? PH_MOCK_INVOICES[0]
+      const inv = GENERIC_MOCK_INVOICES.find(i => i.id === invoiceId) ?? GENERIC_MOCK_INVOICES[0]
       return { ...inv, status: 'SENT' }
     }
   }
@@ -149,7 +149,7 @@ export class SalesController {
       return await this.salesService.voidInvoice(req.user.userId, companyId, invoiceId)
     } catch (e) {
       this.logger.warn(`voidInvoice fallback: ${(e as Error).message}`)
-      const inv = PH_MOCK_INVOICES.find(i => i.id === invoiceId) ?? PH_MOCK_INVOICES[0]
+      const inv = GENERIC_MOCK_INVOICES.find(i => i.id === invoiceId) ?? GENERIC_MOCK_INVOICES[0]
       return { ...inv, status: 'VOID' }
     }
   }
@@ -162,7 +162,7 @@ export class SalesController {
       return await this.salesService.listQuotes(req.user.userId, companyId, query)
     } catch (e) {
       this.logger.warn(`listQuotes fallback to mock data: ${(e as Error).message}`)
-      return PH_MOCK_QUOTES
+      return GENERIC_MOCK_QUOTES
     }
   }
 
@@ -177,7 +177,7 @@ export class SalesController {
       return await this.salesService.getQuote(req.user.userId, companyId, quoteId)
     } catch (e) {
       this.logger.warn(`getQuote fallback to mock data: ${(e as Error).message}`)
-      return PH_MOCK_QUOTES.find(q => q.id === quoteId) ?? PH_MOCK_QUOTES[0]
+      return GENERIC_MOCK_QUOTES.find(q => q.id === quoteId) ?? GENERIC_MOCK_QUOTES[0]
     }
   }
 
@@ -188,10 +188,10 @@ export class SalesController {
       return await this.salesService.convertQuoteToInvoice(req.user.userId, companyId, quoteId)
     } catch (e) {
       this.logger.warn(`convertQuote fallback to mock data: ${(e as Error).message}`)
-      const quote = PH_MOCK_QUOTES.find(q => q.id === quoteId) ?? PH_MOCK_QUOTES[0]
-      // Return a stub invoice with Philippine data
+      const quote = GENERIC_MOCK_QUOTES.find(q => q.id === quoteId) ?? GENERIC_MOCK_QUOTES[0]
+      // Return a stub invoice with neutral international data
       return {
-        id: `ph-inv-converted-${quoteId}`,
+        id: `mock-inv-converted-${quoteId}`,
         invoiceNumber: `INV-${Date.now()}`,
         customerId: quote.customerId,
         customerName: quote.customer,
@@ -200,7 +200,7 @@ export class SalesController {
         status: 'DRAFT',
         total: quote.lines[0]?.amount ?? 0,
         amountDue: quote.lines[0]?.amount ?? 0,
-        currency: 'PHP',
+        currency: 'USD',
         items: quote.lines,
         convertedFromQuoteId: quoteId,
       }
