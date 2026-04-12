@@ -84,6 +84,16 @@ export class ArController {
         return this.svc.batchUpdateCustomerGroup(req.user.userId, companyId, body.ids, body.groupId)
     }
 
+    @Get('customers/:contactId/activity')
+    getCustomerActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('contactId') contactId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.getCustomerActivity(req.user.userId, companyId, contactId, query)
+    }
+
     @Get('customers/:contactId')
     getCustomer(
         @Req() req: any,

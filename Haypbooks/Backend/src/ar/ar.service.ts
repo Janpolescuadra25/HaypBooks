@@ -131,6 +131,17 @@ export class ArService {
         const displayName = data.displayName || data.name
         if (!displayName) throw new BadRequestException('displayName is required')
         const result = await this.repo.createCustomer(wid, { ...data, displayName })
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'CREATE',
+                tableName: 'Customer',
+                recordId: result.contactId,
+                changes: { name: displayName },
+            },
+        }).catch(() => {})
         return this.normalizeCustomer(result)
     }
 
@@ -141,6 +152,20 @@ export class ArService {
         if (!customer) throw new NotFoundException('Customer not found')
         if (data.name && !data.displayName) data.displayName = data.name
         const result = await this.repo.updateCustomer(wid, contactId, data)
+        const changes: Record<string, any> = {}
+        const tracked = ['displayName', 'email', 'phone', 'address', 'city', 'state', 'zip', 'country', 'paymentTermId', 'creditLimit']
+        for (const f of tracked) { if (data[f] !== undefined) changes[f] = data[f] }
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'Customer',
+                recordId: contactId,
+                changes,
+            },
+        }).catch(() => {})
         return this.normalizeCustomer(result)
     }
 
@@ -149,7 +174,19 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         const customer = await this.repo.findCustomerById(wid, contactId)
         if (!customer) throw new NotFoundException('Customer not found')
-        return this.repo.softDeleteCustomer(wid, contactId)
+        const result = await this.repo.softDeleteCustomer(wid, contactId)
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'DELETE',
+                tableName: 'Customer',
+                recordId: contactId,
+                changes: { name: customer.contact?.displayName ?? '' },
+            },
+        }).catch(() => {})
+        return result
     }
 
     async batchDeleteCustomers(userId: string, companyId: string, ids: string[]) {
@@ -197,6 +234,25 @@ export class ArService {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
         return this.repo.listCustomerGroups(wid)
+    }
+
+    async getCustomerActivity(userId: string, companyId: string, contactId: string, opts: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where = { tableName: 'Customer', recordId: contactId, companyId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({
+                where,
+                include: { user: { select: { id: true, name: true, email: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
     }
 
     // ─── Quotes ───────────────────────────────────────────────────────────────

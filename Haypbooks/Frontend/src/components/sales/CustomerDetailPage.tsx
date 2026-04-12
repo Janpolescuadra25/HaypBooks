@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit2, User, Mail, Phone, MapPin, AlertCircle,
-  Loader2, FileText, CreditCard, DollarSign, TrendingUp, X,
+  Loader2, FileText, CreditCard, DollarSign, TrendingUp, X, Clock,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -58,6 +58,14 @@ interface PaymentTerm {
   dueDays: number
 }
 
+interface ActivityEntry {
+  id: string
+  action: string
+  changes: Record<string, any> | null
+  createdAt: string
+  user: { id: string; name: string | null; email: string } | null
+}
+
 const STATUS_COLORS = {
   DRAFT: 'bg-gray-100 text-gray-600',
   SENT: 'bg-blue-100 text-blue-700',
@@ -83,6 +91,11 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   const [error, setError] = useState('')
   const [showEdit, setShowEdit] = useState(false)
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([])
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity'>('overview')
+  const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [activityTotal, setActivityTotal] = useState(0)
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [activityError, setActivityError] = useState('')
 
   const fmtCurrency = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -108,10 +121,29 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
     } catch { /* not critical */ }
   }, [companyId])
 
+  const fetchActivity = useCallback(async () => {
+    if (!companyId) return
+    setActivityLoading(true)
+    setActivityError('')
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers/${customerId}/activity`)
+      setActivity(Array.isArray(data.data) ? data.data : [])
+      setActivityTotal(data.total ?? 0)
+    } catch (e: any) {
+      setActivityError(e?.response?.data?.message ?? 'Failed to load activity')
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [companyId, customerId])
+
   useEffect(() => {
     fetchCustomer()
     fetchPaymentTerms()
   }, [fetchCustomer, fetchPaymentTerms])
+
+  useEffect(() => {
+    if (activeTab === 'activity') fetchActivity()
+  }, [activeTab, fetchActivity])
 
   if (cidLoading || loading) {
     return (
@@ -174,6 +206,26 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
         </button>
       </div>
 
+      {/* Tab navigation */}
+      <div className="flex gap-1 border-b border-gray-200">
+        {(['overview', 'activity'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+              activeTab === tab
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab === 'activity' ? (
+              <span className="flex items-center gap-1.5"><Clock size={13} /> Activity</span>
+            ) : 'Overview'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' && (<>
       {/* Financial summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
@@ -321,6 +373,103 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
           onSaved={() => { setShowEdit(false); fetchCustomer() }}
         />
       )}
+    </>)}
+
+      {/* Activity Tab */}
+      {activeTab === 'activity' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-5 flex items-center gap-2">
+            <Clock size={15} /> Activity Log
+            {activityTotal > 0 && <span className="ml-auto text-xs text-gray-400">{activityTotal} event{activityTotal !== 1 ? 's' : ''}</span>}
+          </h2>
+
+          {activityLoading && (
+            <div className="flex items-center gap-2 py-8 justify-center text-gray-400">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-sm">Loading activity…</span>
+            </div>
+          )}
+
+          {!activityLoading && activityError && (
+            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+              <AlertCircle size={14} /> {activityError}
+            </div>
+          )}
+
+          {!activityLoading && !activityError && activity.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <Clock size={28} className="mb-3 opacity-40" />
+              <p className="text-sm font-medium">No activity recorded yet</p>
+              <p className="text-xs mt-1 text-gray-300">Actions like creating, editing, or deleting this customer will appear here</p>
+            </div>
+          )}
+
+          {!activityLoading && activity.length > 0 && (
+            <div className="relative">
+              {/* Vertical line */}
+              <div className="absolute left-3.5 top-2 bottom-2 w-px bg-gray-100" />
+              <div className="space-y-4">
+                {activity.map((entry, i) => {
+                  const isCreate = entry.action === 'CREATE'
+                  const isDelete = entry.action === 'DELETE'
+                  const dotColor = isCreate
+                    ? 'bg-emerald-500 ring-emerald-100'
+                    : isDelete
+                      ? 'bg-red-400 ring-red-100'
+                      : 'bg-blue-400 ring-blue-100'
+                  const label = isCreate ? 'Created' : isDelete ? 'Deleted' : 'Updated'
+                  const labelColor = isCreate
+                    ? 'text-emerald-700 bg-emerald-50'
+                    : isDelete
+                      ? 'text-red-600 bg-red-50'
+                      : 'text-blue-700 bg-blue-50'
+                  const userName = entry.user?.name || entry.user?.email || 'Unknown user'
+                  const changes = entry.changes && typeof entry.changes === 'object' ? entry.changes as Record<string, any> : null
+                  const changeKeys = changes ? Object.keys(changes) : []
+
+                  return (
+                    <div key={entry.id} className="relative flex gap-4 pl-1">
+                      {/* Dot */}
+                      <div className={`relative z-10 mt-1 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center ring-4 ${dotColor}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 pb-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${labelColor}`}>{label}</span>
+                            <span className="text-sm text-gray-700">by <span className="font-medium">{userName}</span></span>
+                          </div>
+                          <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">{fmt(entry.createdAt)}</span>
+                        </div>
+                        {changeKeys.length > 0 && (
+                          <div className="mt-2 rounded-lg border border-gray-100 overflow-hidden text-xs">
+                            <table className="w-full">
+                              <tbody>
+                                {changeKeys.map(k => (
+                                  <tr key={k} className="border-t border-gray-100 first:border-0">
+                                    <td className="px-3 py-1.5 text-gray-400 font-medium w-32 bg-gray-50">{k}</td>
+                                    <td className="px-3 py-1.5 text-gray-700">
+                                      {typeof changes![k] === 'object' && changes![k] !== null
+                                        ? JSON.stringify(changes![k])
+                                        : String(changes![k] ?? '—')}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   )
 }
