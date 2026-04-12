@@ -3,36 +3,38 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { SalesService } from './sales.service'
 
-// ─── Generic mock data used as stub fallback for international sales workflows ───
+// ─── Generic mock data used as stub fallback for international sales workflows.
+// Amount values are numeric and currency-agnostic; frontend display should use
+// the company’s configured currency format.
 const GENERIC_MOCK_INVOICES = [
   {
     id: 'mock-inv-001', invoiceNumber: 'INV-2024-001', customerId: 'cust-001',
     customerName: 'Acme Corporation', date: '2024-01-10', dueDate: '2024-02-10',
-    status: 'SENT', total: 125000, amountDue: 125000, currency: 'USD',
+    status: 'SENT', total: 125000, amountDue: 125000,
     items: [{ description: 'Office Supplies', quantity: 50, unitPrice: 2500, amount: 125000, accountId: null }],
   },
   {
     id: 'mock-inv-002', invoiceNumber: 'INV-2024-002', customerId: 'cust-002',
     customerName: 'Global Tech Solutions', date: '2024-01-15', dueDate: '2024-02-15',
-    status: 'PAID', total: 380000, amountDue: 0, currency: 'USD',
+    status: 'PAID', total: 380000, amountDue: 0,
     items: [{ description: 'Consulting Services', quantity: 20, unitPrice: 19000, amount: 380000, accountId: null }],
   },
   {
     id: 'mock-inv-003', invoiceNumber: 'INV-2024-003', customerId: 'cust-003',
     customerName: 'Pacific Trading Co.', date: '2024-01-20', dueDate: '2024-02-20',
-    status: 'OVERDUE', total: 560000, amountDue: 560000, currency: 'USD',
+    status: 'OVERDUE', total: 560000, amountDue: 560000,
     items: [{ description: 'IT Infrastructure Services', quantity: 1, unitPrice: 560000, amount: 560000, accountId: null }],
   },
   {
     id: 'mock-inv-004', invoiceNumber: 'INV-2024-004', customerId: 'cust-004',
     customerName: 'Northern Industries Ltd.', date: '2024-01-25', dueDate: '2024-03-25',
-    status: 'DRAFT', total: 210000, amountDue: 210000, currency: 'USD',
+    status: 'DRAFT', total: 210000, amountDue: 210000,
     items: [{ description: 'Project Management Consulting', quantity: 3, unitPrice: 70000, amount: 210000, accountId: null }],
   },
   {
     id: 'mock-inv-005', invoiceNumber: 'INV-2024-005', customerId: 'cust-005',
     customerName: 'Summit Consulting Group', date: '2024-02-01', dueDate: '2024-03-01',
-    status: 'PARTIAL', total: 95000, amountDue: 47500, currency: 'USD',
+    status: 'PARTIAL', total: 95000, amountDue: 47500,
     items: [{ description: 'Software Licenses', quantity: 10, unitPrice: 9500, amount: 95000, accountId: null }],
   },
 ]
@@ -200,7 +202,6 @@ export class SalesController {
         status: 'DRAFT',
         total: quote.lines[0]?.amount ?? 0,
         amountDue: quote.lines[0]?.amount ?? 0,
-        currency: 'USD',
         items: quote.lines,
         convertedFromQuoteId: quoteId,
       }
