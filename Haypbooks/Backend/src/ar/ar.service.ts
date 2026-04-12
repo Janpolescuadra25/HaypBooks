@@ -236,6 +236,94 @@ export class ArService {
         return this.repo.listCustomerGroups(wid)
     }
 
+    async createCustomerGroup(userId: string, companyId: string, data: { name: string; description?: string }) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!data.name?.trim()) throw new BadRequestException('Group name is required')
+        const result = await this.repo.createCustomerGroup(wid, companyId, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'CustomerGroup', recordId: result.id, changes: { name: result.name } },
+        }).catch(() => {})
+        return result
+    }
+
+    async getCustomerGroup(userId: string, companyId: string, id: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const group = await this.repo.getCustomerGroup(wid, id)
+        if (!group) throw new NotFoundException('Customer group not found')
+        return group
+    }
+
+    async updateCustomerGroup(userId: string, companyId: string, id: string, data: { name?: string; description?: string }) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const existing = await this.repo.getCustomerGroup(wid, id)
+        if (!existing) throw new NotFoundException('Customer group not found')
+        const result = await this.repo.updateCustomerGroup(wid, id, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'CustomerGroup', recordId: id, changes: data },
+        }).catch(() => {})
+        return result
+    }
+
+    async deleteCustomerGroup(userId: string, companyId: string, id: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const existing = await this.repo.getCustomerGroup(wid, id)
+        if (!existing) throw new NotFoundException('Customer group not found')
+        const result = await this.repo.deleteCustomerGroup(wid, id)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'CustomerGroup', recordId: id, changes: { name: existing.name } },
+        }).catch(() => {})
+        return result
+    }
+
+    async listGroupMembers(userId: string, companyId: string, groupId: string, opts: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 50
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        return this.repo.listGroupMembers(wid, groupId, { search: opts.search, limit, offset })
+    }
+
+    async addGroupMembers(userId: string, companyId: string, groupId: string, customerIds: string[]) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!customerIds?.length) throw new BadRequestException('No customer IDs provided')
+        const existing = await this.repo.getCustomerGroup(wid, groupId)
+        if (!existing) throw new NotFoundException('Customer group not found')
+        return this.repo.addGroupMembers(wid, groupId, customerIds)
+    }
+
+    async removeGroupMembers(userId: string, companyId: string, groupId: string, customerIds: string[]) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!customerIds?.length) throw new BadRequestException('No customer IDs provided')
+        return this.repo.removeGroupMembers(wid, groupId, customerIds)
+    }
+
+    async batchDeleteCustomerGroups(userId: string, companyId: string, ids: string[]) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!ids?.length) throw new BadRequestException('No IDs provided')
+        return this.repo.batchDeleteCustomerGroups(wid, ids)
+    }
+
+    async exportCustomerGroupsCsv(userId: string, companyId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const rows = await this.repo.exportCustomerGroupsCsv(wid)
+        const cols = ['id', 'name', 'description', 'customerCount']
+        const esc = (v: any) => {
+            const s = String(v ?? '')
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+        }
+        const header = cols.join(',')
+        const lines = rows.map((r: any) => cols.map(k => esc(r[k])).join(','))
+        return { csv: [header, ...lines].join('\n'), filename: 'customer-groups.csv' }
+    }
+
     async getCustomerActivity(userId: string, companyId: string, contactId: string, opts: any) {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)

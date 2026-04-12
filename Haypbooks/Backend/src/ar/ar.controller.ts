@@ -49,12 +49,100 @@ export class ArController {
         return this.svc.getAllCustomerActivity(req.user.userId, companyId, query)
     }
 
+    // ─── Customer Groups ──────────────────────────────────────────────────────
+
+    @Post('customer-groups')
+    createCustomerGroup(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createCustomerGroup(req.user.userId, companyId, body)
+    }
+
+    @Get('customer-groups/export')
+    async exportCustomerGroups(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.exportCustomerGroupsCsv(req.user.userId, companyId)
+    }
+
+    @Post('customer-groups/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteCustomerGroups(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteCustomerGroups(req.user.userId, companyId, body.ids)
+    }
+
     @Get('customer-groups')
     listCustomerGroups(
         @Req() req: any,
         @Param('companyId') companyId: string,
     ) {
         return this.svc.listCustomerGroups(req.user.userId, companyId)
+    }
+
+    @Get('customer-groups/:id')
+    getCustomerGroup(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.getCustomerGroup(req.user.userId, companyId, id)
+    }
+
+    @Get('customer-groups/:id/members')
+    listGroupMembers(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Query() query: any,
+    ) {
+        return this.svc.listGroupMembers(req.user.userId, companyId, id, query)
+    }
+
+    @Post('customer-groups/:id/members')
+    addGroupMembers(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: { customerIds: string[] },
+    ) {
+        return this.svc.addGroupMembers(req.user.userId, companyId, id, body.customerIds)
+    }
+
+    @Delete('customer-groups/:id/members')
+    @HttpCode(HttpStatus.OK)
+    removeGroupMembers(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: { customerIds: string[] },
+    ) {
+        return this.svc.removeGroupMembers(req.user.userId, companyId, id, body.customerIds)
+    }
+
+    @Put('customer-groups/:id')
+    updateCustomerGroup(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updateCustomerGroup(req.user.userId, companyId, id, body)
+    }
+
+    @Delete('customer-groups/:id')
+    deleteCustomerGroup(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.deleteCustomerGroup(req.user.userId, companyId, id)
     }
 
     @Get('payment-terms')

@@ -325,11 +325,113 @@ export class ArRepository {
     }
 
     async listCustomerGroups(workspaceId: string) {
-        return this.prisma.customerGroup.findMany({
+        const groups = await this.prisma.customerGroup.findMany({
             where: { workspaceId },
-            select: { id: true, name: true },
+            select: {
+                id: true, name: true, description: true,
+                _count: { select: { customers: true } },
+            },
             orderBy: { name: 'asc' },
         })
+        return groups.map(g => ({
+            id: g.id,
+            name: g.name,
+            description: g.description ?? '',
+            customerCount: g._count.customers,
+        }))
+    }
+
+    async createCustomerGroup(workspaceId: string, companyId: string, data: { name: string; description?: string }) {
+        return this.prisma.customerGroup.create({
+            data: { workspaceId, companyId, name: data.name, description: data.description ?? null },
+        })
+    }
+
+    async getCustomerGroup(workspaceId: string, id: string) {
+        const group = await this.prisma.customerGroup.findFirst({
+            where: { id, workspaceId },
+            select: {
+                id: true, name: true, description: true,
+                _count: { select: { customers: true } },
+            },
+        })
+        if (!group) return null
+        return { id: group.id, name: group.name, description: group.description ?? '', customerCount: group._count.customers }
+    }
+
+    async updateCustomerGroup(workspaceId: string, id: string, data: { name?: string; description?: string }) {
+        return this.prisma.customerGroup.update({
+            where: { id },
+            data: {
+                ...(data.name !== undefined ? { name: data.name } : {}),
+                ...(data.description !== undefined ? { description: data.description } : {}),
+            },
+            select: { id: true, name: true, description: true },
+        })
+    }
+
+    async deleteCustomerGroup(workspaceId: string, id: string) {
+        await this.prisma.customer.updateMany({ where: { groupId: id, workspaceId }, data: { groupId: null } })
+        return this.prisma.customerGroup.delete({ where: { id } })
+    }
+
+    async listGroupMembers(workspaceId: string, groupId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
+        const where: any = {
+            workspaceId,
+            groupId,
+            deletedAt: null,
+            ...(opts.search ? { contact: { displayName: { contains: opts.search, mode: 'insensitive' } } } : {}),
+        }
+        const [customers, total] = await Promise.all([
+            this.prisma.customer.findMany({
+                where,
+                include: {
+                    contact: { select: { displayName: true, contactEmails: true } },
+                    paymentTerm: { select: { name: true } },
+                },
+                orderBy: { contact: { displayName: 'asc' } },
+                take: opts.limit ?? 50,
+                skip: opts.offset ?? 0,
+            }),
+            this.prisma.customer.count({ where }),
+        ])
+        return {
+            data: customers.map(c => ({
+                id: c.contactId,
+                name: c.contact.displayName,
+                email: (c.contact.contactEmails as any[])?.[0]?.email ?? '',
+                paymentTermName: c.paymentTerm?.name ?? '',
+            })),
+            total,
+        }
+    }
+
+    async addGroupMembers(workspaceId: string, groupId: string, customerIds: string[]) {
+        return this.prisma.customer.updateMany({
+            where: { contactId: { in: customerIds }, workspaceId, groupId: null },
+            data: { groupId },
+        })
+    }
+
+    async removeGroupMembers(workspaceId: string, groupId: string, customerIds: string[]) {
+        return this.prisma.customer.updateMany({
+            where: { contactId: { in: customerIds }, workspaceId, groupId },
+            data: { groupId: null },
+        })
+    }
+
+    async batchDeleteCustomerGroups(workspaceId: string, ids: string[]) {
+        await this.prisma.customer.updateMany({ where: { groupId: { in: ids }, workspaceId }, data: { groupId: null } })
+        return this.prisma.customerGroup.deleteMany({ where: { id: { in: ids }, workspaceId } })
+    }
+
+    async exportCustomerGroupsCsv(workspaceId: string) {
+        const groups = await this.prisma.customerGroup.findMany({
+            where: { workspaceId },
+            select: { id: true, name: true, description: true, _count: { select: { customers: true } } },
+            orderBy: { name: 'asc' },
+        })
+        return groups.map(g => ({ id: g.id, name: g.name, description: g.description ?? '', customerCount: g._count.customers }))
     }
 
     async findPaymentTerms(workspaceId: string) {
