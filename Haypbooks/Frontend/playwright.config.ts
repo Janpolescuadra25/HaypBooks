@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './src/__tests__/e2e',
-  timeout: 60_000,
+  timeout: 30_000,
   expect: { timeout: 5000 },
   fullyParallel: true,
   reporter: [['list'], ['html', { open: 'never' }]],
@@ -10,7 +10,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     // Retain traces on failure so CI can upload them; `retain-on-failure` keeps traces for failed tests
     trace: 'retain-on-failure',
-    // take screenshots on failure and capture videos for failed tests to help CI debugging
+    // take screenshots on failure only
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     headless: true,

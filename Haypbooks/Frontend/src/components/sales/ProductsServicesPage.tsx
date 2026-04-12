@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Search, Plus, MoreHorizontal, Package, Wrench, Tag,
   Pencil, Trash2, Loader2, AlertCircle, RefreshCw,
@@ -18,6 +19,9 @@ export interface Item {
   name: string
   description?: string | null
   type: string        // e.g. PRODUCT | SERVICE | INVENTORY | BUNDLE
+  category: string | null
+  unit: string | null
+  status: string
   salesPrice: number | null
   purchaseCost: number | null
   trackingType: string | null
@@ -105,6 +109,8 @@ export default function ProductsServicesPage() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  const router = useRouter()
 
   const handleDelete = useCallback(async (item: Item) => {
     if (!companyId) return
@@ -260,7 +266,11 @@ export default function ProductsServicesPage() {
                   const stockQty = row.stockLevels?.reduce((s, l) => s + (l.quantity ?? 0), 0) ?? null
                   const isDeleting = deletingId === row.id
                   return (
-                    <tr key={row.id} className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${isDeleting ? 'opacity-50' : ''}`}>
+                    <tr
+                    key={row.id}
+                    onClick={() => router.push(`/sales/sales/products-services/${row.id}`)}
+                    className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer ${isDeleting ? 'opacity-50' : ''}`}
+                  >
                       <td className="px-4 py-2.5 text-slate-700 border-r border-gray-100 font-medium">{row.name}</td>
                       <td className="px-4 py-2.5 border-r border-gray-100 max-w-[220px]">
                         {row.description
@@ -287,7 +297,8 @@ export default function ProductsServicesPage() {
                       <td className="px-2 py-2 relative">
                         <div ref={openMenuId === row.id ? menuRef : undefined} className="relative inline-block">
                         <button
-                          onClick={() => setOpenMenuId(p => p === row.id ? null : row.id)}
+                          onClick={(event) => { event.stopPropagation(); setOpenMenuId(p => p === row.id ? null : row.id) }}
+                          aria-label="Row actions"
                           className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100"
                         >
                           <MoreHorizontal size={14} />
@@ -295,13 +306,13 @@ export default function ProductsServicesPage() {
                         {openMenuId === row.id && (
                           <div className="absolute right-2 top-8 z-30 bg-white rounded-xl shadow-xl border border-slate-200 py-1 w-40 text-sm">
                             <button
-                              onClick={() => { setModalItem(row); setOpenMenuId(null) }}
+                              onClick={(event) => { event.stopPropagation(); setModalItem(row); setOpenMenuId(null) }}
                               className="flex items-center gap-2 w-full px-3 py-2 hover:bg-slate-50 text-slate-700"
                             >
                               <Pencil size={13} /> Edit
                             </button>
                             <button
-                              onClick={() => handleDelete(row)}
+                              onClick={(event) => { event.stopPropagation(); handleDelete(row) }}
                               className="flex items-center gap-2 w-full px-3 py-2 hover:bg-red-50 text-red-600"
                             >
                               <Trash2 size={13} /> Delete

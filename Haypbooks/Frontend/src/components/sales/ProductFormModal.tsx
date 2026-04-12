@@ -45,6 +45,9 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
   const [description, setDescription] = useState(item?.description ?? '')
   const [type, setType] = useState(item?.type ?? 'SERVICE')
   const [sku, setSku] = useState(item?.sku ?? '')
+  const [category, setCategory] = useState(item?.category ?? '')
+  const [unit, setUnit] = useState(item?.unit ?? 'each')
+  const [status, setStatus] = useState(item?.status ?? 'ACTIVE')
   const [salesPrice, setSalesPrice] = useState(item?.salesPrice != null ? String(item.salesPrice) : '')
   const [purchaseCost, setPurchaseCost] = useState(item?.purchaseCost != null ? String(item.purchaseCost) : '')
   const [trackingType, setTrackingType] = useState(item?.trackingType ?? 'NONE')
@@ -61,6 +64,10 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
     e.preventDefault()
     if (!companyId) return
     if (!name.trim()) { setError('Name is required.'); return }
+    if (type !== 'SERVICE' && !sku.trim()) { setError('SKU is required for products and inventory items.'); return }
+    if (salesPrice === '') { setError('Sales price is required.'); return }
+    const salesValue = Number(salesPrice)
+    if (Number.isNaN(salesValue) || salesValue < 0) { setError('Sales price must be a number greater than or equal to 0.'); return }
 
     setSaving(true)
     setError('')
@@ -70,6 +77,9 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
         description: description.trim() || null,
         type,
         sku: sku.trim() || null,
+        category: category.trim() || null,
+        unit: unit.trim() || null,
+        status,
         salesPrice: salesPrice !== '' ? parseFloat(salesPrice) : null,
         purchaseCost: purchaseCost !== '' ? parseFloat(purchaseCost) : null,
         trackingType: type === 'INVENTORY' ? trackingType : 'NONE',
@@ -167,6 +177,45 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
               placeholder="Optional — e.g. WD-001"
               className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+              <input
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                placeholder="e.g. Services"
+                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Unit</label>
+              <select
+                value={unit}
+                onChange={e => setUnit(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+              >
+                <option value="each">Each</option>
+                <option value="hours">Hours</option>
+                <option value="kg">Kg</option>
+                <option value="m">m</option>
+                <option value="l">L</option>
+                <option value="pack">Pack</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
           </div>
 
           {/* Price / Cost */}

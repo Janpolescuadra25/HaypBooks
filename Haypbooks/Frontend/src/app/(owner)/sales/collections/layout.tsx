@@ -1,9 +1,9 @@
 import ModuleTabs from '@/components/shared/ModuleTabs'
 
 const TABS = [
-  { label: 'Payments', value: 'payments' },
-  { label: 'A/R Aging', value: 'ar-aging' },
-  { label: 'Collections Center', value: 'collections-center' },
+  { label: 'Customer Payments', value: 'payments' },
+  { label: 'A/R Aging', value: 'aging' },
+  { label: 'Collections Center', value: 'center' },
   { label: 'Dunning', value: 'dunning' },
   { label: 'Write-Offs', value: 'write-offs' },
   { label: 'Refunds', value: 'refunds' },

@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Download, Plus, RefreshCw, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 25
 
 const STATUS_FILTERS = ['All', 'DRAFT', 'SENT', 'ACCEPTED', 'EXPIRED', 'REJECTED', 'CONVERTED'] as const
 type StatusFilter = typeof STATUS_FILTERS[number]
@@ -21,41 +21,59 @@ interface QuoteRow {
   expiryDate: string | null
   amount: number
   status: string
+  lineCount: number
   convertedToInvoiceId: string | null
 }
 
-interface CustomerOption {
-  id: string
-  name: string
+interface CustomerOption { id: string; name: string }
+interface LineItem { description: string; quantity: string; unitPrice: string }
+
+interface ColDef {
+  key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right'
 }
 
-interface LineItem {
-  description: string
-  quantity: string
-  unitPrice: string
+const DEFAULT_COLS: ColDef[] = [
+  { key: 'quoteNumber', label: 'Quote #', visible: true, width: 120, align: 'left' },
+  { key: 'customer', label: 'Customer', visible: true, width: 200, align: 'left' },
+  { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
+  { key: 'expiryDate', label: 'Expiry', visible: true, width: 110, align: 'left' },
+  { key: 'amount', label: 'Amount', visible: true, width: 120, align: 'right' },
+  { key: 'status', label: 'Status', visible: true, width: 100, align: 'left' },
+]
+
+function loadCols(): ColDef[] {
+  try {
+    const s = localStorage.getItem('quotes-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as ColDef[]
+      return DEFAULT_COLS.map(d => {
+        const sc = saved.find(c => c.key === d.key)
+        return sc ? { ...d, visible: sc.visible, width: sc.width } : d
+      })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_COLS
 }
 
 function normalizeQuote(q: any): QuoteRow {
   return {
     id: q.id,
     quoteNumber: q.quoteNumber ?? `QT-${q.id?.slice(0, 8)}`,
-    customer: q.customer ?? q.customerName ?? q.customer?.contact?.displayName ?? '—',
+    customer: q.customer ?? q.customerName ?? '—',
     customerId: q.customerId ?? '',
     date: q.date ?? q.issuedAt ?? null,
     expiryDate: q.expiryDate ?? null,
     amount: Number(q.amount ?? q.totalAmount ?? 0),
     status: q.status ?? 'DRAFT',
+    lineCount: q.lineCount ?? 0,
     convertedToInvoiceId: q.convertedToInvoiceId ?? null,
   }
 }
 
 function fmtDate(d: string | null) {
   if (!d) return '—'
-  try {
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  } catch {
-    return d
-  }
+  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+  catch { return d }
 }
 
 function statusColor(status: string) {
@@ -69,23 +87,20 @@ function statusColor(status: string) {
   }
 }
 
-function statusLabel(status: string) {
-  const labels: Record<string, string> = {
+function statusLabel(s: string) {
+  const m: Record<string, string> = {
     DRAFT: 'Draft', SENT: 'Sent', ACCEPTED: 'Accepted',
     EXPIRED: 'Expired', REJECTED: 'Rejected', CONVERTED: 'Converted',
   }
-  return labels[status] ?? status
+  return m[s] ?? s
 }
 
-function emptyLine(): LineItem {
-  return { description: '', quantity: '1', unitPrice: '' }
-}
+function emptyLine(): LineItem { return { description: '', quantity: '1', unitPrice: '' } }
 
 export default function QuotesEstimatesPage() {
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
 
-  // List state
   const [items, setItems] = useState<QuoteRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -95,23 +110,62 @@ export default function QuotesEstimatesPage() {
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState('')
   const [actioningId, setActioningId] = useState<string | null>(null)
+  const [exportLoading, setExportLoading] = useState(false)
+  const [batchLoading, setBatchLoading] = useState(false)
 
-  // Create modal state
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Detail drawer
+  const [drawerQuote, setDrawerQuote] = useState<QuoteRow | null>(null)
+
+  // Create/Edit modal
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [custLoading, setCustLoading] = useState(false)
-  const [form, setForm] = useState({
-    customerId: '',
-    expiryDate: '',
-  })
+  const [form, setForm] = useState({ customerId: '', expiryDate: '' })
   const [lines, setLines] = useState<LineItem[]>([emptyLine()])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
+  // Column defs
+  const [cols, setCols] = useState<ColDef[]>(() => loadCols())
+  const [showColMenu, setShowColMenu] = useState(false)
+  const colsRef = useRef(cols)
+  useEffect(() => { colsRef.current = cols }, [cols])
+
+  const saveCols = (next: ColDef[]) => {
+    setCols(next)
+    try { localStorage.setItem('quotes-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
+  }
+
+  // Column resize
+  const resizingRef = useRef<{ colKey: string; startX: number; startW: number } | null>(null)
+
+  const onResizeStart = (e: React.MouseEvent, colKey: string, startW: number) => {
+    e.preventDefault()
+    resizingRef.current = { colKey, startX: e.clientX, startW }
+    const onMove = (me: MouseEvent) => {
+      if (!resizingRef.current) return
+      const { colKey: k, startX, startW: sw } = resizingRef.current
+      const delta = me.clientX - startX
+      const newW = Math.max(60, sw + delta)
+      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: newW } : c))
+    }
+    const onUp = () => {
+      resizingRef.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
   const searchRef = useRef(search)
   useEffect(() => { searchRef.current = search }, [search])
 
-  // ─── Fetch quotes ─────────────────────────────────────────────────────────
+  // ─── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchQuotes = useCallback(async (pg: number, status: StatusFilter) => {
     if (!companyId) return
@@ -133,11 +187,93 @@ export default function QuotesEstimatesPage() {
 
   useEffect(() => { fetchQuotes(0, statusFilter) }, [fetchQuotes, statusFilter])
 
-  // ─── Toast helper ─────────────────────────────────────────────────────────
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3500)
+  // ─── Selection ────────────────────────────────────────────────────────────
+
+  const toggleAll = () => {
+    if (selectedIds.size === filtered.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(filtered.map(r => r.id)))
+  }
+
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  // ─── Batch ops ────────────────────────────────────────────────────────────
+
+  async function handleBatchDelete() {
+    if (!companyId || selectedIds.size === 0) return
+    if (!window.confirm(`Delete ${selectedIds.size} quote(s)? This cannot be undone.`)) return
+    setBatchLoading(true)
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/quotes/batch/delete`, { ids: Array.from(selectedIds) })
+      setSelectedIds(new Set())
+      fetchQuotes(page, statusFilter)
+      showToast(`Deleted ${selectedIds.size} quote(s)`)
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Batch delete failed')
+    } finally {
+      setBatchLoading(false)
+    }
+  }
+
+  async function handleBatchStatus(status: string) {
+    if (!companyId || selectedIds.size === 0) return
+    setBatchLoading(true)
+    try {
+      await apiClient.patch(`/companies/${companyId}/ar/quotes/batch/status`, { ids: Array.from(selectedIds), status })
+      setSelectedIds(new Set())
+      fetchQuotes(page, statusFilter)
+      showToast(`Updated ${selectedIds.size} quote(s) to ${statusLabel(status)}`)
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Batch update failed')
+    } finally {
+      setBatchLoading(false)
+    }
+  }
+
+  // ─── Export ───────────────────────────────────────────────────────────────
+
+  async function handleExport() {
+    if (!companyId) return
+    setExportLoading(true)
+    try {
+      const params: Record<string, string> = {}
+      if (statusFilter !== 'All') params.status = statusFilter
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/quotes/export`, { params })
+      const blob = new Blob([data], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = 'quotes-export.csv'; a.click()
+      URL.revokeObjectURL(url)
+      showToast('Export downloaded')
+    } catch {
+      showToast('Export failed')
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
+  // ─── Single delete ────────────────────────────────────────────────────────
+
+  async function handleDelete(quoteId: string) {
+    if (!companyId) return
+    if (!window.confirm('Delete this quote? This cannot be undone.')) return
+    setActioningId(quoteId)
+    try {
+      await apiClient.delete(`/companies/${companyId}/ar/quotes/${quoteId}`)
+      setDrawerQuote(null)
+      fetchQuotes(page, statusFilter)
+      showToast('Quote deleted')
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Delete failed')
+    } finally {
+      setActioningId(null)
+    }
   }
 
   // ─── Status action ────────────────────────────────────────────────────────
@@ -149,7 +285,7 @@ export default function QuotesEstimatesPage() {
       await apiClient.patch(`/companies/${companyId}/ar/quotes/${quoteId}/status`, { status })
       fetchQuotes(page, statusFilter)
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to update status')
+      showToast(err?.response?.data?.message || 'Failed to update status')
     } finally {
       setActioningId(null)
     }
@@ -159,14 +295,14 @@ export default function QuotesEstimatesPage() {
 
   async function handleConvert(quoteId: string) {
     if (!companyId) return
-    if (!window.confirm('Convert this quote to an invoice? The quote will be marked as converted.')) return
+    if (!window.confirm('Convert this quote to an invoice?')) return
     setActioningId(quoteId)
     try {
       await apiClient.post(`/companies/${companyId}/ar/quotes/${quoteId}/convert`)
       fetchQuotes(page, statusFilter)
       showToast('Quote converted to invoice successfully')
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to convert quote to invoice')
+      showToast(err?.response?.data?.message || 'Failed to convert quote')
     } finally {
       setActioningId(null)
     }
@@ -181,17 +317,24 @@ export default function QuotesEstimatesPage() {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
       const raw: any[] = Array.isArray(data) ? data : data?.items || []
       setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
-    } catch {
-      // non-blocking
-    } finally {
-      setCustLoading(false)
-    }
+    } catch { /* non-blocking */ }
+    finally { setCustLoading(false) }
   }, [companyId, customers.length])
 
-  // ─── Open create modal ────────────────────────────────────────────────────
+  // ─── Open create/edit modal ───────────────────────────────────────────────
 
-  function openModal() {
+  function openCreate() {
+    setEditingId(null)
     setForm({ customerId: '', expiryDate: '' })
+    setLines([emptyLine()])
+    setSaveError('')
+    setModalOpen(true)
+    loadCustomers()
+  }
+
+  function openEdit(row: QuoteRow) {
+    setEditingId(row.id)
+    setForm({ customerId: row.customerId, expiryDate: row.expiryDate ?? '' })
     setLines([emptyLine()])
     setSaveError('')
     setModalOpen(true)
@@ -201,11 +344,10 @@ export default function QuotesEstimatesPage() {
   // ─── Line helpers ─────────────────────────────────────────────────────────
 
   function setLine(idx: number, field: keyof LineItem, value: string) {
-    setLines((prev) => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l))
+    setLines(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l))
   }
-
-  function addLine() { setLines((prev) => [...prev, emptyLine()]) }
-  function removeLine(idx: number) { setLines((prev) => prev.filter((_, i) => i !== idx)) }
+  function addLine() { setLines(prev => [...prev, emptyLine()]) }
+  function removeLine(idx: number) { setLines(prev => prev.filter((_, i) => i !== idx)) }
 
   const lineTotal = lines.reduce((s, l) => {
     const qty = parseFloat(l.quantity) || 0
@@ -213,32 +355,37 @@ export default function QuotesEstimatesPage() {
     return s + qty * price
   }, 0)
 
-  // ─── Save quote ───────────────────────────────────────────────────────────
+  // ─── Save ─────────────────────────────────────────────────────────────────
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!companyId) return
     if (!form.customerId) { setSaveError('Select a customer'); return }
-    const validLines = lines.filter((l) => l.description.trim())
-    if (!validLines.length) { setSaveError('Add at least one line item with a description'); return }
-    setSaving(true)
-    setSaveError('')
+    const validLines = lines.filter(l => l.description.trim())
+    if (!validLines.length) { setSaveError('Add at least one line item'); return }
+    setSaving(true); setSaveError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/quotes`, {
+      const payload = {
         customerId: form.customerId,
         expiryDate: form.expiryDate || undefined,
-        lines: validLines.map((l) => {
+        lines: validLines.map(l => {
           const qty = parseFloat(l.quantity) || 1
           const price = parseFloat(l.unitPrice) || 0
           return { description: l.description.trim(), quantity: qty, unitPrice: price, amount: qty * price }
         }),
-      })
+      }
+      if (editingId) {
+        await apiClient.put(`/companies/${companyId}/ar/quotes/${editingId}`, payload)
+        showToast('Quote updated')
+      } else {
+        await apiClient.post(`/companies/${companyId}/ar/quotes`, payload)
+        showToast('Quote created')
+      }
       setModalOpen(false)
       setPage(0)
       fetchQuotes(0, statusFilter)
-      showToast('Quote created successfully')
     } catch (err: any) {
-      setSaveError(err?.response?.data?.message || 'Failed to create quote')
+      setSaveError(err?.response?.data?.message || 'Failed to save quote')
     } finally {
       setSaving(false)
     }
@@ -249,19 +396,19 @@ export default function QuotesEstimatesPage() {
   const filtered = useMemo(() => {
     if (!search) return items
     const q = search.toLowerCase()
-    return items.filter(
-      (row) =>
-        row.quoteNumber?.toLowerCase().includes(q) ||
-        row.customer?.toLowerCase().includes(q) ||
-        row.status?.toLowerCase().includes(q)
+    return items.filter(r =>
+      r.quoteNumber?.toLowerCase().includes(q) ||
+      r.customer?.toLowerCase().includes(q) ||
+      r.status?.toLowerCase().includes(q)
     )
   }, [items, search])
+
+  const visibleCols = cols.filter(c => c.visible)
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-[100] bg-emerald-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg">
           {toast}
@@ -277,14 +424,46 @@ export default function QuotesEstimatesPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleExport}
+              disabled={exportLoading}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+              title="Export CSV"
+            >
+              <Download size={15} /> {exportLoading ? 'Exporting…' : 'Export'}
+            </button>
+            <button
               onClick={() => fetchQuotes(page, statusFilter)}
               className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
               title="Refresh"
             >
               <RefreshCw size={16} />
             </button>
+            {/* Column visibility */}
+            <div className="relative">
+              <button
+                onClick={() => setShowColMenu(v => !v)}
+                className="px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+              >
+                Columns
+              </button>
+              {showColMenu && (
+                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-40 py-2">
+                  {cols.map(c => (
+                    <label key={c.key} className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={c.visible}
+                        onChange={() => saveCols(cols.map(col => col.key === c.key ? { ...col, visible: !col.visible } : col))}
+                        className="accent-emerald-600"
+                      />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
-              onClick={openModal}
+              onClick={openCreate}
               className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
             >
               <Plus size={16} /> New Quote
@@ -292,139 +471,177 @@ export default function QuotesEstimatesPage() {
           </div>
         </div>
 
-        {/* Status filter tabs */}
+        {/* Status tabs */}
         <div className="px-6 pb-3 flex gap-1.5 flex-wrap">
-          {STATUS_FILTERS.map((s) => (
+          {STATUS_FILTERS.map(s => (
             <button
               key={s}
-              onClick={() => { setStatusFilter(s); setPage(0) }}
-              className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
-                statusFilter === s
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-white text-slate-600 border-slate-300 hover:border-emerald-400'
-              }`}
+              onClick={() => { setStatusFilter(s); setPage(0); setSelectedIds(new Set()) }}
+              className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-300 hover:border-emerald-400'}`}
             >
               {s === 'All' ? 'All' : statusLabel(s)}
             </button>
           ))}
         </div>
 
-        {/* Search bar */}
+        {/* Search */}
         <div className="px-6 pb-4">
           <input
-            placeholder="Search by quote number, customer, or status…"
+            placeholder="Search by quote number, customer…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             className="w-full max-w-sm px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
       </div>
 
+      {/* Batch bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-emerald-700 text-white px-6 py-2.5 flex items-center gap-3 text-sm font-medium">
+          <span>{selectedIds.size} selected</span>
+          <button
+            onClick={handleBatchDelete}
+            disabled={batchLoading}
+            className="px-3 py-1 bg-rose-500 hover:bg-rose-600 rounded text-white text-xs font-semibold disabled:opacity-50"
+          >
+            Delete
+          </button>
+          {(['SENT', 'ACCEPTED', 'EXPIRED'] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => handleBatchStatus(s)}
+              disabled={batchLoading}
+              className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold disabled:opacity-50"
+            >
+              Mark {statusLabel(s)}
+            </button>
+          ))}
+          <button onClick={() => setSelectedIds(new Set())} className="ml-auto p-1 hover:bg-white/20 rounded">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="text-left px-4 py-3">Quote #</th>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3 hidden md:table-cell">Date</th>
-                <th className="text-left px-4 py-3 hidden lg:table-cell">Expiry</th>
-                <th className="text-right px-4 py-3">Amount</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-left px-4 py-3">Actions</th>
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleAll}
+                    className="accent-emerald-600"
+                  />
+                </th>
+                {visibleCols.map((col, ci) => (
+                  <th
+                    key={col.key}
+                    style={{ width: col.width, minWidth: col.width }}
+                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                  >
+                    {col.label}
+                    {ci < visibleCols.length - 1 && (
+                      <span
+                        onMouseDown={e => onResizeStart(e, col.key, col.width)}
+                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30"
+                      />
+                    )}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-400">
                     <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
                     Loading…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center">
+                  <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
                     <p className="text-rose-500 font-medium">{error}</p>
-                    <button onClick={() => fetchQuotes(page, statusFilter)} className="mt-2 text-sm text-emerald-600 hover:underline">
-                      Try again
-                    </button>
+                    <button onClick={() => fetchQuotes(page, statusFilter)} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No quotes found.</td>
+                  <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No quotes found.</td>
                 </tr>
               ) : (
-                filtered.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-700">{row.quoteNumber}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.customer}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{fmtDate(row.date)}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden lg:table-cell">{fmtDate(row.expiryDate)}</td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-800">
-                      {formatCurrency(row.amount, currency)}
+                filtered.map(row => (
+                  <tr
+                    key={row.id}
+                    className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}
+                  >
+                    <td className="px-3 py-3">
+                      <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(row.status)}`}>
-                        {statusLabel(row.status)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {row.status === 'DRAFT' && (
-                          <button
-                            disabled={actioningId === row.id}
-                            onClick={() => handleStatusChange(row.id, 'SENT')}
-                            className="text-xs font-semibold text-sky-700 hover:underline disabled:opacity-40"
-                          >
-                            Send
-                          </button>
+                    {visibleCols.map(col => (
+                      <td
+                        key={col.key}
+                        className={`px-4 py-3 cursor-pointer ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
+                        onClick={() => setDrawerQuote(row)}
+                      >
+                        {col.key === 'quoteNumber' && <span className="font-mono text-xs text-slate-700">{row.quoteNumber}</span>}
+                        {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
+                        {col.key === 'date' && <span className="text-slate-600">{fmtDate(row.date)}</span>}
+                        {col.key === 'expiryDate' && <span className="text-slate-600">{fmtDate(row.expiryDate)}</span>}
+                        {col.key === 'amount' && <span className="font-semibold text-slate-800">{formatCurrency(row.amount, currency)}</span>}
+                        {col.key === 'status' && (
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(row.status)}`}>
+                            {statusLabel(row.status)}
+                          </span>
                         )}
-                        {row.status === 'SENT' && (
+                      </td>
+                    ))}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => openEdit(row)}
+                          className="text-xs font-semibold text-slate-500 hover:text-slate-700 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <span className="text-slate-300">·</span>
+                        {row.status === 'DRAFT' && (
                           <>
                             <button
                               disabled={actioningId === row.id}
-                              onClick={() => handleStatusChange(row.id, 'ACCEPTED')}
-                              className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-40"
+                              onClick={() => handleStatusChange(row.id, 'SENT')}
+                              className="text-xs font-semibold text-sky-700 hover:underline disabled:opacity-40"
                             >
-                              Accept
+                              Send
                             </button>
                             <span className="text-slate-300">·</span>
-                            <button
-                              disabled={actioningId === row.id}
-                              onClick={() => handleStatusChange(row.id, 'REJECTED')}
-                              className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40"
-                            >
-                              Reject
-                            </button>
+                          </>
+                        )}
+                        {row.status === 'SENT' && (
+                          <>
+                            <button disabled={actioningId === row.id} onClick={() => handleStatusChange(row.id, 'ACCEPTED')} className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-40">Accept</button>
+                            <span className="text-slate-300">·</span>
+                            <button disabled={actioningId === row.id} onClick={() => handleStatusChange(row.id, 'REJECTED')} className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40">Reject</button>
+                            <span className="text-slate-300">·</span>
                           </>
                         )}
                         {(row.status === 'SENT' || row.status === 'ACCEPTED') && (
                           <>
+                            <button disabled={actioningId === row.id} onClick={() => handleConvert(row.id)} className="text-xs font-semibold text-violet-700 hover:underline disabled:opacity-40">Convert</button>
                             <span className="text-slate-300">·</span>
-                            <button
-                              disabled={actioningId === row.id}
-                              onClick={() => handleStatusChange(row.id, 'EXPIRED')}
-                              className="text-xs font-semibold text-slate-500 hover:underline disabled:opacity-40"
-                            >
-                              Expire
-                            </button>
                           </>
                         )}
-                        {row.status !== 'CONVERTED' && row.status !== 'EXPIRED' && row.status !== 'REJECTED' && (
-                          <>
-                            <span className="text-slate-300">·</span>
-                            <button
-                              disabled={actioningId === row.id}
-                              onClick={() => handleConvert(row.id)}
-                              className="text-xs font-semibold text-violet-700 hover:underline disabled:opacity-40"
-                            >
-                              Convert
-                            </button>
-                          </>
-                        )}
+                        <button
+                          disabled={actioningId === row.id}
+                          onClick={() => handleDelete(row.id)}
+                          className="text-xs font-semibold text-rose-500 hover:underline disabled:opacity-40"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -437,14 +654,14 @@ export default function QuotesEstimatesPage() {
         {/* Pagination */}
         {!loading && !error && (
           <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">Page {page + 1}{hasMore ? '+' : ''}</p>
+            <p className="text-sm text-slate-500">Page {page + 1}{hasMore ? '+' : ''} · {filtered.length} shown</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { const p = page - 1; setPage(p); fetchQuotes(p, statusFilter) }}
                 disabled={page === 0}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <ChevronLeft size={14} /> Previous
+                <ChevronLeft size={14} /> Prev
               </button>
               <button
                 onClick={() => { const p = page + 1; setPage(p); fetchQuotes(p, statusFilter) }}
@@ -458,7 +675,70 @@ export default function QuotesEstimatesPage() {
         )}
       </div>
 
-      {/* Create Quote Modal */}
+      {/* Detail Drawer */}
+      {drawerQuote && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/30" onClick={() => setDrawerQuote(null)} />
+          <div className="w-full max-w-md bg-white shadow-2xl flex flex-col overflow-y-auto">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">{drawerQuote.quoteNumber}</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{drawerQuote.customer}</p>
+              </div>
+              <button onClick={() => setDrawerQuote(null)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4 flex-1">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Date</p>
+                  <p className="font-semibold text-slate-800">{fmtDate(drawerQuote.date)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Expiry</p>
+                  <p className="font-semibold text-slate-800">{fmtDate(drawerQuote.expiryDate)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Amount</p>
+                  <p className="font-bold text-xl text-slate-900">{formatCurrency(drawerQuote.amount, currency)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Status</p>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(drawerQuote.status)}`}>
+                    {statusLabel(drawerQuote.status)}
+                  </span>
+                </div>
+              </div>
+              {drawerQuote.convertedToInvoiceId && (
+                <div className="text-sm bg-violet-50 border border-violet-100 rounded-lg px-3 py-2 text-violet-700">
+                  Converted to Invoice ID: <span className="font-mono">{drawerQuote.convertedToInvoiceId.slice(0, 12)}…</span>
+                </div>
+              )}
+              <div className="text-sm text-slate-500">
+                {drawerQuote.lineCount > 0 ? `${drawerQuote.lineCount} line item(s)` : 'No line item details available'}
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-200 flex gap-2">
+              <button
+                onClick={() => { openEdit(drawerQuote); setDrawerQuote(null) }}
+                className="flex-1 px-4 py-2 text-sm font-semibold border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
+              >
+                Edit Quote
+              </button>
+              <button
+                onClick={() => handleDelete(drawerQuote.id)}
+                disabled={actioningId === drawerQuote.id}
+                className="px-4 py-2 text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-lg disabled:opacity-50"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Modal */}
       {modalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -466,28 +746,25 @@ export default function QuotesEstimatesPage() {
         >
           <div
             className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">New Quote</h2>
-              <button onClick={() => setModalOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100">✕</button>
+              <h2 className="text-lg font-bold text-slate-900">{editingId ? 'Edit Quote' : 'New Quote'}</h2>
+              <button onClick={() => setModalOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
             </div>
 
             <form onSubmit={handleSave} className="p-4 space-y-4">
-              {/* Customer + Expiry */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
                   <select
                     required
                     value={form.customerId}
-                    onChange={(e) => setForm((f) => ({ ...f, customerId: e.target.value }))}
+                    onChange={e => setForm(f => ({ ...f, customerId: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   >
                     <option value="">{custLoading ? 'Loading…' : 'Select customer…'}</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -495,7 +772,7 @@ export default function QuotesEstimatesPage() {
                   <input
                     type="date"
                     value={form.expiryDate}
-                    onChange={(e) => setForm((f) => ({ ...f, expiryDate: e.target.value }))}
+                    onChange={e => setForm(f => ({ ...f, expiryDate: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   />
                 </div>
@@ -505,9 +782,7 @@ export default function QuotesEstimatesPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-slate-700">Line Items *</label>
-                  <button type="button" onClick={addLine} className="text-xs font-semibold text-emerald-700 hover:underline">
-                    + Add line
-                  </button>
+                  <button type="button" onClick={addLine} className="text-xs font-semibold text-emerald-700 hover:underline">+ Add line</button>
                 </div>
                 <div className="border border-slate-200 rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
@@ -524,50 +799,21 @@ export default function QuotesEstimatesPage() {
                       {lines.map((l, i) => {
                         const qty = parseFloat(l.quantity) || 0
                         const price = parseFloat(l.unitPrice) || 0
-                        const lineAmt = qty * price
                         return (
                           <tr key={i} className="border-t border-slate-100">
                             <td className="px-2 py-1">
-                              <input
-                                value={l.description}
-                                onChange={(e) => setLine(i, 'description', e.target.value)}
-                                placeholder="Description"
-                                className="w-full px-2 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm"
-                              />
+                              <input value={l.description} onChange={e => setLine(i, 'description', e.target.value)} placeholder="Description" className="w-full px-2 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
                             </td>
                             <td className="px-2 py-1">
-                              <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                value={l.quantity}
-                                onChange={(e) => setLine(i, 'quantity', e.target.value)}
-                                className="w-full px-2 py-1.5 border border-slate-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm"
-                              />
+                              <input type="number" min="0" step="1" value={l.quantity} onChange={e => setLine(i, 'quantity', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
                             </td>
                             <td className="px-2 py-1">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={l.unitPrice}
-                                onChange={(e) => setLine(i, 'unitPrice', e.target.value)}
-                                placeholder="0.00"
-                                className="w-full px-2 py-1.5 border border-slate-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm"
-                              />
+                              <input type="number" min="0" step="0.01" value={l.unitPrice} onChange={e => setLine(i, 'unitPrice', e.target.value)} placeholder="0.00" className="w-full px-2 py-1.5 border border-slate-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm" />
                             </td>
-                            <td className="px-3 py-1 text-right tabular-nums text-slate-700 text-sm">
-                              {formatCurrency(lineAmt, currency)}
-                            </td>
+                            <td className="px-3 py-1 text-right tabular-nums text-slate-700 text-sm">{formatCurrency(qty * price, currency)}</td>
                             <td className="px-1 py-1 text-center">
                               {lines.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeLine(i)}
-                                  className="text-rose-400 hover:text-rose-600 text-lg leading-none"
-                                >
-                                  ×
-                                </button>
+                                <button type="button" onClick={() => removeLine(i)} className="text-rose-400 hover:text-rose-600 text-lg leading-none">×</button>
                               )}
                             </td>
                           </tr>
@@ -584,19 +830,9 @@ export default function QuotesEstimatesPage() {
               {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60"
-                >
-                  {saving ? 'Saving…' : 'Save as Draft'}
+                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                  {saving ? 'Saving…' : editingId ? 'Update Quote' : 'Save as Draft'}
                 </button>
               </div>
             </form>

@@ -1,5 +1,7 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+'use client'
+
+import CreditNotesPage from '@/components/sales/CreditNotesPage'
 
 export default function Page() {
-  return <ComingSoon featureName="Credit Notes" estimatedTime="Q2 2026" />
+  return <CreditNotesPage />
 }

@@ -91,7 +91,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
   const [error, setError] = useState('')
   const [showEdit, setShowEdit] = useState(false)
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([])
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'contacts' | 'activity'>('overview')
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [activityTotal, setActivityTotal] = useState(0)
   const [activityLoading, setActivityLoading] = useState(false)
@@ -208,7 +208,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
 
       {/* Tab navigation */}
       <div className="flex gap-1 border-b border-gray-200">
-        {(['overview', 'activity'] as const).map(tab => (
+        {(['overview', 'contacts', 'activity'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -220,7 +220,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
           >
             {tab === 'activity' ? (
               <span className="flex items-center gap-1.5"><Clock size={13} /> Activity</span>
-            ) : 'Overview'}
+            ) : tab === 'contacts' ? 'Contacts' : 'Overview'}
           </button>
         ))}
       </div>
@@ -374,6 +374,14 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
         />
       )}
     </>)}
+
+      {/* Activity Tab */}
+      {activeTab === 'contacts' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Contacts</h2>
+          <p className="text-sm text-gray-400">Contact management will be added here.</p>
+        </div>
+      )}
 
       {/* Activity Tab */}
       {activeTab === 'activity' && (

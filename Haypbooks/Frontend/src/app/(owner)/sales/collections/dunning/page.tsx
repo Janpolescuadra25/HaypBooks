@@ -1,5 +1,7 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+'use client'
+
+import DunningManagementPage from '@/components/sales/DunningManagementPage'
 
 export default function Page() {
-  return <TabComingSoon title="Dunning" />
+  return <DunningManagementPage />
 }

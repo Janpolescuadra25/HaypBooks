@@ -1,81 +1,287 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Download, Plus, RefreshCw, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 
-const CREDIT_REASONS = [
-  'Returned Goods',
-  'Billing Error',
-  'Discount Adjustment',
-  'Price Correction',
-  'Service Issue',
-  'Other',
-]
-
+const CREDIT_REASONS = ['Returned Goods', 'Billing Error', 'Discount Adjustment', 'Price Correction', 'Service Issue', 'Other']
 const STATUS_OPTIONS = ['', 'DRAFT', 'ISSUED', 'APPLIED', 'VOID']
 
-function statusBadge(status: string) {
-  switch (status) {
-    case 'ISSUED':  return 'text-sky-700 bg-sky-50 border-sky-200'
-    case 'APPLIED': return 'text-emerald-700 bg-emerald-50 border-emerald-200'
-    case 'VOID':    return 'text-rose-700 bg-rose-50 border-rose-200'
-    default:        return 'text-slate-600 bg-slate-50 border-slate-200'
+interface CreditNoteRow {
+  id: string
+  creditNoteNumber: string
+  customer: string
+  customerId: string
+  invoiceId: string | null
+  invoiceNumber: string | null
+  date: string | null
+  amount: number
+  status: string
+  memo: string
+}
+
+interface CustomerOption { id: string; name: string }
+interface InvoiceOption { id: string; invoiceNumber: string; balance: number }
+
+interface ColDef {
+  key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right'
+}
+
+const DEFAULT_COLS: ColDef[] = [
+  { key: 'creditNoteNumber', label: 'CN #', visible: true, width: 120, align: 'left' },
+  { key: 'customer', label: 'Customer', visible: true, width: 180, align: 'left' },
+  { key: 'invoiceNumber', label: 'Invoice #', visible: true, width: 120, align: 'left' },
+  { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
+  { key: 'amount', label: 'Amount', visible: true, width: 120, align: 'right' },
+  { key: 'memo', label: 'Reason', visible: true, width: 160, align: 'left' },
+  { key: 'status', label: 'Status', visible: true, width: 96, align: 'left' },
+]
+
+function loadCols(): ColDef[] {
+  try {
+    const s = localStorage.getItem('credit-notes-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as ColDef[]
+      return DEFAULT_COLS.map(d => {
+        const sc = saved.find(c => c.key === d.key)
+        return sc ? { ...d, visible: sc.visible, width: sc.width } : d
+      })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_COLS
+}
+
+function normalizeCN(cn: any): CreditNoteRow {
+  return {
+    id: cn.id,
+    creditNoteNumber: cn.creditNoteNumber ?? `CN-${cn.id?.slice(0, 8)}`,
+    customer: cn.customer ?? cn.customerName ?? '—',
+    customerId: cn.customerId ?? '',
+    invoiceId: cn.invoiceId ?? null,
+    invoiceNumber: cn.invoiceNumber ?? null,
+    date: cn.date ?? cn.issuedAt ?? null,
+    amount: Number(cn.amount ?? cn.totalAmount ?? 0),
+    status: cn.status ?? 'DRAFT',
+    memo: cn.memo ?? cn.reason ?? '',
   }
 }
 
-function fmtDate(iso: string | null | undefined) {
-  if (!iso) return '—'
-  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
-  catch { return iso }
+function fmtDate(d: string | null) {
+  if (!d) return '—'
+  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+  catch { return d }
+}
+
+function statusBadge(status: string) {
+  switch (status) {
+    case 'ISSUED': return 'text-sky-700 bg-sky-50 border-sky-200'
+    case 'APPLIED': return 'text-emerald-700 bg-emerald-50 border-emerald-200'
+    case 'VOID': return 'text-rose-700 bg-rose-50 border-rose-200'
+    default: return 'text-slate-600 bg-slate-50 border-slate-200'
+  }
 }
 
 export default function CreditNotesPage() {
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
-  const [items, setItems] = useState<any[]>([])
+  const [items, setItems] = useState<CreditNoteRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [helpOpen, setHelpOpen] = useState(false)
+  const [toast, setToast] = useState('')
+  const [actioningId, setActioningId] = useState<string | null>(null)
+  const [exportLoading, setExportLoading] = useState(false)
+  const [batchLoading, setBatchLoading] = useState(false)
+
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Detail drawer
+  const [drawerCN, setDrawerCN] = useState<CreditNoteRow | null>(null)
+
+  // Create modal
   const [newOpen, setNewOpen] = useState(false)
-
-  // Customers for select
-  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([])
+  const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [custLoading, setCustLoading] = useState(false)
-
-  // New Credit Note form state
-  const [nc, setNc] = useState({
-    customerId: '',
-    totalAmount: '',
-    reason: CREDIT_REASONS[0],
-  })
+  const [invoices, setInvoices] = useState<InvoiceOption[]>([])
+  const [invoicesLoading, setInvoicesLoading] = useState(false)
+  const [nc, setNc] = useState({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
+  // Apply to Invoice modal
+  const [applyOpen, setApplyOpen] = useState(false)
+  const [applyingCN, setApplyingCN] = useState<CreditNoteRow | null>(null)
+  const [applyForm, setApplyForm] = useState({ invoiceId: '', amount: '' })
+  const [applying, setApplying] = useState(false)
+  const [applyError, setApplyError] = useState('')
+
+  // Column defs
+  const [cols, setCols] = useState<ColDef[]>(() => loadCols())
+  const [showColMenu, setShowColMenu] = useState(false)
+  const colsRef = useRef(cols)
+  useEffect(() => { colsRef.current = cols }, [cols])
+
+  const saveCols = (next: ColDef[]) => {
+    setCols(next)
+    try { localStorage.setItem('credit-notes-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
+  }
+
+  // Column resize
+  const resizingRef = useRef<{ colKey: string; startX: number; startW: number } | null>(null)
+  const onResizeStart = (e: React.MouseEvent, colKey: string, startW: number) => {
+    e.preventDefault()
+    resizingRef.current = { colKey, startX: e.clientX, startW }
+    const onMove = (me: MouseEvent) => {
+      if (!resizingRef.current) return
+      const { colKey: k, startX, startW: sw } = resizingRef.current
+      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: Math.max(60, sw + me.clientX - startX) } : c))
+    }
+    const onUp = () => { resizingRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
+
+  // ─── Fetch ────────────────────────────────────────────────────────────────
+
   const fetchData = useCallback(async () => {
     if (!companyId) return
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
-      const params = new URLSearchParams()
-      if (statusFilter) params.set('status', statusFilter)
-      if (search) params.set('search', search)
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/credit-notes?${params}`)
-      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
+      const params: Record<string, string> = {}
+      if (statusFilter) params.status = statusFilter
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/credit-notes`, { params })
+      const raw: any[] = Array.isArray(data) ? data : data?.items || []
+      setItems(raw.map(normalizeCN))
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to load credit notes')
     } finally {
       setLoading(false)
     }
-  }, [companyId, statusFilter, search])
+  }, [companyId, statusFilter])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // ─── Selection ────────────────────────────────────────────────────────────
+
+  const toggleAll = () => {
+    if (selectedIds.size === filtered.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(filtered.map(r => r.id)))
+  }
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
+  }
+
+  // ─── Batch ops ────────────────────────────────────────────────────────────
+
+  async function handleBatchDelete() {
+    if (!companyId || selectedIds.size === 0) return
+    if (!window.confirm(`Delete ${selectedIds.size} credit note(s)?`)) return
+    setBatchLoading(true)
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/credit-notes/batch/delete`, { ids: Array.from(selectedIds) })
+      setSelectedIds(new Set())
+      fetchData()
+      showToast(`Deleted ${selectedIds.size} credit note(s)`)
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Batch delete failed')
+    } finally {
+      setBatchLoading(false)
+    }
+  }
+
+  // ─── Export ───────────────────────────────────────────────────────────────
+
+  async function handleExport() {
+    if (!companyId) return
+    setExportLoading(true)
+    try {
+      const params: Record<string, string> = {}
+      if (statusFilter) params.status = statusFilter
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/credit-notes/export`, { params })
+      const blob = new Blob([data], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = 'credit-notes-export.csv'; a.click()
+      URL.revokeObjectURL(url)
+      showToast('Export downloaded')
+    } catch {
+      showToast('Export failed')
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
+  // ─── Void ─────────────────────────────────────────────────────────────────
+
+  async function handleVoid(cnId: string) {
+    if (!companyId) return
+    if (!window.confirm('Void this credit note? This will reverse the GL entry.')) return
+    setActioningId(cnId)
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/credit-notes/${cnId}/void`)
+      fetchData()
+      setDrawerCN(null)
+      showToast('Credit note voided')
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Failed to void credit note')
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  // ─── Apply to Invoice ─────────────────────────────────────────────────────
+
+  function openApplyModal(cn: CreditNoteRow) {
+    setApplyingCN(cn)
+    setApplyForm({ invoiceId: cn.invoiceId ?? '', amount: cn.amount.toString() })
+    setApplyError('')
+    setApplyOpen(true)
+    loadInvoicesForCustomer(cn.customerId)
+  }
+
+  const loadInvoicesForCustomer = async (customerId: string) => {
+    if (!companyId || !customerId) return
+    setInvoicesLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices`, { params: { customerId, status: 'UNPAID', limit: 50 } })
+      const raw: any[] = Array.isArray(data) ? data : data?.items || []
+      setInvoices(raw.map((inv: any) => ({ id: inv.id, invoiceNumber: inv.invoiceNumber ?? inv.id?.slice(0, 8), balance: Number(inv.balance ?? inv.amount ?? 0) })))
+    } catch {
+      setInvoices([])
+    } finally {
+      setInvoicesLoading(false)
+    }
+  }
+
+  async function submitApply(e: React.FormEvent) {
+    e.preventDefault()
+    if (!companyId || !applyingCN) return
+    if (!applyForm.invoiceId) { setApplyError('Select an invoice'); return }
+    if (!applyForm.amount || parseFloat(applyForm.amount) <= 0) { setApplyError('Enter a valid amount'); return }
+    setApplying(true); setApplyError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/credit-notes/${applyingCN.id}/apply`, {
+        invoiceId: applyForm.invoiceId,
+        amount: parseFloat(applyForm.amount),
+      })
+      setApplyOpen(false)
+      fetchData()
+      showToast('Credit note applied to invoice')
+    } catch (err: any) {
+      setApplyError(err?.response?.data?.message || 'Failed to apply credit note')
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  // ─── Load customers ───────────────────────────────────────────────────────
 
   const loadCustomers = useCallback(async () => {
     if (!companyId || customers.length > 0) return
@@ -84,45 +290,33 @@ export default function CreditNotesPage() {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
       const raw: any[] = Array.isArray(data) ? data : data?.items || []
       setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
-    } catch {
-      // non-blocking
-    } finally {
-      setCustLoading(false)
-    }
+    } catch { /* non-blocking */ }
+    finally { setCustLoading(false) }
   }, [companyId, customers.length])
 
   function openModal() {
-    setNc({ customerId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
+    setNc({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
     setSaveError('')
     setNewOpen(true)
     loadCustomers()
   }
 
-  const filtered = useMemo(() => {
-    if (!search) return items
-    const q = search.toLowerCase()
-    return items.filter((row) =>
-      (row.creditNoteNumber || '').toLowerCase().includes(q) ||
-      (row.customer || '').toLowerCase().includes(q) ||
-      (row.invoiceNumber || '').toLowerCase().includes(q) ||
-      (row.memo || row.reason || '').toLowerCase().includes(q) ||
-      (row.status || '').toLowerCase().includes(q)
-    )
-  }, [search, items])
-
   async function submitNewCreditNote(e: React.FormEvent) {
     e.preventDefault()
     if (!companyId) return
-    setSaving(true)
-    setSaveError('')
+    if (!nc.customerId) { setSaveError('Select a customer'); return }
+    if (!nc.totalAmount || parseFloat(nc.totalAmount) <= 0) { setSaveError('Enter a valid amount'); return }
+    setSaving(true); setSaveError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
         customerId: nc.customerId,
+        invoiceId: nc.invoiceId || undefined,
         totalAmount: parseFloat(nc.totalAmount),
         reason: nc.reason,
       })
       setNewOpen(false)
       fetchData()
+      showToast('Credit note created')
     } catch (err: any) {
       setSaveError(err?.response?.data?.message || 'Failed to create credit note')
     } finally {
@@ -130,8 +324,31 @@ export default function CreditNotesPage() {
     }
   }
 
+  // ─── Search filter ────────────────────────────────────────────────────────
+
+  const filtered = useMemo(() => {
+    if (!search) return items
+    const q = search.toLowerCase()
+    return items.filter(r =>
+      r.creditNoteNumber?.toLowerCase().includes(q) ||
+      r.customer?.toLowerCase().includes(q) ||
+      (r.invoiceNumber ?? '').toLowerCase().includes(q) ||
+      r.memo?.toLowerCase().includes(q) ||
+      r.status?.toLowerCase().includes(q)
+    )
+  }, [search, items])
+
+  const visibleCols = cols.filter(c => c.visible)
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
+      {toast && (
+        <div className="fixed top-4 right-4 z-[100] bg-emerald-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg">{toast}</div>
+      )}
+
+      {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -139,83 +356,140 @@ export default function CreditNotesPage() {
             <p className="text-sm text-slate-500 mt-1">Manage customer credit notes and adjustments</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={openModal}
-              className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
-            >
-              New Credit Note
+            <button onClick={handleExport} disabled={exportLoading} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+              <Download size={15} /> {exportLoading ? 'Exporting…' : 'Export'}
             </button>
-            <button onClick={() => setHelpOpen((cur) => !cur)} type="button" aria-label="Open documentation for Credit Notes" className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold">?</button>
+            <button onClick={fetchData} className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Refresh">
+              <RefreshCw size={16} />
+            </button>
+            {/* Column visibility */}
+            <div className="relative">
+              <button onClick={() => setShowColMenu(v => !v)} className="px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Columns</button>
+              {showColMenu && (
+                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-40 py-2">
+                  {cols.map(c => (
+                    <label key={c.key} className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                      <input type="checkbox" checked={c.visible} onChange={() => saveCols(cols.map(col => col.key === c.key ? { ...col, visible: !col.visible } : col))} className="accent-emerald-600" />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={openModal} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">
+              <Plus size={16} /> New Credit Note
+            </button>
           </div>
         </div>
 
         <div className="px-6 pb-4 flex flex-wrap gap-3">
           <input
-            title="Search credit notes"
             placeholder="Search by number, customer, reason…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm w-64"
           />
           <select
-            title="Filter by status"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={e => setStatusFilter(e.target.value)}
             className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           >
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s}>{s || 'All Statuses'}</option>
-            ))}
+            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s || 'All Statuses'}</option>)}
           </select>
         </div>
       </div>
 
-      <div className="px-6 py-5">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      {/* Batch bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-emerald-700 text-white px-6 py-2.5 flex items-center gap-3 text-sm font-medium">
+          <span>{selectedIds.size} selected</span>
+          <button onClick={handleBatchDelete} disabled={batchLoading} className="px-3 py-1 bg-rose-500 hover:bg-rose-600 rounded text-white text-xs font-semibold disabled:opacity-50">Delete</button>
+          <button onClick={() => setSelectedIds(new Set())} className="ml-auto p-1 hover:bg-white/20 rounded"><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="px-6 py-5 flex-1">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="text-left px-4 py-3">Credit Note #</th>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3">Invoice #</th>
-                <th className="text-left px-4 py-3">Date</th>
-                <th className="text-right px-4 py-3">Amount</th>
-                <th className="text-left px-4 py-3">Reason</th>
-                <th className="text-left px-4 py-3">Status</th>
+                <th className="px-3 py-3 w-10">
+                  <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleAll} className="accent-emerald-600" />
+                </th>
+                {visibleCols.map((col, ci) => (
+                  <th
+                    key={col.key}
+                    style={{ width: col.width, minWidth: col.width }}
+                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                  >
+                    {col.label}
+                    {ci < visibleCols.length - 1 && (
+                      <span onMouseDown={e => onResizeStart(e, col.key, col.width)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />
+                    )}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
-                    <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                    Loading…
-                  </td>
-                </tr>
+                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-400">
+                  <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />Loading…
+                </td></tr>
               ) : error ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center">
-                    <p className="text-rose-500 font-medium">{error}</p>
-                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
-                  </td>
-                </tr>
+                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
+                  <p className="text-rose-500 font-medium">{error}</p>
+                  <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
+                </td></tr>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No credit notes found.</td>
-                </tr>
+                <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No credit notes found.</td></tr>
               ) : (
-                filtered.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.creditNoteNumber || '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{row.customer || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.invoiceNumber || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">{fmtDate(row.date)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-slate-900">{fmt(Number(row.amount ?? 0))}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.memo || row.reason || '—'}</td>
+                filtered.map(row => (
+                  <tr key={row.id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}>
+                    <td className="px-3 py-3">
+                      <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
+                    </td>
+                    {visibleCols.map(col => (
+                      <td key={col.key} className={`px-4 py-3 cursor-pointer ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCN(row)}>
+                        {col.key === 'creditNoteNumber' && <span className="font-mono text-xs text-slate-700">{row.creditNoteNumber}</span>}
+                        {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
+                        {col.key === 'invoiceNumber' && <span className="text-slate-600">{row.invoiceNumber ?? '—'}</span>}
+                        {col.key === 'date' && <span className="text-slate-600">{fmtDate(row.date)}</span>}
+                        {col.key === 'amount' && <span className="font-semibold text-slate-800">{formatCurrency(row.amount, currency)}</span>}
+                        {col.key === 'memo' && <span className="text-slate-600 truncate max-w-[140px] inline-block" title={row.memo}>{row.memo || '—'}</span>}
+                        {col.key === 'status' && (
+                          <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusBadge(row.status)}`}>
+                            {row.status}
+                          </span>
+                        )}
+                      </td>
+                    ))}
                     <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusBadge(row.status)}`}>
-                        {row.status || 'DRAFT'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {row.status !== 'VOID' && row.status !== 'APPLIED' && (
+                          <>
+                            <button
+                              disabled={actioningId === row.id}
+                              onClick={() => openApplyModal(row)}
+                              className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-40"
+                            >
+                              Apply
+                            </button>
+                            <span className="text-slate-300">·</span>
+                            <button
+                              disabled={actioningId === row.id}
+                              onClick={() => handleVoid(row.id)}
+                              className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40"
+                            >
+                              Void
+                            </button>
+                          </>
+                        )}
+                        {(row.status === 'VOID' || row.status === 'APPLIED') && (
+                          <span className="text-xs text-slate-400 italic">{row.status === 'VOID' ? 'Voided' : 'Applied'}</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -225,13 +499,121 @@ export default function CreditNotesPage() {
         </div>
       </div>
 
-      {/* New Credit Note Modal */}
+      {/* Detail Drawer */}
+      {drawerCN && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/30" onClick={() => setDrawerCN(null)} />
+          <div className="w-full max-w-md bg-white shadow-2xl flex flex-col overflow-y-auto">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">{drawerCN.creditNoteNumber}</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{drawerCN.customer}</p>
+              </div>
+              <button onClick={() => setDrawerCN(null)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+            </div>
+            <div className="px-5 py-4 space-y-4 flex-1">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Date</p>
+                  <p className="font-semibold text-slate-800">{fmtDate(drawerCN.date)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Amount</p>
+                  <p className="font-bold text-xl text-slate-900">{formatCurrency(drawerCN.amount, currency)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Status</p>
+                  <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusBadge(drawerCN.status)}`}>{drawerCN.status}</span>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Invoice #</p>
+                  <p className="font-semibold text-slate-800">{drawerCN.invoiceNumber ?? '—'}</p>
+                </div>
+              </div>
+              {drawerCN.memo && (
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-1">Reason</p>
+                  <p className="text-sm text-slate-700">{drawerCN.memo}</p>
+                </div>
+              )}
+            </div>
+            {drawerCN.status !== 'VOID' && drawerCN.status !== 'APPLIED' && (
+              <div className="px-5 py-4 border-t border-slate-200 flex gap-2">
+                <button
+                  onClick={() => { openApplyModal(drawerCN); setDrawerCN(null) }}
+                  className="flex-1 px-4 py-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
+                >
+                  Apply to Invoice
+                </button>
+                <button
+                  onClick={() => handleVoid(drawerCN.id)}
+                  disabled={actioningId === drawerCN.id}
+                  className="px-4 py-2 text-sm font-semibold border border-rose-300 text-rose-600 hover:bg-rose-50 rounded-lg disabled:opacity-50"
+                >
+                  Void
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Apply to Invoice Modal */}
+      {applyOpen && applyingCN && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setApplyOpen(false)}>
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900">Apply Credit Note</h2>
+              <button onClick={() => setApplyOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={16} /></button>
+            </div>
+            <form onSubmit={submitApply} className="p-4 space-y-4">
+              <p className="text-sm text-slate-600">Applying <strong>{applyingCN.creditNoteNumber}</strong> ({formatCurrency(applyingCN.amount, currency)}) to an invoice.</p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Invoice *</label>
+                <select
+                  required
+                  value={applyForm.invoiceId}
+                  onChange={e => setApplyForm(f => ({ ...f, invoiceId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                >
+                  <option value="">{invoicesLoading ? 'Loading invoices…' : 'Select invoice…'}</option>
+                  {invoices.map(inv => (
+                    <option key={inv.id} value={inv.id}>{inv.invoiceNumber} (Balance: {formatCurrency(inv.balance, currency)})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Amount to Apply *</label>
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  max={applyingCN.amount}
+                  value={applyForm.amount}
+                  onChange={e => setApplyForm(f => ({ ...f, amount: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                />
+              </div>
+              {applyError && <p className="text-sm text-rose-500">{applyError}</p>}
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setApplyOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="submit" disabled={applying} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                  {applying ? 'Applying…' : 'Apply'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Modal */}
       {newOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setNewOpen(false)}>
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-lg font-bold">New Credit Note</h2>
-              <button onClick={() => setNewOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
+              <button onClick={() => setNewOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
             </div>
             <form onSubmit={submitNewCreditNote} className="p-4 space-y-4">
               <div>
@@ -239,7 +621,7 @@ export default function CreditNotesPage() {
                 <select
                   required
                   value={nc.customerId}
-                  onChange={e => setNc(p => ({ ...p, customerId: e.target.value }))}
+                  onChange={e => { setNc(p => ({ ...p, customerId: e.target.value })); setInvoices([]) }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   disabled={custLoading}
                 >
@@ -282,26 +664,7 @@ export default function CreditNotesPage() {
           </div>
         </div>
       )}
-
-      {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Credit Notes Documentation</h2>
-              <button onClick={() => setHelpOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
-            </div>
-            <div className="p-4 text-sm text-slate-700 space-y-3">
-              <p>Issue and manage credit notes to adjust invoices and customer balances.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Create credit notes for returned goods, billing errors, and discounts.</li>
-                <li>Apply credits against open invoices to reduce what the customer owes.</li>
-                <li>Void a credit note to cancel it without applying it.</li>
-                <li>Track status: Draft → Issued → Applied or Void.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
+

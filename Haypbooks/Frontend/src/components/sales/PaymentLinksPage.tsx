@@ -28,10 +28,15 @@ export default function PaymentLinksPage() {
     setLoading(true)
     setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/invoices`)
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/payment-links`)
       setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load data')
+      // 404 expected until PaymentLink model is built — show empty table, not an error
+      if (err?.response?.status === 404) {
+        setItems([])
+      } else {
+        setError(err?.response?.data?.message || 'Failed to load payment links')
+      }
     } finally {
       setLoading(false)
     }
@@ -47,12 +52,12 @@ export default function PaymentLinksPage() {
     if (!search) return items
     const lower = search.toLowerCase()
     return items.filter((row) =>
-      row.linkId.toLowerCase().includes(lower) ||
-      row.description.toLowerCase().includes(lower) ||
-      row.amount.toLowerCase().includes(lower) ||
-      row.createdDate.toLowerCase().includes(lower) ||
-      row.expiryDate.toLowerCase().includes(lower) ||
-      row.status.toLowerCase().includes(lower)
+      (row.linkId ?? '').toLowerCase().includes(lower) ||
+      (row.description ?? '').toLowerCase().includes(lower) ||
+      (row.amount ?? '').toString().toLowerCase().includes(lower) ||
+      (row.createdDate ?? '').toLowerCase().includes(lower) ||
+      (row.expiryDate ?? '').toLowerCase().includes(lower) ||
+      (row.status ?? '').toLowerCase().includes(lower)
     )
   }, [search, items])
 

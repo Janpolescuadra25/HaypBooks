@@ -101,7 +101,6 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         tabs: [
           { id: 'customers',            label: 'Customers',            path: '/sales/customers' },
           { id: 'customer-groups',      label: 'Customer Groups',      path: '/sales/customers/groups' },
-          { id: 'price-lists',          label: 'Price Lists',          path: '/sales/customers/price-lists' },
           { id: 'customer-portal',      label: 'Customer Portal',      path: '/sales/customers/portal' },
         ],
       },
@@ -109,9 +108,10 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         id: 'sales',
         label: 'Sales',
         tabs: [
-          { id: 'products-services',    label: 'Products & Services',  path: '/sales/sales-operations/products-services' },
-          { id: 'quotes',               label: 'Quotes',               path: '/sales/sales-operations/quotes' },
-          { id: 'sales-orders',         label: 'Sales Orders',         path: '/sales/sales-operations/sales-orders' },
+          { id: 'pipeline',             label: 'Pipeline',             path: '/sales/sales/pipeline' },
+          { id: 'products-services',    label: 'Products & Services',  path: '/sales/sales/products-services' },
+          { id: 'quotes',               label: 'Quotes',               path: '/sales/sales/quotes' },
+          { id: 'orders',               label: 'Sales Orders',         path: '/sales/sales/orders' },
         ],
       },
       {
@@ -119,7 +119,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         label: 'Billing',
         tabs: [
           { id: 'invoices',             label: 'Invoices',             path: '/sales/billing/invoices' },
-          { id: 'recurring-invoices',   label: 'Recurring Invoices',   path: '/sales/billing/recurring-invoices' },
+          { id: 'recurring',            label: 'Recurring Invoices',   path: '/sales/billing/recurring' },
           { id: 'payment-links',        label: 'Payment Links',        path: '/sales/billing/payment-links' },
         ],
       },
@@ -128,8 +128,8 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         label: 'Collections',
         tabs: [
           { id: 'customer-payments',    label: 'Customer Payments',    path: '/sales/collections/payments' },
-          { id: 'ar-aging',             label: 'A/R Aging',            path: '/sales/collections/ar-aging' },
-          { id: 'collections-center',   label: 'Collections Center',   path: '/sales/collections/collections-center' },
+          { id: 'aging',                label: 'A/R Aging',            path: '/sales/collections/aging' },
+          { id: 'center',               label: 'Collections Center',   path: '/sales/collections/center' },
           { id: 'dunning',              label: 'Dunning',              path: '/sales/collections/dunning' },
           { id: 'write-offs',           label: 'Write-Offs',           path: '/sales/collections/write-offs' },
           { id: 'refunds',              label: 'Refunds',              path: '/sales/collections/refunds' },
@@ -140,8 +140,8 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         label: 'Revenue',
         tabs: [
           { id: 'credit-notes',         label: 'Credit Notes',         path: '/sales/revenue/credit-notes' },
-          { id: 'revenue-recognition',  label: 'Revenue Recognition',  path: '/sales/revenue/revenue-recognition' },
-          { id: 'deferred-revenue',     label: 'Deferred Revenue',     path: '/sales/revenue/deferred-revenue' },
+          { id: 'recognition',          label: 'Revenue Recognition',  path: '/sales/revenue/recognition' },
+          { id: 'deferred',             label: 'Deferred Revenue',     path: '/sales/revenue/deferred' },
         ],
       },
     ],

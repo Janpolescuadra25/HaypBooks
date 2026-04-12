@@ -9,7 +9,6 @@ const InvoicesPage = dynamic(() => import('@/components/sales/InvoicesPage'), { 
 const PaymentsPage = dynamic(() => import('@/components/sales/PaymentsPage'), { ssr: false })
 const ArAgingPage = dynamic(() => import('@/components/sales/ArAgingPage'), { ssr: false })
 const RefundsPage = dynamic(() => import('@/components/sales/RefundsPage'), { ssr: false })
-const SubscriptionsPage = dynamic(() => import('@/components/sales/SubscriptionsPage'), { ssr: false })
 const RevenueRecognitionPage = dynamic(() => import('@/components/sales/RevenueRecognitionPage'), { ssr: false })
 const DeferredRevenuePage = dynamic(() => import('@/components/sales/DeferredRevenuePage'), { ssr: false })
 
@@ -35,12 +34,12 @@ function resolveComponent(slug: string[] | undefined) {
     case 'customers':
     case 'customers/customers': return <CustomersPage />
     case 'billing/invoices': return <InvoicesPage />
-    case 'billing/subscriptions': return <SubscriptionsPage />
     case 'collections/customer-payments': return <PaymentsPage />
-    case 'collections/ar-aging': return <ArAgingPage />
+    case 'collections/payments': return <PaymentsPage />
+    case 'collections/aging': return <ArAgingPage />
     case 'collections/refunds': return <RefundsPage />
-    case 'revenue/revenue-recognition': return <RevenueRecognitionPage />
-    case 'revenue/deferred-revenue': return <DeferredRevenuePage />
+    case 'revenue/recognition': return <RevenueRecognitionPage />
+    case 'revenue/deferred': return <DeferredRevenuePage />
     default: return null
   }
 }

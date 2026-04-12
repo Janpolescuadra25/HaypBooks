@@ -1,149 +1,435 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
+  Download, Eye, Play, Pause, FileX, Zap,
+} from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { formatCurrency } from '@/lib/format'
+import { useToast } from '@/components/ToastProvider'
 
-type RecurringRow = {
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
+interface RecurringRow {
   id: string
-  templateName: string
-  customer: string
-  frequency: 'Monthly' | 'Yearly'
-  amount: string
-  nextRunDate: string
-  status: 'Active' | 'Paused'
+  description?: string
+  templateName?: string
+  customer?: string
+  customerId?: string
+  frequency: string
+  nextRun?: string
+  nextRunDate?: string
+  status: string
+  templateData?: { totalAmount?: number }
+  amount?: number | string
 }
 
+interface ColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+
+const DEFAULT_COLS: ColDef[] = [
+  { key: 'name', label: 'Template', visible: true, width: 200, align: 'left' },
+  { key: 'customer', label: 'Customer', visible: true, width: 180, align: 'left' },
+  { key: 'frequency', label: 'Frequency', visible: true, width: 110, align: 'left' },
+  { key: 'amount', label: 'Amount', visible: true, width: 110, align: 'right' },
+  { key: 'nextRun', label: 'Next Run', visible: true, width: 120, align: 'left' },
+  { key: 'status', label: 'Status', visible: true, width: 110, align: 'left' },
+]
+
+function loadCols(): ColDef[] {
+  try {
+    const s = localStorage.getItem('recurring-invoices-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as ColDef[]
+      return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, visible: sc.visible, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_COLS
+}
+
+const STATUS_MAP: Record<string, string> = {
+  ACTIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  PAUSED: 'bg-amber-50 text-amber-700 border-amber-200',
+  CANCELLED: 'bg-gray-100 text-gray-500 border-gray-200',
+  Active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Paused: 'bg-amber-50 text-amber-700 border-amber-200',
+}
+
+const FREQ_LABELS: Record<string, string> = {
+  WEEKLY: 'Weekly', BIWEEKLY: 'Bi-Weekly', MONTHLY: 'Monthly',
+  QUARTERLY: 'Quarterly', ANNUALLY: 'Annually',
+}
+
+interface RecurringFormData { customerId: string; frequency: string; startDate: string; endDate: string; amount: string }
+
+const getRowName = (r: RecurringRow) => r.description ?? r.templateName ?? '—'
+const getRowAmount = (r: RecurringRow) => r.templateData?.totalAmount ?? (r.amount ? Number(r.amount) : 0)
+const getRowNextRun = (r: RecurringRow) => r.nextRun ?? r.nextRunDate ?? '—'
+
 export default function RecurringInvoicesPage() {
-  const { companyId, loading: companyLoading } = useCompanyId()
+  const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [items, setItems] = useState<any[]>([])
+  const toast = useToast()
+
+  const [items, setItems] = useState<RecurringRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [freqFilter, setFreqFilter] = useState('')
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(25)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [cols, setCols] = useState<ColDef[]>(() => loadCols())
+  const [showColMenu, setShowColMenu] = useState(false)
+  const [batchLoading, setBatchLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [detailItem, setDetailItem] = useState<RecurringRow | null>(null)
+  const [formData, setFormData] = useState<RecurringFormData>({ customerId: '', frequency: 'MONTHLY', startDate: new Date().toISOString().split('T')[0], endDate: '', amount: '' })
+  const [formSaving, setFormSaving] = useState(false)
 
-  const fetchData = useCallback(async () => {
+  const colsRef = useRef(cols)
+  useEffect(() => { colsRef.current = cols }, [cols])
+
+  const saveCols = (next: ColDef[]) => {
+    setCols(next)
+    try { localStorage.setItem('recurring-invoices-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
+  }
+
+  const fetchItems = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
-    setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/invoices?isRecurring=true`)
-      setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load data')
-    } finally {
-      setLoading(false)
-    }
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/recurring-invoices`)
+      setItems(Array.isArray(data) ? data : data?.items ?? data?.records ?? [])
+      setError('')
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to load recurring invoices')
+    } finally { setLoading(false) }
   }, [companyId])
 
-  useEffect(() => { fetchData() }, [fetchData])
-  const [search, setSearch] = useState('')
-  const [helpOpen, setHelpOpen] = useState(false)
+  useEffect(() => { fetchItems() }, [fetchItems])
 
-  // Data fetched from API (see fetchData above)
-
-  const filtered = useMemo(() => {
-    if (!search) return items
+  const filtered = items.filter(row => {
     const q = search.toLowerCase()
-    return items.filter((row) =>
-      row.templateName.toLowerCase().includes(q) ||
-      row.customer.toLowerCase().includes(q) ||
-      row.frequency.toLowerCase().includes(q) ||
-      row.amount.toLowerCase().includes(q) ||
-      row.nextRunDate.toLowerCase().includes(q) ||
-      row.status.toLowerCase().includes(q)
+    const name = getRowName(row).toLowerCase()
+    const matchSearch = !q || name.includes(q) || (row.customer ?? '').toLowerCase().includes(q) || row.frequency.toLowerCase().includes(q)
+    const matchStatus = !statusFilter || row.status === statusFilter
+    const matchFreq = !freqFilter || row.frequency === freqFilter
+    return matchSearch && matchStatus && matchFreq
+  })
+
+  const paginated = filtered.slice(page * pageSize, page * pageSize + pageSize)
+  const totalPages = Math.ceil(filtered.length / pageSize)
+  const allSelected = paginated.length > 0 && paginated.every(r => selectedIds.has(r.id))
+  const toggleAll = () => { if (allSelected) setSelectedIds(new Set()); else setSelectedIds(new Set(paginated.map(r => r.id))) }
+  const toggleOne = (id: string) => { const n = new Set(selectedIds); if (n.has(id)) n.delete(id); else n.add(id); setSelectedIds(n) }
+
+  const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    resizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => {
+      if (!resizeRef.current) return
+      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(60, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
+    }
+    const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
+
+  const handleGenerate = async (id: string) => {
+    if (!companyId || !window.confirm('Generate an invoice now from this template?')) return
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/recurring-invoices/${id}/generate`)
+      toast.success('Invoice generated'); fetchItems()
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Generate failed') }
+  }
+
+  const handleTogglePause = async (row: RecurringRow) => {
+    if (!companyId) return
+    const newStatus = (row.status === 'ACTIVE' || row.status === 'Active') ? 'PAUSED' : 'ACTIVE'
+    try {
+      await apiClient.put(`/companies/${companyId}/ar/recurring-invoices/${row.id}`, { status: newStatus })
+      toast.success(`Template ${newStatus === 'PAUSED' ? 'paused' : 'resumed'}`); fetchItems()
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Update failed') }
+  }
+
+  const handleBatchDelete = async () => {
+    if (!companyId || !selectedIds.size || !window.confirm(`Delete ${selectedIds.size} template(s)?`)) return
+    setBatchLoading(true)
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/recurring-invoices/batch/delete`, { ids: [...selectedIds] })
+      toast.success(`${selectedIds.size} template(s) deleted`); setSelectedIds(new Set()); fetchItems()
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Batch delete failed') }
+    finally { setBatchLoading(false) }
+  }
+
+  const handleExport = () => {
+    const headers = ['Template', 'Customer', 'Frequency', 'Amount', 'Next Run', 'Status']
+    const rows = filtered.map(r => [getRowName(r), r.customer ?? '—', r.frequency, String(getRowAmount(r)), getRowNextRun(r), r.status])
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'recurring-invoices.csv'; a.click(); URL.revokeObjectURL(url)
+  }
+
+  const handleSave = async () => {
+    if (!companyId || !formData.customerId || !formData.amount) { toast.error('Customer and amount are required'); return }
+    setFormSaving(true)
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/recurring-invoices`, {
+        customerId: formData.customerId,
+        frequency: formData.frequency,
+        startDate: formData.startDate,
+        endDate: formData.endDate || undefined,
+        templateData: { totalAmount: Number(formData.amount) },
+      })
+      toast.success('Recurring template created'); setShowForm(false); fetchItems()
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Save failed') }
+    finally { setFormSaving(false) }
+  }
+
+  const visibleCols = cols.filter(c => c.visible)
+
+  const renderCell = (c: ColDef, row: RecurringRow) => {
+    if (c.key === 'name') return getRowName(row)
+    if (c.key === 'amount') return formatCurrency(getRowAmount(row), currency)
+    if (c.key === 'nextRun') return getRowNextRun(row)
+    if (c.key === 'frequency') return FREQ_LABELS[row.frequency] ?? row.frequency
+    if (c.key === 'status') return (
+      <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_MAP[row.status] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>{row.status}</span>
     )
-  }, [search, items])
+    return (row as any)[c.key] ?? '—'
+  }
+
+  if (cidLoading) return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /><span className="ml-2 text-emerald-700">Loading…</span></div>
+  if (cidError) return <div className="p-6 text-red-600">{cidError}</div>
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Recurring Invoices</h1>
-            <p className="text-sm text-slate-500 mt-1">Automate recurring billing cycles</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">New Template</button>
-            <button onClick={() => setHelpOpen((cur) => !cur)} type="button" aria-label="Open documentation for Recurring Invoices" className="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-lg font-bold">?</button>
-          </div>
+    <div className="p-4 sm:p-6 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-emerald-900">Recurring Invoices</h1>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} template{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-
-        <div className="px-6 pb-4 grid gap-3 sm:grid-cols-3">
-          <input
-            title="Search recurring invoices"
-            placeholder="Search templates, customer, status"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-          <div className="text-xs text-slate-500 sm:col-span-2">Search by template name, customer, frequency, or status.</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={fetchItems} title="Refresh" className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 border border-emerald-100 transition-colors"><RefreshCw size={15} /></button>
+          <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-100 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors"><Download size={15} /> Export</button>
+          <div className="relative">
+            <button onClick={() => setShowColMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-100 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors"><Eye size={15} /> Columns</button>
+            {showColMenu && (
+              <><div className="fixed inset-0 z-10" onClick={() => setShowColMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-emerald-100 rounded-xl shadow-lg p-2 min-w-[160px]">
+                  {cols.filter(c => c.key !== 'name').map(c => (
+                    <label key={c.key} className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-emerald-50 cursor-pointer">
+                      <input type="checkbox" checked={c.visible} onChange={() => saveCols(cols.map(d => d.key === c.key ? { ...d, visible: !d.visible } : d))} className="accent-emerald-600" />{c.label}
+                    </label>
+                  ))}
+                </div></>
+            )}
+          </div>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Template</button>
         </div>
       </div>
 
-      <div className="px-6 py-5">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700">
-                <th className="text-left px-4 py-3">Template Name</th>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3">Frequency</th>
-                <th className="text-left px-4 py-3">Amount</th>
-                <th className="text-left px-4 py-3">Next Run Date</th>
-                <th className="text-left px-4 py-3">Status</th>
+      <div className="bg-white rounded-xl border border-gray-200 p-3 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" placeholder="Search templates…" value={search} onChange={e => { setSearch(e.target.value); setPage(0) }}
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+        </div>
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(0) }}
+          className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-gray-700">
+          <option value="">All Status</option>
+          <option value="ACTIVE">Active</option>
+          <option value="PAUSED">Paused</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+        <select value={freqFilter} onChange={e => { setFreqFilter(e.target.value); setPage(0) }}
+          className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-gray-700">
+          <option value="">All Frequencies</option>
+          {Object.entries(FREQ_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span className="text-xs text-gray-500">Rows:</span>
+          <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(0) }}
+            className="px-2 py-1 text-xs border border-gray-200 rounded bg-white focus:outline-none">
+            {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {selectedIds.size > 0 && (
+        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">{selectedIds.size} selected</span>
+          <div className="flex-1" />
+          <button onClick={handleBatchDelete} disabled={batchLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500/80 hover:bg-red-500 rounded-lg disabled:opacity-40 transition-colors font-semibold">
+            <Trash2 size={13} /> Delete
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700">
+          <AlertCircle size={16} /> {error}
+          <button onClick={() => { setError(''); fetchItems() }} className="ml-auto text-xs underline">Retry</button>
+          <button onClick={() => setError('')}><X size={14} /></button>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
+        <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 600 }}>
+          <colgroup>
+            <col style={{ width: 44 }} />
+            {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+            <col style={{ width: 100 }} />
+          </colgroup>
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="px-3 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
+              {visibleCols.map(c => (
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                  {c.label}
+                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
+                </th>
+              ))}
+              <th className="px-3 py-3 text-right font-semibold text-gray-600">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-b border-gray-100 animate-pulse">
+                  <td className="px-3 py-3"><div className="h-4 w-4 bg-gray-100 rounded" /></td>
+                  {visibleCols.map(c => <td key={c.key} className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-3/4" /></td>)}
+                  <td className="px-3 py-3"><div className="h-4 w-16 bg-gray-100 rounded ml-auto" /></td>
+                </tr>
+              ))
+            ) : paginated.length === 0 ? (
+              <tr>
+                <td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center">
+                  <FileX size={28} className="mx-auto mb-2 opacity-30 text-gray-400" />
+                  <p className="font-medium text-gray-400">No templates found</p>
+                  <p className="text-xs mt-1 text-gray-300">{search || statusFilter ? 'Try adjusting your filters' : 'Create a recurring template to get started'}</p>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
-                    <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                    Loading...
+            ) : (
+              paginated.map(row => (
+                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setDetailItem(row)}>
+                  <td className="px-3 py-3" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
+                  {visibleCols.map(c => (
+                    <td key={c.key} className="px-3 py-3 truncate" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(c, row)}</td>
+                  ))}
+                  <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button onClick={() => handleGenerate(row.id)} title="Generate Invoice Now"
+                        className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 transition-colors"><Zap size={14} /></button>
+                      <button onClick={() => handleTogglePause(row)} title={row.status === 'ACTIVE' || row.status === 'Active' ? 'Pause' : 'Resume'}
+                        className="p-1.5 rounded hover:bg-amber-50 text-amber-600 transition-colors">
+                        {row.status === 'ACTIVE' || row.status === 'Active' ? <Pause size={14} /> : <Play size={14} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center">
-                    <p className="text-rose-500 font-medium">{error}</p>
-                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No recurring invoices found.</td>
-                </tr>
-              ) : (
-                filtered.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.templateName}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.customer}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.frequency}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.amount}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.nextRunDate}</td>
-                    <td className={`px-4 py-3 text-sm font-semibold ${row.status === 'Active' ? 'text-emerald-700' : 'text-amber-700'}`}>{row.status}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {helpOpen && (
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-gray-600">
+          <span>{filtered.length} total, page {page + 1} of {totalPages}</span>
+          <div className="flex gap-1">
+            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">← Prev</button>
+            <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next →</button>
+          </div>
+        </div>
+      )}
+
+      {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Recurring Invoices Documentation</h2>
-              <button onClick={() => setHelpOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">New Recurring Template</h2>
+              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
-            <div className="p-4 text-sm text-slate-700 space-y-3">
-              <p>Set up, schedule, and manage recurring invoice templates for customers.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Create recurring templates with configurable frequency and amounts.</li>
-                <li>Pause and activate templates as needed for customer contracts.</li>
-                <li>View upcoming run dates and status for automatic billing cycles.</li>
-              </ul>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer ID *</label>
+                <input type="text" value={formData.customerId} onChange={e => setFormData(f => ({ ...f, customerId: e.target.value }))} placeholder="Customer ID"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                <select value={formData.frequency} onChange={e => setFormData(f => ({ ...f, frequency: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+                  {Object.entries(FREQ_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input type="date" value={formData.startDate} onChange={e => setFormData(f => ({ ...f, startDate: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <input type="date" value={formData.endDate} onChange={e => setFormData(f => ({ ...f, endDate: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Amount *</label>
+                <input type="number" step="0.01" min="0" value={formData.amount} onChange={e => setFormData(f => ({ ...f, amount: e.target.value }))} placeholder="0.00"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-gray-50 rounded-b-2xl">
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100">Cancel</button>
+              <button onClick={handleSave} disabled={formSaving}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40">
+                {formSaving ? <Loader2 size={15} className="animate-spin" /> : null} Create Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detailItem && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="fixed inset-0 bg-black/30" onClick={() => setDetailItem(null)} />
+          <div className="relative bg-white w-full max-w-md shadow-2xl overflow-y-auto flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-lg font-semibold text-gray-900">{getRowName(detailItem)}</h2>
+              <button onClick={() => setDetailItem(null)} className="p-1.5 rounded hover:bg-gray-100"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-4 flex-1">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ['Customer', detailItem.customer ?? '—'],
+                  ['Frequency', FREQ_LABELS[detailItem.frequency] ?? detailItem.frequency],
+                  ['Next Run', getRowNextRun(detailItem)],
+                  ['Amount', formatCurrency(getRowAmount(detailItem), currency)],
+                  ['Status', detailItem.status],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+                    <p className="text-sm font-medium text-gray-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => { handleGenerate(detailItem.id); setDetailItem(null) }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700">
+                  <Zap size={15} /> Generate Now
+                </button>
+                <button onClick={() => { handleTogglePause(detailItem); setDetailItem(null) }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-sm font-semibold hover:bg-amber-100">
+                  {detailItem.status === 'ACTIVE' || detailItem.status === 'Active' ? <><Pause size={15} /> Pause</> : <><Play size={15} /> Resume</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -151,3 +437,4 @@ export default function RecurringInvoicesPage() {
     </div>
   )
 }
+

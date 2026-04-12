@@ -10,7 +10,7 @@ import { Grid3X3, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 
 const QUICK_LINKS = [
-  { label: 'New Invoice', href: '/sales/sales-operations/invoices' },
+  { label: 'New Invoice', href: '/sales/billing/invoices' },
   { label: 'New Bill', href: '/expenses/payables/bills' },
   { label: 'New Journal Entry', href: '/accounting/core-accounting/journal-entries' },
   { label: 'Bank Reconciliation', href: '/banking-cash/bank-accounts/reconcile' },

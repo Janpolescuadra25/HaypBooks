@@ -37,6 +37,10 @@ function toLabel(seg: string) {
   const map: Record<string, string> = {
     'ap-aging': 'A/P Aging',
     'ar-aging': 'A/R Aging',
+    'aging': 'A/R Aging',
+    'center': 'Collections Center',
+    'recognition': 'Revenue Recognition',
+    'deferred': 'Deferred Revenue',
     'profit-loss': 'Profit & Loss',
     'balance-sheet': 'Balance Sheet',
     'cash-flow': 'Cash Flow',

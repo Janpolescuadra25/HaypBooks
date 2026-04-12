@@ -166,7 +166,7 @@ export default function OwnerDashboard() {
             isPositive={false}
             icon={ReceiptText}
             subtitle={`${kpis?.overdueReceivables?.count ?? 0} invoices`}
-            href="/sales/collections/ar-aging"
+            href="/sales/collections/aging"
           />
           <StatCard
             title="Overdue A/P"
@@ -261,7 +261,7 @@ export default function OwnerDashboard() {
           ) : (
             <div className="space-y-3">
               {(kpis?.overdueReceivables?.count ?? 0) > 0 && (
-                <Link href="/sales/collections/ar-aging" className="block hover:opacity-90 transition-opacity">
+                <Link href="/sales/collections/aging" className="block hover:opacity-90 transition-opacity">
                   <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl hover:border-amber-300">
                     <div className="flex items-center gap-3">
                       <ReceiptText size={16} className="text-amber-600" />
