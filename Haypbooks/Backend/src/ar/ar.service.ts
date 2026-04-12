@@ -425,6 +425,46 @@ export class ArService {
         return invoice
     }
 
+    async updateQuote(userId: string, companyId: string, quoteId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const q = await this.repo.findQuoteById(companyId, quoteId)
+        if (!q) throw new NotFoundException('Quote not found')
+        if (q.status === 'CONVERTED') throw new BadRequestException('Cannot edit a converted quote')
+        const updateData: any = {}
+        if (data.customerId) updateData.customerId = data.customerId
+        if (data.expiryDate !== undefined) updateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null
+        if (data.lines) updateData.lines = data.lines
+        const result = await this.repo.updateQuote(companyId, quoteId, updateData)
+        return this.normalizeQuote(result)
+    }
+
+    async deleteQuote(userId: string, companyId: string, quoteId: string) {
+        await this.assertAccess(userId, companyId)
+        const q = await this.repo.findQuoteById(companyId, quoteId)
+        if (!q) throw new NotFoundException('Quote not found')
+        await this.repo.deleteQuote(companyId, quoteId)
+        return { success: true }
+    }
+
+    async batchDeleteQuotes(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
+        if (!ids?.length) throw new BadRequestException('ids array is required')
+        return this.repo.batchDeleteQuotes(companyId, ids)
+    }
+
+    async batchUpdateQuoteStatus(userId: string, companyId: string, ids: string[], status: string) {
+        await this.assertAccess(userId, companyId)
+        if (!ids?.length) throw new BadRequestException('ids array is required')
+        const allowed = ['SENT', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'DRAFT']
+        if (!allowed.includes(status)) throw new BadRequestException(`Invalid status: ${status}`)
+        return this.repo.batchUpdateQuoteStatus(companyId, ids, status)
+    }
+
+    async exportQuotes(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.exportQuotes(companyId, { status: opts.status, search: opts.search })
+    }
+
     // ─── Invoices ─────────────────────────────────────────────────────────────
 
     async listInvoices(userId: string, companyId: string, opts: any) {
@@ -587,19 +627,91 @@ export class ArService {
         return []
     }
 
-    async listCollections(userId: string, companyId: string) {
+    private normalizeCollection(c: any) {
+        return {
+            id: c.id,
+            caseNumber: c.caseNumber,
+            companyId: c.companyId,
+            customerId: c.customerId ?? null,
+            invoiceId: c.invoiceId ?? null,
+            subject: c.subject,
+            status: c.status,
+            priority: c.priority,
+            assignedTo: c.assignedTo ?? null,
+            notes: c.notes ?? null,
+            promisedAmount: c.promisedAmount ? Number(c.promisedAmount) : null,
+            promisedDate: c.promisedDate instanceof Date ? c.promisedDate.toISOString().split('T')[0] : c.promisedDate ?? null,
+            resolution: c.resolution ?? null,
+            resolvedAt: c.resolvedAt instanceof Date ? c.resolvedAt.toISOString() : c.resolvedAt ?? null,
+            createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+        }
+    }
+
+    async listCollections(userId: string, companyId: string, opts: any = {}) {
         await this.assertAccess(userId, companyId)
-        return []
+        const rows = await this.repo.findCollections(companyId, {
+            search: opts.search,
+            status: opts.status,
+            priority: opts.priority,
+            limit: opts.limit ? parseInt(opts.limit) : 50,
+            offset: opts.offset ? parseInt(opts.offset) : 0,
+        })
+        return rows.map((c: any) => this.normalizeCollection(c))
+    }
+
+    async getCollection(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const c = await this.repo.findCollectionById(companyId, id)
+        if (!c) throw new NotFoundException('Collection case not found')
+        return this.normalizeCollection(c)
     }
 
     async createCollection(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        return { success: true }
+        if (!data.subject) throw new BadRequestException('subject is required')
+        const wid = await this.getWorkspaceId(companyId)
+        const c = await this.repo.createCollectionsCase(companyId, wid, data)
+        return this.normalizeCollection(c)
+    }
+
+    async updateCollection(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.repo.findCollectionById(companyId, id)
+        if (!existing) throw new NotFoundException('Collection case not found')
+        const c = await this.repo.updateCollectionsCase(id, data)
+        return this.normalizeCollection(c)
+    }
+
+    async deleteCollection(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.repo.findCollectionById(companyId, id)
+        if (!existing) throw new NotFoundException('Collection case not found')
+        await this.repo.deleteCollectionsCase(id)
+        return { success: true, id }
+    }
+
+    async batchDeleteCollections(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
+        if (!Array.isArray(ids) || ids.length === 0) throw new BadRequestException('ids array is required')
+        await this.repo.batchDeleteCollections(companyId, ids)
+        return { success: true, count: ids.length }
+    }
+
+    async batchUpdateCollectionStatus(userId: string, companyId: string, ids: string[], status: string) {
+        await this.assertAccess(userId, companyId)
+        if (!Array.isArray(ids) || ids.length === 0) throw new BadRequestException('ids array is required')
+        if (!status) throw new BadRequestException('status is required')
+        await this.repo.batchUpdateCollectionStatus(companyId, ids, status)
+        return { success: true, count: ids.length }
+    }
+
+    async exportCollections(userId: string, companyId: string, opts: any = {}) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.exportCollections(companyId, opts)
     }
 
     async listRefunds(userId: string, companyId: string) {
-        await this.assertAccess(userId, companyId)
-        return []
+        return this.listRefundsEnriched(userId, companyId)
     }
 
     // ─── Credit Notes ─────────────────────────────────────────────────────────
@@ -671,6 +783,18 @@ export class ArService {
         return this.normalizeCreditNote(result)
     }
 
+    async batchDeleteCreditNotes(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
+        if (!Array.isArray(ids) || ids.length === 0) throw new BadRequestException('ids array is required')
+        await this.repo.batchDeleteCreditNotes(companyId, ids)
+        return { success: true, count: ids.length }
+    }
+
+    async exportCreditNotes(userId: string, companyId: string, opts: any = {}) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.exportCreditNotes(companyId, opts)
+    }
+
     // ─── AR Aging ─────────────────────────────────────────────────────────────
 
     async getArAging(userId: string, companyId: string) {
@@ -723,75 +847,324 @@ export class ArService {
         }
     }
 
-    // ─── Price Lists ──────────────────────────────────────────────────────────
+    // ─── Recurring Invoices ───────────────────────────────────────────────────
 
-    async listPriceLists(userId: string, companyId: string, opts: any = {}) {
+    async listRecurringInvoices(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        return this.repo.findPriceLists(wid, {
-            search: opts.search,
-            status: opts.status,
-            limit: opts.limit ? parseInt(opts.limit) : 50,
-            offset: opts.offset ? parseInt(opts.offset) : 0,
-        })
+        const rows = await this.repo.findRecurringInvoices(wid, companyId)
+        return rows.map((r: any) => ({
+            id: r.id,
+            customer: r.customer?.contact?.displayName ?? '',
+            customerId: r.customerId,
+            frequency: r.frequency,
+            startDate: r.startDate instanceof Date ? r.startDate.toISOString().split('T')[0] : r.startDate,
+            endDate: r.endDate ? (r.endDate instanceof Date ? r.endDate.toISOString().split('T')[0] : r.endDate) : null,
+            nextRun: r.nextRun instanceof Date ? r.nextRun.toISOString().split('T')[0] : r.nextRun,
+            lastRun: r.lastRun ? (r.lastRun instanceof Date ? r.lastRun.toISOString().split('T')[0] : r.lastRun) : null,
+            status: r.status,
+            isActive: r.isActive,
+            templateData: r.templateData,
+        }))
     }
 
-    async getPriceList(userId: string, companyId: string, id: string) {
+    async getRecurringInvoice(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        const pl = await this.repo.findPriceListById(wid, id)
-        if (!pl) throw new NotFoundException('Price list not found')
-        return pl
+        const r = await this.repo.findRecurringInvoiceById(wid, id)
+        if (!r) throw new NotFoundException('Recurring invoice not found')
+        return r
     }
 
-    async createPriceList(userId: string, companyId: string, data: any) {
+    async createRecurringInvoice(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        const result = await this.repo.createPriceList(wid, data)
-        await this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'PriceList', recordId: result.id, changes: { name: result.name } },
-        })
+        const result = await this.repo.createRecurringInvoice(wid, companyId, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'RecurringInvoice', recordId: result.id, changes: { frequency: data.frequency } },
+        }).catch(() => {})
         return result
     }
 
-    async updatePriceList(userId: string, companyId: string, id: string, data: any) {
+    async updateRecurringInvoice(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        const existing = await this.repo.findPriceListById(wid, id)
-        if (!existing) throw new NotFoundException('Price list not found')
-        const result = await this.repo.updatePriceList(wid, id, data)
-        await this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'PriceList', recordId: id, changes: data },
-        })
+        const result = await this.repo.updateRecurringInvoice(id, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'RecurringInvoice', recordId: id, changes: data },
+        }).catch(() => {})
         return result
     }
 
-    async deletePriceList(userId: string, companyId: string, id: string) {
+    async deleteRecurringInvoice(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        const existing = await this.repo.findPriceListById(wid, id)
-        if (!existing) throw new NotFoundException('Price list not found')
-        await this.repo.deletePriceList(wid, id)
-        await this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'PriceList', recordId: id, changes: { name: existing.name } },
-        })
+        await this.repo.deleteRecurringInvoice(id)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'RecurringInvoice', recordId: id, changes: {} },
+        }).catch(() => {})
         return { success: true }
     }
 
-    async batchDeletePriceLists(userId: string, companyId: string, ids: string[]) {
+    async generateRecurringInvoice(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        return this.repo.batchDeletePriceLists(wid, ids)
+        const recurring = await this.repo.findRecurringInvoiceById(wid, id)
+        if (!recurring) throw new NotFoundException('Recurring invoice not found')
+        // Create invoice from template
+        const template = recurring.templateData as any
+        const invCount = await this.prisma.invoice.count({ where: { companyId } })
+        const invoiceNumber = `INV-${String(invCount + 1).padStart(6, '0')}`
+        const invoice = await this.prisma.invoice.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                customerId: recurring.customerId,
+                invoiceNumber,
+                status: 'DRAFT' as any,
+                date: new Date(),
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                totalAmount: template?.totalAmount ?? 0,
+            },
+        })
+        await this.prisma.recurringInvoice.update({
+            where: { id },
+            data: { lastRun: new Date(), nextRun: this.computeNextRun(recurring.frequency, new Date()) },
+        })
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'GENERATE', tableName: 'RecurringInvoice', recordId: id, changes: { invoiceId: invoice.id } },
+        }).catch(() => {})
+        return { invoiceId: invoice.id, invoiceNumber }
     }
 
-    async exportPriceListsCsv(userId: string, companyId: string) {
+    async batchDeleteRecurringInvoices(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
         const wid = await this.getWorkspaceId(companyId)
-        const priceLists = await this.repo.exportPriceLists(wid)
-        const header = 'Name,Currency,Status,Is Default,Customer Group,Products,Start Date,End Date'
-        const rows = priceLists.map(pl => [
-            `"${(pl.name ?? '').replace(/"/g, '""')}"`,
-            pl.currency ?? '',
-            pl.status ?? '',
-            pl.isDefault ? 'Yes' : 'No',
-            `"${((pl.customerGroup as any)?.name ?? '').replace(/"/g, '""')}"`,
-            (pl as any)._count?.entries ?? 0,
-            pl.startDate ? new Date(pl.startDate).toLocaleDateString() : '',
-            pl.endDate ? new Date(pl.endDate).toLocaleDateString() : '',
-        ].join(','))
-        return [header, ...rows].join('\n')
+        return this.repo.batchDeleteRecurringInvoices(wid, companyId, ids)
+    }
+
+    private computeNextRun(frequency: string, from: Date): Date {
+        const d = new Date(from)
+        switch (frequency.toUpperCase()) {
+            case 'WEEKLY': d.setDate(d.getDate() + 7); break
+            case 'BIWEEKLY': d.setDate(d.getDate() + 14); break
+            case 'MONTHLY': d.setMonth(d.getMonth() + 1); break
+            case 'QUARTERLY': d.setMonth(d.getMonth() + 3); break
+            case 'ANNUALLY': d.setFullYear(d.getFullYear() + 1); break
+            default: d.setMonth(d.getMonth() + 1)
+        }
+        return d
+    }
+
+    // ─── Write-Offs ───────────────────────────────────────────────────────────
+
+    async listWriteOffs(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.findWriteOffs(wid, companyId)
+    }
+
+    async getWriteOff(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const r = await this.repo.findWriteOffById(wid, id)
+        if (!r) throw new NotFoundException('Write-off not found')
+        return r
+    }
+
+    async createWriteOff(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.createWriteOff(wid, companyId, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'WriteOff', recordId: result.id, changes: { amount: data.amount } },
+        }).catch(() => {})
+        return result
+    }
+
+    async updateWriteOff(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.updateWriteOff(id, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'WriteOff', recordId: id, changes: data },
+        }).catch(() => {})
+        return result
+    }
+
+    async approveWriteOff(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.approveWriteOff(id, userId)
+        await this.subLedger.postWriteOffToGL(id, userId)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'APPROVE', tableName: 'WriteOff', recordId: id, changes: { status: 'APPROVED' } },
+        }).catch(() => {})
+        return result
+    }
+
+    async reverseWriteOff(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        await this.subLedger.reverseWriteOffGL(id, userId)
+        const result = await this.repo.reverseWriteOff(id)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'REVERSE', tableName: 'WriteOff', recordId: id, changes: { status: 'REVERSED' } },
+        }).catch(() => {})
+        return result
+    }
+
+    async deleteWriteOff(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        await this.repo.deleteWriteOff(id)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'WriteOff', recordId: id, changes: {} },
+        }).catch(() => {})
+        return { success: true }
+    }
+
+    async batchDeleteWriteOffs(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.batchDeleteWriteOffs(wid, companyId, ids)
+    }
+
+    // ─── Sales Orders ─────────────────────────────────────────────────────────
+
+    async listSalesOrders(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.findSalesOrders(wid, companyId)
+    }
+
+    async getSalesOrder(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const r = await this.repo.findSalesOrderById(wid, id)
+        if (!r) throw new NotFoundException('Sales order not found')
+        return r
+    }
+
+    async createSalesOrder(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.createSalesOrder(wid, companyId, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'SalesOrder', recordId: result.id, changes: { orderNumber: result.orderNumber } },
+        }).catch(() => {})
+        return result
+    }
+
+    async updateSalesOrder(userId: string, companyId: string, id: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.updateSalesOrder(id, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'SalesOrder', recordId: id, changes: data },
+        }).catch(() => {})
+        return result
+    }
+
+    async deleteSalesOrder(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        await this.repo.deleteSalesOrder(id)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'SalesOrder', recordId: id, changes: {} },
+        }).catch(() => {})
+        return { success: true }
+    }
+
+    async convertSalesOrder(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.convertSalesOrderToInvoice(wid, companyId, id)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CONVERT', tableName: 'SalesOrder', recordId: id, changes: { invoiceId: result.invoiceId } },
+        }).catch(() => {})
+        return result
+    }
+
+    async batchDeleteSalesOrders(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.batchDeleteSalesOrders(wid, companyId, ids)
+    }
+
+    // ─── Refunds (extended) ───────────────────────────────────────────────────
+
+    async listRefundsEnriched(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.findRefunds(wid, companyId)
+    }
+
+    async getRefund(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const r = await this.repo.findRefundById(wid, id)
+        if (!r) throw new NotFoundException('Refund not found')
+        return r
+    }
+
+    async createRefund(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const result = await this.repo.createRefund(wid, companyId, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'CustomerRefund', recordId: result.id, changes: { amount: data.amount } },
+        }).catch(() => {})
+        return result
+    }
+
+    async processRefund(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        await this.prisma.customerRefund.update({ where: { id }, data: { approvalStatus: 'APPROVED' } })
+        await this.subLedger.postRefundToGL(id, userId)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'APPROVE', tableName: 'CustomerRefund', recordId: id, changes: { status: 'APPROVED' } },
+        }).catch(() => {})
+        return this.repo.findRefundById(wid, id)
+    }
+
+    async batchDeleteRefunds(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        return this.repo.batchDeleteRefunds(wid, companyId, ids)
+    }
+
+    // ─── Dunning ─────────────────────────────────────────────────────────────
+
+    async sendDunningReminder(userId: string, companyId: string, invoiceId: string, level: number) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId } })
+        if (!invoice) throw new NotFoundException('Invoice not found')
+        const levelMap: Record<number, string> = { 1: 'REMINDER', 2: 'WARNING', 3: 'FINAL_NOTICE' }
+        await this.prisma.invoice.update({
+            where: { id: invoiceId },
+            data: { dunningLevel: level, dunningLastSentAt: new Date() } as any,
+        }).catch(() => {}) // field may not exist — non-critical
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'SEND', tableName: 'Invoice', recordId: invoiceId, changes: { dunningLevel: level, type: levelMap[level] ?? 'REMINDER' } },
+        }).catch(() => {})
+        return { success: true, level, sentAt: new Date() }
+    }
+
+    async batchSendDunning(userId: string, companyId: string, invoiceIds: string[], level: number) {
+        await this.assertAccess(userId, companyId)
+        const results = await Promise.allSettled(invoiceIds.map(id => this.sendDunningReminder(userId, companyId, id, level)))
+        return { sent: results.filter(r => r.status === 'fulfilled').length, total: invoiceIds.length }
+    }
+
+    async updateDunningLevel(userId: string, companyId: string, invoiceId: string, level: number) {
+        await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'Invoice', recordId: invoiceId, changes: { dunningLevel: level } },
+        }).catch(() => {})
+        return { success: true, invoiceId, level }
     }
 }

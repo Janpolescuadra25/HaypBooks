@@ -23,39 +23,262 @@ export class InventoryService {
 
     async listItems(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
-        return this.repo.findItems(companyId, { search: opts.search, type: opts.type, limit: opts.limit ? parseInt(opts.limit) : 50, offset: opts.offset ? parseInt(opts.offset) : 0 })
+        return this.repo.findItems(companyId, {
+            search: opts.search,
+            type: opts.type,
+            status: opts.status,
+            category: opts.category,
+            sort: opts.sort,
+            order: opts.order,
+            limit: opts.limit ? parseInt(opts.limit) : 50,
+            offset: opts.offset ? parseInt(opts.offset) : 0,
+        })
     }
 
     async getItem(userId: string, companyId: string, itemId: string) {
         await this.assertAccess(userId, companyId)
-        const item = await this.repo.findItemById(companyId, itemId)
+        const item = await this.repo.findItemDetail(companyId, itemId)
         if (!item) throw new NotFoundException('Item not found')
-        return item
+
+        const soldAgg = await this.prisma.invoiceLine.aggregate({
+            where: { itemId, companyId, invoice: { status: { not: 'VOID' } } },
+            _sum: { quantity: true, totalPrice: true },
+        })
+
+        const quoteAgg = await this.prisma.quoteLine.aggregate({
+            where: { itemId, companyId, quote: { status: { not: 'VOID' } } },
+            _sum: { quantity: true },
+        })
+
+        const priceListItemCount = await this.prisma.priceListItem.count({ where: { itemId } })
+        const priceListEntryCount = await this.prisma.priceListEntry.count({ where: { itemId } })
+
+        const activity = await this.prisma.auditLog.findMany({
+            where: { companyId, tableName: 'Item', recordId: itemId },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+        })
+
+        const stockQty = item.trackingType && item.trackingType !== 'NONE'
+            ? item.stockLevels.reduce((sum, level) => sum + Number(level.quantity), 0)
+            : null
+
+        const recentInvoices = item.InvoiceLine?.map(line => ({
+            id: line.invoice.id,
+            number: line.invoice.invoiceNumber,
+            date: line.invoice.date,
+            status: line.invoice.status,
+            quantity: Number(line.quantity),
+            total: Number(line.totalPrice),
+        })) ?? []
+
+        const recentQuotes = item.QuoteLine?.map(line => ({
+            id: line.quote.id,
+            number: line.quote.quoteNumber,
+            date: line.quote.date,
+            status: line.quote.status,
+            quantity: Number(line.quantity),
+            total: Number(line.amount),
+        })) ?? []
+
+        return {
+            ...item,
+            soldCount: Number(soldAgg._sum.quantity ?? 0),
+            revenueGenerated: Number(soldAgg._sum.totalPrice ?? 0),
+            quotedCount: Number(quoteAgg._sum.quantity ?? 0),
+            inStock: stockQty,
+            usedInPriceLists: priceListItemCount + priceListEntryCount,
+            recentInvoices,
+            recentQuotes,
+            activity,
+        }
     }
 
     async createItem(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
         if (!data.name) throw new BadRequestException('name is required')
         if (!data.type) throw new BadRequestException('type is required')
-        return this.repo.createItem(companyId, {
+
+        const item = await this.repo.createItem(companyId, {
             ...data,
             salesPrice: data.salesPrice != null ? Number(data.salesPrice) : undefined,
             purchaseCost: data.purchaseCost != null ? Number(data.purchaseCost) : undefined,
+            status: data.status ?? 'ACTIVE',
+            category: data.category ?? null,
+            unit: data.unit ?? null,
         })
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'CREATE',
+                tableName: 'Item',
+                recordId: item.id,
+                changes: {
+                    name: item.name,
+                    sku: item.sku,
+                    type: item.type,
+                    category: item.category,
+                    status: item.status,
+                    unit: item.unit,
+                },
+            },
+        })
+
+        return item
     }
 
     async updateItem(userId: string, companyId: string, itemId: string, data: any) {
         await this.assertAccess(userId, companyId)
         const item = await this.repo.findItemById(companyId, itemId)
         if (!item) throw new NotFoundException('Item not found')
-        return this.repo.updateItem(companyId, itemId, data)
+
+        const updated = await this.repo.updateItem(companyId, itemId, {
+            ...data,
+            salesPrice: data.salesPrice != null ? Number(data.salesPrice) : undefined,
+            purchaseCost: data.purchaseCost != null ? Number(data.purchaseCost) : undefined,
+            status: data.status,
+            category: data.category,
+            unit: data.unit,
+            trackingType: data.type === 'INVENTORY' ? data.trackingType ?? 'NONE' : 'NONE',
+        })
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'Item',
+                recordId: itemId,
+                changes: data,
+            },
+        })
+
+        return updated
     }
 
     async deleteItem(userId: string, companyId: string, itemId: string) {
         await this.assertAccess(userId, companyId)
         const item = await this.repo.findItemById(companyId, itemId)
         if (!item) throw new NotFoundException('Item not found')
-        return this.repo.softDeleteItem(itemId, userId)
+
+        const activeInvoiceCount = await this.prisma.invoiceLine.count({
+            where: { itemId, companyId, invoice: { status: { not: 'VOID' } } },
+        })
+        const activeQuoteCount = await this.prisma.quoteLine.count({
+            where: { itemId, companyId, quote: { status: { not: 'VOID' } } },
+        })
+        if (activeInvoiceCount > 0 || activeQuoteCount > 0) {
+            const details = []
+            if (activeInvoiceCount > 0) details.push(`${activeInvoiceCount} invoice line${activeInvoiceCount === 1 ? '' : 's'}`)
+            if (activeQuoteCount > 0) details.push(`${activeQuoteCount} quote line${activeQuoteCount === 1 ? '' : 's'}`)
+            throw new BadRequestException(`Cannot delete item: referenced by ${details.join(' and ')}`)
+        }
+
+        const result = await this.repo.softDeleteItem(itemId, userId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'DELETE',
+                tableName: 'Item',
+                recordId: itemId,
+                changes: { name: item.name, sku: item.sku, type: item.type },
+            },
+        })
+        return result
+    }
+
+    async batchDeleteItems(userId: string, companyId: string, ids: string[]) {
+        await this.assertAccess(userId, companyId)
+        const deleted: string[] = []
+        const skipped: Array<{ id: string; reason: string }> = []
+
+        for (const id of ids) {
+            const item = await this.repo.findItemById(companyId, id)
+            if (!item) {
+                skipped.push({ id, reason: 'Item not found or already deleted' })
+                continue
+            }
+
+            const invoiceCount = await this.prisma.invoiceLine.count({
+                where: { itemId: id, companyId, invoice: { status: { not: 'VOID' } } },
+            })
+            const quoteCount = await this.prisma.quoteLine.count({
+                where: { itemId: id, companyId, quote: { status: { not: 'VOID' } } },
+            })
+
+            if (invoiceCount > 0 || quoteCount > 0) {
+                const parts = []
+                if (invoiceCount > 0) parts.push(`${invoiceCount} invoice line${invoiceCount === 1 ? '' : 's'}`)
+                if (quoteCount > 0) parts.push(`${quoteCount} quote line${quoteCount === 1 ? '' : 's'}`)
+                skipped.push({ id, reason: `Referenced by ${parts.join(' and ')}` })
+                continue
+            }
+
+            await this.repo.softDeleteItem(id, userId)
+            deleted.push(id)
+        }
+
+        return { deleted, skipped }
+    }
+
+    async batchUpdateItemStatus(userId: string, companyId: string, ids: string[], status: 'ACTIVE' | 'INACTIVE') {
+        await this.assertAccess(userId, companyId)
+        if (status !== 'ACTIVE' && status !== 'INACTIVE') throw new BadRequestException('Invalid status')
+        const updated = await this.repo.batchUpdateItemStatus(companyId, ids, status)
+        return { updated }
+    }
+
+    async exportItems(userId: string, companyId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const rows = await this.repo.exportItems(companyId, {
+            search: opts.search,
+            type: opts.type,
+            status: opts.status,
+            category: opts.category,
+            sort: opts.sort,
+            order: opts.order,
+        })
+
+        const escape = (value: string | number | null | undefined) => {
+            if (value === null || value === undefined) return ''
+            const str = String(value)
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`
+            }
+            return str
+        }
+
+        const header = ['Name', 'SKU', 'Type', 'Category', 'Sales Price', 'Purchase Price', 'Unit', 'Status', 'Stock Qty', 'Created Date']
+        const body = rows.map(row => {
+            const stockQty = row.stockLevels?.reduce((sum, level) => sum + Number(level.quantity), 0) ?? 0
+            return [
+                escape(row.name),
+                escape(row.sku),
+                escape(row.type),
+                escape(row.category),
+                escape(row.salesPrice != null ? Number(row.salesPrice).toFixed(2) : ''),
+                escape(row.purchaseCost != null ? Number(row.purchaseCost).toFixed(2) : ''),
+                escape(row.unit),
+                escape(row.status),
+                escape(stockQty),
+                escape(row.createdAt.toISOString()),
+            ].join(',')
+        })
+        return [header.join(','), ...body].join('\n')
+    }
+
+    async listItemCategories(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return this.repo.findCategories(companyId)
     }
 
     // ─── Stock ────────────────────────────────────────────────────────────────

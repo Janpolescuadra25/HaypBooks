@@ -7,20 +7,41 @@ export class InventoryRepository {
 
     // ─── Items ────────────────────────────────────────────────────────────────
 
-    async findItems(companyId: string, opts: { search?: string; type?: string; limit?: number; offset?: number } = {}) {
-        return this.prisma.item.findMany({
-            where: {
-                companyId, deletedAt: null,
-                ...(opts.type ? { type: opts.type } : {}),
-                ...(opts.search ? { OR: [{ name: { contains: opts.search, mode: 'insensitive' } }, { sku: { contains: opts.search, mode: 'insensitive' } }] } : {}),
-            },
-            include: {
-                stockLevels: { include: { stockLocation: { select: { id: true, name: true } } } },
-            },
-            orderBy: { name: 'asc' },
-            take: opts.limit ?? 50,
-            skip: opts.offset ?? 0,
-        })
+    async findItems(companyId: string, opts: { search?: string; type?: string; status?: string; category?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
+        const where: any = {
+            companyId,
+            deletedAt: null,
+            ...(opts.type && opts.type !== 'ALL' ? { type: opts.type } : {}),
+            ...(opts.status && opts.status !== 'ALL' ? { status: opts.status } : {}),
+            ...(opts.category ? { category: opts.category } : {}),
+            ...(opts.search ? {
+                OR: [
+                    { name: { contains: opts.search, mode: 'insensitive' } },
+                    { sku: { contains: opts.search, mode: 'insensitive' } },
+                    { description: { contains: opts.search, mode: 'insensitive' } },
+                ],
+            } : {}),
+        }
+
+        let orderBy: any = { name: opts.order ?? 'asc' }
+        const direction = opts.order === 'desc' ? 'desc' : 'asc'
+        if (opts.sort === 'salesPrice') orderBy = { salesPrice: direction }
+        else if (opts.sort === 'createdAt') orderBy = { createdAt: direction }
+        else if (opts.sort === 'soldCount') orderBy = { InvoiceLine: { _count: direction } }
+        else if (opts.sort === 'name') orderBy = { name: direction }
+
+        const [data, total] = await this.prisma.$transaction([
+            this.prisma.item.findMany({
+                where,
+                include: { stockLevels: { include: { stockLocation: { select: { id: true, name: true } } } } },
+                orderBy,
+                take: opts.limit ?? 50,
+                skip: opts.offset ?? 0,
+            }),
+            this.prisma.item.count({ where }),
+        ])
+
+        return { data, total }
     }
 
     async findItemById(companyId: string, itemId: string) {
@@ -29,6 +50,76 @@ export class InventoryRepository {
             include: {
                 stockLevels: { include: { stockLocation: true } },
                 costLayers: { orderBy: { createdAt: 'desc' }, take: 5 },
+            },
+        })
+    }
+
+    async batchUpdateItemStatus(companyId: string, ids: string[], status: string) {
+        const result = await this.prisma.item.updateMany({
+            where: { companyId, id: { in: ids }, deletedAt: null },
+            data: { status },
+        })
+        return result.count
+    }
+
+    async findCategories(companyId: string) {
+        const rows = await this.prisma.item.groupBy({
+            by: ['category'],
+            where: { companyId, deletedAt: null, category: { not: null } },
+            orderBy: { category: 'asc' },
+        })
+        return rows.map(r => r.category)
+    }
+
+    async exportItems(companyId: string, opts: { search?: string; type?: string; status?: string; category?: string; sort?: string; order?: 'asc' | 'desc' } = {}) {
+        const where: any = {
+            companyId,
+            deletedAt: null,
+            ...(opts.type && opts.type !== 'ALL' ? { type: opts.type } : {}),
+            ...(opts.status && opts.status !== 'ALL' ? { status: opts.status } : {}),
+            ...(opts.category ? { category: opts.category } : {}),
+            ...(opts.search ? {
+                OR: [
+                    { name: { contains: opts.search, mode: 'insensitive' } },
+                    { sku: { contains: opts.search, mode: 'insensitive' } },
+                    { description: { contains: opts.search, mode: 'insensitive' } },
+                ],
+            } : {}),
+        }
+
+        let orderBy: any = { name: opts.order ?? 'asc' }
+        const direction = opts.order === 'desc' ? 'desc' : 'asc'
+        if (opts.sort === 'salesPrice') orderBy = { salesPrice: direction }
+        else if (opts.sort === 'createdAt') orderBy = { createdAt: direction }
+        else if (opts.sort === 'soldCount') orderBy = { InvoiceLine: { _count: direction } }
+        else if (opts.sort === 'name') orderBy = { name: direction }
+
+        return this.prisma.item.findMany({
+            where,
+            include: { stockLevels: true },
+            orderBy,
+        })
+    }
+
+    async findItemDetail(companyId: string, itemId: string) {
+        return this.prisma.item.findFirst({
+            where: { id: itemId, companyId, deletedAt: null },
+            include: {
+                stockLevels: true,
+                priceListItems: true,
+                priceListEntries: true,
+                InvoiceLine: {
+                    where: { invoice: { status: { not: 'VOID' } } },
+                    include: { invoice: { select: { id: true, invoiceNumber: true, date: true, status: true } } },
+                    orderBy: { invoice: { date: 'desc' } },
+                    take: 5,
+                },
+                QuoteLine: {
+                    where: { quote: { status: { not: 'VOID' } } },
+                    include: { quote: { select: { id: true, quoteNumber: true, date: true, status: true } } },
+                    orderBy: { quote: { date: 'desc' } },
+                    take: 5,
+                },
             },
         })
     }

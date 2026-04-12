@@ -1,6 +1,6 @@
 import {
-    Controller, Get, Post, Put, Delete, Body, Param, Query,
-    UseGuards, Req, HttpCode, HttpStatus,
+    Controller, Get, Post, Put, Delete, Patch, Body, Param, Query,
+    UseGuards, Req, HttpCode, HttpStatus, Header,
 } from '@nestjs/common'
 import { InventoryService } from './inventory.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -28,6 +28,29 @@ export class InventoryController {
     @Post('items')
     createItem(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
         return this.svc.createItem(req.user.userId, cid, body)
+    }
+
+    @Get('items/export')
+    @Header('Content-Type', 'text/csv')
+    async exportItems(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.exportItems(req.user.userId, cid, q)
+    }
+
+    @Get('items/categories')
+    listItemCategories(@Req() req: any, @Param('companyId') cid: string) {
+        return this.svc.listItemCategories(req.user.userId, cid)
+    }
+
+    @Post('items/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteItems(@Req() req: any, @Param('companyId') cid: string, @Body() body: { ids: string[] }) {
+        return this.svc.batchDeleteItems(req.user.userId, cid, body.ids)
+    }
+
+    @Patch('items/batch/status')
+    @HttpCode(HttpStatus.OK)
+    batchUpdateItemStatus(@Req() req: any, @Param('companyId') cid: string, @Body() body: { ids: string[]; status: 'ACTIVE' | 'INACTIVE' }) {
+        return this.svc.batchUpdateItemStatus(req.user.userId, cid, body.ids, body.status)
     }
 
     @Get('items/:itemId')

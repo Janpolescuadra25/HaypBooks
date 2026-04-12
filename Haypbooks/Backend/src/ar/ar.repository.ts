@@ -505,6 +505,70 @@ export class ArRepository {
         return this.prisma.quote.update({ where: { id: quoteId }, data: { status: status as any } })
     }
 
+    async updateQuote(companyId: string, quoteId: string, data: { customerId?: string; expiryDate?: Date | null; lines?: any[] }) {
+        const updates: any = {}
+        if (data.customerId !== undefined) updates.customerId = data.customerId
+        if (data.expiryDate !== undefined) updates.expiryDate = data.expiryDate
+        if (data.lines !== undefined) {
+            const totalAmount = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? (Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0))), 0)
+            updates.totalAmount = totalAmount
+            await this.prisma.quoteLine.deleteMany({ where: { quoteId } })
+            updates.lines = {
+                create: data.lines.map((l: any) => ({
+                    companyId,
+                    description: l.description,
+                    quantity: l.quantity ?? 1,
+                    unitPrice: l.unitPrice ?? 0,
+                    amount: l.amount ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0),
+                    itemId: l.itemId ?? null,
+                })),
+            }
+        }
+        return this.prisma.quote.update({
+            where: { id: quoteId },
+            data: updates,
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                lines: true,
+            },
+        })
+    }
+
+    async deleteQuote(companyId: string, quoteId: string) {
+        await this.prisma.quote.update({ where: { id: quoteId }, data: { deletedAt: new Date() } })
+    }
+
+    async batchDeleteQuotes(companyId: string, ids: string[]) {
+        return this.prisma.quote.updateMany({ where: { id: { in: ids }, companyId }, data: { deletedAt: new Date() } })
+    }
+
+    async batchUpdateQuoteStatus(companyId: string, ids: string[], status: string) {
+        return this.prisma.quote.updateMany({ where: { id: { in: ids }, companyId, deletedAt: null }, data: { status: status as any } })
+    }
+
+    async exportQuotes(companyId: string, opts: { status?: string; search?: string } = {}) {
+        const rows = await this.prisma.quote.findMany({
+            where: {
+                companyId,
+                deletedAt: null,
+                ...(opts.status ? { status: opts.status as any } : {}),
+            },
+            include: { customer: { include: { contact: { select: { displayName: true } } } }, lines: true },
+            orderBy: { issuedAt: 'desc' },
+        })
+        const header = ['Quote #', 'Customer', 'Date', 'Expiry', 'Amount', 'Status', 'Line Count']
+        const data = rows.map(q => [
+            q.quoteNumber ?? `QT-${q.id.slice(0, 8)}`,
+            q.customer?.contact?.displayName ?? '',
+            q.issuedAt instanceof Date ? q.issuedAt.toISOString().split('T')[0] : (q.issuedAt ?? ''),
+            q.expiryDate instanceof Date ? q.expiryDate.toISOString().split('T')[0] : (q.expiryDate ?? ''),
+            q.totalAmount.toString(),
+            q.status,
+            q.lines?.length ?? 0,
+        ])
+        return [header, ...data].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    }
+
     async convertQuoteToInvoice(companyId: string, workspaceId: string, quoteId: string, createdById: string) {
         const quote = await this.prisma.quote.findFirst({
             where: { id: quoteId, companyId, deletedAt: null },
@@ -1024,134 +1088,551 @@ export class ArRepository {
         })
     }
 
-    // ─── Price Lists ──────────────────────────────────────────────────────────
+    // ─── Recurring Invoices ───────────────────────────────────────────────────
 
-    async findPriceLists(workspaceId: string, opts: { search?: string; status?: string; limit?: number; offset?: number } = {}) {
-        const where: any = {
-            workspaceId,
-            ...(opts.status ? { status: opts.status } : {}),
-            ...(opts.search ? { name: { contains: opts.search, mode: 'insensitive' } } : {}),
-        }
-        const [data, total] = await Promise.all([
-            this.prisma.priceList.findMany({
-                where,
-                include: {
-                    customerGroup: { select: { id: true, name: true } },
-                    _count: { select: { entries: true } },
-                },
-                orderBy: { name: 'asc' },
-                take: opts.limit ?? 50,
-                skip: opts.offset ?? 0,
-            }),
-            this.prisma.priceList.count({ where }),
-        ])
+    async findRecurringInvoices(workspaceId: string, companyId: string) {
+        const rows = await this.prisma.recurringInvoice.findMany({
+            where: { workspaceId, companyId, deletedAt: null },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+            },
+            orderBy: { createdAt: 'desc' },
+        })
+        return rows.map(r => this.normalizeRecurringInvoice(r))
+    }
+
+    private normalizeRecurringInvoice(r: any) {
         return {
-            data: data.map(pl => ({
-                id: pl.id, name: pl.name, currency: pl.currency, isDefault: pl.isDefault,
-                description: pl.description, status: pl.status, startDate: pl.startDate,
-                endDate: pl.endDate, customerGroup: pl.customerGroup, entryCount: pl._count.entries,
-                createdAt: pl.createdAt, updatedAt: pl.updatedAt,
-            })),
-            total,
+            id: r.id,
+            customer: r.customer?.contact?.displayName ?? '',
+            customerId: r.customerId,
+            frequency: r.frequency,
+            startDate: r.startDate instanceof Date ? r.startDate.toISOString().split('T')[0] : r.startDate,
+            endDate: r.endDate ? (r.endDate instanceof Date ? r.endDate.toISOString().split('T')[0] : r.endDate) : null,
+            nextRun: r.nextRun instanceof Date ? r.nextRun.toISOString().split('T')[0] : r.nextRun,
+            status: r.status,
+            isActive: r.isActive,
+            templateData: r.templateData ?? {},
+            recurrenceRule: r.recurrenceRule ?? null,
         }
     }
 
-    async findPriceListById(workspaceId: string, id: string) {
-        return this.prisma.priceList.findFirst({
+    async findRecurringInvoiceById(workspaceId: string, id: string) {
+        return this.prisma.recurringInvoice.findFirst({
+            where: { id, workspaceId, deletedAt: null },
+            include: {
+                customer: { include: { contact: { select: { displayName: true, contactEmails: true } } } },
+            },
+        })
+    }
+
+    async createRecurringInvoice(workspaceId: string, companyId: string, data: any) {
+        return this.prisma.recurringInvoice.create({
+            data: {
+                workspaceId,
+                companyId,
+                customerId: data.customerId,
+                frequency: data.frequency,
+                startDate: new Date(data.startDate),
+                endDate: data.endDate ? new Date(data.endDate) : null,
+                nextRun: new Date(data.startDate),
+                status: data.status ?? 'ACTIVE',
+                isActive: data.status !== 'PAUSED',
+                templateData: data.templateData ?? {},
+                recurrenceRule: data.recurrenceRule ?? null,
+            },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+            },
+        })
+    }
+
+    async updateRecurringInvoice(id: string, data: any) {
+        const updateData: any = {}
+        if (data.frequency !== undefined) updateData.frequency = data.frequency
+        if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate)
+        if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null
+        if (data.status !== undefined) { updateData.status = data.status; updateData.isActive = data.status === 'ACTIVE' }
+        if (data.templateData !== undefined) updateData.templateData = data.templateData
+        if (data.customerId !== undefined) updateData.customerId = data.customerId
+        return this.prisma.recurringInvoice.update({
+            where: { id },
+            data: updateData,
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+            },
+        })
+    }
+
+    async deleteRecurringInvoice(id: string) {
+        return this.prisma.recurringInvoice.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } })
+    }
+
+    async batchDeleteRecurringInvoices(workspaceId: string, companyId: string, ids: string[]) {
+        return this.prisma.recurringInvoice.updateMany({
+            where: { id: { in: ids }, workspaceId, companyId },
+            data: { deletedAt: new Date(), isActive: false },
+        })
+    }
+
+    // ─── Write-Offs ───────────────────────────────────────────────────────────
+
+    async findWriteOffs(workspaceId: string, companyId: string) {
+        const rows = await this.prisma.writeOff.findMany({
+            where: { workspaceId, companyId },
+            include: {
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        customer: { include: { contact: { select: { displayName: true } } } },
+                    },
+                },
+            },
+            orderBy: { writeOffDate: 'desc' },
+        })
+        return rows.map(r => this.normalizeWriteOff(r))
+    }
+
+    async findWriteOffById(workspaceId: string, id: string) {
+        const r = await this.prisma.writeOff.findFirst({
             where: { id, workspaceId },
             include: {
-                customerGroup: { select: { id: true, name: true } },
-                entries: {
-                    include: { item: { select: { id: true, name: true, sku: true, salesPrice: true } } },
-                    orderBy: { createdAt: 'asc' },
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        totalAmount: true,
+                        customer: { include: { contact: { select: { displayName: true } } } },
+                    },
+                },
+                journalEntry: { select: { id: true, entryNumber: true } },
+            },
+        })
+        if (!r) return null
+        return this.normalizeWriteOff(r)
+    }
+
+    private normalizeWriteOff(r: any) {
+        return {
+            id: r.id,
+            writeOffNumber: `WO-${r.id.slice(0, 8).toUpperCase()}`,
+            customer: r.invoice?.customer?.contact?.displayName ?? '',
+            invoiceNumber: r.invoice?.invoiceNumber ?? '',
+            amount: r.amount.toString(),
+            reason: r.reason ?? '',
+            date: r.writeOffDate instanceof Date ? r.writeOffDate.toISOString().split('T')[0] : r.writeOffDate,
+            approvedBy: r.approvedBy ?? '',
+            status: r.status ?? 'DRAFT',
+            journalEntryId: r.journalEntryId ?? null,
+            journalEntryNumber: r.journalEntry?.entryNumber ?? null,
+            invoiceId: r.invoiceId ?? null,
+        }
+    }
+
+    async createWriteOff(workspaceId: string, companyId: string, data: any) {
+        const r = await this.prisma.writeOff.create({
+            data: {
+                workspaceId,
+                companyId,
+                invoiceId: data.invoiceId ?? null,
+                amount: data.amount,
+                writeOffDate: data.writeOffDate ? new Date(data.writeOffDate) : new Date(),
+                reason: data.reason ?? null,
+                status: 'DRAFT',
+            },
+            include: {
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        customer: { include: { contact: { select: { displayName: true } } } },
+                    },
                 },
             },
         })
+        return this.normalizeWriteOff(r)
     }
 
-    async createPriceList(workspaceId: string, data: {
-        name: string; currency: string; description?: string; isDefault?: boolean;
-        status?: string; startDate?: string | null; endDate?: string | null; customerGroupId?: string | null;
-        entries?: Array<{ itemId: string; unitPrice: number; discountPct?: number; minQuantity?: number }>;
-    }) {
-        const { entries, ...rest } = data
-        return this.prisma.priceList.create({
-            data: {
-                workspaceId, name: rest.name, currency: rest.currency,
-                description: rest.description ?? null, isDefault: rest.isDefault ?? false,
-                status: rest.status ?? 'ACTIVE',
-                startDate: rest.startDate ? new Date(rest.startDate) : null,
-                endDate: rest.endDate ? new Date(rest.endDate) : null,
-                customerGroupId: rest.customerGroupId ?? null,
-                entries: entries?.length ? {
-                    create: entries.map(e => ({
-                        itemId: e.itemId, unitPrice: e.unitPrice,
-                        discountPct: e.discountPct ?? 0, minQuantity: e.minQuantity ?? 1,
-                    })),
-                } : undefined,
-            },
-            include: {
-                customerGroup: { select: { id: true, name: true } },
-                entries: { include: { item: { select: { id: true, name: true, sku: true, salesPrice: true } } } },
-            },
-        })
-    }
-
-    async updatePriceList(workspaceId: string, id: string, data: {
-        name?: string; currency?: string; description?: string; isDefault?: boolean;
-        status?: string; startDate?: string | null; endDate?: string | null; customerGroupId?: string | null;
-        entries?: Array<{ itemId: string; unitPrice: number; discountPct?: number; minQuantity?: number }>;
-    }) {
-        const { entries, ...rest } = data
-        if (entries !== undefined) {
-            await this.prisma.priceListEntry.deleteMany({ where: { priceListId: id } })
-            if (entries.length > 0) {
-                await this.prisma.priceListEntry.createMany({
-                    data: entries.map(e => ({
-                        priceListId: id, itemId: e.itemId, unitPrice: e.unitPrice,
-                        discountPct: e.discountPct ?? 0, minQuantity: e.minQuantity ?? 1,
-                    })),
-                })
-            }
-        }
-        return this.prisma.priceList.update({
+    async updateWriteOff(id: string, data: any) {
+        const updateData: any = {}
+        if (data.amount !== undefined) updateData.amount = data.amount
+        if (data.reason !== undefined) updateData.reason = data.reason
+        if (data.writeOffDate !== undefined) updateData.writeOffDate = new Date(data.writeOffDate)
+        if (data.invoiceId !== undefined) updateData.invoiceId = data.invoiceId
+        const r = await this.prisma.writeOff.update({
             where: { id },
+            data: updateData,
+            include: {
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        customer: { include: { contact: { select: { displayName: true } } } },
+                    },
+                },
+            },
+        })
+        return this.normalizeWriteOff(r)
+    }
+
+    async approveWriteOff(id: string, userId: string) {
+        const r = await this.prisma.writeOff.update({
+            where: { id },
+            data: { status: 'APPROVED', approvedBy: userId },
+            include: {
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        customer: { include: { contact: { select: { displayName: true } } } },
+                    },
+                },
+            },
+        })
+        return this.normalizeWriteOff(r)
+    }
+
+    async reverseWriteOff(id: string) {
+        const r = await this.prisma.writeOff.update({
+            where: { id },
+            data: { status: 'REVERSED', journalEntryId: null },
+            include: {
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        customer: { include: { contact: { select: { displayName: true } } } },
+                    },
+                },
+            },
+        })
+        return this.normalizeWriteOff(r)
+    }
+
+    async deleteWriteOff(id: string) {
+        return this.prisma.writeOff.delete({ where: { id } })
+    }
+
+    async batchDeleteWriteOffs(workspaceId: string, companyId: string, ids: string[]) {
+        return this.prisma.writeOff.deleteMany({ where: { id: { in: ids }, workspaceId, companyId } })
+    }
+
+    // ─── Sales Orders ─────────────────────────────────────────────────────────
+
+    async findSalesOrders(workspaceId: string, companyId: string) {
+        const rows = await this.prisma.salesOrder.findMany({
+            where: { workspaceId, companyId },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+            },
+            orderBy: { orderDate: 'desc' },
+        })
+        return rows.map(r => this.normalizeSalesOrder(r))
+    }
+
+    async findSalesOrderById(workspaceId: string, id: string) {
+        const r = await this.prisma.salesOrder.findFirst({
+            where: { id, workspaceId },
+            include: {
+                customer: { include: { contact: { select: { displayName: true, contactEmails: true } } } },
+                lines: { include: { item: { select: { id: true, name: true } } } },
+                invoice: { select: { id: true, invoiceNumber: true, status: true } },
+            },
+        })
+        if (!r) return null
+        return { ...this.normalizeSalesOrder(r), lines: r.lines, invoice: r.invoice }
+    }
+
+    private normalizeSalesOrder(r: any) {
+        return {
+            id: r.id,
+            orderNumber: r.orderNumber,
+            customer: r.customer?.contact?.displayName ?? '',
+            customerId: r.customerId,
+            orderDate: r.orderDate instanceof Date ? r.orderDate.toISOString().split('T')[0] : r.orderDate,
+            shipDate: r.shipmentDate ? (r.shipmentDate instanceof Date ? r.shipmentDate.toISOString().split('T')[0] : r.shipmentDate) : '',
+            total: r.totalAmount.toString(),
+            status: r.status,
+            invoiceId: r.invoiceId ?? null,
+        }
+    }
+
+    async createSalesOrder(workspaceId: string, companyId: string, data: any) {
+        const count = await this.prisma.salesOrder.count({ where: { companyId } })
+        const orderNumber = data.orderNumber ?? `SO-${String(count + 1).padStart(6, '0')}`
+        const totalAmount = (data.lines ?? []).reduce((s: number, l: any) => s + (Number(l.quantity) * Number(l.unitPrice)), 0)
+        const r = await this.prisma.salesOrder.create({
             data: {
-                ...(rest.name !== undefined ? { name: rest.name } : {}),
-                ...(rest.currency !== undefined ? { currency: rest.currency } : {}),
-                ...(rest.description !== undefined ? { description: rest.description } : {}),
-                ...(rest.isDefault !== undefined ? { isDefault: rest.isDefault } : {}),
-                ...(rest.status !== undefined ? { status: rest.status } : {}),
-                ...(rest.startDate !== undefined ? { startDate: rest.startDate ? new Date(rest.startDate) : null } : {}),
-                ...(rest.endDate !== undefined ? { endDate: rest.endDate ? new Date(rest.endDate) : null } : {}),
-                ...(rest.customerGroupId !== undefined ? { customerGroupId: rest.customerGroupId } : {}),
+                workspaceId,
+                companyId,
+                customerId: data.customerId,
+                orderNumber,
+                status: 'DRAFT',
+                orderDate: data.orderDate ? new Date(data.orderDate) : new Date(),
+                shipmentDate: data.shipDate ? new Date(data.shipDate) : null,
+                totalAmount,
+                lines: {
+                    create: (data.lines ?? []).map((l: any) => ({
+                        description: l.description,
+                        quantity: l.quantity,
+                        unitPrice: l.unitPrice,
+                        amount: Number(l.quantity) * Number(l.unitPrice),
+                        itemId: l.itemId ?? null,
+                    })),
+                },
             },
             include: {
-                customerGroup: { select: { id: true, name: true } },
-                entries: { include: { item: { select: { id: true, name: true, sku: true, salesPrice: true } } } },
+                customer: { include: { contact: { select: { displayName: true } } } },
+            },
+        })
+        return this.normalizeSalesOrder(r)
+    }
+
+    async updateSalesOrder(id: string, data: any) {
+        const updateData: any = {}
+        if (data.status !== undefined) updateData.status = data.status
+        if (data.shipDate !== undefined) updateData.shipmentDate = data.shipDate ? new Date(data.shipDate) : null
+        if (data.orderDate !== undefined) updateData.orderDate = new Date(data.orderDate)
+        if (data.customerId !== undefined) updateData.customerId = data.customerId
+        const r = await this.prisma.salesOrder.update({
+            where: { id },
+            data: updateData,
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+            },
+        })
+        return this.normalizeSalesOrder(r)
+    }
+
+    async deleteSalesOrder(id: string) {
+        await this.prisma.salesOrderLine.deleteMany({ where: { salesOrderId: id } })
+        return this.prisma.salesOrder.delete({ where: { id } })
+    }
+
+    async batchDeleteSalesOrders(workspaceId: string, companyId: string, ids: string[]) {
+        await this.prisma.salesOrderLine.deleteMany({ where: { salesOrderId: { in: ids } } })
+        return this.prisma.salesOrder.deleteMany({ where: { id: { in: ids }, workspaceId, companyId } })
+    }
+
+    async convertSalesOrderToInvoice(workspaceId: string, companyId: string, orderId: string) {
+        const order = await this.prisma.salesOrder.findFirst({
+            where: { id: orderId, workspaceId },
+            include: {
+                lines: true,
+                customer: { include: { contact: { select: { displayName: true } } } },
+            },
+        })
+        if (!order) throw new Error('Sales order not found')
+        const invCount = await this.prisma.invoice.count({ where: { companyId } })
+        const invoiceNumber = `INV-${String(invCount + 1).padStart(6, '0')}`
+        const invoice = await this.prisma.invoice.create({
+            data: {
+                workspaceId,
+                companyId,
+                customerId: order.customerId,
+                invoiceNumber,
+                status: 'DRAFT' as any,
+                date: new Date(),
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                totalAmount: order.totalAmount,
+                lines: {
+                    create: order.lines.map((l: any) => ({
+                        companyId,
+                        workspaceId,
+                        description: l.description,
+                        quantity: l.quantity,
+                        unitPrice: l.unitPrice,
+                        totalPrice: l.amount,
+                        itemId: l.itemId ?? null,
+                    })),
+                },
+            },
+        })
+        await this.prisma.salesOrder.update({
+            where: { id: orderId },
+            data: { status: 'FULFILLED', invoiceId: invoice.id },
+        })
+        return { invoiceId: invoice.id, invoiceNumber }
+    }
+
+    // ─── Refunds ──────────────────────────────────────────────────────────────
+
+    async findRefunds(workspaceId: string, companyId: string) {
+        const rows = await this.prisma.customerRefund.findMany({
+            where: { workspaceId, companyId },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                paymentReceived: { select: { referenceNumber: true } },
+                reason: { select: { name: true } },
+            },
+            orderBy: { refundDate: 'desc' },
+        })
+        return rows.map(r => this.normalizeRefund(r))
+    }
+
+    async findRefundById(workspaceId: string, id: string) {
+        const r = await this.prisma.customerRefund.findFirst({
+            where: { id, workspaceId },
+            include: {
+                customer: { include: { contact: { select: { displayName: true, contactEmails: true } } } },
+                paymentReceived: { select: { id: true, referenceNumber: true, amount: true } },
+                reason: { select: { id: true, name: true } },
+                journalEntry: { select: { id: true, entryNumber: true } },
+                approvals: { orderBy: { createdAt: 'desc' } },
+            },
+        })
+        if (!r) return null
+        return { ...this.normalizeRefund(r), approvals: (r as any).approvals, journalEntryNumber: (r as any).journalEntry?.entryNumber }
+    }
+
+    private normalizeRefund(r: any) {
+        return {
+            id: r.id,
+            refundNumber: `RF-${r.id.slice(0, 8).toUpperCase()}`,
+            customer: r.customer?.contact?.displayName ?? '',
+            customerId: r.customerId,
+            invoiceNumber: r.paymentReceived?.referenceNumber ?? '',
+            paymentReceivedId: r.paymentReceivedId ?? null,
+            date: r.refundDate instanceof Date ? r.refundDate.toISOString().split('T')[0] : r.refundDate,
+            method: r.method,
+            amount: Number(r.amount),
+            reason: r.reason?.name ?? '',
+            reasonId: r.reasonId ?? null,
+            status: r.approvalStatus,
+            journalEntryId: r.journalEntryId ?? null,
+        }
+    }
+
+    async createRefund(workspaceId: string, companyId: string, data: any) {
+        const r = await this.prisma.customerRefund.create({
+            data: {
+                workspaceId,
+                companyId,
+                customerId: data.customerId,
+                paymentReceivedId: data.paymentReceivedId ?? null,
+                amount: data.amount,
+                refundDate: data.refundDate ? new Date(data.refundDate) : new Date(),
+                method: data.method ?? 'CASH',
+                reasonId: data.reasonId ?? null,
+                referenceNumber: data.referenceNumber ?? null,
+                approvalStatus: 'PENDING',
+                currency: data.currency ?? null,
+            },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                reason: { select: { name: true } },
+            },
+        })
+        return this.normalizeRefund(r)
+    }
+
+    async batchDeleteRefunds(workspaceId: string, companyId: string, ids: string[]) {
+        return this.prisma.customerRefund.deleteMany({ where: { id: { in: ids }, workspaceId, companyId } })
+    }
+
+    // ─── Credit Notes Batch ──────────────────────────────────────────────────
+
+    async batchDeleteCreditNotes(companyId: string, ids: string[]) {
+        return this.prisma.creditNote.deleteMany({ where: { id: { in: ids }, companyId } })
+    }
+
+    async exportCreditNotes(companyId: string, opts: { status?: string; search?: string }) {
+        const where: any = { companyId }
+        if (opts.status) where.status = opts.status
+        if (opts.search) where.creditNoteNumber = { contains: opts.search, mode: 'insensitive' }
+        const rows = await this.prisma.creditNote.findMany({
+            where,
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                invoice: { select: { invoiceNumber: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        })
+        const header = 'CreditNoteNumber,Customer,InvoiceNumber,Date,Amount,Status,Memo'
+        const lines = rows.map((cn: any) => {
+            const customer = cn.customer?.contact?.displayName ?? ''
+            const date = cn.issuedAt ? new Date(cn.issuedAt).toISOString().split('T')[0] : ''
+            return `${cn.creditNoteNumber ?? ''},${JSON.stringify(customer)},${cn.invoice?.invoiceNumber ?? ''},${date},${Number(cn.totalAmount ?? 0).toFixed(2)},${cn.status ?? ''},${JSON.stringify(cn.reason ?? '')}`
+        })
+        return [header, ...lines].join('\n')
+    }
+
+    // ─── Collections ─────────────────────────────────────────────────────────
+
+    async findCollections(companyId: string, opts: { search?: string; status?: string; priority?: string; limit?: number; offset?: number }) {
+        const where: any = { companyId }
+        if (opts.status) where.status = opts.status
+        if (opts.priority) where.priority = opts.priority
+        if (opts.search) where.OR = [
+            { caseNumber: { contains: opts.search, mode: 'insensitive' } },
+            { subject: { contains: opts.search, mode: 'insensitive' } },
+            { assignedTo: { contains: opts.search, mode: 'insensitive' } },
+        ]
+        return this.prisma.collectionsCase.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: opts.limit ?? 50,
+            skip: opts.offset ?? 0,
+        })
+    }
+
+    async findCollectionById(companyId: string, id: string) {
+        return this.prisma.collectionsCase.findFirst({ where: { id, companyId } })
+    }
+
+    async createCollectionsCase(companyId: string, workspaceId: string, data: any) {
+        const count = await this.prisma.collectionsCase.count({ where: { companyId } })
+        const caseNumber = `COL-${String(count + 1).padStart(4, '0')}`
+        return this.prisma.collectionsCase.create({
+            data: {
+                companyId,
+                workspaceId,
+                caseNumber,
+                subject: data.subject ?? 'Collection Case',
+                status: data.status ?? 'OPEN',
+                priority: data.priority ?? 'MEDIUM',
+                invoiceId: data.invoiceId ?? null,
+                customerId: data.customerId ?? null,
+                assignedTo: data.assignedTo ?? null,
+                notes: data.notes ?? null,
+                promisedAmount: data.promisedAmount ? Number(data.promisedAmount) : null,
+                promisedDate: data.promisedDate ? new Date(data.promisedDate) : null,
             },
         })
     }
 
-    async deletePriceList(workspaceId: string, id: string) {
-        // PriceListItem has no cascade — clear any legacy items before delete
-        await this.prisma.priceListItem.deleteMany({ where: { priceListId: id } })
-        return this.prisma.priceList.delete({ where: { id } })
+    async updateCollectionsCase(id: string, data: any) {
+        const upd: any = {}
+        if (data.subject !== undefined) upd.subject = data.subject
+        if (data.status !== undefined) upd.status = data.status
+        if (data.priority !== undefined) upd.priority = data.priority
+        if (data.assignedTo !== undefined) upd.assignedTo = data.assignedTo
+        if (data.notes !== undefined) upd.notes = data.notes
+        if (data.promisedAmount !== undefined) upd.promisedAmount = data.promisedAmount ? Number(data.promisedAmount) : null
+        if (data.promisedDate !== undefined) upd.promisedDate = data.promisedDate ? new Date(data.promisedDate) : null
+        if (data.resolution !== undefined) upd.resolution = data.resolution
+        if (data.resolvedAt !== undefined) upd.resolvedAt = data.resolvedAt ? new Date(data.resolvedAt) : null
+        return this.prisma.collectionsCase.update({ where: { id }, data: upd })
     }
 
-    async batchDeletePriceLists(workspaceId: string, ids: string[]) {
-        await this.prisma.priceListItem.deleteMany({ where: { priceListId: { in: ids } } })
-        return this.prisma.priceList.deleteMany({ where: { id: { in: ids }, workspaceId } })
+    async deleteCollectionsCase(id: string) {
+        return this.prisma.collectionsCase.delete({ where: { id } })
     }
 
-    async exportPriceLists(workspaceId: string) {
-        return this.prisma.priceList.findMany({
-            where: { workspaceId },
-            include: {
-                customerGroup: { select: { name: true } },
-                _count: { select: { entries: true } },
-            },
-            orderBy: { name: 'asc' },
+    async batchDeleteCollections(companyId: string, ids: string[]) {
+        return this.prisma.collectionsCase.deleteMany({ where: { id: { in: ids }, companyId } })
+    }
+
+    async batchUpdateCollectionStatus(companyId: string, ids: string[], status: string) {
+        return this.prisma.collectionsCase.updateMany({ where: { id: { in: ids }, companyId }, data: { status } })
+    }
+
+    async exportCollections(companyId: string, opts: { status?: string; priority?: string; search?: string }) {
+        const where: any = { companyId }
+        if (opts.status) where.status = opts.status
+        if (opts.priority) where.priority = opts.priority
+        const rows = await this.prisma.collectionsCase.findMany({ where, orderBy: { createdAt: 'desc' } })
+        const header = 'CaseNumber,CustomerId,Subject,Status,Priority,AssignedTo,PromisedAmount,PromisedDate,Notes,CreatedAt'
+        const lines = rows.map((c: any) => {
+            const date = c.promisedDate ? new Date(c.promisedDate).toISOString().split('T')[0] : ''
+            const created = c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : ''
+            return `${c.caseNumber},${c.customerId ?? ''},${JSON.stringify(c.subject ?? '')},${c.status},${c.priority},${c.assignedTo ?? ''},${c.promisedAmount ?? ''},${date},${JSON.stringify(c.notes ?? '')},${created}`
         })
+        return [header, ...lines].join('\n')
     }
 }

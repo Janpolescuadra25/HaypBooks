@@ -5750,6 +5750,9 @@ model Item {
   sku                String?
   name               String
   type               String
+  category           String?
+  unit               String?
+  status             String   @default("ACTIVE")
   salesPrice         Decimal? @db.Decimal(19, 4) // Base sales price
   purchaseCost       Decimal? @db.Decimal(19, 4) // Base purchase cost
   standardCost       Decimal? @db.Decimal(19, 4) // Standard cost for variance analysis
@@ -5798,6 +5801,9 @@ model Item {
 
   @@index([companyId])
   @@index([companyId, deletedAt])
+  @@index([companyId, status])
+  @@index([companyId, type])
+  @@index([companyId, category])
 }
 
 model PriceList {
@@ -9332,6 +9338,8 @@ model WriteOff {
   amount         Decimal  @db.Decimal(19, 4)
   writeOffDate   DateTime @default(now())
   reason         String?
+  status         String   @default("DRAFT") // DRAFT | APPROVED | REVERSED
+  approvedBy     String?
   accountId      String?
   journalEntryId String?
 
@@ -9348,6 +9356,31 @@ model WriteOff {
   @@index([billId])
   @@index([accountId])
   @@index([journalEntryId])
+}
+
+model CollectionsCase {
+  id             String    @id @default(uuid())
+  workspaceId    String
+  companyId      String
+  caseNumber     String
+  invoiceId      String?
+  customerId     String?
+  status         String    @default("OPEN")
+  priority       String    @default("MEDIUM")
+  assignedTo     String?
+  subject        String    @default("")
+  notes          String?
+  promisedAmount Decimal?  @db.Decimal(18, 2)
+  promisedDate   DateTime?
+  resolution     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([workspaceId, caseNumber])
 }
 
 model RefundApproval {

@@ -628,4 +628,281 @@ export class SubLedgerService {
       this.logger.error(`[SubLedger] Failed to reverse credit note ${creditNoteId}: ${err?.message}`)
     }
   }
+
+  // ─── AR: Write-Off Approved (DR: Bad Debt Expense  CR: Accounts Receivable) ─
+
+  /**
+   * Called when a Write-Off is approved.
+   * Creates a POSTED JournalEntry:
+   *   DR Bad Debt Expense      (6100)
+   *   CR Accounts Receivable   (1100)
+   */
+  async postWriteOffToGL(writeOffId: string, postedById?: string): Promise<void> {
+    try {
+      const writeOff = await this.prisma.writeOff.findUnique({ where: { id: writeOffId } })
+      if (!writeOff) return
+      if (writeOff.journalEntryId) return // already posted
+
+      const company = await this.prisma.company.findUnique({
+        where: { id: writeOff.companyId },
+        select: { workspaceId: true, currency: true },
+      })
+      if (!company) return
+
+      const arAccountId = await this.findAccountByCode(writeOff.companyId, '1100')
+      const badDebtAccountId = await this.findAccountByCode(writeOff.companyId, '6100')
+
+      if (!arAccountId || !badDebtAccountId) {
+        this.logger.warn(`[SubLedger] Cannot post write-off ${writeOffId}: Bad Debt (6100) or AR (1100) account not found`)
+        return
+      }
+
+      const amount = Number(writeOff.amount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(writeOff.companyId, 'WO')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: company.workspaceId,
+          companyId: writeOff.companyId,
+          date: writeOff.writeOffDate ?? new Date(),
+          description: writeOff.reason ? `Write-off: ${writeOff.reason}` : `Write-off ${writeOffId}`,
+          currency: company.currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: badDebtAccountId, debit: amount, credit: 0, memo: 'Bad Debt Expense' },
+            { accountId: arAccountId, debit: 0, credit: amount, memo: 'Accounts Receivable' },
+          ],
+        })
+        if (je) {
+          await tx.writeOff.update({ where: { id: writeOffId }, data: { journalEntryId: je.id } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post write-off ${writeOffId}: ${err?.message}`)
+    }
+  }
+
+  // ─── AR: Write-Off Reversed (DR: AR  CR: Bad Debt Expense) ─────────────────
+
+  async reverseWriteOffGL(writeOffId: string, postedById?: string): Promise<void> {
+    try {
+      const writeOff = await this.prisma.writeOff.findUnique({ where: { id: writeOffId } })
+      if (!writeOff) return
+
+      const company = await this.prisma.company.findUnique({
+        where: { id: writeOff.companyId },
+        select: { workspaceId: true, currency: true },
+      })
+      if (!company) return
+
+      const arAccountId = await this.findAccountByCode(writeOff.companyId, '1100')
+      const badDebtAccountId = await this.findAccountByCode(writeOff.companyId, '6100')
+      if (!arAccountId || !badDebtAccountId) return
+
+      const amount = Number(writeOff.amount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(writeOff.companyId, 'WOV')
+        await this.createPostedJE(tx, {
+          workspaceId: company.workspaceId,
+          companyId: writeOff.companyId,
+          date: new Date(),
+          description: `Write-off Reversed ${writeOffId}`,
+          currency: company.currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: arAccountId, debit: amount, credit: 0, memo: 'AR recovery (write-off reversed)' },
+            { accountId: badDebtAccountId, debit: 0, credit: amount, memo: 'Bad Debt Expense reversal' },
+          ],
+        })
+        await tx.writeOff.update({ where: { id: writeOffId }, data: { journalEntryId: null } })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to reverse write-off ${writeOffId}: ${err?.message}`)
+    }
+  }
+
+  // ─── AR: Cash Refund (DR: Sales Returns  CR: Cash/Bank) ─────────────────────
+
+  /**
+   * Called when a cash refund is processed.
+   * Creates a POSTED JournalEntry:
+   *   DR Sales Returns and Allowances   (4040 — contra-revenue)
+   *   CR Cash / Bank                    (1000)
+   */
+  async postRefundToGL(refundId: string, postedById?: string): Promise<void> {
+    try {
+      const refund = await this.prisma.customerRefund.findUnique({ where: { id: refundId } })
+      if (!refund) return
+      if (refund.journalEntryId) return
+
+      const company = await this.prisma.company.findUnique({
+        where: { id: refund.companyId },
+        select: { workspaceId: true, currency: true },
+      })
+      if (!company) return
+
+      const salesReturnsId = await this.findAccountByCode(refund.companyId, '4040')
+      const cashAccountId = await this.resolveAccount(refund.companyId, (refund as any).bankAccountId, '1000')
+
+      if (!salesReturnsId || !cashAccountId) {
+        this.logger.warn(`[SubLedger] Cannot post refund ${refundId}: Sales Returns (4040) or Cash (1000) account not found`)
+        return
+      }
+
+      const amount = Number(refund.amount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(refund.companyId, 'RF')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: company.workspaceId,
+          companyId: refund.companyId,
+          date: refund.refundDate ?? new Date(),
+          description: `Refund ${refund.referenceNumber ?? refundId}`,
+          currency: refund.currency ?? company.currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: salesReturnsId, debit: amount, credit: 0, memo: 'Sales Returns' },
+            { accountId: cashAccountId, debit: 0, credit: amount, memo: 'Cash/Bank' },
+          ],
+        })
+        if (je) {
+          await tx.customerRefund.update({ where: { id: refundId }, data: { journalEntryId: je.id } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post refund ${refundId}: ${err?.message}`)
+    }
+  }
+
+  // ─── AR: Cash Refund Reversed ─────────────────────────────────────────────
+
+  async reverseRefundGL(refundId: string, postedById?: string): Promise<void> {
+    try {
+      const refund = await this.prisma.customerRefund.findUnique({ where: { id: refundId } })
+      if (!refund) return
+
+      const company = await this.prisma.company.findUnique({
+        where: { id: refund.companyId },
+        select: { workspaceId: true, currency: true },
+      })
+      if (!company) return
+
+      const salesReturnsId = await this.findAccountByCode(refund.companyId, '4040')
+      const cashAccountId = await this.resolveAccount(refund.companyId, (refund as any).bankAccountId, '1000')
+      if (!salesReturnsId || !cashAccountId) return
+
+      const amount = Number(refund.amount ?? 0)
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(refund.companyId, 'RFV')
+        await this.createPostedJE(tx, {
+          workspaceId: company.workspaceId,
+          companyId: refund.companyId,
+          date: new Date(),
+          description: `Refund Reversed ${refund.referenceNumber ?? refundId}`,
+          currency: refund.currency ?? company.currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: [
+            { accountId: cashAccountId, debit: amount, credit: 0, memo: 'Cash/Bank recovery' },
+            { accountId: salesReturnsId, debit: 0, credit: amount, memo: 'Sales Returns reversal' },
+          ],
+        })
+        await tx.customerRefund.update({ where: { id: refundId }, data: { journalEntryId: null } })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to reverse refund ${refundId}: ${err?.message}`)
+    }
+  }
+
+  // ─── Revenue Recognition (DR: Deferred Revenue  CR: Revenue) ─────────────
+
+  /**
+   * Called when deferred revenue is recognized.
+   * Creates a POSTED JournalEntry:
+   *   DR Deferred Revenue   (2100)
+   *   CR Revenue            (4000)
+   */
+  async postRevenueRecognitionToGL(data: {
+    workspaceId: string
+    companyId: string
+    amount: number
+    recognitionId: string
+    description?: string
+    currency?: string
+    postedById?: string
+  }): Promise<string | null> {
+    try {
+      const deferredRevenueId = await this.findAccountByCode(data.companyId, '2100')
+      const revenueAccountId = await this.findAccountByCode(data.companyId, '4000')
+
+      if (!deferredRevenueId || !revenueAccountId) {
+        this.logger.warn(`[SubLedger] Cannot post revenue recognition ${data.recognitionId}: Deferred Revenue (2100) or Revenue (4000) account not found`)
+        return null
+      }
+
+      let jeId: string | null = null
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(data.companyId, 'RR')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: data.workspaceId,
+          companyId: data.companyId,
+          date: new Date(),
+          description: data.description ?? `Revenue Recognition ${data.recognitionId}`,
+          currency: data.currency ?? 'PHP',
+          createdById: data.postedById,
+          entryNumber,
+          lines: [
+            { accountId: deferredRevenueId, debit: data.amount, credit: 0, memo: 'Deferred Revenue' },
+            { accountId: revenueAccountId, debit: 0, credit: data.amount, memo: 'Recognized Revenue' },
+          ],
+        })
+        jeId = je?.id ?? null
+      })
+      return jeId
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post revenue recognition ${data.recognitionId}: ${err?.message}`)
+      return null
+    }
+  }
+
+  // ─── Revenue Recognition Reversed ─────────────────────────────────────────
+
+  async reverseRevenueRecognitionGL(data: {
+    workspaceId: string
+    companyId: string
+    amount: number
+    recognitionId: string
+    currency?: string
+    postedById?: string
+  }): Promise<void> {
+    try {
+      const deferredRevenueId = await this.findAccountByCode(data.companyId, '2100')
+      const revenueAccountId = await this.findAccountByCode(data.companyId, '4000')
+      if (!deferredRevenueId || !revenueAccountId) return
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber(data.companyId, 'RRV')
+        await this.createPostedJE(tx, {
+          workspaceId: data.workspaceId,
+          companyId: data.companyId,
+          date: new Date(),
+          description: `Revenue Recognition Reversed ${data.recognitionId}`,
+          currency: data.currency ?? 'PHP',
+          createdById: data.postedById,
+          entryNumber,
+          lines: [
+            { accountId: revenueAccountId, debit: data.amount, credit: 0, memo: 'Revenue reversal' },
+            { accountId: deferredRevenueId, debit: 0, credit: data.amount, memo: 'Deferred Revenue re-deferred' },
+          ],
+        })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to reverse revenue recognition ${data.recognitionId}: ${err?.message}`)
+    }
+  }
 }

@@ -239,6 +239,34 @@ export class ArController {
         return this.svc.createQuote(req.user.userId, companyId, body)
     }
 
+    @Get('quotes/export')
+    exportQuotes(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.exportQuotes(req.user.userId, companyId, query)
+    }
+
+    @Post('quotes/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteQuotes(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteQuotes(req.user.userId, companyId, body.ids)
+    }
+
+    @Patch('quotes/batch/status')
+    batchUpdateQuoteStatus(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[]; status: string },
+    ) {
+        return this.svc.batchUpdateQuoteStatus(req.user.userId, companyId, body.ids, body.status)
+    }
+
     @Get('quotes/:quoteId')
     getQuote(
         @Req() req: any,
@@ -246,6 +274,16 @@ export class ArController {
         @Param('quoteId') quoteId: string,
     ) {
         return this.svc.getQuote(req.user.userId, companyId, quoteId)
+    }
+
+    @Put('quotes/:quoteId')
+    updateQuote(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('quoteId') quoteId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updateQuote(req.user.userId, companyId, quoteId, body)
     }
 
     @Patch('quotes/:quoteId/status')
@@ -256,6 +294,15 @@ export class ArController {
         @Body() body: { status: string },
     ) {
         return this.svc.updateQuoteStatus(req.user.userId, companyId, quoteId, body.status)
+    }
+
+    @Delete('quotes/:quoteId')
+    deleteQuote(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('quoteId') quoteId: string,
+    ) {
+        return this.svc.deleteQuote(req.user.userId, companyId, quoteId)
     }
 
     @Post('quotes/:quoteId/convert')
@@ -390,8 +437,9 @@ export class ArController {
     listCollections(
         @Req() req: any,
         @Param('companyId') companyId: string,
+        @Query() query: any,
     ) {
-        return this.svc.listCollections(req.user.userId, companyId)
+        return this.svc.listCollections(req.user.userId, companyId, query)
     }
 
     @Post('collections')
@@ -401,6 +449,62 @@ export class ArController {
         @Body() body: any,
     ) {
         return this.svc.createCollection(req.user.userId, companyId, body)
+    }
+
+    @Get('collections/export')
+    exportCollections(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.exportCollections(req.user.userId, companyId, query)
+    }
+
+    @Post('collections/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteCollections(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteCollections(req.user.userId, companyId, body.ids)
+    }
+
+    @Patch('collections/batch/status')
+    batchUpdateCollectionStatus(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[]; status: string },
+    ) {
+        return this.svc.batchUpdateCollectionStatus(req.user.userId, companyId, body.ids, body.status)
+    }
+
+    @Get('collections/:caseId')
+    getCollection(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('caseId') caseId: string,
+    ) {
+        return this.svc.getCollection(req.user.userId, companyId, caseId)
+    }
+
+    @Put('collections/:caseId')
+    updateCollection(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('caseId') caseId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updateCollection(req.user.userId, companyId, caseId, body)
+    }
+
+    @Delete('collections/:caseId')
+    deleteCollection(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('caseId') caseId: string,
+    ) {
+        return this.svc.deleteCollection(req.user.userId, companyId, caseId)
     }
 
     @Get('refunds')
@@ -429,6 +533,25 @@ export class ArController {
         @Body() body: any,
     ) {
         return this.svc.createCreditNote(req.user.userId, companyId, body)
+    }
+
+    @Get('credit-notes/export')
+    exportCreditNotes(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.exportCreditNotes(req.user.userId, companyId, query)
+    }
+
+    @Post('credit-notes/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteCreditNotes(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteCreditNotes(req.user.userId, companyId, body.ids)
     }
 
     @Get('credit-notes/:creditNoteId')
@@ -471,69 +594,280 @@ export class ArController {
         return this.svc.getArAging(req.user.userId, companyId)
     }
 
-    // ─── Price Lists ──────────────────────────────────────────────────────────
+    // ─── Recurring Invoices ───────────────────────────────────────────────────
 
-    @Post('price-lists')
-    createPriceList(
+    @Get('recurring-invoices')
+    getRecurringInvoices(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.listRecurringInvoices(req.user.userId, companyId)
+    }
+
+    @Post('recurring-invoices')
+    createRecurringInvoice(
         @Req() req: any,
         @Param('companyId') companyId: string,
         @Body() body: any,
     ) {
-        return this.svc.createPriceList(req.user.userId, companyId, body)
+        return this.svc.createRecurringInvoice(req.user.userId, companyId, body)
     }
 
-    @Get('price-lists/export')
-    async exportPriceLists(
-        @Req() req: any,
-        @Param('companyId') companyId: string,
-    ) {
-        return this.svc.exportPriceListsCsv(req.user.userId, companyId)
-    }
-
-    @Post('price-lists/batch/delete')
+    @Post('recurring-invoices/batch/delete')
     @HttpCode(HttpStatus.OK)
-    batchDeletePriceLists(
+    batchDeleteRecurringInvoices(
         @Req() req: any,
         @Param('companyId') companyId: string,
-        @Body() body: any,
+        @Body() body: { ids: string[] },
     ) {
-        return this.svc.batchDeletePriceLists(req.user.userId, companyId, body.ids)
+        return this.svc.batchDeleteRecurringInvoices(req.user.userId, companyId, body.ids)
     }
 
-    @Get('price-lists')
-    listPriceLists(
-        @Req() req: any,
-        @Param('companyId') companyId: string,
-        @Query() query: any,
-    ) {
-        return this.svc.listPriceLists(req.user.userId, companyId, query)
-    }
-
-    @Get('price-lists/:id')
-    getPriceList(
+    @Get('recurring-invoices/:id')
+    getRecurringInvoice(
         @Req() req: any,
         @Param('companyId') companyId: string,
         @Param('id') id: string,
     ) {
-        return this.svc.getPriceList(req.user.userId, companyId, id)
+        return this.svc.getRecurringInvoice(req.user.userId, companyId, id)
     }
 
-    @Put('price-lists/:id')
-    updatePriceList(
+    @Put('recurring-invoices/:id')
+    updateRecurringInvoice(
         @Req() req: any,
         @Param('companyId') companyId: string,
         @Param('id') id: string,
         @Body() body: any,
     ) {
-        return this.svc.updatePriceList(req.user.userId, companyId, id, body)
+        return this.svc.updateRecurringInvoice(req.user.userId, companyId, id, body)
     }
 
-    @Delete('price-lists/:id')
-    deletePriceList(
+    @Delete('recurring-invoices/:id')
+    deleteRecurringInvoice(
         @Req() req: any,
         @Param('companyId') companyId: string,
         @Param('id') id: string,
     ) {
-        return this.svc.deletePriceList(req.user.userId, companyId, id)
+        return this.svc.deleteRecurringInvoice(req.user.userId, companyId, id)
+    }
+
+    @Post('recurring-invoices/:id/generate')
+    generateRecurringInvoice(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.generateRecurringInvoice(req.user.userId, companyId, id)
+    }
+
+    // ─── Write-Offs ───────────────────────────────────────────────────────────
+
+    @Get('write-offs')
+    getWriteOffs(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.listWriteOffs(req.user.userId, companyId)
+    }
+
+    @Post('write-offs')
+    createWriteOff(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createWriteOff(req.user.userId, companyId, body)
+    }
+
+    @Post('write-offs/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteWriteOffs(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteWriteOffs(req.user.userId, companyId, body.ids)
+    }
+
+    @Get('write-offs/:id')
+    getWriteOff(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.getWriteOff(req.user.userId, companyId, id)
+    }
+
+    @Put('write-offs/:id')
+    updateWriteOff(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updateWriteOff(req.user.userId, companyId, id, body)
+    }
+
+    @Delete('write-offs/:id')
+    deleteWriteOff(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.deleteWriteOff(req.user.userId, companyId, id)
+    }
+
+    @Post('write-offs/:id/approve')
+    approveWriteOff(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.approveWriteOff(req.user.userId, companyId, id)
+    }
+
+    @Post('write-offs/:id/reverse')
+    reverseWriteOff(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.reverseWriteOff(req.user.userId, companyId, id)
+    }
+
+    // ─── Sales Orders ─────────────────────────────────────────────────────────
+
+    @Get('sales-orders')
+    getSalesOrders(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.listSalesOrders(req.user.userId, companyId)
+    }
+
+    @Post('sales-orders')
+    createSalesOrder(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createSalesOrder(req.user.userId, companyId, body)
+    }
+
+    @Post('sales-orders/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteSalesOrders(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteSalesOrders(req.user.userId, companyId, body.ids)
+    }
+
+    @Get('sales-orders/:id')
+    getSalesOrder(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.getSalesOrder(req.user.userId, companyId, id)
+    }
+
+    @Put('sales-orders/:id')
+    updateSalesOrder(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updateSalesOrder(req.user.userId, companyId, id, body)
+    }
+
+    @Delete('sales-orders/:id')
+    deleteSalesOrder(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.deleteSalesOrder(req.user.userId, companyId, id)
+    }
+
+    @Post('sales-orders/:id/convert')
+    convertSalesOrder(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.convertSalesOrder(req.user.userId, companyId, id)
+    }
+
+    // ─── Refunds (extended) ───────────────────────────────────────────────────
+
+    @Post('refunds')
+    createRefund(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createRefund(req.user.userId, companyId, body)
+    }
+
+    @Post('refunds/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteRefunds(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteRefunds(req.user.userId, companyId, body.ids)
+    }
+
+    @Get('refunds/:id')
+    getRefund(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.getRefund(req.user.userId, companyId, id)
+    }
+
+    @Post('refunds/:id/process')
+    processRefund(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+    ) {
+        return this.svc.processRefund(req.user.userId, companyId, id)
+    }
+
+    // ─── Dunning ─────────────────────────────────────────────────────────────
+
+    @Post('dunning/send')
+    sendDunningReminder(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { invoiceId: string; level: number },
+    ) {
+        return this.svc.sendDunningReminder(req.user.userId, companyId, body.invoiceId, body.level ?? 1)
+    }
+
+    @Post('dunning/batch/send')
+    @HttpCode(HttpStatus.OK)
+    batchSendDunning(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { invoiceIds: string[]; level: number },
+    ) {
+        return this.svc.batchSendDunning(req.user.userId, companyId, body.invoiceIds, body.level ?? 1)
+    }
+
+    @Patch('dunning/:invoiceId/level')
+    updateDunningLevel(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('invoiceId') invoiceId: string,
+        @Body() body: { level: number },
+    ) {
+        return this.svc.updateDunningLevel(req.user.userId, companyId, invoiceId, body.level)
     }
 }
