@@ -4,17 +4,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
-
-type CreditNoteRow = {
-  id: string
-  creditNoteNumber: string
-  customer: string
-  invoiceNumber: string
-  date: string
-  amount: string
-  reason: string
-  status: 'Issued' | 'Applied' | 'Void'
-}
+import { formatCurrency } from '@/lib/format'
 
 const CREDIT_REASONS = [
   'Returned Goods',
@@ -25,24 +15,45 @@ const CREDIT_REASONS = [
   'Other',
 ]
 
+const STATUS_OPTIONS = ['', 'DRAFT', 'ISSUED', 'APPLIED', 'VOID']
+
+function statusBadge(status: string) {
+  switch (status) {
+    case 'ISSUED':  return 'text-sky-700 bg-sky-50 border-sky-200'
+    case 'APPLIED': return 'text-emerald-700 bg-emerald-50 border-emerald-200'
+    case 'VOID':    return 'text-rose-700 bg-rose-50 border-rose-200'
+    default:        return 'text-slate-600 bg-slate-50 border-slate-200'
+  }
+}
+
+function fmtDate(iso: string | null | undefined) {
+  if (!iso) return '—'
+  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+  catch { return iso }
+}
+
 export default function CreditNotesPage() {
-  const { companyId, loading: companyLoading } = useCompanyId()
+  const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
 
+  // Customers for select
+  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([])
+  const [custLoading, setCustLoading] = useState(false)
+
   // New Credit Note form state
   const [nc, setNc] = useState({
-    customer: '',
-    invoiceNumber: '',
-    amount: '',
+    customerId: '',
+    totalAmount: '',
     reason: CREDIT_REASONS[0],
-    date: new Date().toISOString().split('T')[0],
-    notes: '',
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -52,16 +63,40 @@ export default function CreditNotesPage() {
     setLoading(true)
     setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/invoices?status=credit_note`)
+      const params = new URLSearchParams()
+      if (statusFilter) params.set('status', statusFilter)
+      if (search) params.set('search', search)
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/credit-notes?${params}`)
       setItems(Array.isArray(data) ? data : data?.items || data?.records || [])
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load data')
+      setError(err?.response?.data?.message || 'Failed to load credit notes')
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, statusFilter, search])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const loadCustomers = useCallback(async () => {
+    if (!companyId || customers.length > 0) return
+    setCustLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const raw: any[] = Array.isArray(data) ? data : data?.items || []
+      setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
+    } catch {
+      // non-blocking
+    } finally {
+      setCustLoading(false)
+    }
+  }, [companyId, customers.length])
+
+  function openModal() {
+    setNc({ customerId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
+    setSaveError('')
+    setNewOpen(true)
+    loadCustomers()
+  }
 
   const filtered = useMemo(() => {
     if (!search) return items
@@ -70,9 +105,7 @@ export default function CreditNotesPage() {
       (row.creditNoteNumber || '').toLowerCase().includes(q) ||
       (row.customer || '').toLowerCase().includes(q) ||
       (row.invoiceNumber || '').toLowerCase().includes(q) ||
-      (row.date || '').toLowerCase().includes(q) ||
-      (row.amount || '').toLowerCase().includes(q) ||
-      (row.reason || '').toLowerCase().includes(q) ||
+      (row.memo || row.reason || '').toLowerCase().includes(q) ||
       (row.status || '').toLowerCase().includes(q)
     )
   }, [search, items])
@@ -84,15 +117,11 @@ export default function CreditNotesPage() {
     setSaveError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
-        customer: nc.customer,
-        invoiceNumber: nc.invoiceNumber,
-        amount: parseFloat(nc.amount),
+        customerId: nc.customerId,
+        totalAmount: parseFloat(nc.totalAmount),
         reason: nc.reason,
-        date: nc.date,
-        notes: nc.notes,
       })
       setNewOpen(false)
-      setNc({ customer: '', invoiceNumber: '', amount: '', reason: CREDIT_REASONS[0], date: new Date().toISOString().split('T')[0], notes: '' })
       fetchData()
     } catch (err: any) {
       setSaveError(err?.response?.data?.message || 'Failed to create credit note')
@@ -111,7 +140,7 @@ export default function CreditNotesPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setNewOpen(true)}
+              onClick={openModal}
               className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
             >
               New Credit Note
@@ -120,15 +149,24 @@ export default function CreditNotesPage() {
           </div>
         </div>
 
-        <div className="px-6 pb-4 grid gap-3 sm:grid-cols-3">
+        <div className="px-6 pb-4 flex flex-wrap gap-3">
           <input
             title="Search credit notes"
-            placeholder="Search by credit note, customer, invoice, status"
+            placeholder="Search by number, customer, reason…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm w-64"
           />
-          <div className="text-xs text-slate-500 sm:col-span-2">Search by number, customer, invoice, reason, or status.</div>
+          <select
+            title="Filter by status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          >
+            {STATUS_OPTIONS.map(s => (
+              <option key={s} value={s}>{s || 'All Statuses'}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -141,7 +179,7 @@ export default function CreditNotesPage() {
                 <th className="text-left px-4 py-3">Customer</th>
                 <th className="text-left px-4 py-3">Invoice #</th>
                 <th className="text-left px-4 py-3">Date</th>
-                <th className="text-left px-4 py-3">Amount</th>
+                <th className="text-right px-4 py-3">Amount</th>
                 <th className="text-left px-4 py-3">Reason</th>
                 <th className="text-left px-4 py-3">Status</th>
               </tr>
@@ -149,14 +187,14 @@ export default function CreditNotesPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                     <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                    Loading...
+                    Loading…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center">
+                  <td colSpan={7} className="px-4 py-10 text-center">
                     <p className="text-rose-500 font-medium">{error}</p>
                     <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
                   </td>
@@ -168,17 +206,17 @@ export default function CreditNotesPage() {
               ) : (
                 filtered.map((row) => (
                   <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.creditNoteNumber}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.customer}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.invoiceNumber}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.date}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.amount}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.reason}</td>
-                    <td className={`px-4 py-3 text-sm font-semibold ${
-                      row.status === 'Issued' ? 'text-sky-700' :
-                      row.status === 'Applied' ? 'text-emerald-700' :
-                      'text-rose-700'
-                    }`}>{row.status}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{row.creditNoteNumber || '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{row.customer || '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.invoiceNumber || '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{fmtDate(row.date)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-slate-900">{fmt(Number(row.amount ?? 0))}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.memo || row.reason || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusBadge(row.status)}`}>
+                        {row.status || 'DRAFT'}
+                      </span>
+                    </td>
                   </tr>
                 ))
               )}
@@ -190,7 +228,7 @@ export default function CreditNotesPage() {
       {/* New Credit Note Modal */}
       {newOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-lg font-bold">New Credit Note</h2>
               <button onClick={() => setNewOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
@@ -198,68 +236,39 @@ export default function CreditNotesPage() {
             <form onSubmit={submitNewCreditNote} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
-                <input
+                <select
                   required
-                  value={nc.customer}
-                  onChange={e => setNc(p => ({ ...p, customer: e.target.value }))}
+                  value={nc.customerId}
+                  onChange={e => setNc(p => ({ ...p, customerId: e.target.value }))}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="Customer name"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Invoice # (optional)</label>
-                  <input
-                    value={nc.invoiceNumber}
-                    onChange={e => setNc(p => ({ ...p, invoiceNumber: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="INV-0001"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
-                  <input
-                    required
-                    type="date"
-                    value={nc.date}
-                    onChange={e => setNc(p => ({ ...p, date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={nc.amount}
-                    onChange={e => setNc(p => ({ ...p, amount: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
-                  <select
-                    value={nc.reason}
-                    onChange={e => setNc(p => ({ ...p, reason: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  >
-                    {CREDIT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
+                  disabled={custLoading}
+                >
+                  <option value="">{custLoading ? 'Loading customers…' : 'Select customer'}</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                <textarea
-                  rows={3}
-                  value={nc.notes}
-                  onChange={e => setNc(p => ({ ...p, notes: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
-                  placeholder="Additional notes…"
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
+                <select
+                  required
+                  value={nc.reason}
+                  onChange={e => setNc(p => ({ ...p, reason: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                >
+                  {CREDIT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={nc.totalAmount}
+                  onChange={e => setNc(p => ({ ...p, totalAmount: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="0.00"
                 />
               </div>
               {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
@@ -285,8 +294,9 @@ export default function CreditNotesPage() {
               <p>Issue and manage credit notes to adjust invoices and customer balances.</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Create credit notes for returned goods, billing errors, and discounts.</li>
-                <li>Apply credits against open invoices or refund as necessary.</li>
-                <li>Track status through issued, applied, or voided steps.</li>
+                <li>Apply credits against open invoices to reduce what the customer owes.</li>
+                <li>Void a credit note to cancel it without applying it.</li>
+                <li>Track status: Draft → Issued → Applied or Void.</li>
               </ul>
             </div>
           </div>
