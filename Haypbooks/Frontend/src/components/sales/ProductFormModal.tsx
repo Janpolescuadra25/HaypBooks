@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { X, Loader2, AlertCircle } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import type { Item } from './ProductsServicesPage'
 
 interface Props {
@@ -19,15 +20,34 @@ const ITEM_TYPES = [
   { value: 'BUNDLE', label: 'Bundle' },
 ]
 
+const TRACKING_TYPES = [
+  { value: 'NONE', label: 'None' },
+  { value: 'LOT', label: 'Lot tracking' },
+  { value: 'SERIAL', label: 'Serial numbers' },
+]
+
 export default function ProductFormModal({ item, onSaved, onClose }: Props) {
   const { companyId } = useCompanyId()
+  const { currency } = useCompanyCurrency()
   const isEdit = !!item
 
+  // Derive a currency symbol for the price prefix
+  const currencySymbol = useMemo(() => {
+    try {
+      return (0).toLocaleString(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 })
+        .replace(/[\d,.\s]/g, '').trim() || currency
+    } catch {
+      return currency
+    }
+  }, [currency])
+
   const [name, setName] = useState(item?.name ?? '')
+  const [description, setDescription] = useState(item?.description ?? '')
   const [type, setType] = useState(item?.type ?? 'SERVICE')
   const [sku, setSku] = useState(item?.sku ?? '')
   const [salesPrice, setSalesPrice] = useState(item?.salesPrice != null ? String(item.salesPrice) : '')
   const [purchaseCost, setPurchaseCost] = useState(item?.purchaseCost != null ? String(item.purchaseCost) : '')
+  const [trackingType, setTrackingType] = useState(item?.trackingType ?? 'NONE')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -47,10 +67,12 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
     try {
       const payload = {
         name: name.trim(),
+        description: description.trim() || null,
         type,
         sku: sku.trim() || null,
         salesPrice: salesPrice !== '' ? parseFloat(salesPrice) : null,
         purchaseCost: purchaseCost !== '' ? parseFloat(purchaseCost) : null,
+        trackingType: type === 'INVENTORY' ? trackingType : 'NONE',
       }
 
       let saved: Item
@@ -81,7 +103,7 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[75vh]">
           {error && (
             <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
               <AlertCircle size={14} /> {error}
@@ -124,6 +146,18 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
             />
           </div>
 
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Optional description…"
+              rows={2}
+              className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none"
+            />
+          </div>
+
           {/* SKU */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">SKU / Code</label>
@@ -140,7 +174,7 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Sales Price</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{currencySymbol}</span>
                 <input
                   type="number" min="0" step="0.01"
                   value={salesPrice}
@@ -153,7 +187,7 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Purchase Cost</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{currencySymbol}</span>
                 <input
                   type="number" min="0" step="0.01"
                   value={purchaseCost}
@@ -164,6 +198,22 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
               </div>
             </div>
           </div>
+
+          {/* Tracking type — only for INVENTORY */}
+          {type === 'INVENTORY' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Stock Tracking</label>
+              <select
+                value={trackingType}
+                onChange={e => setTrackingType(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+              >
+                {TRACKING_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </form>
 
         {/* Footer */}

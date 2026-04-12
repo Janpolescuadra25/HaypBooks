@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search, Plus, MoreHorizontal, Package, Wrench, Tag,
-  Pencil, Trash2, Loader2, AlertCircle, X, RefreshCw,
+  Pencil, Trash2, Loader2, AlertCircle, RefreshCw,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -15,6 +16,7 @@ export interface Item {
   id: string
   sku: string | null
   name: string
+  description?: string | null
   type: string        // e.g. PRODUCT | SERVICE | INVENTORY | BUNDLE
   salesPrice: number | null
   purchaseCost: number | null
@@ -25,39 +27,75 @@ export interface Item {
 
 type FilterType = 'ALL' | 'PRODUCT' | 'SERVICE' | 'INVENTORY' | 'BUNDLE'
 
+const PAGE_SIZE = 20
+
 export default function ProductsServicesPage() {
-  const { companyId, loading: cidLoading } = useCompanyId()
+  const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const fmt = useCallback((n: number | null) => n == null ? '—' : formatCurrency(n, currency), [currency])
 
+  // Table items (filtered + paginated)
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+
+  // Stats items (all items, no type filter — for accurate counts)
+  const [statsData, setStatsData] = useState<Pick<Item, 'type' | 'stockLevels'>[]>([])
+
+  // Filters
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<FilterType>('ALL')
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [modalItem, setModalItem] = useState<Item | null | 'new'>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const fetchItems = useCallback(async () => {
+  // Debounce search input — waits 300ms after typing stops
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // Reset to page 0 when filter or debounced search changes
+  useEffect(() => { setPage(0) }, [typeFilter, debouncedSearch])
+
+  const fetchItems = useCallback(async (pg: number) => {
     if (!companyId) return
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams({ limit: '200' })
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(pg * PAGE_SIZE) })
       if (typeFilter !== 'ALL') params.set('type', typeFilter)
-      if (search) params.set('search', search)
+      if (debouncedSearch) params.set('search', debouncedSearch)
       const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?${params}`)
-      setItems(Array.isArray(data) ? data : data.items ?? [])
+      const raw: Item[] = Array.isArray(data) ? data : data.items ?? []
+      setItems(raw)
+      setHasMore(raw.length === PAGE_SIZE)
     } catch {
       setError('Failed to load products & services.')
     } finally {
       setLoading(false)
     }
-  }, [companyId, typeFilter, search])
+  }, [companyId, typeFilter, debouncedSearch])
 
-  useEffect(() => { fetchItems() }, [fetchItems])
+  useEffect(() => { fetchItems(page) }, [fetchItems, page])
+
+  // Separate fetch for global stats (no type filter, no search)
+  const fetchStats = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?limit=1000`)
+      setStatsData(Array.isArray(data) ? data : data.items ?? [])
+    } catch {
+      // non-blocking
+    }
+  }, [companyId])
+
+  useEffect(() => { fetchStats() }, [fetchStats])
 
   // Close row menu on outside click
   useEffect(() => {
@@ -75,13 +113,14 @@ export default function ProductsServicesPage() {
     try {
       await apiClient.delete(`/companies/${companyId}/inventory/items/${item.id}`)
       setItems(p => p.filter(i => i.id !== item.id))
+      fetchStats()
     } catch {
       alert('Failed to delete item.')
     } finally {
       setDeletingId(null)
       setOpenMenuId(null)
     }
-  }, [companyId])
+  }, [companyId, fetchStats])
 
   const handleSaved = useCallback((saved: Item) => {
     setItems(p => {
@@ -89,14 +128,16 @@ export default function ProductsServicesPage() {
       return idx >= 0 ? p.map(i => i.id === saved.id ? saved : i) : [saved, ...p]
     })
     setModalItem(null)
-  }, [])
+    fetchStats()
+  }, [fetchStats])
 
+  // Stats always computed from global (unfiltered) data
   const totalStock = useMemo(
-    () => items.reduce((s, i) => s + (i.stockLevels?.reduce((ss, l) => ss + (l.quantity ?? 0), 0) ?? 0), 0),
-    [items],
+    () => statsData.reduce((s, i) => s + (i.stockLevels?.reduce((ss, l) => ss + (l.quantity ?? 0), 0) ?? 0), 0),
+    [statsData],
   )
-  const productCount = items.filter(i => i.type === 'PRODUCT' || i.type === 'INVENTORY').length
-  const serviceCount = items.filter(i => i.type === 'SERVICE').length
+  const productCount = statsData.filter(i => i.type === 'PRODUCT' || i.type === 'INVENTORY').length
+  const serviceCount = statsData.filter(i => i.type === 'SERVICE').length
 
   const typeLabel = (t: string) => {
     const map: Record<string, string> = { PRODUCT: 'Product', SERVICE: 'Service', INVENTORY: 'Inventory', BUNDLE: 'Bundle' }
@@ -155,7 +196,7 @@ export default function ProductsServicesPage() {
             ))}
           </div>
 
-          <button onClick={fetchItems} title="Refresh" className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+          <button onClick={() => { fetchItems(page); fetchStats() }} title="Refresh" className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
             <RefreshCw size={14} />
           </button>
         </div>
@@ -164,7 +205,7 @@ export default function ProductsServicesPage() {
       {/* ── Stats Strip ──────────────────────────────────────────────────────── */}
       <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Items', value: items.length, icon: Tag, color: 'text-slate-700' },
+          { label: 'Total Items', value: statsData.length, icon: Tag, color: 'text-slate-700' },
           { label: 'Products', value: productCount, icon: Package, color: 'text-blue-700' },
           { label: 'Services', value: serviceCount, icon: Wrench, color: 'text-purple-700' },
           { label: 'Units in Stock', value: totalStock, icon: Package, color: 'text-emerald-700' },
@@ -197,6 +238,7 @@ export default function ProductsServicesPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Name</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 max-w-[220px]">Description</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">SKU</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">Type</th>
                   <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">Sales Price</th>
@@ -208,7 +250,7 @@ export default function ProductsServicesPage() {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-16 text-center text-slate-400">
+                    <td colSpan={8} className="px-4 py-16 text-center text-slate-400">
                       <Package size={32} className="mx-auto mb-3 text-slate-300" />
                       <p className="font-medium">No items yet</p>
                       <p className="text-xs mt-1">Click <strong>New Item</strong> to add your first product or service.</p>
@@ -220,6 +262,11 @@ export default function ProductsServicesPage() {
                   return (
                     <tr key={row.id} className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${isDeleting ? 'opacity-50' : ''}`}>
                       <td className="px-4 py-2.5 text-slate-700 border-r border-gray-100 font-medium">{row.name}</td>
+                      <td className="px-4 py-2.5 border-r border-gray-100 max-w-[220px]">
+                        {row.description
+                          ? <span className="text-slate-500 text-xs block truncate" title={row.description}>{row.description}</span>
+                          : <span className="text-slate-300 text-xs">—</span>}
+                      </td>
                       <td className="px-4 py-2.5 text-slate-500 border-r border-gray-100 font-mono text-xs">{row.sku ?? '—'}</td>
                       <td className="px-4 py-2.5 border-r border-gray-100">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${typeColor(row.type)}`}>
@@ -270,6 +317,33 @@ export default function ProductsServicesPage() {
             </table>
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && !error && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-slate-500">
+              {items.length > 0
+                ? `Showing ${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + items.length}`
+                : 'No results'}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page === 0}
+                onClick={() => setPage(p => p - 1)}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={14} /> Previous
+              </button>
+              <button
+                disabled={!hasMore}
+                onClick={() => setPage(p => p + 1)}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Create/Edit Modal ─────────────────────────────────────────────────── */}
