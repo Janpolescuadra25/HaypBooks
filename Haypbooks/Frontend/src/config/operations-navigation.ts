@@ -100,18 +100,18 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         label: 'Customers',
         tabs: [
           { id: 'customers',            label: 'Customers',            path: '/sales/customers/customers' },
-          { id: 'customer-groups',      label: 'Customer Groups',      path: '/sales/customers/customer-groups' },
+          { id: 'customer-groups',      label: 'Customer Groups',      path: '/sales/customers/groups' },
           { id: 'price-lists',          label: 'Price Lists',          path: '/sales/customers/price-lists' },
-          { id: 'customer-portal',      label: 'Customer Portal',      path: '/sales/customers/customer-portal' },
+          { id: 'customer-portal',      label: 'Customer Portal',      path: '/sales/customers/portal' },
         ],
       },
       {
         id: 'sales',
         label: 'Sales',
         tabs: [
-          { id: 'products-services',    label: 'Products & Services',  path: '/sales/sales/products-services' },
-          { id: 'quotes',               label: 'Quotes',               path: '/sales/sales/quotes' },
-          { id: 'sales-orders',         label: 'Sales Orders',         path: '/sales/sales/sales-orders' },
+          { id: 'products-services',    label: 'Products & Services',  path: '/sales/sales-operations/products-services' },
+          { id: 'quotes',               label: 'Quotes',               path: '/sales/sales-operations/quotes' },
+          { id: 'sales-orders',         label: 'Sales Orders',         path: '/sales/sales-operations/sales-orders' },
         ],
       },
       {
@@ -128,7 +128,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         id: 'collections',
         label: 'Collections',
         tabs: [
-          { id: 'customer-payments',    label: 'Customer Payments',    path: '/sales/collections/customer-payments' },
+          { id: 'customer-payments',    label: 'Customer Payments',    path: '/sales/collections/payments' },
           { id: 'ar-aging',             label: 'A/R Aging',            path: '/sales/collections/ar-aging' },
           { id: 'collections-center',   label: 'Collections Center',   path: '/sales/collections/collections-center' },
           { id: 'dunning',              label: 'Dunning',              path: '/sales/collections/dunning' },
