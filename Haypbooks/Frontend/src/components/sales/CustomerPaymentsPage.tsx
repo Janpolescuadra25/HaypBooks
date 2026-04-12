@@ -1,12 +1,15 @@
 'use client'
 
 import { useMemo, useState, useCallback, useEffect } from 'react'
+import { Ban, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 
-type PaymentRow = {
+const PAGE_SIZE = 20
+
+interface PaymentRow {
   id: string
   paymentNumber: string
   customer: string
@@ -14,78 +17,222 @@ type PaymentRow = {
   method: string
   amount: number
   appliedTo: string
-  status: 'Completed' | 'Pending' | 'Failed' | 'Reversed'
+}
+
+interface CustomerOption {
+  id: string
+  name: string
+  email: string
+}
+
+interface InvoiceOption {
+  id: string
+  invoiceNumber: string
+  amountDue: number
+  total: number
+}
+
+const METHOD_OPTIONS = [
+  { value: 'CASH', label: 'Cash' },
+  { value: 'CHECK', label: 'Check' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'CREDIT_CARD', label: 'Credit Card' },
+  { value: 'OTHER', label: 'Other' },
+]
+
+function normalizeRow(r: any): PaymentRow {
+  return {
+    id: r.id,
+    paymentNumber: r.paymentNumber || r.referenceNumber || r.id?.slice(0, 8) || '—',
+    customer: r.customerName || r.customer?.contact?.displayName || '—',
+    date: r.date || r.paymentDate || '',
+    method: r.method || r.paymentMethodId || '—',
+    amount: Number(r.amount ?? r.totalAmount ?? 0),
+    appliedTo:
+      (r.InvoicePaymentApplication ?? [])
+        .map((a: any) => a.invoice?.invoiceNumber)
+        .filter(Boolean)
+        .join(', ') || '—',
+  }
+}
+
+function fmtDate(d: string) {
+  try {
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch {
+    return d
+  }
 }
 
 export default function CustomerPaymentsPage() {
-  const { companyId, loading: companyLoading } = useCompanyId()
+  const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [items, setItems] = useState<any[]>([])
+
+  // List state
+  const [items, setItems] = useState<PaymentRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [voidingId, setVoidingId] = useState<string | null>(null)
 
-  const fetchData = useCallback(async () => {
-    if (!companyId) return
-    setLoading(true)
-    setError('')
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/payments`)
-      const raw: any[] = Array.isArray(data) ? data : data?.items || data?.records || []
-      setItems(raw.map((r: any) => ({
-        id: r.id,
-        paymentNumber: r.paymentNumber || r.referenceNumber || r.id?.slice(0, 8) || '—',
-        customer: r.customerName || r.customer?.displayName || r.customer?.name || '—',
-        date: r.date || r.paymentDate || '',
-        method: r.paymentMethod || r.method || '—',
-        amount: r.amount ?? r.totalAmount ?? 0,
-        appliedTo: r.invoiceNumber || r.invoiceId?.slice(0, 8) || '—',
-        status: r.status || 'Completed',
-      })))
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load data')
-    } finally {
-      setLoading(false)
-    }
-  }, [companyId])
-
-  useEffect(() => { fetchData() }, [fetchData])
+  // Filters
   const [search, setSearch] = useState('')
   const [dateStart, setDateStart] = useState('')
   const [dateEnd, setDateEnd] = useState('')
   const [methodFilter, setMethodFilter] = useState('All')
-  const [newPaymentOpen, setNewPaymentOpen] = useState(false)
 
-  // New Payment form state
-  const [np, setNp] = useState({
-    customer: '',
-    invoiceNumber: '',
+  // Form state
+  const [newPaymentOpen, setNewPaymentOpen] = useState(false)
+  const [customers, setCustomers] = useState<CustomerOption[]>([])
+  const [customersLoading, setCustomersLoading] = useState(false)
+  const [invoices, setInvoices] = useState<InvoiceOption[]>([])
+  const [invoicesLoading, setInvoicesLoading] = useState(false)
+  const [form, setForm] = useState({
+    customerId: '',
+    invoiceId: '',
     amount: '',
-    paymentMethod: 'Cash',
-    referenceNumber: '',
+    method: 'CASH',
+    reference: '',
     date: new Date().toISOString().split('T')[0],
     memo: '',
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
-  async function submitNewPayment(e: React.FormEvent) {
+  // ─── Fetch payments ──────────────────────────────────────────────────────────
+
+  const fetchPayments = useCallback(async (pg: number) => {
+    if (!companyId) return
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/payments`, {
+        params: { limit: PAGE_SIZE, offset: pg * PAGE_SIZE },
+      })
+      const raw: any[] = Array.isArray(data) ? data : data?.items || data?.records || []
+      setItems(raw.map(normalizeRow))
+      setHasMore(raw.length === PAGE_SIZE)
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load payments')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { fetchPayments(0) }, [fetchPayments])
+
+  // ─── Load customers for dropdown ─────────────────────────────────────────────
+
+  const loadCustomers = useCallback(async () => {
+    if (!companyId || customers.length > 0) return
+    setCustomersLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const raw: any[] = Array.isArray(data) ? data : data?.items || []
+      setCustomers(
+        raw.map((c: any) => ({
+          id: c.id || c.contactId,
+          name: c.name || c.displayName || c.contact?.displayName || '—',
+          email: c.email || '',
+        }))
+      )
+    } catch {
+      // non-blocking
+    } finally {
+      setCustomersLoading(false)
+    }
+  }, [companyId, customers.length])
+
+  // ─── Load open invoices when customer selected ────────────────────────────────
+
+  useEffect(() => {
+    if (!companyId || !form.customerId) {
+      setInvoices([])
+      return
+    }
+    setInvoicesLoading(true)
+    apiClient
+      .get(`/companies/${companyId}/ar/invoices`, {
+        params: { customerId: form.customerId, limit: 100 },
+      })
+      .then(({ data }) => {
+        const raw: any[] = Array.isArray(data) ? data : data?.items || []
+        setInvoices(
+          raw
+            .filter((i: any) =>
+              ['SENT', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(i.status)
+            )
+            .map((i: any) => ({
+              id: i.id,
+              invoiceNumber: i.invoiceNumber || i.id?.slice(0, 8),
+              amountDue: Number(i.amountDue ?? i.balance ?? 0),
+              total: Number(i.total ?? i.totalAmount ?? 0),
+            }))
+        )
+      })
+      .catch(() => setInvoices([]))
+      .finally(() => setInvoicesLoading(false))
+  }, [companyId, form.customerId])
+
+  // ─── Pre-fill amount when invoice selected ───────────────────────────────────
+
+  useEffect(() => {
+    if (!form.invoiceId) return
+    const inv = invoices.find((i) => i.id === form.invoiceId)
+    if (inv) {
+      setForm((f) => ({ ...f, amount: String(inv.amountDue > 0 ? inv.amountDue : inv.total) }))
+    }
+  }, [form.invoiceId, invoices])
+
+  // ─── Modal open / close ───────────────────────────────────────────────────────
+
+  function openModal() {
+    setForm({
+      customerId: '',
+      invoiceId: '',
+      amount: '',
+      method: 'CASH',
+      reference: '',
+      date: new Date().toISOString().split('T')[0],
+      memo: '',
+    })
+    setInvoices([])
+    setSaveError('')
+    setNewPaymentOpen(true)
+    loadCustomers()
+  }
+
+  function closeModal() {
+    setNewPaymentOpen(false)
+    setSaveError('')
+  }
+
+  // ─── Submit new payment ───────────────────────────────────────────────────────
+
+  async function submitPayment(e: React.FormEvent) {
     e.preventDefault()
     if (!companyId) return
+    const parsedAmount = parseFloat(form.amount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setSaveError('Enter a valid amount greater than 0')
+      return
+    }
     setSaving(true)
     setSaveError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/payments`, {
-        customer: np.customer,
-        invoiceNumber: np.invoiceNumber,
-        amount: parseFloat(np.amount),
-        paymentMethod: np.paymentMethod,
-        referenceNumber: np.referenceNumber,
-        date: np.date,
-        memo: np.memo,
+        customerId: form.customerId || undefined,
+        invoiceId: form.invoiceId || undefined,
+        amount: parsedAmount,
+        paymentDate: form.date,
+        method: form.method,
+        referenceNumber: form.reference || undefined,
+        memo: form.memo || undefined,
       })
-      setNewPaymentOpen(false)
-      setNp({ customer: '', invoiceNumber: '', amount: '', paymentMethod: 'Cash', referenceNumber: '', date: new Date().toISOString().split('T')[0], memo: '' })
-      fetchData()
+      closeModal()
+      setPage(0)
+      fetchPayments(0)
     } catch (err: any) {
       setSaveError(err?.response?.data?.message || 'Failed to record payment')
     } finally {
@@ -93,32 +240,48 @@ export default function CustomerPaymentsPage() {
     }
   }
 
-  // Data fetched from API (see fetchData above)
+  // ─── Void payment ─────────────────────────────────────────────────────────────
+
+  async function handleVoid(id: string) {
+    if (!companyId) return
+    if (!window.confirm('Void this payment? This cannot be undone.')) return
+    setVoidingId(id)
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/payments/${id}/void`)
+      fetchPayments(page)
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to void payment')
+    } finally {
+      setVoidingId(null)
+    }
+  }
+
+  // ─── Client-side filtering ────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
     let list = items
-
-    if (dateStart) list = list.filter((row) => row.date >= dateStart)
-    if (dateEnd) list = list.filter((row) => row.date <= dateEnd)
-    if (methodFilter !== 'All') list = list.filter((row) => row.method === methodFilter)
-
+    if (dateStart) list = list.filter((r) => r.date >= dateStart)
+    if (dateEnd) list = list.filter((r) => r.date <= dateEnd)
+    if (methodFilter !== 'All') list = list.filter((r) => r.method === methodFilter)
     if (!search) return list
-
     const q = search.toLowerCase()
-    return list.filter((row) =>
-      row.paymentNumber.toLowerCase().includes(q) ||
-      row.customer.toLowerCase().includes(q) ||
-      row.method.toLowerCase().includes(q) ||
-      String(row.amount).includes(q) ||
-      row.appliedTo.toLowerCase().includes(q) ||
-      row.status.toLowerCase().includes(q)
+    return list.filter(
+      (r) =>
+        r.paymentNumber.toLowerCase().includes(q) ||
+        r.customer.toLowerCase().includes(q) ||
+        r.method.toLowerCase().includes(q) ||
+        r.appliedTo.toLowerCase().includes(q) ||
+        String(r.amount).includes(q)
     )
   }, [items, search, dateStart, dateEnd, methodFilter])
 
-  const totalAmount = items.reduce((s, r) => s + (r.amount || 0), 0)
+  const totalAmount = items.reduce((s, r) => s + r.amount, 0)
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
+      {/* Sticky header */}
       <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -127,14 +290,22 @@ export default function CustomerPaymentsPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setNewPaymentOpen(true)}
-              className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+              onClick={() => fetchPayments(page)}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+              title="Refresh"
             >
-              New Payment
+              <RefreshCw size={16} />
+            </button>
+            <button
+              onClick={openModal}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+            >
+              <Plus size={16} /> New Payment
             </button>
           </div>
         </div>
 
+        {/* Summary tiles */}
         <div className="px-6 pb-3 grid grid-cols-3 gap-3">
           <div className="bg-emerald-50 rounded-lg p-3">
             <p className="text-xs text-emerald-600/60">Total Payments</p>
@@ -150,136 +321,224 @@ export default function CustomerPaymentsPage() {
           </div>
         </div>
 
+        {/* Filters */}
         <div className="px-6 pb-4 grid gap-3 sm:grid-cols-4">
           <input
-            title="Search payments"
-            placeholder="Search by payment, customer, method, status"
+            placeholder="Search by payment, customer, method…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           />
           <input
             type="date"
             value={dateStart}
             onChange={(e) => setDateStart(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label="Start date"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           />
           <input
             type="date"
             value={dateEnd}
             onChange={(e) => setDateEnd(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label="End date"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           />
           <select
             value={methodFilter}
             onChange={(e) => setMethodFilter(e.target.value)}
             aria-label="Filter by payment method"
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           >
             <option value="All">All Methods</option>
-            <option value="Credit Card">Credit Card</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Cash">Cash</option>
+            {METHOD_OPTIONS.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
           </select>
         </div>
       </div>
 
-      <div className="px-6 py-5">
+      {/* Table */}
+      <div className="px-6 py-5 flex-1">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
                 <th className="text-left px-4 py-3">Payment #</th>
                 <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3">Date</th>
-                <th className="text-left px-4 py-3">Method</th>
-                <th className="text-left px-4 py-3">Amount</th>
-                <th className="text-left px-4 py-3">Applied To</th>
-                <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3 hidden md:table-cell">Date</th>
+                <th className="text-left px-4 py-3 hidden sm:table-cell">Method</th>
+                <th className="text-right px-4 py-3">Amount</th>
+                <th className="text-left px-4 py-3 hidden lg:table-cell">Applied To</th>
+                <th className="text-right px-4 py-3 w-20">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                     <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
-                    Loading...
+                    Loading…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center">
+                  <td colSpan={7} className="px-4 py-10 text-center">
                     <p className="text-rose-500 font-medium">{error}</p>
-                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
+                    <button onClick={() => fetchPayments(page)} className="mt-2 text-sm text-emerald-600 hover:underline">
+                      Try again
+                    </button>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No payments found.</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                    No payments found.
+                  </td>
                 </tr>
               ) : (
                 filtered.map((row) => (
                   <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.paymentNumber}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.customer}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.date}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.method}</td>
-                    <td className="px-4 py-3 font-semibold tabular-nums text-emerald-800">{formatCurrency(row.amount, currency)}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.appliedTo}</td>
-                    <td className={`px-4 py-3 text-sm font-semibold ${
-                      row.status === 'Completed' ? 'text-emerald-700' :
-                      row.status === 'Pending' ? 'text-amber-700' :
-                      row.status === 'Failed' ? 'text-rose-700' :
-                      'text-slate-600'
-                    }`}>{row.status}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-700">{row.paymentNumber}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{row.customer}</td>
+                    <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{fmtDate(row.date)}</td>
+                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">{row.method}</td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800">
+                      {formatCurrency(row.amount, currency)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 hidden lg:table-cell">{row.appliedTo}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleVoid(row.id)}
+                        disabled={voidingId === row.id}
+                        className="p-1.5 rounded hover:bg-rose-100 text-rose-400 disabled:opacity-40"
+                        title="Void payment"
+                      >
+                        <Ban size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {!loading && !error && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-slate-500">
+              Page {page + 1}{hasMore ? '+' : ''}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const p = page - 1
+                  setPage(p)
+                  fetchPayments(p)
+                }}
+                disabled={page === 0}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={14} /> Previous
+              </button>
+              <button
+                onClick={() => {
+                  const p = page + 1
+                  setPage(p)
+                  fetchPayments(p)
+                }}
+                disabled={!hasMore}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* New Payment Modal */}
       {newPaymentOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Record Payment</h2>
-              <button onClick={() => setNewPaymentOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
+              <h2 className="text-lg font-bold text-slate-900">Record Payment</h2>
+              <button
+                onClick={closeModal}
+                className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"
+              >
+                ✕
+              </button>
             </div>
-            <form onSubmit={submitNewPayment} className="p-4 space-y-4">
+
+            <form onSubmit={submitPayment} className="p-4 space-y-4">
+              {/* Customer dropdown */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
-                <input
+                <select
                   required
-                  value={np.customer}
-                  onChange={e => setNp(p => ({ ...p, customer: e.target.value }))}
+                  value={form.customerId}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, customerId: e.target.value, invoiceId: '', amount: '' }))
+                  }
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="Customer name"
-                />
+                >
+                  <option value="">
+                    {customersLoading ? 'Loading customers…' : 'Select customer…'}
+                  </option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.email ? ` (${c.email})` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {/* Invoice dropdown */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Invoice # (optional)</label>
-                <input
-                  value={np.invoiceNumber}
-                  onChange={e => setNp(p => ({ ...p, invoiceNumber: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="INV-0001"
-                />
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Invoice <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <select
+                  value={form.invoiceId}
+                  onChange={(e) => setForm((f) => ({ ...f, invoiceId: e.target.value }))}
+                  disabled={!form.customerId || invoicesLoading}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-50 disabled:text-slate-400"
+                >
+                  <option value="">
+                    {!form.customerId
+                      ? 'Select a customer first'
+                      : invoicesLoading
+                      ? 'Loading…'
+                      : invoices.length === 0
+                      ? 'No open invoices'
+                      : 'Select invoice…'}
+                  </option>
+                  {invoices.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.invoiceNumber} — {formatCurrency(i.amountDue, currency)} due
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {/* Amount + Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
                   <input
                     required
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
-                    value={np.amount}
-                    onChange={e => setNp(p => ({ ...p, amount: e.target.value }))}
+                    value={form.amount}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                     placeholder="0.00"
                   />
@@ -289,51 +548,65 @@ export default function CustomerPaymentsPage() {
                   <input
                     required
                     type="date"
-                    value={np.date}
-                    onChange={e => setNp(p => ({ ...p, date: e.target.value }))}
+                    value={form.date}
+                    onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   />
                 </div>
               </div>
+
+              {/* Method + Reference */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
                   <select
-                    value={np.paymentMethod}
-                    onChange={e => setNp(p => ({ ...p, paymentMethod: e.target.value }))}
+                    value={form.method}
+                    onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="Check">Check</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="GCash">GCash</option>
-                    <option value="Credit Card">Credit Card</option>
+                    {METHOD_OPTIONS.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Reference #</label>
                   <input
-                    value={np.referenceNumber}
-                    onChange={e => setNp(p => ({ ...p, referenceNumber: e.target.value }))}
+                    value={form.reference}
+                    onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="Check or ref number"
+                    placeholder="Check # or ref"
                   />
                 </div>
               </div>
+
+              {/* Memo */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Memo</label>
                 <textarea
                   rows={2}
-                  value={np.memo}
-                  onChange={e => setNp(p => ({ ...p, memo: e.target.value }))}
+                  value={form.memo}
+                  onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
                   placeholder="Optional memo…"
                 />
               </div>
+
               {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
+
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setNewPaymentOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60"
+                >
                   {saving ? 'Saving…' : 'Record Payment'}
                 </button>
               </div>
