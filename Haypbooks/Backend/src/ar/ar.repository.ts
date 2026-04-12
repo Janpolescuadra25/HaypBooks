@@ -8,31 +8,64 @@ export class ArRepository {
 
     // ─── Contacts / Customers ─────────────────────────────────────────────────
 
-    async findCustomers(workspaceId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
-        const customers = await this.prisma.customer.findMany({
-            where: {
-                workspaceId,
-                deletedAt: null,
-                ...(opts.search ? {
-                    contact: { displayName: { contains: opts.search, mode: 'insensitive' } },
-                } : {}),
-            },
-            include: {
-                contact: {
-                    select: { id: true, displayName: true, contactEmails: true, contactPhones: true },
+    async findCustomers(workspaceId: string, companyId: string | undefined, opts: {
+        search?: string; status?: string; groupId?: string;
+        sort?: string; direction?: 'asc' | 'desc';
+        limit?: number; offset?: number
+    } = {}) {
+        const { search, status, groupId, sort, direction = 'asc', limit = 50, offset = 0 } = opts
+        const deletedFilter = status === 'INACTIVE'
+            ? { deletedAt: { not: null as Date | null } }
+            : status === 'ALL'
+                ? {}
+                : { deletedAt: null }
+        const where: any = {
+            workspaceId,
+            ...deletedFilter,
+            ...(groupId ? { groupId } : {}),
+            ...(search ? { contact: { displayName: { contains: search, mode: 'insensitive' } } } : {}),
+        }
+        const orderBy = sort === 'creditLimit'
+            ? { creditLimit: direction as any }
+            : { contact: { displayName: direction as any } }
+        const [customers, total] = await Promise.all([
+            this.prisma.customer.findMany({
+                where,
+                include: {
+                    contact: { select: { id: true, displayName: true, contactEmails: true, contactPhones: true } },
+                    group: { select: { id: true, name: true } },
                 },
-            },
-            take: opts.limit ?? 50,
-            skip: opts.offset ?? 0,
-            orderBy: { contact: { displayName: 'asc' } },
-        })
-        if (!customers.length) return customers
+                take: limit,
+                skip: offset,
+                orderBy,
+            }),
+            this.prisma.customer.count({ where }),
+        ])
+        if (!customers.length) return { data: [], total: 0 }
         const contactIds = customers.map(c => c.contactId)
-        const addresses = await this.prisma.contactAddress.findMany({
-            where: { contactId: { in: contactIds }, type: 'BILLING' },
-        })
+        const [addresses, balances] = await Promise.all([
+            this.prisma.contactAddress.findMany({ where: { contactId: { in: contactIds }, type: 'BILLING' } }),
+            companyId
+                ? this.prisma.invoice.groupBy({
+                    by: ['customerId'],
+                    where: { companyId, customerId: { in: contactIds }, deletedAt: null },
+                    _sum: { balance: true, totalAmount: true },
+                    _count: { id: true },
+                })
+                : Promise.resolve([]),
+        ])
         const addrMap = new Map(addresses.map(a => [a.contactId, a]))
-        return customers.map(c => ({ ...c, contactAddress: addrMap.get(c.contactId) ?? null }))
+        const balMap = new Map((balances as any[]).map(b => [b.customerId, b]))
+        return {
+            data: customers.map(c => ({
+                ...c,
+                contactAddress: addrMap.get(c.contactId) ?? null,
+                openBalance: Number(balMap.get(c.contactId)?._sum?.balance ?? 0),
+                totalRevenue: Number(balMap.get(c.contactId)?._sum?.totalAmount ?? 0),
+                invoiceCount: balMap.get(c.contactId)?._count?.id ?? 0,
+            })),
+            total,
+        }
     }
 
     async findCustomerById(workspaceId: string, contactId: string) {
@@ -41,6 +74,7 @@ export class ArRepository {
             include: {
                 contact: { include: { contactEmails: true, contactPhones: true } },
                 paymentTerm: true,
+                group: { select: { id: true, name: true } },
             },
         })
         if (!customer) return null
@@ -48,6 +82,58 @@ export class ArRepository {
             where: { contactId, type: 'BILLING' },
         })
         return { ...customer, contactAddress: addr ?? null }
+    }
+
+    async getCustomerDetail(workspaceId: string, companyId: string, contactId: string) {
+        const customer = await this.prisma.customer.findFirst({
+            where: { contactId, workspaceId },
+            include: {
+                contact: { include: { contactEmails: true, contactPhones: true } },
+                paymentTerm: true,
+                group: { select: { id: true, name: true } },
+            },
+        })
+        if (!customer) return null
+        const [addr, invoiceAgg, recentInvoices, recentPayments, openInvoiceCount] = await Promise.all([
+            this.prisma.contactAddress.findFirst({ where: { contactId, type: 'BILLING' } }),
+            this.prisma.invoice.aggregate({
+                where: { companyId, customerId: contactId, deletedAt: null },
+                _sum: { totalAmount: true, balance: true },
+                _count: { id: true },
+            }),
+            this.prisma.invoice.findMany({
+                where: { companyId, customerId: contactId, deletedAt: null },
+                orderBy: { date: 'desc' },
+                take: 5,
+                select: { id: true, invoiceNumber: true, date: true, totalAmount: true, balance: true, status: true },
+            }),
+            this.prisma.paymentReceived.findMany({
+                where: { companyId, customerId: contactId },
+                orderBy: { paymentDate: 'desc' },
+                take: 5,
+                select: { id: true, referenceNumber: true, paymentDate: true, amount: true },
+            }),
+            this.prisma.invoice.count({
+                where: { companyId, customerId: contactId, deletedAt: null, status: { notIn: ['PAID', 'VOID'] } },
+            }),
+        ])
+        return {
+            ...customer,
+            contactAddress: addr ?? null,
+            totalRevenue: Number(invoiceAgg._sum.totalAmount ?? 0),
+            openBalance: Number(invoiceAgg._sum.balance ?? 0),
+            invoiceCount: invoiceAgg._count.id,
+            openInvoiceCount,
+            recentInvoices: recentInvoices.map(inv => ({
+                ...inv,
+                total: Number(inv.totalAmount),
+                balance: Number(inv.balance),
+            })),
+            recentPayments: recentPayments.map(p => ({
+                ...p,
+                amount: Number(p.amount),
+            })),
+        }
     }
 
     async createCustomer(workspaceId: string, data: {
@@ -165,6 +251,85 @@ export class ArRepository {
     async softDeleteCustomer(workspaceId: string, contactId: string) {
         await this.prisma.customer.update({ where: { contactId }, data: { deletedAt: new Date() } })
         return { success: true }
+    }
+
+    async batchDeleteCustomers(workspaceId: string, ids: string[]) {
+        await this.prisma.customer.updateMany({
+            where: { workspaceId, contactId: { in: ids } },
+            data: { deletedAt: new Date() },
+        })
+        return { deleted: ids.length }
+    }
+
+    async batchUpdateCustomerStatus(workspaceId: string, ids: string[], status: 'ACTIVE' | 'INACTIVE') {
+        const data = status === 'ACTIVE' ? { deletedAt: null } : { deletedAt: new Date() }
+        await this.prisma.customer.updateMany({
+            where: { workspaceId, contactId: { in: ids } },
+            data,
+        })
+        return { updated: ids.length }
+    }
+
+    async batchUpdateCustomerGroup(workspaceId: string, ids: string[], groupId: string | null) {
+        await this.prisma.customer.updateMany({
+            where: { workspaceId, contactId: { in: ids } },
+            data: { groupId },
+        })
+        return { updated: ids.length }
+    }
+
+    async getCustomersForExport(workspaceId: string, companyId: string, opts: {
+        search?: string; status?: string; groupId?: string
+    } = {}) {
+        const { search, status, groupId } = opts
+        const deletedFilter = status === 'INACTIVE'
+            ? { deletedAt: { not: null as Date | null } }
+            : status === 'ALL'
+                ? {}
+                : { deletedAt: null }
+        const where: any = {
+            workspaceId,
+            ...deletedFilter,
+            ...(groupId ? { groupId } : {}),
+            ...(search ? { contact: { displayName: { contains: search, mode: 'insensitive' } } } : {}),
+        }
+        const customers = await this.prisma.customer.findMany({
+            where,
+            include: {
+                contact: { include: { contactEmails: true, contactPhones: true } },
+                paymentTerm: { select: { name: true } },
+                group: { select: { name: true } },
+            },
+            orderBy: { contact: { displayName: 'asc' } },
+        })
+        if (!customers.length) return []
+        const contactIds = customers.map(c => c.contactId)
+        const [addresses, balances] = await Promise.all([
+            this.prisma.contactAddress.findMany({ where: { contactId: { in: contactIds }, type: 'BILLING' } }),
+            this.prisma.invoice.groupBy({
+                by: ['customerId'],
+                where: { companyId, customerId: { in: contactIds }, deletedAt: null },
+                _sum: { balance: true, totalAmount: true },
+                _count: { id: true },
+            }),
+        ])
+        const addrMap = new Map(addresses.map(a => [a.contactId, a]))
+        const balMap = new Map(balances.map((b: any) => [b.customerId, b]))
+        return customers.map(c => ({
+            ...c,
+            contactAddress: addrMap.get(c.contactId) ?? null,
+            openBalance: Number(balMap.get(c.contactId)?._sum?.balance ?? 0),
+            totalRevenue: Number(balMap.get(c.contactId)?._sum?.totalAmount ?? 0),
+            invoiceCount: balMap.get(c.contactId)?._count?.id ?? 0,
+        }))
+    }
+
+    async listCustomerGroups(workspaceId: string) {
+        return this.prisma.customerGroup.findMany({
+            where: { workspaceId },
+            select: { id: true, name: true },
+            orderBy: { name: 'asc' },
+        })
     }
 
     async findPaymentTerms(workspaceId: string) {

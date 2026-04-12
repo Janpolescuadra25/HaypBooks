@@ -31,6 +31,59 @@ export class ArController {
         return this.svc.createCustomer(req.user.userId, companyId, body)
     }
 
+    @Get('customers/export')
+    async exportCustomers(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.exportCustomersCsv(req.user.userId, companyId, query)
+    }
+
+    @Get('customer-groups')
+    listCustomerGroups(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.listCustomerGroups(req.user.userId, companyId)
+    }
+
+    @Get('payment-terms')
+    listPaymentTerms(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.listPaymentTerms(req.user.userId, companyId)
+    }
+
+    @Post('customers/batch/delete')
+    @HttpCode(HttpStatus.OK)
+    batchDeleteCustomers(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[] },
+    ) {
+        return this.svc.batchDeleteCustomers(req.user.userId, companyId, body.ids)
+    }
+
+    @Patch('customers/batch/status')
+    batchUpdateCustomerStatus(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[]; status: string },
+    ) {
+        return this.svc.batchUpdateCustomerStatus(req.user.userId, companyId, body.ids, body.status)
+    }
+
+    @Patch('customers/batch/group')
+    batchUpdateCustomerGroup(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: { ids: string[]; groupId: string | null },
+    ) {
+        return this.svc.batchUpdateCustomerGroup(req.user.userId, companyId, body.ids, body.groupId)
+    }
+
     @Get('customers/:contactId')
     getCustomer(
         @Req() req: any,

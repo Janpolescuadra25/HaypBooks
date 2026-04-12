@@ -37,12 +37,19 @@ export class ArService {
             displayName: c.contact?.displayName ?? c.name ?? '',
             email: c.contact?.contactEmails?.[0]?.email ?? c.email ?? '',
             phone: c.contact?.contactPhones?.[0]?.phone ?? c.phone ?? '',
-            balance: Number(c.balance ?? 0),
+            balance: Number(c.openBalance ?? c.balance ?? 0),
+            openBalance: Number(c.openBalance ?? c.balance ?? 0),
+            totalRevenue: Number(c.totalRevenue ?? 0),
+            invoiceCount: c.invoiceCount ?? 0,
             address: c.contactAddress?.line1 ?? c.address ?? '',
             city: c.contactAddress?.city ?? c.city ?? '',
             state: c.contactAddress?.state ?? c.state ?? '',
             zip: c.contactAddress?.postalCode ?? c.zip ?? '',
             country: c.contactAddress?.country ?? c.country ?? 'US',
+            status: c.deletedAt ? 'INACTIVE' : 'ACTIVE',
+            groupId: c.groupId ?? null,
+            groupName: c.group?.name ?? null,
+            paymentTermName: c.paymentTerm?.name ?? null,
         }
     }
 
@@ -92,12 +99,16 @@ export class ArService {
     async listCustomers(userId: string, companyId: string, opts: any) {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
-        const customers = await this.repo.findCustomers(wid, {
+        const result = await this.repo.findCustomers(wid, companyId, {
             search: opts.search,
+            status: opts.status,
+            groupId: opts.groupId,
+            sort: opts.sort,
+            direction: opts.direction as 'asc' | 'desc' | undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
         })
-        return customers.map((c: any) => this.normalizeCustomer(c))
+        return { data: result.data.map((c: any) => this.normalizeCustomer(c)), total: result.total }
     }
 
     async listPaymentTerms(userId: string, companyId: string) {
@@ -109,7 +120,7 @@ export class ArService {
     async getCustomer(userId: string, companyId: string, contactId: string) {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
-        const customer = await this.repo.findCustomerById(wid, contactId)
+        const customer = await this.repo.getCustomerDetail(wid, companyId, contactId)
         if (!customer) throw new NotFoundException('Customer not found')
         return this.normalizeCustomer(customer)
     }
@@ -139,6 +150,53 @@ export class ArService {
         const customer = await this.repo.findCustomerById(wid, contactId)
         if (!customer) throw new NotFoundException('Customer not found')
         return this.repo.softDeleteCustomer(wid, contactId)
+    }
+
+    async batchDeleteCustomers(userId: string, companyId: string, ids: string[]) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!ids?.length) throw new BadRequestException('No IDs provided')
+        return this.repo.batchDeleteCustomers(wid, ids)
+    }
+
+    async batchUpdateCustomerStatus(userId: string, companyId: string, ids: string[], status: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!ids?.length) throw new BadRequestException('No IDs provided')
+        if (!['ACTIVE', 'INACTIVE'].includes(status)) throw new BadRequestException('Invalid status')
+        return this.repo.batchUpdateCustomerStatus(wid, ids, status as 'ACTIVE' | 'INACTIVE')
+    }
+
+    async batchUpdateCustomerGroup(userId: string, companyId: string, ids: string[], groupId: string | null) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        if (!ids?.length) throw new BadRequestException('No IDs provided')
+        return this.repo.batchUpdateCustomerGroup(wid, ids, groupId)
+    }
+
+    async exportCustomersCsv(userId: string, companyId: string, opts: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const raw = await this.repo.getCustomersForExport(wid, companyId, opts)
+        const rows = raw.map((c: any) => this.normalizeCustomer(c))
+        const cols = [
+            'id', 'name', 'email', 'phone', 'status', 'groupName', 'paymentTermName',
+            'openBalance', 'totalRevenue', 'invoiceCount', 'creditLimit',
+            'address', 'city', 'state', 'zip', 'country',
+        ]
+        const esc = (v: any) => {
+            const s = String(v ?? '')
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+        }
+        const header = cols.join(',')
+        const lines = rows.map((r: any) => cols.map(k => esc(r[k])).join(','))
+        return { csv: [header, ...lines].join('\n'), filename: 'customers.csv' }
+    }
+
+    async listCustomerGroups(userId: string, companyId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        return this.repo.listCustomerGroups(wid)
     }
 
     // ─── Quotes ───────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
+import CustomersPage from '@/components/sales/CustomersPage'
 
 export default function Page() {
-  redirect('/sales/customers/customers')
+  return <CustomersPage />
 }
