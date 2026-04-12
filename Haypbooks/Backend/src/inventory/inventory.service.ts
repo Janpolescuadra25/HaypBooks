@@ -39,8 +39,8 @@ export class InventoryService {
         if (!data.type) throw new BadRequestException('type is required')
         return this.repo.createItem(companyId, {
             ...data,
-            salesPrice: data.salesPrice ? Number(data.salesPrice) : undefined,
-            purchaseCost: data.purchaseCost ? Number(data.purchaseCost) : undefined,
+            salesPrice: data.salesPrice != null ? Number(data.salesPrice) : undefined,
+            purchaseCost: data.purchaseCost != null ? Number(data.purchaseCost) : undefined,
         })
     }
 
