@@ -91,6 +91,21 @@ export class SalesController {
     return this.salesService.deleteCustomer(req.user.userId, companyId, contactId)
   }
 
+  @Get('subscriptions')
+  async listSubscriptions(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
+    return this.salesService.listSubscriptions(req.user.userId, companyId, query)
+  }
+
+  @Get('revenue-recognition')
+  async listRevenueRecognition(@Req() req: any, @Param('companyId') companyId: string) {
+    return this.salesService.listRevenueRecognition(req.user.userId, companyId)
+  }
+
+  @Get('deferred-revenue')
+  async listDeferredRevenue(@Req() req: any, @Param('companyId') companyId: string) {
+    return this.salesService.listDeferredRevenue(req.user.userId, companyId)
+  }
+
   // ─── Invoices (Sales facade) ────────────────────────────────────────────
 
   @Get('invoices')

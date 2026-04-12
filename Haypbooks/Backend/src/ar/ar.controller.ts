@@ -218,6 +218,48 @@ export class ArController {
         return this.svc.voidPayment(req.user.userId, companyId, paymentId)
     }
 
+    @Get('aging')
+    getAging(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.getAging(req.user.userId, companyId)
+    }
+
+    @Get('collections')
+    listCollections(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.listCollections(req.user.userId, companyId)
+    }
+
+    @Post('collections')
+    createCollection(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createCollection(req.user.userId, companyId, body)
+    }
+
+    @Get('refunds')
+    listRefunds(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+    ) {
+        return this.svc.listRefunds(req.user.userId, companyId)
+    }
+
+    @Post('credit-notes')
+    createCreditNote(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.createCreditNote(req.user.userId, companyId, body)
+    }
+
     // ─── AR Aging Report ──────────────────────────────────────────────────────
 
     @Get('reports/aging')

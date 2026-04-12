@@ -65,6 +65,18 @@ export class SalesService {
     return this.arService.voidInvoice(userId, companyId, invoiceId)
   }
 
+  async listSubscriptions(userId: string, companyId: string, query: any) {
+    return []
+  }
+
+  async listRevenueRecognition(userId: string, companyId: string) {
+    return []
+  }
+
+  async listDeferredRevenue(userId: string, companyId: string) {
+    return []
+  }
+
   // ─── Quotes (facade to AR service) ───────────────────────────────────────
 
   async listQuotes(userId: string, companyId: string, query: any) {

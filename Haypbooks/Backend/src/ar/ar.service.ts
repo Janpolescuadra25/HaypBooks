@@ -313,6 +313,31 @@ export class ArService {
         return result
     }
 
+    async getAging(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return []
+    }
+
+    async listCollections(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return []
+    }
+
+    async createCollection(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        return { success: true }
+    }
+
+    async listRefunds(userId: string, companyId: string) {
+        await this.assertAccess(userId, companyId)
+        return []
+    }
+
+    async createCreditNote(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        return { success: true, id: 'stub-id' }
+    }
+
     // ─── AR Aging ─────────────────────────────────────────────────────────────
 
     async getArAging(userId: string, companyId: string) {
