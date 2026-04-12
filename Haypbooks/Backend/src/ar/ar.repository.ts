@@ -9,7 +9,7 @@ export class ArRepository {
     // ─── Contacts / Customers ─────────────────────────────────────────────────
 
     async findCustomers(workspaceId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
-        return this.prisma.customer.findMany({
+        const customers = await this.prisma.customer.findMany({
             where: {
                 workspaceId,
                 deletedAt: null,
@@ -26,22 +26,41 @@ export class ArRepository {
             skip: opts.offset ?? 0,
             orderBy: { contact: { displayName: 'asc' } },
         })
+        if (!customers.length) return customers
+        const contactIds = customers.map(c => c.contactId)
+        const addresses = await this.prisma.contactAddress.findMany({
+            where: { contactId: { in: contactIds }, type: 'BILLING' },
+        })
+        const addrMap = new Map(addresses.map(a => [a.contactId, a]))
+        return customers.map(c => ({ ...c, contactAddress: addrMap.get(c.contactId) ?? null }))
     }
 
     async findCustomerById(workspaceId: string, contactId: string) {
-        return this.prisma.customer.findFirst({
+        const customer = await this.prisma.customer.findFirst({
             where: { contactId, workspaceId, deletedAt: null },
             include: {
                 contact: { include: { contactEmails: true, contactPhones: true } },
                 paymentTerm: true,
             },
         })
+        if (!customer) return null
+        const addr = await this.prisma.contactAddress.findFirst({
+            where: { contactId, type: 'BILLING' },
+        })
+        return { ...customer, contactAddress: addr ?? null }
     }
 
     async createCustomer(workspaceId: string, data: {
         displayName: string
         email?: string
         phone?: string
+        address?: string
+        line1?: string
+        city?: string
+        state?: string
+        zip?: string
+        postalCode?: string
+        country?: string
         paymentTermId?: string
         creditLimit?: number
     }) {
@@ -58,7 +77,23 @@ export class ArRepository {
                         contactPhones: { create: [{ phone: data.phone, type: 'WORK', isPrimary: true }] },
                     } : {}),
                 },
+                include: { contactEmails: true, contactPhones: true },
             })
+            const line1 = data.address ?? data.line1
+            if (line1) {
+                await tx.contactAddress.create({
+                    data: {
+                        contactId: contact.id,
+                        workspaceId,
+                        type: 'BILLING',
+                        line1,
+                        city: data.city ?? '',
+                        state: data.state ?? '',
+                        postalCode: data.zip ?? data.postalCode ?? '',
+                        country: data.country ?? 'US',
+                    },
+                })
+            }
             const customer = await tx.customer.create({
                 data: {
                     contactId: contact.id,
@@ -67,7 +102,10 @@ export class ArRepository {
                     creditLimit: data.creditLimit ?? null,
                 },
             })
-            return { ...customer, contact }
+            const addr = line1
+                ? await tx.contactAddress.findFirst({ where: { contactId: contact.id, type: 'BILLING' } })
+                : null
+            return { ...customer, contact, contactAddress: addr ?? null }
         })
     }
 
@@ -76,20 +114,65 @@ export class ArRepository {
             if (data.displayName) {
                 await tx.contact.update({ where: { id: contactId }, data: { displayName: data.displayName } })
             }
-            return tx.customer.update({
+            // Persist email changes
+            if (data.email !== undefined) {
+                await tx.contactEmail.deleteMany({ where: { contactId } })
+                if (data.email) {
+                    await tx.contactEmail.create({ data: { contactId, email: data.email, type: 'WORK', isPrimary: true } })
+                }
+            }
+            // Persist phone changes
+            if (data.phone !== undefined) {
+                await tx.contactPhone.deleteMany({ where: { contactId } })
+                if (data.phone) {
+                    await tx.contactPhone.create({ data: { contactId, phone: data.phone, type: 'WORK', isPrimary: true } })
+                }
+            }
+            // Persist address changes
+            const line1 = data.address ?? data.line1
+            if (line1 !== undefined) {
+                await tx.contactAddress.deleteMany({ where: { contactId, type: 'BILLING' } })
+                if (line1) {
+                    await tx.contactAddress.create({
+                        data: {
+                            contactId,
+                            workspaceId,
+                            type: 'BILLING',
+                            line1,
+                            city: data.city ?? '',
+                            state: data.state ?? '',
+                            postalCode: data.zip ?? data.postalCode ?? '',
+                            country: data.country ?? 'US',
+                        },
+                    })
+                }
+            }
+            const customer = await tx.customer.update({
                 where: { contactId },
                 data: {
                     paymentTermId: data.paymentTermId,
                     creditLimit: data.creditLimit,
                 },
-                include: { contact: true },
+                include: {
+                    contact: { include: { contactEmails: true, contactPhones: true } },
+                },
             })
+            const addr = await tx.contactAddress.findFirst({ where: { contactId, type: 'BILLING' } })
+            return { ...customer, contactAddress: addr ?? null }
         })
     }
 
     async softDeleteCustomer(workspaceId: string, contactId: string) {
         await this.prisma.customer.update({ where: { contactId }, data: { deletedAt: new Date() } })
         return { success: true }
+    }
+
+    async findPaymentTerms(workspaceId: string) {
+        return this.prisma.paymentTerm.findMany({
+            where: { workspaceId, isActive: true },
+            orderBy: { dueDays: 'asc' },
+            select: { id: true, name: true, dueDays: true },
+        })
     }
 
     // ─── Quotes ───────────────────────────────────────────────────────────────

@@ -91,6 +91,11 @@ export class SalesController {
     return this.salesService.deleteCustomer(req.user.userId, companyId, contactId)
   }
 
+  @Get('payment-terms')
+  async listPaymentTerms(@Req() req: any, @Param('companyId') companyId: string) {
+    return this.salesService.listPaymentTerms(req.user.userId, companyId)
+  }
+
   @Get('subscriptions')
   async listSubscriptions(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
     return this.salesService.listSubscriptions(req.user.userId, companyId, query)

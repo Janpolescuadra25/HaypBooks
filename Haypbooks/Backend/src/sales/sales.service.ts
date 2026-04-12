@@ -45,6 +45,10 @@ export class SalesService {
     return this.arService.deleteCustomer(userId, companyId, contactId)
   }
 
+  async listPaymentTerms(userId: string, companyId: string) {
+    return this.arService.listPaymentTerms(userId, companyId)
+  }
+
   async getInvoice(userId: string, companyId: string, invoiceId: string) {
     return this.arService.getInvoice(userId, companyId, invoiceId)
   }

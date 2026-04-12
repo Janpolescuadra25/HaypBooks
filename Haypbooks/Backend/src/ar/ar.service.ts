@@ -32,11 +32,17 @@ export class ArService {
     private normalizeCustomer(c: any) {
         return {
             ...c,
+            id: c.contactId,
             name: c.contact?.displayName ?? c.name ?? '',
             displayName: c.contact?.displayName ?? c.name ?? '',
             email: c.contact?.contactEmails?.[0]?.email ?? c.email ?? '',
             phone: c.contact?.contactPhones?.[0]?.phone ?? c.phone ?? '',
             balance: Number(c.balance ?? 0),
+            address: c.contactAddress?.line1 ?? c.address ?? '',
+            city: c.contactAddress?.city ?? c.city ?? '',
+            state: c.contactAddress?.state ?? c.state ?? '',
+            zip: c.contactAddress?.postalCode ?? c.zip ?? '',
+            country: c.contactAddress?.country ?? c.country ?? 'US',
         }
     }
 
@@ -69,8 +75,18 @@ export class ArService {
     async listCustomers(userId: string, companyId: string, opts: any) {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
-        const customers = await this.repo.findCustomers(wid, opts)
+        const customers = await this.repo.findCustomers(wid, {
+            search: opts.search,
+            limit: opts.limit ? parseInt(opts.limit) : 50,
+            offset: opts.offset ? parseInt(opts.offset) : 0,
+        })
         return customers.map((c: any) => this.normalizeCustomer(c))
+    }
+
+    async listPaymentTerms(userId: string, companyId: string) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        return this.repo.findPaymentTerms(wid)
     }
 
     async getCustomer(userId: string, companyId: string, contactId: string) {
