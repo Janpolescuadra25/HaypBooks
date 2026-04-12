@@ -75,6 +75,8 @@ export default function InvoicesPage() {
   const [toast, setToast] = useState('')
   const [emailPreviewInvoice, setEmailPreviewInvoice] = useState<Invoice | null>(null)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -82,27 +84,30 @@ export default function InvoicesPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices`)
-      setInvoices(Array.isArray(data) ? data : data.items ?? data.invoices ?? [])
+      const params = new URLSearchParams()
+      params.set('limit', '20')
+      params.set('offset', String((page - 1) * 20))
+      if (statusFilter !== 'ALL') params.set('status', statusFilter)
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices?${params}`)
+      const list = Array.isArray(data) ? data : data.items ?? data.invoices ?? []
+      setInvoices(list)
+      setHasMore(list.length === 20)
       setError('')
     } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load invoices') }
     finally { setLoading(false) }
-  }, [companyId])
+  }, [companyId, page, statusFilter])
 
   useEffect(() => { fetchInvoices() }, [fetchInvoices])
 
   const filtered = useMemo(() => {
-    let list = invoices
-    if (statusFilter !== 'ALL') list = list.filter(i => i.status === statusFilter)
-    if (search) {
-      const q = search.toLowerCase()
-      list = list.filter(i =>
-        (i.invoiceNumber ?? '').toLowerCase().includes(q) ||
-        (i.customerName ?? '').toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [invoices, search, statusFilter])
+    // Status filter is applied server-side; only apply search client-side
+    if (!search) return invoices
+    const q = search.toLowerCase()
+    return invoices.filter(i =>
+      (i.invoiceNumber ?? '').toLowerCase().includes(q) ||
+      (i.customerName ?? '').toLowerCase().includes(q)
+    )
+  }, [invoices, search])
 
   const stats = useMemo(() => ({
     total: invoices.length,
@@ -170,7 +175,11 @@ export default function InvoicesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Invoices</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} of {invoices.length} invoices</p>
+          <p className="text-sm text-emerald-600/70 mt-0.5">
+            {search
+              ? `${filtered.length} of ${invoices.length} on page ${page}`
+              : `${invoices.length} invoice${invoices.length !== 1 ? 's' : ''} · Page ${page}`}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setShowTemplates(true)}
@@ -205,7 +214,7 @@ export default function InvoicesPage() {
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           {['ALL', 'DRAFT', 'SENT', 'PARTIAL', 'PAID', 'OVERDUE', 'VOID'].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)}
+            <button key={s} onClick={() => { setStatusFilter(s); setPage(1) }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
               {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
               {s === 'OVERDUE' && stats.overdue > 0 && (
@@ -337,6 +346,30 @@ export default function InvoicesPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {(page > 1 || hasMore) && (
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-gray-400">
+            Showing {(page - 1) * 20 + 1}–{(page - 1) * 20 + invoices.length}{hasMore ? '+' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => p - 1)}
+              disabled={page === 1 || loading}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors">
+              Previous
+            </button>
+            <span className="text-xs font-semibold text-gray-600 tabular-nums">Page {page}</span>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={!hasMore || loading}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors">
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       <AnimatePresence>

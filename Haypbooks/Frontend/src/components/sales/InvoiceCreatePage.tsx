@@ -410,6 +410,13 @@ export default function InvoiceCreatePage() {
     if (!customerId) { setError('Please select a customer.'); return }
     const validItems = items.filter(it => it.description.trim())
     if (validItems.length === 0) { setError('Add at least one line item.'); return }
+    // TODO: invoiceSettings (recurring schedule, late fees, auto-reminders, custom numbering) are
+    // collected by InvoiceSettingsModal but the backend createInvoice endpoint does NOT yet support
+    // these fields. When backend support is added, pass them through from `invoiceSettings` here.
+    // Supported fields today: customerId, dueDate, paymentTermId, currency, lines.
+    if (invoiceSettings.makeRecurring || invoiceSettings.applyLateFee || invoiceSettings.autoReminders) {
+      console.warn('[InvoiceCreate] Invoice settings (recurring/late fees/reminders) ignored — backend does not yet support these fields.')
+    }
     setSaving(true); setSaveAction(action); setError('')
     try {
       const { data: inv } = await apiClient.post(`/companies/${companyId}/ar/invoices`, {

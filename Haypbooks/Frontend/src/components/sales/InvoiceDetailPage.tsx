@@ -7,6 +7,7 @@ import {
   FileText, User, Calendar, CreditCard, Loader2, AlertCircle,
   MoreVertical, Printer, Download, ChevronRight,
   Mail, Eye, Globe, ChevronDown, BookOpen, Settings2,
+  Plus, Save,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -70,6 +71,12 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     method: '',
     referenceNumber: '',
   })
+  // Edit state for DRAFT invoices
+  const [editDueDate, setEditDueDate] = useState(initialInvoice.dueDate ?? '')
+  const [editLines, setEditLines] = useState<Array<{ description: string; quantity: number; unitPrice: number }>>(() =>
+    (initialInvoice.items ?? []).map((it: any) => ({ description: it.description ?? '', quantity: Number(it.quantity ?? 1), unitPrice: Number(it.unitPrice ?? 0) }))
+  )
+  const [editSaving, setEditSaving] = useState(false)
 
   const fmt = useCallback((n: number) => formatCurrency(n ?? 0, currency), [currency])
 
@@ -117,6 +124,35 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       .then(res => setEmailTemplates(res.data ?? []))
       .catch(() => {/* non-fatal */})
   }, [activeTab, companyId])
+
+  const handleUpdateInvoice = async () => {
+    const validLines = editLines.filter(l => l.description.trim())
+    if (!validLines.length) { setError('Add at least one line item.'); return }
+    setEditSaving(true); setError('')
+    try {
+      const { data: updated } = await apiClient.put(`/companies/${companyId}/ar/invoices/${invoice.id}`, {
+        dueDate: editDueDate || undefined,
+        lines: validLines.map(l => ({
+          description: l.description,
+          quantity: Number(l.quantity),
+          unitPrice: Number(l.unitPrice),
+          amount: Number(l.quantity) * Number(l.unitPrice),
+        })),
+      })
+      setInvoice(p => ({ ...p, ...updated, items: updated.items ?? updated.lines ?? p.items }))
+      setEditDueDate(updated.dueDate ?? editDueDate)
+      setEditLines((updated.items ?? updated.lines ?? validLines).map((it: any) => ({
+        description: it.description ?? '',
+        quantity: Number(it.quantity ?? 1),
+        unitPrice: Number(it.unitPrice ?? it.rate ?? 0),
+      })))
+      onRefresh()
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to update invoice')
+    } finally {
+      setEditSaving(false)
+    }
+  }
 
   const handleSendEmail = async (scheduledAt?: string) => {
     setSending(true); setError('')
@@ -248,91 +284,196 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
             )}
 
             {activeTab === 'edit' && <div className="px-6 py-5 space-y-5">
-              {/* Meta Row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: 'Customer', value: invoice.customerName ?? (invoice as any).customer?.name ?? '—', Icon: User },
-                  { label: 'Invoice Date', value: invoice.date ? new Date(invoice.date).toLocaleDateString() : '—', Icon: Calendar },
-                  { label: 'Due Date', value: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '—', Icon: Clock },
-                  { label: 'Amount Due', value: fmt(invoice.amountDue ?? invoice.total ?? 0), Icon: CreditCard },
-                ].map(({ label, value, Icon }) => (
-                  <div key={label} className="bg-gray-50 rounded-xl p-3">
-                    <div className="flex items-center gap-1.5 text-gray-400 mb-1">
-                      <Icon size={12} />
-                      <span className="text-xs">{label}</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
+              {invoice.status !== 'DRAFT' ? (
+                <>
+                  {/* Non-editable notice */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 flex items-center gap-2">
+                    <AlertCircle size={13} /> This invoice cannot be edited because it has already been sent.
                   </div>
-                ))}
-              </div>
+                  {/* Meta Row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Customer', value: invoice.customerName ?? (invoice as any).customer?.name ?? '—', Icon: User },
+                      { label: 'Invoice Date', value: invoice.date ? new Date(invoice.date).toLocaleDateString() : '—', Icon: Calendar },
+                      { label: 'Due Date', value: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '—', Icon: Clock },
+                      { label: 'Amount Due', value: fmt(invoice.amountDue ?? invoice.total ?? 0), Icon: CreditCard },
+                    ].map(({ label, value, Icon }) => (
+                      <div key={label} className="bg-gray-50 rounded-xl p-3">
+                        <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                          <Icon size={12} />
+                          <span className="text-xs">{label}</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Line Items (read-only) */}
+                  {items.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">Line Items</h3>
+                      <div className="border border-emerald-100 rounded-xl overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-emerald-50/60">
+                              <th className="text-left px-3 py-2 text-xs font-medium text-emerald-700">Description</th>
+                              <th className="text-right px-3 py-2 text-xs font-medium text-emerald-700 w-16">Qty</th>
+                              <th className="text-right px-3 py-2 text-xs font-medium text-emerald-700 w-28">Unit Price</th>
+                              <th className="text-right px-3 py-2 text-xs font-medium text-emerald-700 w-28">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map((it: any, i: number) => (
+                              <tr key={i} className="border-t border-emerald-50">
+                                <td className="px-3 py-2 text-gray-800">{it.description}</td>
+                                <td className="px-3 py-2 text-right text-gray-600">{it.quantity}</td>
+                                <td className="px-3 py-2 text-right text-gray-600 tabular-nums">{fmt(it.unitPrice)}</td>
+                                <td className="px-3 py-2 text-right font-semibold text-emerald-800 tabular-nums">{fmt(it.amount ?? it.quantity * it.unitPrice)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="flex justify-end mt-3">
+                        <div className="w-52 space-y-1.5 text-sm">
+                          <div className="flex justify-between text-gray-600">
+                            <span>Subtotal</span>
+                            <span className="tabular-nums font-medium">{fmt(subtotal)}</span>
+                          </div>
+                          {taxAmount > 0 && (
+                            <div className="flex justify-between text-gray-500">
+                              <span>Tax</span><span className="tabular-nums">{fmt(taxAmount)}</span>
+                            </div>
+                          )}
+                          {amountPaid > 0 && (
+                            <div className="flex justify-between text-emerald-600">
+                              <span>Amount Paid</span><span className="tabular-nums">- {fmt(amountPaid)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-bold text-emerald-900 text-base pt-1.5 border-t border-emerald-100">
+                            <span>Balance Due</span>
+                            <span className="tabular-nums">{fmt(invoice.amountDue ?? invoice.total ?? 0)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {items.length === 0 && (
+                    <div className="flex justify-between items-center bg-emerald-50 rounded-xl p-4">
+                      <span className="text-sm font-semibold text-emerald-700">Total Amount</span>
+                      <span className="text-xl font-bold text-emerald-900 tabular-nums">{fmt(invoice.total ?? 0)}</span>
+                    </div>
+                  )}
+                  {invoice.memo && (
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-gray-500 mb-1">Message</p>
+                      <p className="text-sm text-gray-700">{invoice.memo}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* DRAFT: editable fields */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 text-gray-400 mb-1"><Calendar size={12} /><span className="text-xs">Invoice Date</span></div>
+                      <p className="text-sm font-semibold text-gray-900">{invoice.date ? new Date(invoice.date).toLocaleDateString() : '—'}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <label className="flex items-center gap-1.5 text-gray-400 mb-1"><Clock size={12} /><span className="text-xs">Due Date</span></label>
+                      <input
+                        type="date"
+                        value={editDueDate.slice(0, 10)}
+                        onChange={e => setEditDueDate(e.target.value)}
+                        className="w-full text-sm font-semibold text-gray-900 bg-transparent border-b border-gray-200 focus:border-emerald-400 outline-none pb-0.5"
+                      />
+                    </div>
+                  </div>
 
-              {/* Line Items */}
-              {items.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">Line Items</h3>
-                  <div className="border border-emerald-100 rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-emerald-50/60">
-                          <th className="text-left px-3 py-2 text-xs font-medium text-emerald-700">Description</th>
-                          <th className="text-right px-3 py-2 text-xs font-medium text-emerald-700 w-16">Qty</th>
-                          <th className="text-right px-3 py-2 text-xs font-medium text-emerald-700 w-28">Unit Price</th>
-                          <th className="text-right px-3 py-2 text-xs font-medium text-emerald-700 w-28">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((it: any, i: number) => (
-                          <tr key={i} className="border-t border-emerald-50">
-                            <td className="px-3 py-2 text-gray-800">{it.description}</td>
-                            <td className="px-3 py-2 text-right text-gray-600">{it.quantity}</td>
-                            <td className="px-3 py-2 text-right text-gray-600 tabular-nums">{fmt(it.unitPrice)}</td>
-                            <td className="px-3 py-2 text-right font-semibold text-emerald-800 tabular-nums">{fmt(it.amount ?? it.quantity * it.unitPrice)}</td>
+                  {/* Editable Line Items */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Line Items</h3>
+                      <button
+                        onClick={() => setEditLines(p => [...p, { description: '', quantity: 1, unitPrice: 0 }])}
+                        className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                        <Plus size={12} /> Add Line
+                      </button>
+                    </div>
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Description</th>
+                            <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 w-16">Qty</th>
+                            <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 w-28">Unit Price</th>
+                            <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 w-24">Amount</th>
+                            <th className="w-7" />
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Totals */}
-                  <div className="flex justify-end mt-3">
-                    <div className="w-52 space-y-1.5 text-sm">
-                      <div className="flex justify-between text-gray-600">
-                        <span>Subtotal</span>
-                        <span className="tabular-nums font-medium">{fmt(subtotal)}</span>
-                      </div>
-                      {taxAmount > 0 && (
-                        <div className="flex justify-between text-gray-500">
-                          <span>Tax</span><span className="tabular-nums">{fmt(taxAmount)}</span>
+                        </thead>
+                        <tbody>
+                          {editLines.map((line, i) => (
+                            <tr key={i} className="border-t border-gray-100">
+                              <td className="px-3 py-1.5">
+                                <input
+                                  value={line.description}
+                                  onChange={e => setEditLines(p => p.map((l, j) => j === i ? { ...l, description: e.target.value } : l))}
+                                  placeholder="Description"
+                                  className="w-full text-sm border border-gray-100 rounded px-2 py-1 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 outline-none"
+                                />
+                              </td>
+                              <td className="px-3 py-1.5">
+                                <input
+                                  type="number" min={0}
+                                  value={line.quantity}
+                                  onChange={e => setEditLines(p => p.map((l, j) => j === i ? { ...l, quantity: Number(e.target.value) } : l))}
+                                  className="w-14 text-sm text-right border border-gray-100 rounded px-2 py-1 focus:border-emerald-400 outline-none tabular-nums"
+                                />
+                              </td>
+                              <td className="px-3 py-1.5">
+                                <input
+                                  type="number" min={0} step="0.01"
+                                  value={line.unitPrice}
+                                  onChange={e => setEditLines(p => p.map((l, j) => j === i ? { ...l, unitPrice: Number(e.target.value) } : l))}
+                                  className="w-24 text-sm text-right border border-gray-100 rounded px-2 py-1 focus:border-emerald-400 outline-none tabular-nums"
+                                />
+                              </td>
+                              <td className="px-3 py-1.5 text-right text-sm font-semibold text-gray-700 tabular-nums">
+                                {fmt(Number(line.quantity) * Number(line.unitPrice))}
+                              </td>
+                              <td className="px-2 py-1.5">
+                                {editLines.length > 1 && (
+                                  <button onClick={() => setEditLines(p => p.filter((_, j) => j !== i))}
+                                    className="text-gray-300 hover:text-red-400 transition-colors">
+                                    <X size={13} />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="flex justify-end mt-2">
+                      <div className="w-44 space-y-1 text-sm">
+                        <div className="flex justify-between font-bold text-emerald-900 pt-1.5 border-t border-gray-200">
+                          <span>Total</span>
+                          <span className="tabular-nums">{fmt(editLines.reduce((s, l) => s + Number(l.quantity) * Number(l.unitPrice), 0))}</span>
                         </div>
-                      )}
-                      {amountPaid > 0 && (
-                        <div className="flex justify-between text-emerald-600">
-                          <span>Amount Paid</span><span className="tabular-nums">- {fmt(amountPaid)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between font-bold text-emerald-900 text-base pt-1.5 border-t border-emerald-100">
-                        <span>Balance Due</span>
-                        <span className="tabular-nums">{fmt(invoice.amountDue ?? invoice.total ?? 0)}</span>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* No items fallback */}
-              {items.length === 0 && (
-                <div className="flex justify-between items-center bg-emerald-50 rounded-xl p-4">
-                  <span className="text-sm font-semibold text-emerald-700">Total Amount</span>
-                  <span className="text-xl font-bold text-emerald-900 tabular-nums">{fmt(invoice.total ?? 0)}</span>
-                </div>
-              )}
-
-              {/* Memo */}
-              {invoice.memo && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs font-semibold text-gray-500 mb-1">Message</p>
-                  <p className="text-sm text-gray-700">{invoice.memo}</p>
-                </div>
+                  {/* Save Changes */}
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={handleUpdateInvoice}
+                      disabled={editSaving}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+                      {editSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      Save Changes
+                    </button>
+                  </div>
+                </>
               )}
 
               {/* Payment History */}
