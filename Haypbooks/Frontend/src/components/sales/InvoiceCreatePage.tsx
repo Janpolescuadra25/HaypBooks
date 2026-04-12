@@ -419,6 +419,7 @@ export default function InvoiceCreatePage() {
         memo,
         internalNotes,
         poNumber,
+        paymentTerms,
         discountType,
         discountValue: Number(discountValue),
         billAddress: { contactName: billContact, company: billCompany, ...billAddress },
@@ -432,7 +433,13 @@ export default function InvoiceCreatePage() {
         })),
       })
       if (action === 'send' && inv?.id) {
-        await apiClient.post(`/companies/${companyId}/ar/invoices/${inv.id}/send`)
+        await apiClient.post(`/companies/${companyId}/ar/invoices/${inv.id}/send`, {
+          subject: emailSubject,
+          body: emailMessage,
+          ...(emailCc ? { cc: emailCc } : {}),
+          ...(emailBcc ? { bcc: emailBcc } : {}),
+          sendCopy: emailSendCopyToSelf,
+        })
       }
       recordTemplateUsage(template.id)
       router.push('/sales/billing/invoices')

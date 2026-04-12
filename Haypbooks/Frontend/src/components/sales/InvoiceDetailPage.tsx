@@ -76,8 +76,8 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const status = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.DRAFT
   const StatusIcon = status.Icon
 
-  const amountPaid = (invoice.total ?? 0) - (invoice.amountDue ?? invoice.total ?? 0)
-  const taxAmount = 0
+  const amountPaid = payments.reduce((s, p) => s + (p.amount ?? 0), 0)
+  const taxAmount = (invoice as any).taxAmount ?? 0
   const subtotal = invoice.total ?? 0
 
   useEffect(() => {
@@ -124,6 +124,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/send`, {
         subject: emailSubject,
         body: emailBody.replace('{amount}', formatCurrency(invoice.total ?? 0, currency)),
+        sendCopy,
         ...(scheduledAt ? { scheduledAt } : {}),
       })
       setInvoice(p => ({ ...p, status: 'SENT' }))
