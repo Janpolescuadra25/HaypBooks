@@ -40,6 +40,15 @@ export class ArController {
         return this.svc.exportCustomersCsv(req.user.userId, companyId, query)
     }
 
+    @Get('customers/activity')
+    getAllCustomerActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.getAllCustomerActivity(req.user.userId, companyId, query)
+    }
+
     @Get('customer-groups')
     listCustomerGroups(
         @Req() req: any,

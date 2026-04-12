@@ -255,6 +255,37 @@ export class ArService {
         return { data: logs, total }
     }
 
+    async getAllCustomerActivity(userId: string, companyId: string, opts: any) {
+        const wid = await this.getWorkspaceId(companyId)
+        await this.assertAccess(userId, companyId)
+        const take = opts.take ? parseInt(opts.take) : 20
+        const skip = opts.skip ? parseInt(opts.skip) : 0
+        const where: any = { tableName: 'Customer', companyId }
+        if (opts.action && ['CREATE', 'UPDATE', 'DELETE'].includes(opts.action)) {
+            where.action = opts.action
+        }
+        if (opts.userId) {
+            where.userId = opts.userId
+        }
+        if (opts.search) {
+            where.OR = [
+                { changes: { path: ['name'], string_contains: opts.search } },
+                { changes: { path: ['displayName'], string_contains: opts.search } },
+            ]
+        }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({
+                where,
+                include: { user: { select: { id: true, name: true, email: true } } },
+                orderBy: { createdAt: 'desc' },
+                take,
+                skip,
+            }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
+    }
+
     // ─── Quotes ───────────────────────────────────────────────────────────────
 
     async listQuotes(userId: string, companyId: string, opts: any) {
