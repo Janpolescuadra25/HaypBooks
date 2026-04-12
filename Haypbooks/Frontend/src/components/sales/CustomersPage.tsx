@@ -323,19 +323,19 @@ export default function CustomersPage() {
 
       {/* Batch actions */}
       {selectedIds.size > 0 && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-emerald-800">{selectedIds.size} selected</span>
+        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">{selectedIds.size} selected</span>
           <div className="flex-1" />
           <button onClick={() => handleBatchStatus('ACTIVE')} disabled={batchLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white/20 hover:bg-white/30 rounded-lg disabled:opacity-40 transition-colors font-semibold">
             <UserCheck size={13} /> Mark Active
           </button>
           <button onClick={() => handleBatchStatus('INACTIVE')} disabled={batchLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-40 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white/20 hover:bg-white/30 rounded-lg disabled:opacity-40 transition-colors font-semibold">
             <UserX size={13} /> Mark Inactive
           </button>
           <button onClick={handleBatchDelete} disabled={batchLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-40 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500/80 hover:bg-red-500 text-white rounded-lg disabled:opacity-40 transition-colors font-semibold">
             <Trash2 size={13} /> Delete
           </button>
         </div>
@@ -350,7 +350,7 @@ export default function CustomersPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-emerald-100 overflow-x-auto">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
         <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 600 }}>
           <colgroup>
             <col style={{ width: 44 }} />
@@ -358,56 +358,56 @@ export default function CustomersPage() {
             <col style={{ width: 80 }} />
           </colgroup>
           <thead>
-            <tr className="bg-emerald-50/50 border-b border-emerald-100">
+            <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-3 py-3">
-                <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-emerald-600" />
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" />
               </th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-3 py-3 font-medium text-emerald-700 select-none"
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none"
                   style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
                   {c.label}
                   <div
-                    className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-300/60"
+                    className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60"
                     onMouseDown={e => startResize(e, c.key, c.width)}
                   />
                 </th>
               ))}
-              <th className="px-3 py-3 text-right font-medium text-emerald-700">Actions</th>
+              <th className="px-3 py-3 text-right font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-t border-emerald-50 animate-pulse">
-                  <td className="px-3 py-3"><div className="h-4 w-4 bg-emerald-50 rounded" /></td>
+                  <tr key={i} className="border-b border-gray-100 animate-pulse">
+                  <td className="px-3 py-3"><div className="h-4 w-4 bg-gray-100 rounded" /></td>
                   {visibleCols.map(c => (
                     <td key={c.key} className="px-3 py-3">
-                      <div className="h-4 bg-emerald-50 rounded w-3/4" />
+                      <div className="h-4 bg-gray-100 rounded w-3/4" />
                     </td>
                   ))}
-                  <td className="px-3 py-3"><div className="h-4 w-8 bg-emerald-50 rounded ml-auto" /></td>
+                  <td className="px-3 py-3"><div className="h-4 w-8 bg-gray-100 rounded ml-auto" /></td>
                 </tr>
               ))
             ) : customers.length === 0 ? (
               <tr>
-                <td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-emerald-400">
+                <td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-gray-300">
                   <Users size={28} className="mx-auto mb-2 opacity-40" />
-                  <p className="font-medium">No customers found</p>
-                  <p className="text-xs mt-1 text-emerald-300">Try adjusting your filters or add a new customer</p>
+                  <p className="font-medium text-gray-400">No customers found</p>
+                  <p className="text-xs mt-1 text-gray-300">Try adjusting your filters or add a new customer</p>
                 </td>
               </tr>
             ) : (
               customers.map(c => (
                 <tr key={c.id}
-                  className={`border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors ${selectedIds.has(c.id) ? 'bg-emerald-50/50' : ''}`}>
+                  className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selectedIds.has(c.id) ? 'bg-blue-50/20' : ''}`}>
                   <td className="px-3 py-2.5">
-                    <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-emerald-600" />
+                    <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-blue-600" />
                   </td>
                   {visibleCols.map(col => {
                     if (col.key === 'name') return (
                       <td key={col.key} className="px-3 py-2.5 truncate">
                         <button onClick={() => router.push(`/sales/customers/${c.id}`)}
-                          className="font-medium text-emerald-800 hover:text-emerald-600 hover:underline text-left truncate w-full block">
+                          className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline text-left truncate w-full block">
                           {c.name}
                         </button>
                       </td>
@@ -422,12 +422,12 @@ export default function CustomersPage() {
                       </td>
                     )
                     if (col.key === 'openBalance' || col.key === 'creditLimit') return (
-                      <td key={col.key} className="px-3 py-2.5 text-right tabular-nums font-semibold text-emerald-800 truncate">
+                      <td key={col.key} className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-800 truncate">
                         {fmt(Number(c[col.key as keyof Customer] ?? 0))}
                       </td>
                     )
                     return (
-                      <td key={col.key} className={`px-3 py-2.5 text-emerald-600/70 truncate ${col.align === 'right' ? 'text-right' : ''}`}>
+                      <td key={col.key} className={`px-3 py-2.5 text-slate-500 truncate ${col.align === 'right' ? 'text-right' : ''}` }>
                         {String(c[col.key as keyof Customer] ?? '') || '—'}
                       </td>
                     )
@@ -435,7 +435,7 @@ export default function CustomersPage() {
                   <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => { setEditing(c); setShowForm(true) }}
-                        className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="Edit">
+                        className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Edit">
                         <Edit2 size={13} />
                       </button>
                       <button onClick={() => handleDelete(c.id)}
@@ -452,18 +452,18 @@ export default function CustomersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-emerald-50 flex items-center justify-between">
-            <span className="text-xs text-emerald-600/60">
+          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-400">
               Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
             </span>
             <div className="flex items-center gap-2">
               <button onClick={() => goToPage(page - 1)} disabled={page === 0}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-emerald-100 hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed text-emerald-700">
+                className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600">
                 <ChevronLeft size={14} /> Previous
               </button>
-              <span className="text-xs text-emerald-600/60">Page {page + 1} / {totalPages}</span>
+              <span className="text-xs text-gray-400">Page {page + 1} / {totalPages}</span>
               <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages - 1}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-emerald-100 hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed text-emerald-700">
+                className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600">
                 Next <ChevronRight size={14} />
               </button>
             </div>

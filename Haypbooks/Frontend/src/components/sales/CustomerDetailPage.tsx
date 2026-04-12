@@ -162,7 +162,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
                 {customer.status === 'INACTIVE' ? 'Inactive' : 'Active'}
               </span>
               {customer.groupName && (
-                <span className="text-xs text-emerald-600/60">{customer.groupName}</span>
+                <span className="text-xs text-gray-400">{customer.groupName}</span>
               )}
             </div>
           </div>
@@ -179,25 +179,25 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-emerald-50 rounded-lg"><DollarSign size={15} className="text-emerald-600" /></div>
-            <span className="text-xs text-emerald-600/70">Open Balance</span>
+            <span className="text-xs text-gray-500">Open Balance</span>
           </div>
           <p className="text-xl font-bold text-emerald-900 tabular-nums">{fmtCurrency(customer.openBalance)}</p>
           {customer.openInvoiceCount > 0 && (
-            <p className="text-xs text-emerald-500 mt-0.5">{customer.openInvoiceCount} open invoice{customer.openInvoiceCount !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{customer.openInvoiceCount} open invoice{customer.openInvoiceCount !== 1 ? 's' : ''}</p>
           )}
         </div>
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-blue-50 rounded-lg"><TrendingUp size={15} className="text-blue-600" /></div>
-            <span className="text-xs text-emerald-600/70">Total Revenue</span>
+            <span className="text-xs text-gray-500">Total Revenue</span>
           </div>
           <p className="text-xl font-bold text-emerald-900 tabular-nums">{fmtCurrency(customer.totalRevenue)}</p>
-          <p className="text-xs text-emerald-500 mt-0.5">{customer.invoiceCount} invoice{customer.invoiceCount !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{customer.invoiceCount} invoice{customer.invoiceCount !== 1 ? 's' : ''}</p>
         </div>
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-amber-50 rounded-lg"><CreditCard size={15} className="text-amber-600" /></div>
-            <span className="text-xs text-emerald-600/70">Credit Limit</span>
+            <span className="text-xs text-gray-500">Credit Limit</span>
           </div>
           <p className="text-xl font-bold text-emerald-900 tabular-nums">
             {customer.creditLimit != null ? fmtCurrency(customer.creditLimit) : '—'}
@@ -206,7 +206,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 bg-purple-50 rounded-lg"><FileText size={15} className="text-purple-600" /></div>
-            <span className="text-xs text-emerald-600/70">Payment Terms</span>
+            <span className="text-xs text-gray-500">Payment Terms</span>
           </div>
           <p className="text-lg font-bold text-emerald-900">{customer.paymentTermName ?? '—'}</p>
         </div>
@@ -215,30 +215,30 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Contact info */}
         <div className="bg-white rounded-xl border border-emerald-100 p-5">
-          <h2 className="text-sm font-semibold text-emerald-800 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <User size={15} /> Contact Information
           </h2>
           <div className="space-y-3 text-sm">
             {customer.email && (
-              <div className="flex items-center gap-3 text-emerald-700">
-                <Mail size={14} className="text-emerald-400 shrink-0" />
+              <div className="flex items-center gap-3 text-slate-700">
+                <Mail size={14} className="text-gray-400 shrink-0" />
                 <a href={`mailto:${customer.email}`} className="hover:underline">{customer.email}</a>
               </div>
             )}
             {customer.phone && (
-              <div className="flex items-center gap-3 text-emerald-700">
-                <Phone size={14} className="text-emerald-400 shrink-0" />
+              <div className="flex items-center gap-3 text-slate-700">
+                <Phone size={14} className="text-gray-400 shrink-0" />
                 <a href={`tel:${customer.phone}`} className="hover:underline">{customer.phone}</a>
               </div>
             )}
             {addressLine && (
-              <div className="flex items-start gap-3 text-emerald-700">
-                <MapPin size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 text-slate-700">
+                <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
                 <span>{addressLine}</span>
               </div>
             )}
             {!customer.email && !customer.phone && !addressLine && (
-              <p className="text-emerald-400 text-xs">No contact information</p>
+              <p className="text-gray-400 text-xs">No contact information</p>
             )}
           </div>
         </div>
@@ -246,7 +246,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
         {/* Recent invoices */}
         <div className="bg-white rounded-xl border border-emerald-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-emerald-800 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
               <FileText size={15} /> Recent Invoices
             </h2>
             <button
@@ -256,7 +256,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
             </button>
           </div>
           {customer.recentInvoices.length === 0 ? (
-            <p className="text-xs text-emerald-400">No invoices yet</p>
+            <p className="text-xs text-gray-400">No invoices yet</p>
           ) : (
             <div className="space-y-2">
               {customer.recentInvoices.map(inv => (
@@ -264,16 +264,16 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
                   <div>
                     <button
                       onClick={() => router.push(`/sales/invoices/${inv.id}`)}
-                      className="font-medium text-emerald-800 hover:underline text-sm">
+                      className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline text-sm">
                       {inv.invoiceNumber}
                     </button>
-                    <span className="text-emerald-400 text-xs ml-2">{fmt(inv.date)}</span>
+                    <span className="text-gray-400 text-xs ml-2">{fmt(inv.date)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                       STATUS_COLORS[inv.status as keyof typeof STATUS_COLORS] ?? 'bg-gray-100 text-gray-600'
                     }`}>{inv.status}</span>
-                    <span className="tabular-nums font-semibold text-emerald-800 text-xs">{fmtCurrency(inv.total)}</span>
+                    <span className="tabular-nums font-semibold text-slate-800 text-xs">{fmtCurrency(inv.total)}</span>
                   </div>
                 </div>
               ))}
@@ -285,24 +285,24 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
       {/* Recent payments */}
       {customer.recentPayments.length > 0 && (
         <div className="bg-white rounded-xl border border-emerald-100 p-5">
-          <h2 className="text-sm font-semibold text-emerald-800 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <CreditCard size={15} /> Recent Payments
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-emerald-50">
-                  <th className="text-left py-2 pr-4 text-xs text-emerald-600/60 font-medium">Reference</th>
-                  <th className="text-left py-2 pr-4 text-xs text-emerald-600/60 font-medium">Date</th>
-                  <th className="text-right py-2 text-xs text-emerald-600/60 font-medium">Amount</th>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 pr-4 text-xs text-gray-500 font-medium">Reference</th>
+                  <th className="text-left py-2 pr-4 text-xs text-gray-500 font-medium">Date</th>
+                  <th className="text-right py-2 text-xs text-gray-500 font-medium">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {customer.recentPayments.map(p => (
-                  <tr key={p.id} className="border-t border-emerald-50">
-                    <td className="py-2 pr-4 text-emerald-700">{p.referenceNumber ?? '—'}</td>
-                    <td className="py-2 pr-4 text-emerald-600/70 text-xs">{fmt(p.paymentDate)}</td>
-                    <td className="py-2 text-right tabular-nums font-semibold text-emerald-800">{fmtCurrency(p.amount)}</td>
+                  <tr key={p.id} className="border-t border-gray-100">
+                    <td className="py-2 pr-4 text-slate-700">{p.referenceNumber ?? '—'}</td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{fmt(p.paymentDate)}</td>
+                    <td className="py-2 text-right tabular-nums font-semibold text-slate-800">{fmtCurrency(p.amount)}</td>
                   </tr>
                 ))}
               </tbody>
