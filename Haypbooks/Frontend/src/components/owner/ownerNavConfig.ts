@@ -118,7 +118,7 @@ export const navigationData: NavSection[] = [
         ],
       },
       {
-        title: 'Sales (Order-to-Cash)',
+        title: 'Sales',
         items: [
           {
             title: 'Customers',
@@ -145,7 +145,6 @@ export const navigationData: NavSection[] = [
             tabs: [
               { label: 'Invoices',           value: 'invoices',           status: 'existing' },
               { label: 'Recurring Invoices', value: 'recurring-invoices', status: 'existing' },
-              { label: 'Subscriptions',      value: 'subscriptions',      status: 'coming-soon' },
               { label: 'Payment Links',      value: 'payment-links',      status: 'coming-soon' },
             ],
           },

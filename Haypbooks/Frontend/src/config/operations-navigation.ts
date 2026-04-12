@@ -93,7 +93,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
   // ───────────────────────────────────────────────────────────────────────────
   {
     id: 'sales',
-    label: 'Sales (Order-to-Cash)',
+    label: 'Sales',
     subsections: [
       {
         id: 'customers',
@@ -120,7 +120,6 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         tabs: [
           { id: 'invoices',             label: 'Invoices',             path: '/sales/billing/invoices' },
           { id: 'recurring-invoices',   label: 'Recurring Invoices',   path: '/sales/billing/recurring-invoices' },
-          { id: 'subscriptions',        label: 'Subscriptions',        path: '/sales/billing/subscriptions' },
           { id: 'payment-links',        label: 'Payment Links',        path: '/sales/billing/payment-links' },
         ],
       },
