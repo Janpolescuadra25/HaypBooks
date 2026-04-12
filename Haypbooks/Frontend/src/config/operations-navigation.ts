@@ -67,17 +67,8 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         ],
       },
       {
-        id: 'accounts',
-        label: 'Accounts',
-        tabs: [
-          { id: 'bank-accounts',        label: 'Bank Accounts',        path: '/banking-cash/accounts/bank-accounts' },
-          { id: 'credit-cards',         label: 'Credit Cards',         path: '/banking-cash/accounts/credit-cards' },
-          { id: 'petty-cash',           label: 'Petty Cash',           path: '/banking-cash/accounts/petty-cash' },
-          { id: 'clearing-accounts',    label: 'Clearing Accounts',    path: '/banking-cash/accounts/clearing-accounts' },
-        ],
-      },
-      {
         id: 'management',
+        label: 'Management',
         label: 'Management',
         tabs: [
           { id: 'transaction-rules',    label: 'Transaction Rules',    path: '/banking-cash/management/transaction-rules' },
@@ -363,7 +354,7 @@ export function findTab(
 }
 
 /**
- * Given a pathname (e.g. '/banking-cash/accounts/credit-cards'), return the
+ * Given a pathname (e.g. '/banking-cash/transactions/bank-transactions'), return the
  * matching { section, subsection, tab } tuple, or null if not found.
  */
 export function resolveNavFromPath(pathname: string): {

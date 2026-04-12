@@ -31,7 +31,7 @@ const SETUP_PHASES: SetupPhase[] = [
       { id: 'fiscal', title: 'Currency & Fiscal Year', description: 'Set fiscal settings', path: '/onboarding', required: true },
       { id: 'coa', title: 'Chart of Accounts', description: 'Choose COA template or import', path: '/accounting/core-accounting/chart-of-accounts', required: true },
       { id: 'coa_seed', title: 'Seed Default Accounts', description: 'Initialize standard chart of accounts', path: '/home/setup-center', required: true },
-      { id: 'bank', title: 'First Bank Account', description: 'Configure first bank account', path: '/banking-cash/accounts/bank-accounts', required: true },
+      { id: 'bank', title: 'First Bank Account', description: 'Configure first bank account', path: '/banking-cash/transactions', required: true },
       { id: 'tax', title: 'Tax Registration', description: 'Capture tax IDs', path: '/settings/tax', required: true },
       { id: 'review', title: 'Review & Confirm', description: 'Finalize quick setup', path: '/onboarding/review', required: true },
     ],
