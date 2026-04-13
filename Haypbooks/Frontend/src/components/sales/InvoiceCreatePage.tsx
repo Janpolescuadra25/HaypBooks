@@ -319,7 +319,7 @@ export default function InvoiceCreatePage() {
     if (!force && customers.length > 0) return
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
-      const list: any[] = Array.isArray(data) ? data : data.items ?? data.customers ?? []
+      const list: any[] = Array.isArray(data) ? data : data?.data ?? data.items ?? data.customers ?? []
       setCustomers(list.map(c => ({
         contactId: c.contactId ?? c.id,
         name: c.name ?? c.displayName ?? '',

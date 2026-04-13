@@ -322,7 +322,7 @@ export default function CreditNotesPage() {
     setCustLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
-      const raw: any[] = Array.isArray(data) ? data : data?.items || []
+      const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? []
       setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
     } catch { /* non-blocking */ }
     finally { setCustLoading(false) }

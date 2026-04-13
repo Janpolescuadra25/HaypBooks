@@ -149,7 +149,7 @@ export default function SalesOrdersPage() {
     setCustomersLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
-      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.records ?? []
+      const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? data?.records ?? []
       setCustomers(raw.map((c: any) => ({
         id: c.id ?? c.contactId,
         name: c.name ?? c.displayName ?? c.contact?.displayName ?? '—',
