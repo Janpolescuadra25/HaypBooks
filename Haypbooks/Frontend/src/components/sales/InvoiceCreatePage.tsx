@@ -577,7 +577,7 @@ export default function InvoiceCreatePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => { setShowCustomerDD(true); setTimeout(() => customerSearchRef.current?.focus(), 50) }}
+                  onClick={() => { setCustomerId(''); setCustomerSearch(''); setShowCustomerDD(true); setTimeout(() => customerSearchRef.current?.focus(), 50) }}
                   className="text-xs text-emerald-600 hover:text-emerald-700 font-medium border border-emerald-200 hover:border-emerald-400 px-3 py-1.5 rounded-lg transition-colors">
                   Change
                 </button>
