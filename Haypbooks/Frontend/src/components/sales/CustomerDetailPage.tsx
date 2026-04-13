@@ -302,7 +302,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
               <FileText size={15} /> Recent Invoices
             </h2>
             <button
-              onClick={() => router.push(`/sales/invoices?customerId=${customer.id}`)}
+              onClick={() => router.push('/sales/billing/invoices')}
               className="text-xs text-emerald-600 hover:underline">
               View all →
             </button>
@@ -315,7 +315,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
                 <div key={inv.id} className="flex items-center justify-between text-sm">
                   <div>
                     <button
-                      onClick={() => router.push(`/sales/invoices/${inv.id}`)}
+                      onClick={() => router.push('/sales/billing/invoices')}
                       className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline text-sm">
                       {inv.invoiceNumber}
                     </button>

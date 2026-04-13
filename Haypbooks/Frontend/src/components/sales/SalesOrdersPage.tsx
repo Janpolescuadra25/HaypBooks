@@ -1,13 +1,15 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, FileText, FileX,
+  Download, Eye, FileText, FileX, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
+import CustomerPickerField, { type CustomerPickerOption } from './CustomerPickerField'
+import QuickAddCustomerModal from './QuickAddCustomerModal'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -66,6 +68,30 @@ interface SOFormData {
   lines: SalesOrderLine[]
 }
 
+type SortDirection = 'asc' | 'desc'
+type SortKey = 'orderNumber' | 'customer' | 'orderDate' | 'shipDate' | 'total' | 'status'
+
+function compareSalesOrders(a: SalesOrder, b: SalesOrder, key: SortKey, dir: SortDirection): number {
+  const asc = dir === 'asc' ? 1 : -1
+
+  if (key === 'total') {
+    const av = Number(a.total ?? 0)
+    const bv = Number(b.total ?? 0)
+    return av === bv ? 0 : av > bv ? asc : -asc
+  }
+
+  if (key === 'orderDate' || key === 'shipDate') {
+    const ad = a[key] ? new Date(a[key] as string).getTime() : 0
+    const bd = b[key] ? new Date(b[key] as string).getTime() : 0
+    return ad === bd ? 0 : ad > bd ? asc : -asc
+  }
+
+  const av = String(a[key] ?? '').toLowerCase()
+  const bv = String(b[key] ?? '').toLowerCase()
+  if (av === bv) return 0
+  return av > bv ? asc : -asc
+}
+
 const emptyLine = (): SalesOrderLine => ({ description: '', quantity: 1, unitPrice: 0 })
 
 export default function SalesOrdersPage() {
@@ -88,6 +114,11 @@ export default function SalesOrdersPage() {
   const [detailItem, setDetailItem] = useState<SalesOrder | null>(null)
   const [formData, setFormData] = useState<SOFormData>({ customerId: '', orderDate: new Date().toISOString().split('T')[0], shipDate: '', lines: [emptyLine()] })
   const [formSaving, setFormSaving] = useState(false)
+  const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
+  const [customersLoading, setCustomersLoading] = useState(false)
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('orderDate')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
   const colsRef = useRef(cols)
   useEffect(() => { colsRef.current = cols }, [cols])
@@ -112,14 +143,41 @@ export default function SalesOrdersPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const filtered = items.filter(row => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || row.orderNumber?.toLowerCase().includes(q) || row.customer?.toLowerCase().includes(q)
-    const matchStatus = !statusFilter || row.status === statusFilter
-    return matchSearch && matchStatus
-  })
+  const loadCustomers = useCallback(async (force = false) => {
+    if (!companyId || customersLoading) return
+    if (!force && customers.length > 0) return
+    setCustomersLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.records ?? []
+      setCustomers(raw.map((c: any) => ({
+        id: c.id ?? c.contactId,
+        name: c.name ?? c.displayName ?? c.contact?.displayName ?? '—',
+        email: c.email ?? c.contact?.email ?? '',
+      })))
+    } catch {
+      setCustomers([])
+    } finally {
+      setCustomersLoading(false)
+    }
+  }, [companyId, customers.length, customersLoading])
 
-  const paginated = filtered.slice(page * pageSize, page * pageSize + pageSize)
+  const filtered = useMemo(() => {
+    return items.filter(row => {
+      const q = search.toLowerCase()
+      const matchSearch = !q || row.orderNumber?.toLowerCase().includes(q) || row.customer?.toLowerCase().includes(q)
+      const matchStatus = !statusFilter || row.status === statusFilter
+      return matchSearch && matchStatus
+    })
+  }, [items, search, statusFilter])
+
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => compareSalesOrders(a, b, sortKey, sortDir))
+    return next
+  }, [filtered, sortKey, sortDir])
+
+  const paginated = sorted.slice(page * pageSize, page * pageSize + pageSize)
   const totalPages = Math.ceil(filtered.length / pageSize)
 
   const allSelected = paginated.length > 0 && paginated.every(r => selectedIds.has(r.id))
@@ -171,7 +229,21 @@ export default function SalesOrdersPage() {
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'sales-orders.csv'; a.click(); URL.revokeObjectURL(url)
   }
 
-  const openCreate = () => { setEditing(null); setFormData({ customerId: '', orderDate: new Date().toISOString().split('T')[0], shipDate: '', lines: [emptyLine()] }); setShowForm(true) }
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir(key === 'orderDate' || key === 'shipDate' || key === 'total' ? 'desc' : 'asc')
+  }
+
+  const openCreate = () => {
+    setEditing(null)
+    setFormData({ customerId: '', orderDate: new Date().toISOString().split('T')[0], shipDate: '', lines: [emptyLine()] })
+    setShowForm(true)
+    loadCustomers(true)
+  }
 
   const setLine = (i: number, field: keyof SalesOrderLine, value: string | number) =>
     setFormData(f => ({ ...f, lines: f.lines.map((l, idx) => idx === i ? { ...l, [field]: value } : l) }))
@@ -197,8 +269,28 @@ export default function SalesOrdersPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  if (cidLoading) return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /><span className="ml-2 text-emerald-700">Loading…</span></div>
-  if (cidError) return <div className="p-6 text-red-600">{cidError}</div>
+  if (cidLoading || (!companyId && !cidError)) {
+    return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /><span className="ml-2 text-emerald-700">Loading sales orders...</span></div>
+  }
+
+  if (!companyId && cidError) {
+    return (
+      <div className="p-6">
+        <div className="max-w-xl mx-auto bg-white border border-red-200 rounded-2xl p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-red-700">Company Context Unavailable</h2>
+          <p className="text-sm text-red-600 mt-1">{cidError}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={() => window.location.reload()} className="px-3 py-2 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+              Retry
+            </button>
+            <button onClick={() => window.location.assign('/home/setup-center')} className="px-3 py-2 text-sm font-semibold border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors">
+              Open Setup Center
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -281,10 +373,17 @@ export default function SalesOrdersPage() {
           </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
+              <th className="px-3 py-3 border-r border-gray-200"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                  {c.label}
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none border-r border-gray-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(c.key as SortKey)}
+                    className={`inline-flex items-center gap-1 ${c.align === 'right' ? 'ml-auto' : ''}`}
+                  >
+                    <span>{c.label}</span>
+                    <ArrowUpDown size={12} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                  </button>
                   <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
                 </th>
               ))}
@@ -311,9 +410,9 @@ export default function SalesOrdersPage() {
             ) : (
               paginated.map(row => (
                 <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setDetailItem(row)}>
-                  <td className="px-3 py-3" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
+                  <td className="px-3 py-3 border-r border-gray-100" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
                   {visibleCols.map(c => (
-                    <td key={c.key} className="px-3 py-3 truncate" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                    <td key={c.key} className="px-3 py-3 truncate border-r border-gray-100" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
                       {c.key === 'status' ? (
                         <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>{row.status}</span>
                       ) : (row as any)[c.key] ?? '—'}
@@ -355,12 +454,17 @@ export default function SalesOrdersPage() {
               <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer ID *</label>
-                <input type="text" value={formData.customerId} onChange={e => setFormData(f => ({ ...f, customerId: e.target.value }))}
-                  placeholder="Customer ID"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-              </div>
+              <CustomerPickerField
+                label="Customer *"
+                value={formData.customerId}
+                customers={customers}
+                loading={customersLoading}
+                placeholder="Select customer..."
+                createLabel="+ Create New Customer"
+                onOpen={() => loadCustomers(true)}
+                onChange={(id) => setFormData((f) => ({ ...f, customerId: id }))}
+                onCreateNew={() => setShowQuickAddCustomer(true)}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
@@ -406,6 +510,19 @@ export default function SalesOrdersPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showQuickAddCustomer && companyId && (
+        <QuickAddCustomerModal
+          companyId={companyId}
+          onClose={() => setShowQuickAddCustomer(false)}
+          onCreated={(customer) => {
+            const next = { id: customer.contactId, name: customer.name, email: customer.email }
+            setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
+            setFormData((prev) => ({ ...prev, customerId: next.id }))
+            setShowQuickAddCustomer(false)
+          }}
+        />
       )}
 
       {/* Detail Drawer */}

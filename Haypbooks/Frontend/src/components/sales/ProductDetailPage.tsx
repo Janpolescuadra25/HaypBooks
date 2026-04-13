@@ -54,7 +54,7 @@ interface ProductDetail {
   soldCount: number
   revenueGenerated: number
   quotedCount: number
-  usedInPriceLists: number
+  pricingRuleUsageCount: number
   recentInvoices: InvoiceSummary[]
   recentQuotes: QuoteSummary[]
   activity: AuditEntry[]
@@ -95,7 +95,11 @@ export default function ProductDetailPage({ id }: { id: string }) {
     setError('')
     try {
       const response = await apiClient.get(`/companies/${companyId}/inventory/items/${id}`)
-      setProduct(response.data)
+      const raw = response.data ?? {}
+      setProduct({
+        ...raw,
+        pricingRuleUsageCount: Number(raw.pricingRuleUsageCount ?? raw.usedInPriceLists ?? 0),
+      } as ProductDetail)
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Failed to load item')
     } finally {
@@ -228,7 +232,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
                 { label: 'Status', value: product.status },
                 { label: 'Tracking', value: product.trackingType ?? 'NONE' },
                 { label: 'Stock Quantity', value: product.stockQty != null ? product.stockQty : 'Not tracked' },
-                { label: 'Price Lists', value: product.usedInPriceLists },
+                { label: 'Pricing Rules', value: product.pricingRuleUsageCount },
                 { label: 'Created', value: fmtDate(product.createdAt) },
                 { label: 'Updated', value: fmtDate(product.updatedAt) },
               ].map((item) => (

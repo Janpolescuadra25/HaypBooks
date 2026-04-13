@@ -48,7 +48,7 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
         state: form.state.trim() || undefined,
         zip: form.zip.trim() || undefined,
       }
-      const { data } = await apiClient.post(`/companies/${companyId}/customers`, payload)
+      const { data } = await apiClient.post(`/companies/${companyId}/ar/customers`, payload)
       onCreated({
         contactId: data.contactId ?? data.id,
         name: data.name ?? data.displayName ?? form.name,

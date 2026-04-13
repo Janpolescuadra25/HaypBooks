@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Download, Plus, RefreshCw, X } from 'lucide-react'
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Plus, RefreshCw, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import CustomerPickerField from './CustomerPickerField'
+import QuickAddCustomerModal from './QuickAddCustomerModal'
 
 const PAGE_SIZE = 25
 
@@ -25,12 +27,15 @@ interface QuoteRow {
   convertedToInvoiceId: string | null
 }
 
-interface CustomerOption { id: string; name: string }
+interface CustomerOption { id: string; name: string; email?: string }
 interface LineItem { description: string; quantity: string; unitPrice: string }
 
 interface ColDef {
   key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right'
 }
+
+type SortDirection = 'asc' | 'desc'
+type SortKey = 'quoteNumber' | 'customer' | 'date' | 'expiryDate' | 'amount' | 'status'
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'quoteNumber', label: 'Quote #', visible: true, width: 120, align: 'left' },
@@ -95,6 +100,22 @@ function statusLabel(s: string) {
   return m[s] ?? s
 }
 
+function compareQuotes(a: QuoteRow, b: QuoteRow, key: SortKey, dir: SortDirection): number {
+  const asc = dir === 'asc' ? 1 : -1
+  if (key === 'amount') {
+    return a.amount === b.amount ? 0 : a.amount > b.amount ? asc : -asc
+  }
+  if (key === 'date' || key === 'expiryDate') {
+    const ad = a[key] ? new Date(a[key] as string).getTime() : 0
+    const bd = b[key] ? new Date(b[key] as string).getTime() : 0
+    return ad === bd ? 0 : ad > bd ? asc : -asc
+  }
+  const av = String((a as any)[key] ?? '').toLowerCase()
+  const bv = String((b as any)[key] ?? '').toLowerCase()
+  if (av === bv) return 0
+  return av > bv ? asc : -asc
+}
+
 function emptyLine(): LineItem { return { description: '', quantity: '1', unitPrice: '' } }
 
 export default function QuotesEstimatesPage() {
@@ -124,10 +145,13 @@ export default function QuotesEstimatesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [custLoading, setCustLoading] = useState(false)
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
   const [form, setForm] = useState({ customerId: '', expiryDate: '' })
   const [lines, setLines] = useState<LineItem[]>([emptyLine()])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
   // Column defs
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
@@ -310,16 +334,21 @@ export default function QuotesEstimatesPage() {
 
   // ─── Load customers ───────────────────────────────────────────────────────
 
-  const loadCustomers = useCallback(async () => {
-    if (!companyId || customers.length > 0) return
+  const loadCustomers = useCallback(async (force = false) => {
+    if (!companyId || custLoading) return
+    if (!force && customers.length > 0) return
     setCustLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
       const raw: any[] = Array.isArray(data) ? data : data?.items || []
-      setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
+      setCustomers(raw.map((c: any) => ({
+        id: c.id || c.contactId,
+        name: c.name || c.displayName || '—',
+        email: c.email || c.contact?.email || '',
+      })))
     } catch { /* non-blocking */ }
     finally { setCustLoading(false) }
-  }, [companyId, customers.length])
+  }, [companyId, customers.length, custLoading])
 
   // ─── Open create/edit modal ───────────────────────────────────────────────
 
@@ -329,7 +358,7 @@ export default function QuotesEstimatesPage() {
     setLines([emptyLine()])
     setSaveError('')
     setModalOpen(true)
-    loadCustomers()
+    loadCustomers(true)
   }
 
   function openEdit(row: QuoteRow) {
@@ -338,7 +367,7 @@ export default function QuotesEstimatesPage() {
     setLines([emptyLine()])
     setSaveError('')
     setModalOpen(true)
-    loadCustomers()
+    loadCustomers(true)
   }
 
   // ─── Line helpers ─────────────────────────────────────────────────────────
@@ -402,6 +431,21 @@ export default function QuotesEstimatesPage() {
       r.status?.toLowerCase().includes(q)
     )
   }, [items, search])
+
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => compareQuotes(a, b, sortKey, sortDir))
+    return next
+  }, [filtered, sortKey, sortDir])
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir(key === 'date' || key === 'expiryDate' || key === 'amount' ? 'desc' : 'asc')
+  }
 
   const visibleCols = cols.filter(c => c.visible)
 
@@ -528,7 +572,7 @@ export default function QuotesEstimatesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="px-3 py-3 w-10">
+                <th className="px-3 py-3 w-10 border-r border-slate-200">
                   <input
                     type="checkbox"
                     checked={filtered.length > 0 && selectedIds.size === filtered.length}
@@ -540,9 +584,16 @@ export default function QuotesEstimatesPage() {
                   <th
                     key={col.key}
                     style={{ width: col.width, minWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 ${col.align === 'right' ? 'text-right' : 'text-left'}`}
                   >
-                    {col.label}
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(col.key as SortKey)}
+                      className={`inline-flex items-center gap-1 ${col.align === 'right' ? 'ml-auto' : ''}`}
+                    >
+                      <span>{col.label}</span>
+                      <ArrowUpDown size={11} className={sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'} />
+                    </button>
                     {ci < visibleCols.length - 1 && (
                       <span
                         onMouseDown={e => onResizeStart(e, col.key, col.width)}
@@ -569,23 +620,23 @@ export default function QuotesEstimatesPage() {
                     <button onClick={() => fetchQuotes(page, statusFilter)} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : sorted.length === 0 ? (
                 <tr>
                   <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No quotes found.</td>
                 </tr>
               ) : (
-                filtered.map(row => (
+                sorted.map(row => (
                   <tr
                     key={row.id}
                     className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}
                   >
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 border-r border-slate-100">
                       <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
                     {visibleCols.map(col => (
                       <td
                         key={col.key}
-                        className={`px-4 py-3 cursor-pointer ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
+                        className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
                         onClick={() => setDrawerQuote(row)}
                       >
                         {col.key === 'quoteNumber' && <span className="font-mono text-xs text-slate-700">{row.quoteNumber}</span>}
@@ -755,18 +806,17 @@ export default function QuotesEstimatesPage() {
 
             <form onSubmit={handleSave} className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
-                  <select
-                    required
-                    value={form.customerId}
-                    onChange={e => setForm(f => ({ ...f, customerId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  >
-                    <option value="">{custLoading ? 'Loading…' : 'Select customer…'}</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
+                <CustomerPickerField
+                  label="Customer *"
+                  value={form.customerId}
+                  customers={customers}
+                  loading={custLoading}
+                  placeholder="Select customer..."
+                  createLabel="+ Create New Customer"
+                  onOpen={() => loadCustomers(true)}
+                  onChange={(id) => setForm((f) => ({ ...f, customerId: id }))}
+                  onCreateNew={() => setShowQuickAddCustomer(true)}
+                />
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Expiry Date</label>
                   <input
@@ -838,6 +888,19 @@ export default function QuotesEstimatesPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {showQuickAddCustomer && companyId && (
+        <QuickAddCustomerModal
+          companyId={companyId}
+          onClose={() => setShowQuickAddCustomer(false)}
+          onCreated={(customer) => {
+            const next = { id: customer.contactId, name: customer.name, email: customer.email }
+            setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
+            setForm((prev) => ({ ...prev, customerId: next.id }))
+            setShowQuickAddCustomer(false)
+          }}
+        />
       )}
     </div>
   )

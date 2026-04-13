@@ -1,15 +1,17 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, Play, Pause, FileX, Zap,
+  Download, Eye, Play, Pause, FileX, Zap, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useToast } from '@/components/ToastProvider'
+import CustomerPickerField, { type CustomerPickerOption } from './CustomerPickerField'
+import QuickAddCustomerModal from './QuickAddCustomerModal'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -64,6 +66,34 @@ const FREQ_LABELS: Record<string, string> = {
 
 interface RecurringFormData { customerId: string; frequency: string; startDate: string; endDate: string; amount: string }
 
+type SortDirection = 'asc' | 'desc'
+type SortKey = 'name' | 'customer' | 'frequency' | 'amount' | 'nextRun' | 'status'
+
+function compareRecurringRows(a: RecurringRow, b: RecurringRow, key: SortKey, dir: SortDirection): number {
+  const asc = dir === 'asc' ? 1 : -1
+
+  if (key === 'amount') {
+    const av = getRowAmount(a)
+    const bv = getRowAmount(b)
+    return av === bv ? 0 : av > bv ? asc : -asc
+  }
+
+  if (key === 'nextRun') {
+    const av = getRowNextRun(a)
+    const bv = getRowNextRun(b)
+    const ad = av && av !== '—' ? new Date(av).getTime() : 0
+    const bd = bv && bv !== '—' ? new Date(bv).getTime() : 0
+    return ad === bd ? 0 : ad > bd ? asc : -asc
+  }
+
+  const av = key === 'name' ? getRowName(a) : String((a as any)[key] ?? '')
+  const bv = key === 'name' ? getRowName(b) : String((b as any)[key] ?? '')
+  const al = av.toLowerCase()
+  const bl = bv.toLowerCase()
+  if (al === bl) return 0
+  return al > bl ? asc : -asc
+}
+
 const getRowName = (r: RecurringRow) => r.description ?? r.templateName ?? '—'
 const getRowAmount = (r: RecurringRow) => r.templateData?.totalAmount ?? (r.amount ? Number(r.amount) : 0)
 const getRowNextRun = (r: RecurringRow) => r.nextRun ?? r.nextRunDate ?? '—'
@@ -89,6 +119,11 @@ export default function RecurringInvoicesPage() {
   const [detailItem, setDetailItem] = useState<RecurringRow | null>(null)
   const [formData, setFormData] = useState<RecurringFormData>({ customerId: '', frequency: 'MONTHLY', startDate: new Date().toISOString().split('T')[0], endDate: '', amount: '' })
   const [formSaving, setFormSaving] = useState(false)
+  const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
+  const [customersLoading, setCustomersLoading] = useState(false)
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('nextRun')
+  const [sortDir, setSortDir] = useState<SortDirection>('asc')
 
   const colsRef = useRef(cols)
   useEffect(() => { colsRef.current = cols }, [cols])
@@ -112,16 +147,43 @@ export default function RecurringInvoicesPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const filtered = items.filter(row => {
-    const q = search.toLowerCase()
-    const name = getRowName(row).toLowerCase()
-    const matchSearch = !q || name.includes(q) || (row.customer ?? '').toLowerCase().includes(q) || row.frequency.toLowerCase().includes(q)
-    const matchStatus = !statusFilter || row.status === statusFilter
-    const matchFreq = !freqFilter || row.frequency === freqFilter
-    return matchSearch && matchStatus && matchFreq
-  })
+  const loadCustomers = useCallback(async (force = false) => {
+    if (!companyId || customersLoading) return
+    if (!force && customers.length > 0) return
+    setCustomersLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.records ?? []
+      setCustomers(raw.map((c: any) => ({
+        id: c.id ?? c.contactId,
+        name: c.name ?? c.displayName ?? c.contact?.displayName ?? '—',
+        email: c.email ?? c.contact?.email ?? '',
+      })))
+    } catch {
+      setCustomers([])
+    } finally {
+      setCustomersLoading(false)
+    }
+  }, [companyId, customers.length, customersLoading])
 
-  const paginated = filtered.slice(page * pageSize, page * pageSize + pageSize)
+  const filtered = useMemo(() => {
+    return items.filter(row => {
+      const q = search.toLowerCase()
+      const name = getRowName(row).toLowerCase()
+      const matchSearch = !q || name.includes(q) || (row.customer ?? '').toLowerCase().includes(q) || row.frequency.toLowerCase().includes(q)
+      const matchStatus = !statusFilter || row.status === statusFilter
+      const matchFreq = !freqFilter || row.frequency === freqFilter
+      return matchSearch && matchStatus && matchFreq
+    })
+  }, [items, search, statusFilter, freqFilter])
+
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => compareRecurringRows(a, b, sortKey, sortDir))
+    return next
+  }, [filtered, sortKey, sortDir])
+
+  const paginated = sorted.slice(page * pageSize, page * pageSize + pageSize)
   const totalPages = Math.ceil(filtered.length / pageSize)
   const allSelected = paginated.length > 0 && paginated.every(r => selectedIds.has(r.id))
   const toggleAll = () => { if (allSelected) setSelectedIds(new Set()); else setSelectedIds(new Set(paginated.map(r => r.id))) }
@@ -171,6 +233,15 @@ export default function RecurringInvoicesPage() {
     const rows = filtered.map(r => [getRowName(r), r.customer ?? '—', r.frequency, String(getRowAmount(r)), getRowNextRun(r), r.status])
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'recurring-invoices.csv'; a.click(); URL.revokeObjectURL(url)
+  }
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir(key === 'amount' ? 'desc' : 'asc')
   }
 
   const handleSave = async () => {
@@ -228,7 +299,7 @@ export default function RecurringInvoicesPage() {
                 </div></>
             )}
           </div>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Template</button>
+          <button onClick={() => { setShowForm(true); loadCustomers(true) }} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Template</button>
         </div>
       </div>
 
@@ -287,10 +358,17 @@ export default function RecurringInvoicesPage() {
           </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
+              <th className="px-3 py-3 border-r border-gray-200"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                  {c.label}
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none border-r border-gray-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(c.key as SortKey)}
+                    className={`inline-flex items-center gap-1 ${c.align === 'right' ? 'ml-auto' : ''}`}
+                  >
+                    <span>{c.label}</span>
+                    <ArrowUpDown size={12} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                  </button>
                   <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
                 </th>
               ))}
@@ -317,9 +395,9 @@ export default function RecurringInvoicesPage() {
             ) : (
               paginated.map(row => (
                 <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setDetailItem(row)}>
-                  <td className="px-3 py-3" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
+                  <td className="px-3 py-3 border-r border-gray-100" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
                   {visibleCols.map(c => (
-                    <td key={c.key} className="px-3 py-3 truncate" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(c, row)}</td>
+                    <td key={c.key} className="px-3 py-3 truncate border-r border-gray-100" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(c, row)}</td>
                   ))}
                   <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
@@ -356,11 +434,17 @@ export default function RecurringInvoicesPage() {
               <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer ID *</label>
-                <input type="text" value={formData.customerId} onChange={e => setFormData(f => ({ ...f, customerId: e.target.value }))} placeholder="Customer ID"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-              </div>
+              <CustomerPickerField
+                label="Customer *"
+                value={formData.customerId}
+                customers={customers}
+                loading={customersLoading}
+                placeholder="Select customer..."
+                createLabel="+ Create New Customer"
+                onOpen={() => loadCustomers(true)}
+                onChange={(id) => setFormData((f) => ({ ...f, customerId: id }))}
+                onCreateNew={() => setShowQuickAddCustomer(true)}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
                 <select value={formData.frequency} onChange={e => setFormData(f => ({ ...f, frequency: e.target.value }))}
@@ -395,6 +479,19 @@ export default function RecurringInvoicesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showQuickAddCustomer && companyId && (
+        <QuickAddCustomerModal
+          companyId={companyId}
+          onClose={() => setShowQuickAddCustomer(false)}
+          onCreated={(customer) => {
+            const next = { id: customer.contactId, name: customer.name, email: customer.email }
+            setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
+            setFormData((prev) => ({ ...prev, customerId: next.id }))
+            setShowQuickAddCustomer(false)
+          }}
+        />
       )}
 
       {detailItem && (

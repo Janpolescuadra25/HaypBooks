@@ -1,4 +1,4 @@
-import ModuleTabs from '@/components/shared/ModuleTabs'
+import SectionModuleTabs from '@/components/shared/SectionModuleTabs'
 
 const TABS = [
   { label: 'Customers', value: 'customers', path: '/sales/customers' },
@@ -9,7 +9,7 @@ const TABS = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <ModuleTabs tabs={TABS} basePath="/sales/customers" />
+      <SectionModuleTabs tabs={TABS} basePath="/sales/customers" />
       <div>{children}</div>
     </>
   )

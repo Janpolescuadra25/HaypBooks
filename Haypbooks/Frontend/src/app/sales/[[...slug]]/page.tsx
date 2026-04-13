@@ -6,7 +6,7 @@ import { ownerNav } from '@/components/owner/ownerNavConfig'
 
 const CustomersPage = dynamic(() => import('@/components/sales/CustomersPage'), { ssr: false })
 const InvoicesPage = dynamic(() => import('@/components/sales/InvoicesPage'), { ssr: false })
-const PaymentsPage = dynamic(() => import('@/components/sales/PaymentsPage'), { ssr: false })
+const CustomerPaymentsPage = dynamic(() => import('@/components/sales/CustomerPaymentsPage'), { ssr: false })
 const ArAgingPage = dynamic(() => import('@/components/sales/ArAgingPage'), { ssr: false })
 const RefundsPage = dynamic(() => import('@/components/sales/RefundsPage'), { ssr: false })
 const RevenueRecognitionPage = dynamic(() => import('@/components/sales/RevenueRecognitionPage'), { ssr: false })
@@ -34,8 +34,8 @@ function resolveComponent(slug: string[] | undefined) {
     case 'customers':
     case 'customers/customers': return <CustomersPage />
     case 'billing/invoices': return <InvoicesPage />
-    case 'collections/customer-payments': return <PaymentsPage />
-    case 'collections/payments': return <PaymentsPage />
+    case 'collections/customer-payments': return <CustomerPaymentsPage />
+    case 'collections/payments': return <CustomerPaymentsPage />
     case 'collections/aging': return <ArAgingPage />
     case 'collections/refunds': return <RefundsPage />
     case 'revenue/recognition': return <RevenueRecognitionPage />

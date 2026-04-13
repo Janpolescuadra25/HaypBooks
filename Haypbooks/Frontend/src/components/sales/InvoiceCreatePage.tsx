@@ -295,44 +295,54 @@ export default function InvoiceCreatePage() {
   const [showSaveDraftMenu, setShowSaveDraftMenu] = useState(false)
   const [showSendMenu, setShowSendMenu] = useState(false)
 
-  // Fetch catalog items (products & services)
-  useEffect(() => {
+  const loadCatalogItems = useCallback(async (force = false) => {
     if (!companyId) return
-    apiClient.get(`/companies/${companyId}/inventory/items?limit=200`)
-      .then(({ data }) => {
-        const list: any[] = Array.isArray(data) ? data : data.items ?? []
-        setCatalogItems(list.map(i => ({
-          id: i.id,
-          name: i.name,
-          type: i.type,
-          sku: i.sku ?? null,
-          salesPrice: i.salesPrice != null ? Number(i.salesPrice) : null,
-          taxRate: i.taxRate != null ? Number(i.taxRate) : undefined,
-        })))
-      })
-      .catch(() => {})
-  }, [companyId])
+    if (!force && catalogItems.length > 0) return
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?limit=500`)
+      const list: any[] = Array.isArray(data) ? data : data.items ?? []
+      setCatalogItems(list.map(i => ({
+        id: i.id,
+        name: i.name,
+        type: i.type,
+        sku: i.sku ?? null,
+        salesPrice: i.salesPrice != null ? Number(i.salesPrice) : null,
+        taxRate: i.taxRate != null ? Number(i.taxRate) : undefined,
+      })))
+    } catch {
+      setCatalogItems([])
+    }
+  }, [companyId, catalogItems.length])
 
-  // Fetch customers and update memo when template changes
-  useEffect(() => {
+  const loadCustomers = useCallback(async (force = false) => {
     if (!companyId) return
-    apiClient.get(`/companies/${companyId}/customers`)
-      .then(({ data }) => {
-        const list: any[] = Array.isArray(data) ? data : data.items ?? data.customers ?? []
-        setCustomers(list.map(c => ({
-          contactId: c.contactId ?? c.id,
-          name: c.name ?? c.displayName ?? '',
-          email: c.email ?? '',
-          phone: c.phone ?? c.phoneNumber ?? '',
-          balance: Number(c.balance ?? 0),
-          billingAddress: c.billingAddress ?? c.address,
-          shippingAddress: c.shippingAddress,
-          paymentTerms: c.paymentTerms ?? c.terms,
-          taxRate: c.taxRate != null ? Number(c.taxRate) : undefined,
-        })))
-      })
-      .catch(() => {})
-  }, [companyId])
+    if (!force && customers.length > 0) return
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const list: any[] = Array.isArray(data) ? data : data.items ?? data.customers ?? []
+      setCustomers(list.map(c => ({
+        contactId: c.contactId ?? c.id,
+        name: c.name ?? c.displayName ?? '',
+        email: c.email ?? c.contact?.email ?? '',
+        phone: c.phone ?? c.phoneNumber ?? '',
+        balance: Number(c.balance ?? 0),
+        billingAddress: c.billingAddress ?? c.address,
+        shippingAddress: c.shippingAddress,
+        paymentTerms: c.paymentTerms ?? c.terms,
+        taxRate: c.taxRate != null ? Number(c.taxRate) : undefined,
+      })))
+    } catch {
+      setCustomers([])
+    }
+  }, [companyId, customers.length])
+
+  useEffect(() => {
+    loadCatalogItems(true)
+  }, [loadCatalogItems])
+
+  useEffect(() => {
+    loadCustomers(true)
+  }, [loadCustomers])
 
   useEffect(() => {
     setMemo(template.defaultMessage)
@@ -372,6 +382,14 @@ export default function InvoiceCreatePage() {
         c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
         c.email.toLowerCase().includes(customerSearch.toLowerCase()))
     : recentCustomers
+
+  useEffect(() => {
+    if (showCustomerDD) loadCustomers(true)
+  }, [showCustomerDD, loadCustomers])
+
+  useEffect(() => {
+    if (activeCatalogRow) loadCatalogItems(true)
+  }, [activeCatalogRow, loadCatalogItems])
 
   // Calculations
   const subtotal = items.reduce((s, it) => s + (it.quantity * it.unitPrice), 0)
@@ -604,7 +622,7 @@ export default function InvoiceCreatePage() {
                       <div className="border-t border-gray-100 p-2">
                         <button onClick={() => { setShowCustomerDD(false); setShowQuickAddModal(true) }}
                           className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-                          <Plus size={13} /> New Customer
+                          <Plus size={13} /> + Create New Customer
                         </button>
                       </div>
                     </motion.div>
@@ -796,10 +814,9 @@ export default function InvoiceCreatePage() {
                             const recentItems = !q
                               ? recentlyUsedItems.map(id => catalogItems.find(c => c.id === id)).filter(Boolean) as CatalogItem[]
                               : []
-                            const products = allMatches.filter(c => c.type !== 'SERVICE').slice(0, 6)
-                            const services = allMatches.filter(c => c.type === 'SERVICE').slice(0, 6)
+                            const products = allMatches.filter(c => c.type !== 'SERVICE').slice(0, 100)
+                            const services = allMatches.filter(c => c.type === 'SERVICE').slice(0, 100)
                             const hasNoItems = catalogItems.length === 0
-                            if (!hasNoItems && allMatches.length === 0 && recentItems.length === 0) return null
 
                             const CatalogRow = ({ cat, keyPfx }: { cat: CatalogItem; keyPfx?: string }) => (
                               <button
@@ -859,6 +876,19 @@ export default function InvoiceCreatePage() {
                                     {services.map(cat => <CatalogRow key={cat.id} cat={cat} />)}
                                   </>
                                 )}
+                                <div className="border-t border-gray-100 p-2 sticky bottom-0 bg-white">
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault()
+                                      setActiveCatalogRow(null)
+                                      router.push('/sales/sales/products-services')
+                                    }}
+                                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                  >
+                                    <Plus size={12} /> + Create New Product / Service
+                                  </button>
+                                </div>
                               </div>
                             )
                           })()}

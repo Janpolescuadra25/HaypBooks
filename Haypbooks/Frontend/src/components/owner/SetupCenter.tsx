@@ -72,9 +72,9 @@ const SETUP_PHASES: SetupPhase[] = [
     title: 'Setup Center - Sales & Customers',
     tasks: [
       { id: 'customers', title: 'Customers', description: 'Add key customers and terms', path: '/sales/customers', required: true },
-      { id: 'products', title: 'Products & Services', description: 'Define products/services for sales', path: '/sales/items' },
-      { id: 'prices', title: 'Price Lists', description: 'Configure pricing and discounts', path: '/sales/pricing' },
-      { id: 'invoicing', title: 'Invoice Templates', description: 'Set up invoice templates and defaults', path: '/sales/invoices' },
+      { id: 'products', title: 'Products & Services', description: 'Define products/services for sales', path: '/sales/sales/products-services' },
+      { id: 'prices', title: 'Pricing Rules', description: 'Review product pricing and discounts', path: '/sales/sales/products-services' },
+      { id: 'invoicing', title: 'Invoice Templates', description: 'Set up invoice templates and defaults', path: '/sales/billing/invoices' },
     ],
   },
   {

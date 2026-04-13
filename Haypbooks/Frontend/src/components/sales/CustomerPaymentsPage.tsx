@@ -1,11 +1,13 @@
 'use client'
 
 import { useMemo, useState, useCallback, useEffect } from 'react'
-import { Ban, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUpDown, Ban, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import CustomerPickerField from './CustomerPickerField'
+import QuickAddCustomerModal from './QuickAddCustomerModal'
 
 const PAGE_SIZE = 20
 
@@ -64,6 +66,25 @@ function fmtDate(d: string) {
   }
 }
 
+type SortDirection = 'asc' | 'desc'
+type SortKey = 'paymentNumber' | 'customer' | 'date' | 'method' | 'amount' | 'appliedTo'
+
+function comparePayments(a: PaymentRow, b: PaymentRow, key: SortKey, dir: SortDirection): number {
+  const asc = dir === 'asc' ? 1 : -1
+  if (key === 'amount') {
+    return a.amount === b.amount ? 0 : a.amount > b.amount ? asc : -asc
+  }
+  if (key === 'date') {
+    const ad = a.date ? new Date(a.date).getTime() : 0
+    const bd = b.date ? new Date(b.date).getTime() : 0
+    return ad === bd ? 0 : ad > bd ? asc : -asc
+  }
+  const av = String((a as any)[key] ?? '').toLowerCase()
+  const bv = String((b as any)[key] ?? '').toLowerCase()
+  if (av === bv) return 0
+  return av > bv ? asc : -asc
+}
+
 export default function CustomerPaymentsPage() {
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -84,6 +105,7 @@ export default function CustomerPaymentsPage() {
 
   // Form state
   const [newPaymentOpen, setNewPaymentOpen] = useState(false)
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [customersLoading, setCustomersLoading] = useState(false)
   const [invoices, setInvoices] = useState<InvoiceOption[]>([])
@@ -99,6 +121,8 @@ export default function CustomerPaymentsPage() {
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
   // ─── Fetch payments ──────────────────────────────────────────────────────────
 
@@ -124,8 +148,9 @@ export default function CustomerPaymentsPage() {
 
   // ─── Load customers for dropdown ─────────────────────────────────────────────
 
-  const loadCustomers = useCallback(async () => {
-    if (!companyId || customers.length > 0) return
+  const loadCustomers = useCallback(async (force = false) => {
+    if (!companyId || customersLoading) return
+    if (!force && customers.length > 0) return
     setCustomersLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
@@ -142,7 +167,7 @@ export default function CustomerPaymentsPage() {
     } finally {
       setCustomersLoading(false)
     }
-  }, [companyId, customers.length])
+  }, [companyId, customers.length, customersLoading])
 
   // ─── Load open invoices when customer selected ────────────────────────────────
 
@@ -200,7 +225,7 @@ export default function CustomerPaymentsPage() {
     setInvoices([])
     setSaveError('')
     setNewPaymentOpen(true)
-    loadCustomers()
+    loadCustomers(true)
   }
 
   function closeModal() {
@@ -274,6 +299,21 @@ export default function CustomerPaymentsPage() {
         String(r.amount).includes(q)
     )
   }, [items, search, dateStart, dateEnd, methodFilter])
+
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => comparePayments(a, b, sortKey, sortDir))
+    return next
+  }, [filtered, sortKey, sortDir])
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir(key === 'amount' || key === 'date' ? 'desc' : 'asc')
+  }
 
   const totalAmount = items.reduce((s, r) => s + r.amount, 0)
 
@@ -363,12 +403,36 @@ export default function CustomerPaymentsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="text-left px-4 py-3">Payment #</th>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3 hidden md:table-cell">Date</th>
-                <th className="text-left px-4 py-3 hidden sm:table-cell">Method</th>
-                <th className="text-right px-4 py-3">Amount</th>
-                <th className="text-left px-4 py-3 hidden lg:table-cell">Applied To</th>
+                <th className="text-left px-4 py-3 border-r border-slate-200">
+                  <button type="button" onClick={() => toggleSort('paymentNumber')} className="inline-flex items-center gap-1">
+                    <span>Payment #</span><ArrowUpDown size={12} className={sortKey === 'paymentNumber' ? 'text-emerald-600' : 'text-slate-300'} />
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3 border-r border-slate-200">
+                  <button type="button" onClick={() => toggleSort('customer')} className="inline-flex items-center gap-1">
+                    <span>Customer</span><ArrowUpDown size={12} className={sortKey === 'customer' ? 'text-emerald-600' : 'text-slate-300'} />
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3 hidden md:table-cell border-r border-slate-200">
+                  <button type="button" onClick={() => toggleSort('date')} className="inline-flex items-center gap-1">
+                    <span>Date</span><ArrowUpDown size={12} className={sortKey === 'date' ? 'text-emerald-600' : 'text-slate-300'} />
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3 hidden sm:table-cell border-r border-slate-200">
+                  <button type="button" onClick={() => toggleSort('method')} className="inline-flex items-center gap-1">
+                    <span>Method</span><ArrowUpDown size={12} className={sortKey === 'method' ? 'text-emerald-600' : 'text-slate-300'} />
+                  </button>
+                </th>
+                <th className="text-right px-4 py-3 border-r border-slate-200">
+                  <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-1 ml-auto">
+                    <span>Amount</span><ArrowUpDown size={12} className={sortKey === 'amount' ? 'text-emerald-600' : 'text-slate-300'} />
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3 hidden lg:table-cell border-r border-slate-200">
+                  <button type="button" onClick={() => toggleSort('appliedTo')} className="inline-flex items-center gap-1">
+                    <span>Applied To</span><ArrowUpDown size={12} className={sortKey === 'appliedTo' ? 'text-emerald-600' : 'text-slate-300'} />
+                  </button>
+                </th>
                 <th className="text-right px-4 py-3 w-20">Actions</th>
               </tr>
             </thead>
@@ -389,23 +453,23 @@ export default function CustomerPaymentsPage() {
                     </button>
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : sorted.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
                     No payments found.
                   </td>
                 </tr>
               ) : (
-                filtered.map((row) => (
+                sorted.map((row) => (
                   <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-700">{row.paymentNumber}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.customer}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{fmtDate(row.date)}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">{row.method}</td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-700 border-r border-slate-100">{row.paymentNumber}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-100">{row.customer}</td>
+                    <td className="px-4 py-3 text-slate-600 hidden md:table-cell border-r border-slate-100">{fmtDate(row.date)}</td>
+                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell border-r border-slate-100">{row.method}</td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800 border-r border-slate-100">
                       {formatCurrency(row.amount, currency)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600 hidden lg:table-cell">{row.appliedTo}</td>
+                    <td className="px-4 py-3 text-slate-600 hidden lg:table-cell border-r border-slate-100">{row.appliedTo}</td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleVoid(row.id)}
@@ -478,27 +542,17 @@ export default function CustomerPaymentsPage() {
             </div>
 
             <form onSubmit={submitPayment} className="p-4 space-y-4">
-              {/* Customer dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
-                <select
-                  required
-                  value={form.customerId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, customerId: e.target.value, invoiceId: '', amount: '' }))
-                  }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                >
-                  <option value="">
-                    {customersLoading ? 'Loading customers…' : 'Select customer…'}
-                  </option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}{c.email ? ` (${c.email})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomerPickerField
+                label="Customer *"
+                value={form.customerId}
+                customers={customers}
+                loading={customersLoading}
+                placeholder="Select customer..."
+                createLabel="+ Create New Customer"
+                onOpen={() => loadCustomers(true)}
+                onChange={(id) => setForm((f) => ({ ...f, customerId: id, invoiceId: '', amount: '' }))}
+                onCreateNew={() => setShowQuickAddCustomer(true)}
+              />
 
               {/* Invoice dropdown */}
               <div>
@@ -613,6 +667,19 @@ export default function CustomerPaymentsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {showQuickAddCustomer && companyId && (
+        <QuickAddCustomerModal
+          companyId={companyId}
+          onClose={() => setShowQuickAddCustomer(false)}
+          onCreated={(customer) => {
+            const next = { id: customer.contactId, name: customer.name, email: customer.email }
+            setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
+            setForm((prev) => ({ ...prev, customerId: next.id, invoiceId: '', amount: '' }))
+            setShowQuickAddCustomer(false)
+          }}
+        />
       )}
     </div>
   )

@@ -1,15 +1,17 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, CheckCircle, FileX,
+  Download, Eye, CheckCircle, FileX, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useToast } from '@/components/ToastProvider'
+import CustomerPickerField, { type CustomerPickerOption } from './CustomerPickerField'
+import QuickAddCustomerModal from './QuickAddCustomerModal'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -65,6 +67,30 @@ const STATUS_MAP: Record<string, string> = {
 
 interface RefundFormData { customerId: string; amount: string; method: string; refundDate: string; reason: string }
 
+type SortDirection = 'asc' | 'desc'
+type SortKey = 'refundNumber' | 'customer' | 'invoiceNumber' | 'date' | 'method' | 'amount' | 'reason' | 'status'
+
+function compareRefundRows(a: RefundRow, b: RefundRow, key: SortKey, dir: SortDirection): number {
+  const asc = dir === 'asc' ? 1 : -1
+
+  if (key === 'amount') {
+    const av = Number(a.amount ?? 0)
+    const bv = Number(b.amount ?? 0)
+    return av === bv ? 0 : av > bv ? asc : -asc
+  }
+
+  if (key === 'date') {
+    const av = a.date ? new Date(a.date).getTime() : 0
+    const bv = b.date ? new Date(b.date).getTime() : 0
+    return av === bv ? 0 : av > bv ? asc : -asc
+  }
+
+  const av = String((a as any)[key] ?? '').toLowerCase()
+  const bv = String((b as any)[key] ?? '').toLowerCase()
+  if (av === bv) return 0
+  return av > bv ? asc : -asc
+}
+
 export default function RefundsPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -85,6 +111,11 @@ export default function RefundsPage() {
   const [detailItem, setDetailItem] = useState<RefundRow | null>(null)
   const [formData, setFormData] = useState<RefundFormData>({ customerId: '', amount: '', method: 'BANK_TRANSFER', refundDate: new Date().toISOString().split('T')[0], reason: '' })
   const [formSaving, setFormSaving] = useState(false)
+  const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
+  const [customersLoading, setCustomersLoading] = useState(false)
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
   const colsRef = useRef(cols)
   useEffect(() => { colsRef.current = cols }, [cols])
@@ -109,18 +140,45 @@ export default function RefundsPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const filtered = items.filter(row => {
-    const q = search.toLowerCase()
-    const matchSearch = !q ||
-      row.refundNumber?.toLowerCase().includes(q) ||
-      row.customer?.toLowerCase().includes(q) ||
-      row.invoiceNumber?.toLowerCase().includes(q) ||
-      row.reason?.toLowerCase().includes(q)
-    const matchStatus = !statusFilter || row.status === statusFilter || row.approvalStatus === statusFilter
-    return matchSearch && matchStatus
-  })
+  const loadCustomers = useCallback(async (force = false) => {
+    if (!companyId || customersLoading) return
+    if (!force && customers.length > 0) return
+    setCustomersLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
+      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.records ?? []
+      setCustomers(raw.map((c: any) => ({
+        id: c.id ?? c.contactId,
+        name: c.name ?? c.displayName ?? c.contact?.displayName ?? '—',
+        email: c.email ?? c.contact?.email ?? '',
+      })))
+    } catch {
+      setCustomers([])
+    } finally {
+      setCustomersLoading(false)
+    }
+  }, [companyId, customers.length, customersLoading])
 
-  const paginated = filtered.slice(page * pageSize, page * pageSize + pageSize)
+  const filtered = useMemo(() => {
+    return items.filter(row => {
+      const q = search.toLowerCase()
+      const matchSearch = !q ||
+        row.refundNumber?.toLowerCase().includes(q) ||
+        row.customer?.toLowerCase().includes(q) ||
+        row.invoiceNumber?.toLowerCase().includes(q) ||
+        row.reason?.toLowerCase().includes(q)
+      const matchStatus = !statusFilter || row.status === statusFilter || row.approvalStatus === statusFilter
+      return matchSearch && matchStatus
+    })
+  }, [items, search, statusFilter])
+
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => compareRefundRows(a, b, sortKey, sortDir))
+    return next
+  }, [filtered, sortKey, sortDir])
+
+  const paginated = sorted.slice(page * pageSize, page * pageSize + pageSize)
   const totalPages = Math.ceil(filtered.length / pageSize)
 
   const totalAmount = filtered.reduce((s, r) => s + Number(r.amount ?? 0), 0)
@@ -168,6 +226,15 @@ export default function RefundsPage() {
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'refunds.csv'; a.click(); URL.revokeObjectURL(url)
   }
 
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir(key === 'date' || key === 'amount' ? 'desc' : 'asc')
+  }
+
   const handleSave = async () => {
     if (!companyId || !formData.customerId || !formData.amount) { toast.error('Customer and amount are required'); return }
     setFormSaving(true)
@@ -208,7 +275,7 @@ export default function RefundsPage() {
                 </div></>
             )}
           </div>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Refund</button>
+          <button onClick={() => { setShowForm(true); loadCustomers(true) }} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Refund</button>
         </div>
       </div>
 
@@ -279,10 +346,17 @@ export default function RefundsPage() {
           </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
+              <th className="px-3 py-3 border-r border-gray-200"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                  {c.label}
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none border-r border-gray-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(c.key as SortKey)}
+                    className={`inline-flex items-center gap-1 ${c.align === 'right' ? 'ml-auto' : ''}`}
+                  >
+                    <span>{c.label}</span>
+                    <ArrowUpDown size={12} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                  </button>
                   <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
                 </th>
               ))}
@@ -309,9 +383,9 @@ export default function RefundsPage() {
             ) : (
               paginated.map(row => (
                 <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setDetailItem(row)}>
-                  <td className="px-3 py-3" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
+                  <td className="px-3 py-3 border-r border-gray-100" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
                   {visibleCols.map(c => (
-                    <td key={c.key} className="px-3 py-3 truncate" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                    <td key={c.key} className="px-3 py-3 truncate border-r border-gray-100" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
                       {c.key === 'status' ? (
                         <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_MAP[row.status] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>{row.status}</span>
                       ) : c.key === 'amount' ? formatCurrency(Number(row.amount), currency)
@@ -352,11 +426,17 @@ export default function RefundsPage() {
               <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer ID *</label>
-                <input type="text" value={formData.customerId} onChange={e => setFormData(f => ({ ...f, customerId: e.target.value }))} placeholder="Customer ID"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-              </div>
+              <CustomerPickerField
+                label="Customer *"
+                value={formData.customerId}
+                customers={customers}
+                loading={customersLoading}
+                placeholder="Select customer..."
+                createLabel="+ Create New Customer"
+                onOpen={() => loadCustomers(true)}
+                onChange={(id) => setFormData((f) => ({ ...f, customerId: id }))}
+                onCreateNew={() => setShowQuickAddCustomer(true)}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount *</label>
                 <input type="number" step="0.01" min="0" value={formData.amount} onChange={e => setFormData(f => ({ ...f, amount: e.target.value }))} placeholder="0.00"
@@ -392,6 +472,19 @@ export default function RefundsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showQuickAddCustomer && companyId && (
+        <QuickAddCustomerModal
+          companyId={companyId}
+          onClose={() => setShowQuickAddCustomer(false)}
+          onCreated={(customer) => {
+            const next = { id: customer.contactId, name: customer.name, email: customer.email }
+            setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
+            setFormData((prev) => ({ ...prev, customerId: next.id }))
+            setShowQuickAddCustomer(false)
+          }}
+        />
       )}
 
       {/* Detail Drawer */}

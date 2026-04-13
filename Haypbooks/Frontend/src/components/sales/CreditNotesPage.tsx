@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Download, Plus, RefreshCw, X } from 'lucide-react'
+import { ArrowUpDown, Download, Plus, RefreshCw, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import CustomerPickerField from './CustomerPickerField'
+import QuickAddCustomerModal from './QuickAddCustomerModal'
 
 const CREDIT_REASONS = ['Returned Goods', 'Billing Error', 'Discount Adjustment', 'Price Correction', 'Service Issue', 'Other']
 const STATUS_OPTIONS = ['', 'DRAFT', 'ISSUED', 'APPLIED', 'VOID']
@@ -84,6 +86,25 @@ function statusBadge(status: string) {
   }
 }
 
+type SortDirection = 'asc' | 'desc'
+type SortKey = 'creditNoteNumber' | 'customer' | 'invoiceNumber' | 'date' | 'amount' | 'memo' | 'status'
+
+function compareCreditNotes(a: CreditNoteRow, b: CreditNoteRow, key: SortKey, dir: SortDirection): number {
+  const asc = dir === 'asc' ? 1 : -1
+  if (key === 'amount') {
+    return a.amount === b.amount ? 0 : a.amount > b.amount ? asc : -asc
+  }
+  if (key === 'date') {
+    const ad = a.date ? new Date(a.date).getTime() : 0
+    const bd = b.date ? new Date(b.date).getTime() : 0
+    return ad === bd ? 0 : ad > bd ? asc : -asc
+  }
+  const av = String((a as any)[key] ?? '').toLowerCase()
+  const bv = String((b as any)[key] ?? '').toLowerCase()
+  if (av === bv) return 0
+  return av > bv ? asc : -asc
+}
+
 export default function CreditNotesPage() {
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -108,11 +129,14 @@ export default function CreditNotesPage() {
   const [newOpen, setNewOpen] = useState(false)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [custLoading, setCustLoading] = useState(false)
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
   const [invoices, setInvoices] = useState<InvoiceOption[]>([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
   const [nc, setNc] = useState({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
   // Apply to Invoice modal
   const [applyOpen, setApplyOpen] = useState(false)
@@ -218,6 +242,15 @@ export default function CreditNotesPage() {
     }
   }
 
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir(key === 'date' || key === 'amount' ? 'desc' : 'asc')
+  }
+
   // ─── Void ─────────────────────────────────────────────────────────────────
 
   async function handleVoid(cnId: string) {
@@ -283,8 +316,9 @@ export default function CreditNotesPage() {
 
   // ─── Load customers ───────────────────────────────────────────────────────
 
-  const loadCustomers = useCallback(async () => {
-    if (!companyId || customers.length > 0) return
+  const loadCustomers = useCallback(async (force = false) => {
+    if (!companyId || custLoading) return
+    if (!force && customers.length > 0) return
     setCustLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
@@ -292,13 +326,13 @@ export default function CreditNotesPage() {
       setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
     } catch { /* non-blocking */ }
     finally { setCustLoading(false) }
-  }, [companyId, customers.length])
+  }, [companyId, customers.length, custLoading])
 
   function openModal() {
     setNc({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
     setSaveError('')
     setNewOpen(true)
-    loadCustomers()
+    loadCustomers(true)
   }
 
   async function submitNewCreditNote(e: React.FormEvent) {
@@ -337,6 +371,12 @@ export default function CreditNotesPage() {
       r.status?.toLowerCase().includes(q)
     )
   }, [search, items])
+
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => compareCreditNotes(a, b, sortKey, sortDir))
+    return next
+  }, [filtered, sortKey, sortDir])
 
   const visibleCols = cols.filter(c => c.visible)
 
@@ -414,16 +454,23 @@ export default function CreditNotesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="px-3 py-3 w-10">
+                <th className="px-3 py-3 w-10 border-r border-slate-200">
                   <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleAll} className="accent-emerald-600" />
                 </th>
                 {visibleCols.map((col, ci) => (
                   <th
                     key={col.key}
                     style={{ width: col.width, minWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 ${col.align === 'right' ? 'text-right' : 'text-left'}`}
                   >
-                    {col.label}
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(col.key as SortKey)}
+                      className={`inline-flex items-center gap-1 ${col.align === 'right' ? 'ml-auto' : ''}`}
+                    >
+                      <span>{col.label}</span>
+                      <ArrowUpDown size={11} className={sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'} />
+                    </button>
                     {ci < visibleCols.length - 1 && (
                       <span onMouseDown={e => onResizeStart(e, col.key, col.width)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />
                     )}
@@ -442,16 +489,16 @@ export default function CreditNotesPage() {
                   <p className="text-rose-500 font-medium">{error}</p>
                   <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
                 </td></tr>
-              ) : filtered.length === 0 ? (
+              ) : sorted.length === 0 ? (
                 <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No credit notes found.</td></tr>
               ) : (
-                filtered.map(row => (
+                sorted.map(row => (
                   <tr key={row.id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 border-r border-slate-100">
                       <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-4 py-3 cursor-pointer ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCN(row)}>
+                      <td key={col.key} className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCN(row)}>
                         {col.key === 'creditNoteNumber' && <span className="font-mono text-xs text-slate-700">{row.creditNoteNumber}</span>}
                         {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
                         {col.key === 'invoiceNumber' && <span className="text-slate-600">{row.invoiceNumber ?? '—'}</span>}
@@ -616,19 +663,17 @@ export default function CreditNotesPage() {
               <button onClick={() => setNewOpen(false)} className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
             </div>
             <form onSubmit={submitNewCreditNote} className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Customer *</label>
-                <select
-                  required
-                  value={nc.customerId}
-                  onChange={e => { setNc(p => ({ ...p, customerId: e.target.value })); setInvoices([]) }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  disabled={custLoading}
-                >
-                  <option value="">{custLoading ? 'Loading customers…' : 'Select customer'}</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+              <CustomerPickerField
+                label="Customer *"
+                value={nc.customerId}
+                customers={customers}
+                loading={custLoading}
+                placeholder="Select customer..."
+                createLabel="+ Create New Customer"
+                onOpen={() => loadCustomers(true)}
+                onChange={(id) => { setNc((p) => ({ ...p, customerId: id })); setInvoices([]) }}
+                onCreateNew={() => setShowQuickAddCustomer(true)}
+              />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
                 <select
@@ -663,6 +708,19 @@ export default function CreditNotesPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {showQuickAddCustomer && companyId && (
+        <QuickAddCustomerModal
+          companyId={companyId}
+          onClose={() => setShowQuickAddCustomer(false)}
+          onCreated={(customer) => {
+            const next = { id: customer.contactId, name: customer.name }
+            setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
+            setNc((prev) => ({ ...prev, customerId: next.id }))
+            setShowQuickAddCustomer(false)
+          }}
+        />
       )}
     </div>
   )

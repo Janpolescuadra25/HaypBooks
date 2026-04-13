@@ -1,4 +1,4 @@
-import ModuleTabs from '@/components/shared/ModuleTabs'
+import SectionModuleTabs from '@/components/shared/SectionModuleTabs'
 
 const TABS = [
   { label: 'Customer Payments', value: 'payments' },
@@ -12,7 +12,7 @@ const TABS = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <ModuleTabs tabs={TABS} basePath="/sales/collections" />
+      <SectionModuleTabs tabs={TABS} basePath="/sales/collections" />
       <div>{children}</div>
     </>
   )
