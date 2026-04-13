@@ -531,6 +531,7 @@ function CustomerFormModal({ companyId, customer, paymentTerms, onClose, onSaved
 }) {
   const toast = useToast()
   const isEdit = !!customer
+  const [modalTab, setModalTab] = useState<'form' | 'activity'>('form')
   const [form, setForm] = useState({
     name: customer?.name ?? '',
     email: customer?.email ?? '',
@@ -545,6 +546,18 @@ function CustomerFormModal({ companyId, customer, paymentTerms, onClose, onSaved
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  interface ActivityEntry { id: string; action: string; recordId: string; changes: any; createdAt: string; user: { id: string; name: string; email: string } }
+  const [activityLog, setActivityLog] = useState<ActivityEntry[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
+
+  useEffect(() => {
+    if (modalTab !== 'activity' || !customer?.id) return
+    setActivityLoading(true)
+    apiClient.get(`/companies/${companyId}/ar/customers/${customer.id}/activity`)
+      .then(({ data }) => setActivityLog(data.data ?? []))
+      .catch(() => setActivityLog([]))
+      .finally(() => setActivityLoading(false))
+  }, [modalTab, customer?.id, companyId])
 
   const set = (f: string, v: string) => setForm(p => ({ ...p, [f]: v }))
 
@@ -583,6 +596,18 @@ function CustomerFormModal({ companyId, customer, paymentTerms, onClose, onSaved
           <h2 className="text-lg font-bold text-emerald-900">{isEdit ? 'Edit Customer' : 'New Customer'}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
         </div>
+        {isEdit && (
+          <div className="flex border-b border-gray-200 bg-white px-4">
+            {(['form', 'activity'] as const).map(tab => (
+              <button key={tab} onClick={() => setModalTab(tab)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${modalTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
+                {tab === 'form' ? <Edit2 size={11} /> : <Clock size={11} />}
+                {tab === 'form' ? 'Details' : 'Activity'}
+              </button>
+            ))}
+          </div>
+        )}
+        {modalTab === 'form' && (<>
         <div className="p-6 space-y-4">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2">
@@ -652,6 +677,44 @@ function CustomerFormModal({ companyId, customer, paymentTerms, onClose, onSaved
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Customer'}
           </button>
         </div>
+        </>)}
+        {modalTab === 'activity' && (
+          <div className="p-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <Clock size={14} className="text-emerald-600" /> Audit Log
+            </h3>
+            {activityLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400">
+                <Loader2 size={18} className="animate-spin mr-2" /> Loading activity…
+              </div>
+            ) : activityLog.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-sm">No activity recorded yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {activityLog.map(entry => (
+                  <div key={entry.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl text-xs">
+                    <div className="mt-0.5 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <Clock size={11} className="text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-semibold text-gray-800">{entry.user?.name ?? entry.user?.email ?? 'System'}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-mono uppercase text-[10px]">{entry.action}</span>
+                      </div>
+                      <p className="text-gray-500">{new Date(entry.createdAt).toLocaleString()}</p>
+                      {entry.changes && Object.keys(entry.changes).length > 0 && (
+                        <pre className="mt-1 text-[10px] text-gray-400 bg-white rounded p-1.5 border border-gray-100 overflow-x-auto">{JSON.stringify(entry.changes, null, 2)}</pre>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Close</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

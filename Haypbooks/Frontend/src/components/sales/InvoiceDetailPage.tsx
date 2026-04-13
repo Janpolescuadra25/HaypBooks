@@ -50,7 +50,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const [error, setError] = useState('')
   const [confirmVoid, setConfirmVoid] = useState(false)
   const [showEmailPreview, setShowEmailPreview] = useState(false)
-  type ActiveDetailTab = 'edit' | 'email' | 'payor' | 'print'
+  type ActiveDetailTab = 'edit' | 'email' | 'payor' | 'print' | 'activity'
   const [activeTab, setActiveTab] = useState<ActiveDetailTab>('edit')
   const [emailTone, setEmailTone] = useState('professional')
   const [emailSubject, setEmailSubject] = useState('')
@@ -77,6 +77,10 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     (initialInvoice.items ?? []).map((it: any) => ({ description: it.description ?? '', quantity: Number(it.quantity ?? 1), unitPrice: Number(it.unitPrice ?? 0) }))
   )
   const [editSaving, setEditSaving] = useState(false)
+  // Activity log state
+  interface ActivityEntry { id: string; action: string; recordId: string; changes: any; createdAt: string; user: { id: string; name: string; email: string } }
+  const [activityLog, setActivityLog] = useState<ActivityEntry[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
 
   const fmt = useCallback((n: number) => formatCurrency(n ?? 0, currency), [currency])
 
@@ -95,6 +99,16 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       .catch(() => setPayments([]))
       .finally(() => setLoadingPayments(false))
   }, [invoice.id, companyId])
+
+  // Rebuild email subject+body when invoice details or tone changes
+  useEffect(() => {
+    if (activeTab !== 'activity' || !invoice.id) return
+    setActivityLoading(true)
+    apiClient.get(`/companies/${companyId}/ar/invoices/${invoice.id}/activity`)
+      .then(({ data }) => setActivityLog(data.data ?? []))
+      .catch(() => setActivityLog([]))
+      .finally(() => setActivityLoading(false))
+  }, [activeTab, invoice.id, companyId])
 
   // Rebuild email subject+body when invoice details or tone changes
   useEffect(() => {
@@ -258,10 +272,11 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
           {/* View Tabs */}
           <div className="flex border-b border-gray-200 bg-white px-4 flex-shrink-0">
             {([
-              { id: 'edit',  label: 'Edit',       Icon: FileText },
-              { id: 'email', label: 'Email',      Icon: Mail },
-              { id: 'payor', label: 'Payor View', Icon: Eye },
-              { id: 'print', label: 'Print / PDF', Icon: Printer },
+              { id: 'edit',     label: 'Edit',        Icon: FileText },
+              { id: 'email',    label: 'Email',       Icon: Mail },
+              { id: 'payor',    label: 'Payor View',  Icon: Eye },
+              { id: 'print',    label: 'Print / PDF', Icon: Printer },
+              { id: 'activity', label: 'Activity',    Icon: Clock },
             ] as Array<{ id: ActiveDetailTab; label: string; Icon: React.ElementType }>).map(({ id, label, Icon }) => (
               <button
                 key={id}
@@ -743,6 +758,42 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ── Activity Tab ──────────────────────────────────── */}
+            {activeTab === 'activity' && (
+              <div className="px-6 py-5">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <Clock size={14} className="text-emerald-600" /> Audit Log
+                </h3>
+                {activityLoading ? (
+                  <div className="flex items-center justify-center py-10 text-gray-400">
+                    <Loader2 size={18} className="animate-spin mr-2" /> Loading activity…
+                  </div>
+                ) : activityLog.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400 text-sm">No activity recorded yet.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {activityLog.map(entry => (
+                      <div key={entry.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl text-xs">
+                        <div className="mt-0.5 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <Clock size={11} className="text-emerald-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-semibold text-gray-800">{entry.user?.name ?? entry.user?.email ?? 'System'}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-mono uppercase text-[10px]">{entry.action}</span>
+                          </div>
+                          <p className="text-gray-500">{new Date(entry.createdAt).toLocaleString()}</p>
+                          {entry.changes && Object.keys(entry.changes).length > 0 && (
+                            <pre className="mt-1 text-[10px] text-gray-400 bg-white rounded p-1.5 border border-gray-100 overflow-x-auto">{JSON.stringify(entry.changes, null, 2)}</pre>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

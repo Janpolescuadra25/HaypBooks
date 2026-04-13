@@ -486,6 +486,48 @@ export class ArService {
         return { data: logs, total }
     }
 
+    async getInvoiceActivity(userId: string, companyId: string, invoiceId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where: any = { tableName: 'Invoice', recordId: invoiceId, companyId }
+        if (opts.action && ['CREATE', 'UPDATE', 'SEND', 'VOID'].includes(opts.action)) {
+            where.action = opts.action
+        }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({
+                where,
+                include: { user: { select: { id: true, name: true, email: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
+    }
+
+    async getQuoteActivity(userId: string, companyId: string, quoteId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where: any = { tableName: 'Quote', recordId: quoteId, companyId }
+        if (opts.action && ['CREATE', 'UPDATE', 'DELETE', 'CONVERT'].includes(opts.action)) {
+            where.action = opts.action
+        }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({
+                where,
+                include: { user: { select: { id: true, name: true, email: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
+    }
+
     // ─── Quotes ───────────────────────────────────────────────────────────────
 
     async listQuotes(userId: string, companyId: string, opts: any) {
@@ -512,6 +554,9 @@ export class ArService {
         if (!data.customerId) throw new BadRequestException('customerId is required')
         if (!data.lines?.length) throw new BadRequestException('At least one line item is required')
         const quote = await this.repo.createQuote({ workspaceId, companyId, ...data })
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Quote', recordId: (quote as any).id, changes: { customerId: data.customerId, total: (quote as any).totalAmount } },
+        }).catch(() => {})
         return this.normalizeQuote(quote)
     }
 
@@ -534,11 +579,15 @@ export class ArService {
         if (q.status === 'EXPIRED' || q.status === 'REJECTED') throw new BadRequestException('Cannot convert a rejected or expired quote')
         const invoice = await this.repo.convertQuoteToInvoice(companyId, workspaceId, quoteId, userId)
         if (!invoice) throw new BadRequestException('Conversion failed')
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'CONVERT', tableName: 'Quote', recordId: quoteId, changes: { invoiceId: (invoice as any).id } },
+        }).catch(() => {})
         return invoice
     }
 
     async updateQuote(userId: string, companyId: string, quoteId: string, data: any) {
         await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
         const q = await this.repo.findQuoteById(companyId, quoteId)
         if (!q) throw new NotFoundException('Quote not found')
         if (q.status === 'CONVERTED') throw new BadRequestException('Cannot edit a converted quote')
@@ -547,14 +596,21 @@ export class ArService {
         if (data.expiryDate !== undefined) updateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null
         if (data.lines) updateData.lines = data.lines
         const result = await this.repo.updateQuote(companyId, quoteId, updateData)
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'Quote', recordId: quoteId, changes: updateData },
+        }).catch(() => {})
         return this.normalizeQuote(result)
     }
 
     async deleteQuote(userId: string, companyId: string, quoteId: string) {
         await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
         const q = await this.repo.findQuoteById(companyId, quoteId)
         if (!q) throw new NotFoundException('Quote not found')
         await this.repo.deleteQuote(companyId, quoteId)
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'DELETE', tableName: 'Quote', recordId: quoteId, changes: {} },
+        }).catch(() => {})
         return { success: true }
     }
 
@@ -622,27 +678,39 @@ export class ArService {
                 accountId: l.accountId ?? null,
             })),
         })
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Invoice', recordId: result.id, changes: { invoiceNumber: (result as any).invoiceNumber, customerId: data.customerId, total: (result as any).totalAmount } },
+        }).catch(() => {})
         return this.normalizeInvoice(result)
     }
 
     async updateInvoice(userId: string, companyId: string, invoiceId: string, data: any) {
         await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
         const result = await this.repo.updateInvoice(companyId, invoiceId, data, userId)
         if (!result) throw new BadRequestException('Invoice not found or cannot be edited (only DRAFT invoices can be updated)')
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'Invoice', recordId: invoiceId, changes: data },
+        }).catch(() => {})
         return result
     }
 
     async sendInvoice(userId: string, companyId: string, invoiceId: string, opts?: { subject?: string; body?: string; scheduledAt?: string }) {
         await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
         const result = await this.repo.sendInvoice(companyId, invoiceId)
         if (!result) throw new NotFoundException('Invoice not found')
         // Post invoice to the General Ledger (DR: AR, CR: Revenue + Output VAT)
         await this.subLedger.postInvoiceToGL(result.id, userId)
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'SEND', tableName: 'Invoice', recordId: invoiceId, changes: { status: 'SENT' } },
+        }).catch(() => {})
         return result
     }
 
     async voidInvoice(userId: string, companyId: string, invoiceId: string) {
         await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
         const inv = await this.repo.findInvoiceById(companyId, invoiceId)
         if (!inv) throw new NotFoundException('Invoice not found')
         if (inv.status === 'VOID') throw new BadRequestException('Invoice is already void')
@@ -652,7 +720,11 @@ export class ArService {
 
         // Reverse the invoice posting JE before marking the invoice as void.
         await this.subLedger.reverseInvoiceGL(invoiceId, userId)
-        return this.repo.voidInvoice(companyId, invoiceId)
+        const result = await this.repo.voidInvoice(companyId, invoiceId)
+        this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'VOID', tableName: 'Invoice', recordId: invoiceId, changes: { status: 'VOID' } },
+        }).catch(() => {})
+        return result
     }
 
     // ─── Payments ─────────────────────────────────────────────────────────────

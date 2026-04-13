@@ -267,6 +267,16 @@ export class ArController {
         return this.svc.batchUpdateQuoteStatus(req.user.userId, companyId, body.ids, body.status)
     }
 
+    @Get('quotes/:quoteId/activity')
+    getQuoteActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('quoteId') quoteId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.getQuoteActivity(req.user.userId, companyId, quoteId, query)
+    }
+
     @Get('quotes/:quoteId')
     getQuote(
         @Req() req: any,
@@ -333,6 +343,16 @@ export class ArController {
         @Body() body: any,
     ) {
         return this.svc.createInvoice(req.user.userId, companyId, body)
+    }
+
+    @Get('invoices/:invoiceId/activity')
+    getInvoiceActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('invoiceId') invoiceId: string,
+        @Query() query: any,
+    ) {
+        return this.svc.getInvoiceActivity(req.user.userId, companyId, invoiceId, query)
     }
 
     @Get('invoices/:invoiceId')
