@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -58,6 +58,29 @@ function compareDeferredRevenue(a: DeferredRevenueRow, b: DeferredRevenueRow, ke
   }
   const as = String(a[key] ?? '').toLowerCase(); const bs = String(b[key] ?? '').toLowerCase()
   return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+}
+
+interface DeferredColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+const DEFAULT_DEFERRED_COLS: DeferredColDef[] = [
+  { key: 'contractId', label: 'Contract ID', visible: true, width: 120, align: 'left' },
+  { key: 'customer', label: 'Customer', visible: true, width: 160, align: 'left' },
+  { key: 'description', label: 'Description', visible: true, width: 180, align: 'left' },
+  { key: 'frequency', label: 'Frequency', visible: true, width: 110, align: 'left' },
+  { key: 'totalDeferredAmount', label: 'Total Deferred', visible: true, width: 140, align: 'right' },
+  { key: 'recognizedAmount', label: 'Recognized', visible: true, width: 120, align: 'right' },
+  { key: 'remainingDeferred', label: 'Remaining', visible: true, width: 120, align: 'right' },
+  { key: 'nextRecognitionDate', label: 'Next Recognition', visible: true, width: 140, align: 'left' },
+  { key: 'status', label: 'Status', visible: true, width: 100, align: 'left' },
+]
+function loadDeferredCols(): DeferredColDef[] {
+  try {
+    const s = localStorage.getItem('deferred-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as DeferredColDef[]
+      return DEFAULT_DEFERRED_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_DEFERRED_COLS
 }
 
 export default function DeferredRevenuePage() {
@@ -192,6 +215,18 @@ export default function DeferredRevenuePage() {
     () => [...filtered].sort((a, b) => compareDeferredRevenue(a, b, sortKey, sortDir)),
     [filtered, sortKey, sortDir]
   )
+  const [deferredCols, setDeferredCols] = useState<DeferredColDef[]>(() => loadDeferredCols())
+  const deferredColsRef = useRef(deferredCols)
+  useEffect(() => { deferredColsRef.current = deferredCols }, [deferredCols])
+  const saveDeferredCols = (next: DeferredColDef[]) => { setDeferredCols(next); try { localStorage.setItem('deferred-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
+  const deferredResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startDeferredResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    deferredResizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => { if (!deferredResizeRef.current) return; saveDeferredCols(deferredColsRef.current.map(c => c.key === deferredResizeRef.current!.key ? { ...c, width: Math.max(60, deferredResizeRef.current!.startW + mv.clientX - deferredResizeRef.current!.startX) } : c)) }
+    const onUp = () => { deferredResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
 
   const totalDeferred = useMemo(() => items.filter((r) => r.status === 'Active').reduce((s, r) => s + (r.remainingDeferred ?? 0), 0), [items])
   const totalRecognized = useMemo(() => items.reduce((s, r) => s + (r.recognizedAmount ?? 0), 0), [items])
@@ -294,18 +329,21 @@ export default function DeferredRevenuePage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 920 }}>
+                <colgroup>
+                  {deferredCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+                  <col style={{ width: 80 }} />
+                </colgroup>
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('contractId')} className="flex items-center gap-1"><span>Contract ID</span><ArrowUpDown size={10} className={sortKey === 'contractId' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('customer')} className="flex items-center gap-1"><span>Customer</span><ArrowUpDown size={10} className={sortKey === 'customer' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('description')} className="flex items-center gap-1"><span>Description</span><ArrowUpDown size={10} className={sortKey === 'description' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('frequency')} className="flex items-center gap-1"><span>Frequency</span><ArrowUpDown size={10} className={sortKey === 'frequency' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('totalDeferredAmount')} className="flex items-center gap-1"><span>Total Deferred</span><ArrowUpDown size={10} className={sortKey === 'totalDeferredAmount' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('recognizedAmount')} className="flex items-center gap-1"><span>Recognized</span><ArrowUpDown size={10} className={sortKey === 'recognizedAmount' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('remainingDeferred')} className="flex items-center gap-1"><span>Remaining</span><ArrowUpDown size={10} className={sortKey === 'remainingDeferred' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('nextRecognitionDate')} className="flex items-center gap-1"><span>Next Recognition</span><ArrowUpDown size={10} className={sortKey === 'nextRecognitionDate' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('status')} className="flex items-center gap-1"><span>Status</span><ArrowUpDown size={10} className={sortKey === 'status' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    {deferredCols.map(c => (
+                      <th key={c.key} className="relative px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide select-none border-r border-slate-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                        <button onClick={() => toggleSort(c.key as DeferredSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                          <span>{c.label}</span><ArrowUpDown size={10} className={sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'} />
+                        </button>
+                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDeferredResize(e, c.key, c.width)} />
+                      </th>
+                    ))}
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>

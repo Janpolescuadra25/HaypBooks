@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Search, Plus, MoreHorizontal, Package, Wrench, Tag,
@@ -51,6 +51,27 @@ type FilterType = 'ALL' | 'PRODUCT' | 'SERVICE' | 'INVENTORY' | 'BUNDLE'
 
 const PAGE_SIZE = 20
 
+interface ProdColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+const DEFAULT_PROD_COLS: ProdColDef[] = [
+  { key: 'name', label: 'Name', visible: true, width: 180, align: 'left' },
+  { key: 'description', label: 'Description', visible: true, width: 200, align: 'left' },
+  { key: 'sku', label: 'SKU', visible: true, width: 110, align: 'left' },
+  { key: 'type', label: 'Type', visible: true, width: 110, align: 'left' },
+  { key: 'salesPrice', label: 'Sales Price', visible: true, width: 120, align: 'right' },
+  { key: 'purchaseCost', label: 'Cost', visible: true, width: 110, align: 'right' },
+  { key: 'stock', label: 'In Stock', visible: true, width: 100, align: 'right' },
+]
+function loadProdCols(): ProdColDef[] {
+  try {
+    const s = localStorage.getItem('products-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as ProdColDef[]
+      return DEFAULT_PROD_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_PROD_COLS
+}
+
 export default function ProductsServicesPage() {
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -86,6 +107,22 @@ export default function ProductsServicesPage() {
     () => [...items].sort((a, b) => compareProducts(a, b, sortKey, sortDir)),
     [items, sortKey, sortDir]
   )
+
+  const [prodCols, setProdCols] = useState<ProdColDef[]>(() => loadProdCols())
+  const prodColsRef = useRef(prodCols)
+  useEffect(() => { prodColsRef.current = prodCols }, [prodCols])
+  const saveProdCols = (next: ProdColDef[]) => { setProdCols(next); try { localStorage.setItem('products-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
+  const prodResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startProdResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    prodResizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => {
+      if (!prodResizeRef.current) return
+      saveProdCols(prodColsRef.current.map(c => c.key === prodResizeRef.current!.key ? { ...c, width: Math.max(60, prodResizeRef.current!.startW + mv.clientX - prodResizeRef.current!.startX) } : c))
+    }
+    const onUp = () => { prodResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
 
   // Debounce search input — waits 300ms after typing stops
   useEffect(() => {
@@ -269,40 +306,21 @@ export default function ProductsServicesPage() {
               <Loader2 size={18} className="animate-spin" /> Loading…
             </div>
           ) : (
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: 780 }}>
+              <colgroup>
+                {prodCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+                <col style={{ width: 40 }} />
+              </colgroup>
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">
-                    <button onClick={() => toggleSort('name')} className="flex items-center gap-1">
-                      <span>Name</span><ArrowUpDown size={11} className={sortKey === 'name' ? 'text-emerald-600' : 'text-gray-300'} />
-                    </button>
-                  </th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 max-w-[220px]">Description</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">
-                    <button onClick={() => toggleSort('sku')} className="flex items-center gap-1">
-                      <span>SKU</span><ArrowUpDown size={11} className={sortKey === 'sku' ? 'text-emerald-600' : 'text-gray-300'} />
-                    </button>
-                  </th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">
-                    <button onClick={() => toggleSort('type')} className="flex items-center gap-1">
-                      <span>Type</span><ArrowUpDown size={11} className={sortKey === 'type' ? 'text-emerald-600' : 'text-gray-300'} />
-                    </button>
-                  </th>
-                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">
-                    <button onClick={() => toggleSort('salesPrice')} className="flex items-center gap-1 ml-auto">
-                      <span>Sales Price</span><ArrowUpDown size={11} className={sortKey === 'salesPrice' ? 'text-emerald-600' : 'text-gray-300'} />
-                    </button>
-                  </th>
-                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">
-                    <button onClick={() => toggleSort('purchaseCost')} className="flex items-center gap-1 ml-auto">
-                      <span>Cost</span><ArrowUpDown size={11} className={sortKey === 'purchaseCost' ? 'text-emerald-600' : 'text-gray-300'} />
-                    </button>
-                  </th>
-                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-24">
-                    <button onClick={() => toggleSort('stock')} className="flex items-center gap-1 ml-auto">
-                      <span>In Stock</span><ArrowUpDown size={11} className={sortKey === 'stock' ? 'text-emerald-600' : 'text-gray-300'} />
-                    </button>
-                  </th>
+                  {prodCols.map(c => (
+                    <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                      <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                        <span>{c.label}</span><ArrowUpDown size={11} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                      </button>
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startProdResize(e, c.key, c.width)} />
+                    </th>
+                  ))}
                   <th className="w-10 px-2 py-2.5"></th>
                 </tr>
               </thead>

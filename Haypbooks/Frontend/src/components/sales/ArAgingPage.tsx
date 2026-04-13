@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { Loader2, AlertCircle, X, Download, Search, ArrowUpDown } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -34,6 +34,27 @@ function compareAging(a: AgingCustomer, b: AgingCustomer, key: AgingSortKey, dir
   }
   const av = a[key] ?? 0; const bv = b[key] ?? 0
   return dir === 'asc' ? (av as number) - (bv as number) : (bv as number) - (av as number)
+}
+
+interface AgingColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+const DEFAULT_AGING_COLS: AgingColDef[] = [
+  { key: 'customerName', label: 'Customer', visible: true, width: 200, align: 'left' },
+  { key: 'current', label: 'Current', visible: true, width: 100, align: 'right' },
+  { key: 'days30', label: '1-30', visible: true, width: 100, align: 'right' },
+  { key: 'days60', label: '31-60', visible: true, width: 100, align: 'right' },
+  { key: 'days90', label: '61-90', visible: true, width: 100, align: 'right' },
+  { key: 'over90', label: '90+', visible: true, width: 100, align: 'right' },
+  { key: 'total', label: 'Total', visible: true, width: 110, align: 'right' },
+]
+function loadAgingCols(): AgingColDef[] {
+  try {
+    const s = localStorage.getItem('ar-aging-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as AgingColDef[]
+      return DEFAULT_AGING_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_AGING_COLS
 }
 
 export default function ArAgingPage() {
@@ -77,6 +98,18 @@ export default function ArAgingPage() {
       : allCustomers.filter(c => c.customerName?.toLowerCase().includes(search.toLowerCase()))
     return [...filtered].sort((a, b) => compareAging(a, b, agingSortKey, agingSortDir))
   }, [allCustomers, search, agingSortKey, agingSortDir])
+  const [agingCols, setAgingCols] = useState<AgingColDef[]>(() => loadAgingCols())
+  const agingColsRef = useRef(agingCols)
+  useEffect(() => { agingColsRef.current = agingCols }, [agingCols])
+  const saveAgingCols = (next: AgingColDef[]) => { setAgingCols(next); try { localStorage.setItem('ar-aging-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
+  const agingResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startAgingResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    agingResizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => { if (!agingResizeRef.current) return; saveAgingCols(agingColsRef.current.map(c => c.key === agingResizeRef.current!.key ? { ...c, width: Math.max(60, agingResizeRef.current!.startW + mv.clientX - agingResizeRef.current!.startX) } : c)) }
+    const onUp = () => { agingResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
 
   function exportCsv() {
     const headers = ['Customer', 'Current', '1-30', '31-60', '61-90', '90+', 'Total']
@@ -166,24 +199,20 @@ export default function ArAgingPage() {
                   />
                 </div>
               </div>
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 710 }}>
+                <colgroup>
+                  {agingCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+                </colgroup>
                 <thead>
                   <tr className="bg-emerald-50/50 border-b border-emerald-100">
-                    <th className="text-left px-4 py-3 font-medium text-emerald-700 border-r border-emerald-100">
-                      <button onClick={() => toggleAgingSort('customerName')} className="flex items-center gap-1">
-                        <span>Customer</span><ArrowUpDown size={11} className={agingSortKey === 'customerName' ? 'text-emerald-600' : 'text-emerald-300'} />
-                      </button>
-                    </th>
-                    {(['current', 'days30', 'days60', 'days90', 'over90', 'total'] as AgingSortKey[]).map((k, i) => {
-                      const labels: Record<string, string> = { current: 'Current', days30: '1-30', days60: '31-60', days90: '61-90', over90: '90+', total: 'Total' }
-                      return (
-                        <th key={k} className="text-right px-4 py-3 font-medium text-emerald-700 border-r border-emerald-100">
-                          <button onClick={() => toggleAgingSort(k)} className="flex items-center gap-1 ml-auto">
-                            <span>{labels[k]}</span><ArrowUpDown size={11} className={agingSortKey === k ? 'text-emerald-600' : 'text-emerald-300'} />
-                          </button>
-                        </th>
-                      )
-                    })}
+                    {agingCols.map(c => (
+                      <th key={c.key} className="relative px-4 py-3 font-medium text-emerald-700 border-r border-emerald-100 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                        <button onClick={() => toggleAgingSort(c.key as AgingSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                          <span>{c.label}</span><ArrowUpDown size={11} className={agingSortKey === c.key ? 'text-emerald-600' : 'text-emerald-300'} />
+                        </button>
+                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startAgingResize(e, c.key, c.width)} />
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>

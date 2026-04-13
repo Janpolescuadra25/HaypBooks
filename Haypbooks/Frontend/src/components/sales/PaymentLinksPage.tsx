@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -41,6 +41,27 @@ function compareLinks(a: PaymentLinkRow, b: PaymentLinkRow, key: PaymentLinkSort
   }
   const as = String(a[key] ?? '').toLowerCase(); const bs = String(b[key] ?? '').toLowerCase()
   return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+}
+
+interface PlinkColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+const DEFAULT_PLINK_COLS: PlinkColDef[] = [
+  { key: 'linkId', label: 'Link ID', visible: true, width: 110, align: 'left' },
+  { key: 'description', label: 'Description', visible: true, width: 180, align: 'left' },
+  { key: 'amount', label: 'Amount', visible: true, width: 110, align: 'right' },
+  { key: 'createdDate', label: 'Created Date', visible: true, width: 120, align: 'left' },
+  { key: 'expiryDate', label: 'Expiry Date', visible: true, width: 110, align: 'left' },
+  { key: 'views', label: 'Views', visible: true, width: 80, align: 'right' },
+  { key: 'status', label: 'Status', visible: true, width: 100, align: 'left' },
+]
+function loadPlinkCols(): PlinkColDef[] {
+  try {
+    const s = localStorage.getItem('payment-links-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as PlinkColDef[]
+      return DEFAULT_PLINK_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_PLINK_COLS
 }
 
 export default function PaymentLinksPage() {
@@ -133,6 +154,18 @@ export default function PaymentLinksPage() {
     () => [...filtered].sort((a, b) => compareLinks(a, b, sortKey, sortDir)),
     [filtered, sortKey, sortDir]
   )
+  const [plinkCols, setPlinkCols] = useState<PlinkColDef[]>(() => loadPlinkCols())
+  const plinkColsRef = useRef(plinkCols)
+  useEffect(() => { plinkColsRef.current = plinkCols }, [plinkCols])
+  const savePlinkCols = (next: PlinkColDef[]) => { setPlinkCols(next); try { localStorage.setItem('payment-links-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
+  const plinkResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startPlinkResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    plinkResizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => { if (!plinkResizeRef.current) return; savePlinkCols(plinkColsRef.current.map(c => c.key === plinkResizeRef.current!.key ? { ...c, width: Math.max(60, plinkResizeRef.current!.startW + mv.clientX - plinkResizeRef.current!.startX) } : c)) }
+    const onUp = () => { plinkResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -167,14 +200,19 @@ export default function PaymentLinksPage() {
 
       <div className="px-6 py-5">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 710 }}>
+            <colgroup>
+              {plinkCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                {([['linkId','Link ID','left'],['description','Description','left'],['amount','Amount','left'],['createdDate','Created Date','left'],['expiryDate','Expiry Date','left'],['views','Views','left'],['status','Status','left']] as [PaymentLinkSortKey, string, string][]).map(([k, label]) => (
-                  <th key={k} className="text-left px-4 py-3 border-r border-slate-200">
-                    <button onClick={() => toggleSort(k)} className="flex items-center gap-1">
-                      <span>{label}</span><ArrowUpDown size={11} className={sortKey === k ? 'text-emerald-600' : 'text-slate-300'} />
+                {plinkCols.map(c => (
+                  <th key={c.key} className="relative px-4 py-3 border-r border-slate-200 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                    <button onClick={() => toggleSort(c.key as PaymentLinkSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                      <span>{c.label}</span><ArrowUpDown size={11} className={sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'} />
                     </button>
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPlinkResize(e, c.key, c.width)} />
                   </th>
                 ))}
                 <th className="text-left px-4 py-3">Actions</th>

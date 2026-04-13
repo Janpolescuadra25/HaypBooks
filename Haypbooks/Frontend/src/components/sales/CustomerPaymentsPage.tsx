@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { ArrowUpDown, Ban, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -85,6 +85,26 @@ function comparePayments(a: PaymentRow, b: PaymentRow, key: SortKey, dir: SortDi
   return av > bv ? asc : -asc
 }
 
+interface ColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+const DEFAULT_CP_COLS: ColDef[] = [
+  { key: 'paymentNumber', label: 'Payment #', visible: true, width: 120, align: 'left' },
+  { key: 'customer', label: 'Customer', visible: true, width: 180, align: 'left' },
+  { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
+  { key: 'method', label: 'Method', visible: true, width: 120, align: 'left' },
+  { key: 'amount', label: 'Amount', visible: true, width: 110, align: 'right' },
+  { key: 'appliedTo', label: 'Applied To', visible: true, width: 160, align: 'left' },
+]
+function loadCPCols(): ColDef[] {
+  try {
+    const s = localStorage.getItem('customer-payments-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as ColDef[]
+      return DEFAULT_CP_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_CP_COLS
+}
+
 export default function CustomerPaymentsPage() {
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -123,6 +143,22 @@ export default function CustomerPaymentsPage() {
   const [saveError, setSaveError] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
+
+  const [cols, setCols] = useState<ColDef[]>(() => loadCPCols())
+  const colsRef = useRef(cols)
+  useEffect(() => { colsRef.current = cols }, [cols])
+  const saveCols = (next: ColDef[]) => { setCols(next); try { localStorage.setItem('customer-payments-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
+  const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    resizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => {
+      if (!resizeRef.current) return
+      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(60, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
+    }
+    const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
 
   // ─── Fetch payments ──────────────────────────────────────────────────────────
 
@@ -400,39 +436,21 @@ export default function CustomerPaymentsPage() {
       {/* Table */}
       <div className="px-6 py-5 flex-1">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 700 }}>
+            <colgroup>
+              {cols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="text-left px-4 py-3 border-r border-slate-200">
-                  <button type="button" onClick={() => toggleSort('paymentNumber')} className="inline-flex items-center gap-1">
-                    <span>Payment #</span><ArrowUpDown size={12} className={sortKey === 'paymentNumber' ? 'text-emerald-600' : 'text-slate-300'} />
-                  </button>
-                </th>
-                <th className="text-left px-4 py-3 border-r border-slate-200">
-                  <button type="button" onClick={() => toggleSort('customer')} className="inline-flex items-center gap-1">
-                    <span>Customer</span><ArrowUpDown size={12} className={sortKey === 'customer' ? 'text-emerald-600' : 'text-slate-300'} />
-                  </button>
-                </th>
-                <th className="text-left px-4 py-3 hidden md:table-cell border-r border-slate-200">
-                  <button type="button" onClick={() => toggleSort('date')} className="inline-flex items-center gap-1">
-                    <span>Date</span><ArrowUpDown size={12} className={sortKey === 'date' ? 'text-emerald-600' : 'text-slate-300'} />
-                  </button>
-                </th>
-                <th className="text-left px-4 py-3 hidden sm:table-cell border-r border-slate-200">
-                  <button type="button" onClick={() => toggleSort('method')} className="inline-flex items-center gap-1">
-                    <span>Method</span><ArrowUpDown size={12} className={sortKey === 'method' ? 'text-emerald-600' : 'text-slate-300'} />
-                  </button>
-                </th>
-                <th className="text-right px-4 py-3 border-r border-slate-200">
-                  <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-1 ml-auto">
-                    <span>Amount</span><ArrowUpDown size={12} className={sortKey === 'amount' ? 'text-emerald-600' : 'text-slate-300'} />
-                  </button>
-                </th>
-                <th className="text-left px-4 py-3 hidden lg:table-cell border-r border-slate-200">
-                  <button type="button" onClick={() => toggleSort('appliedTo')} className="inline-flex items-center gap-1">
-                    <span>Applied To</span><ArrowUpDown size={12} className={sortKey === 'appliedTo' ? 'text-emerald-600' : 'text-slate-300'} />
-                  </button>
-                </th>
+                {cols.map(c => (
+                  <th key={c.key} className="relative px-4 py-3 border-r border-slate-200 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                    <button type="button" onClick={() => toggleSort(c.key as SortKey)} className="inline-flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                      <span>{c.label}</span><ArrowUpDown size={12} className={sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'} />
+                    </button>
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
+                  </th>
+                ))}
                 <th className="text-right px-4 py-3 w-20">Actions</th>
               </tr>
             </thead>

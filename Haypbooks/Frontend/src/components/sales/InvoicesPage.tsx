@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import {
@@ -8,7 +8,7 @@ import {
   ReceiptText, Clock, CheckCircle2, TrendingUp, MoreVertical, Copy,
   Trash2, RefreshCw, ChevronDown, LayoutTemplate, Filter, SlidersHorizontal,
   Download, CheckSquare, Square, AlertTriangle, DollarSign, Printer,
-  Share2, CreditCard, History, ExternalLink,
+  Share2, CreditCard, History, ExternalLink, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -56,6 +56,41 @@ const statusIcons: Record<string, React.ReactNode> = {
   PAID: React.createElement(CheckCircle2, { size: 11 }),
   OVERDUE: React.createElement(AlertTriangle, { size: 11 }),
   VOID: React.createElement(Ban, { size: 11 }),
+}
+
+type InvSortKey = 'invoiceNumber' | 'customerName' | 'date' | 'dueDate' | 'status' | 'total'
+type InvSortDir = 'asc' | 'desc'
+function compareInvoices(a: Invoice, b: Invoice, key: InvSortKey, dir: InvSortDir): number {
+  const asc = dir === 'asc' ? 1 : -1
+  if (key === 'total') return a.total === b.total ? 0 : a.total > b.total ? asc : -asc
+  if (key === 'date' || key === 'dueDate') {
+    const ad = a[key] ? new Date(a[key] as string).getTime() : 0
+    const bd = b[key] ? new Date(b[key] as string).getTime() : 0
+    return ad === bd ? 0 : ad > bd ? asc : -asc
+  }
+  const av = String((a as any)[key] ?? '').toLowerCase()
+  const bv = String((b as any)[key] ?? '').toLowerCase()
+  return av === bv ? 0 : av > bv ? asc : -asc
+}
+
+interface InvColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+const DEFAULT_INV_COLS: InvColDef[] = [
+  { key: 'invoiceNumber', label: 'Invoice #', visible: true, width: 120, align: 'left' },
+  { key: 'customerName', label: 'Customer', visible: true, width: 180, align: 'left' },
+  { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
+  { key: 'dueDate', label: 'Due Date', visible: true, width: 110, align: 'left' },
+  { key: 'status', label: 'Status', visible: true, width: 100, align: 'left' },
+  { key: 'total', label: 'Total', visible: true, width: 110, align: 'right' },
+]
+function loadInvCols(): InvColDef[] {
+  try {
+    const s = localStorage.getItem('invoices-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as InvColDef[]
+      return DEFAULT_INV_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_INV_COLS
 }
 
 export default function InvoicesPage() {
@@ -152,6 +187,30 @@ export default function InvoicesPage() {
 
   const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleSelectAll = () => setSelected(p => p.size === filtered.length ? new Set() : new Set(filtered.map(i => i.id)))
+
+  const [sortKey, setSortKey] = useState<InvSortKey>('date')
+  const [sortDir, setSortDir] = useState<InvSortDir>('desc')
+  const toggleSort = (key: InvSortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir(key === 'total' || key === 'date' || key === 'dueDate' ? 'desc' : 'asc') }
+  }
+  const sorted = useMemo(() => [...filtered].sort((a, b) => compareInvoices(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+
+  const [invCols, setInvCols] = useState<InvColDef[]>(() => loadInvCols())
+  const invColsRef = useRef(invCols)
+  useEffect(() => { invColsRef.current = invCols }, [invCols])
+  const saveInvCols = (next: InvColDef[]) => { setInvCols(next); try { localStorage.setItem('invoices-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
+  const invResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startInvResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    invResizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => {
+      if (!invResizeRef.current) return
+      saveInvCols(invColsRef.current.map(c => c.key === invResizeRef.current!.key ? { ...c, width: Math.max(60, invResizeRef.current!.startW + mv.clientX - invResizeRef.current!.startX) } : c))
+    }
+    const onUp = () => { invResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
   const fmtDate = (d: string) => {
@@ -270,7 +329,12 @@ export default function InvoicesPage() {
 
       {/* Table */}
       <div className="rounded-xl border border-gray-200 overflow-x-auto bg-white shadow-sm">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: 750 }}>
+          <colgroup>
+            <col style={{ width: 44 }} />
+            {invCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+            <col style={{ width: 48 }} />
+          </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-4 py-2.5 w-10 border-r border-gray-200">
@@ -280,18 +344,20 @@ export default function InvoicesPage() {
                     : React.createElement(Square, { size: 15 })}
                 </button>
               </th>
-              <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 whitespace-nowrap">Invoice #</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Customer</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 hidden md:table-cell whitespace-nowrap">Date</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 hidden lg:table-cell whitespace-nowrap">Due Date</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Status</th>
-              <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 whitespace-nowrap">Total</th>
+              {invCols.map(c => (
+                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                  <button onClick={() => toggleSort(c.key as InvSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                    <span>{c.label}</span><ArrowUpDown size={11} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                  </button>
+                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startInvResize(e, c.key, c.width)} />
+                </th>
+              ))}
               <th className="w-12 px-4 py-2.5"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-16 text-center">
+              <tr><td colSpan={invCols.length + 2} className="px-4 py-16 text-center">
                 <FileText size={32} className="mx-auto mb-3 text-gray-200" />
                 <p className="text-sm text-gray-400 font-semibold">No invoices found</p>
                 <p className="text-xs text-gray-300 mt-1">
@@ -299,7 +365,7 @@ export default function InvoicesPage() {
                 </p>
               </td></tr>
             ) : (
-              filtered.map(inv => (
+              sorted.map(inv => (
                 <tr key={inv.id} className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(inv.id) ? 'bg-blue-50/20' : ''}`}>
                   <td className="px-4 py-2.5 border-r border-gray-100">
                     <button onClick={() => toggleSelect(inv.id)} className="text-gray-300 hover:text-emerald-600 transition-colors">

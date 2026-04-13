@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -60,6 +60,28 @@ function compareRecognition(a: RecognitionRow, b: RecognitionRow, key: RevRecSor
   }
   const as = String(a[key] ?? '').toLowerCase(); const bs = String(b[key] ?? '').toLowerCase()
   return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+}
+
+interface RevRecColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
+const DEFAULT_REVREC_COLS: RevRecColDef[] = [
+  { key: 'contractId', label: 'Contract ID', visible: true, width: 120, align: 'left' },
+  { key: 'customer', label: 'Customer', visible: true, width: 160, align: 'left' },
+  { key: 'description', label: 'Description', visible: true, width: 180, align: 'left' },
+  { key: 'method', label: 'Method', visible: true, width: 130, align: 'left' },
+  { key: 'totalContractValue', label: 'Total Value', visible: true, width: 130, align: 'right' },
+  { key: 'recognizedToDate', label: 'Recognized', visible: true, width: 120, align: 'right' },
+  { key: 'remaining', label: 'Remaining', visible: true, width: 110, align: 'right' },
+  { key: 'status', label: 'Status', visible: true, width: 100, align: 'left' },
+]
+function loadRevRecCols(): RevRecColDef[] {
+  try {
+    const s = localStorage.getItem('revrec-cols-v1')
+    if (s) {
+      const saved = JSON.parse(s) as RevRecColDef[]
+      return DEFAULT_REVREC_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width } : d })
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_REVREC_COLS
 }
 
 export default function RevenueRecognitionPage() {
@@ -194,6 +216,18 @@ export default function RevenueRecognitionPage() {
     () => [...filtered].sort((a, b) => compareRecognition(a, b, sortKey, sortDir)),
     [filtered, sortKey, sortDir]
   )
+  const [revRecCols, setRevRecCols] = useState<RevRecColDef[]>(() => loadRevRecCols())
+  const revRecColsRef = useRef(revRecCols)
+  useEffect(() => { revRecColsRef.current = revRecCols }, [revRecCols])
+  const saveRevRecCols = (next: RevRecColDef[]) => { setRevRecCols(next); try { localStorage.setItem('revrec-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
+  const revRecResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const startRevRecResize = (e: React.MouseEvent, key: string, w: number) => {
+    e.preventDefault()
+    revRecResizeRef.current = { key, startX: e.clientX, startW: w }
+    const onMove = (mv: MouseEvent) => { if (!revRecResizeRef.current) return; saveRevRecCols(revRecColsRef.current.map(c => c.key === revRecResizeRef.current!.key ? { ...c, width: Math.max(60, revRecResizeRef.current!.startW + mv.clientX - revRecResizeRef.current!.startX) } : c)) }
+    const onUp = () => { revRecResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
+  }
 
   const totalRecognized = useMemo(() => filtered.reduce((s, r) => s + (r.recognizedToDate ?? 0), 0), [filtered])
   const totalRemaining = useMemo(() => filtered.reduce((s, r) => s + (r.remaining ?? 0), 0), [filtered])
@@ -296,18 +330,23 @@ export default function RevenueRecognitionPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 880 }}>
+                <colgroup>
+                  {revRecCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+                  <col style={{ width: 110 }} />
+                  <col style={{ width: 80 }} />
+                </colgroup>
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('contractId')} className="flex items-center gap-1"><span>Contract ID</span><ArrowUpDown size={10} className={sortKey === 'contractId' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('customer')} className="flex items-center gap-1"><span>Customer</span><ArrowUpDown size={10} className={sortKey === 'customer' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('description')} className="flex items-center gap-1"><span>Description</span><ArrowUpDown size={10} className={sortKey === 'description' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('method')} className="flex items-center gap-1"><span>Method</span><ArrowUpDown size={10} className={sortKey === 'method' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('totalContractValue')} className="flex items-center gap-1"><span>Total Value</span><ArrowUpDown size={10} className={sortKey === 'totalContractValue' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('recognizedToDate')} className="flex items-center gap-1"><span>Recognized</span><ArrowUpDown size={10} className={sortKey === 'recognizedToDate' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('remaining')} className="flex items-center gap-1"><span>Remaining</span><ArrowUpDown size={10} className={sortKey === 'remaining' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    {revRecCols.map(c => (
+                      <th key={c.key} className="relative px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide select-none border-r border-slate-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                        <button onClick={() => toggleSort(c.key as RevRecSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                          <span>{c.label}</span><ArrowUpDown size={10} className={sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'} />
+                        </button>
+                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startRevRecResize(e, c.key, c.width)} />
+                      </th>
+                    ))}
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200">Period</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('status')} className="flex items-center gap-1"><span>Status</span><ArrowUpDown size={10} className={sortKey === 'status' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>

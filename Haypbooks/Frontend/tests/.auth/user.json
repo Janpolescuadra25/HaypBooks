@@ -2,40 +2,40 @@
   "cookies": [
     {
       "name": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwYWYwODhiOS0zNGQ2LTQ5N2UtOTdhMC0zMjJhN2ZmNjcwZDIiLCJlbWFpbCI6ImUyZS1zYWxlcy0xNzc2MDk5ODA0NDgwQGhheXBib29rcy50ZXN0Iiwicm9sZSI6ImJ1c2luZXNzIiwiaWF0IjoxNzc2MDk5ODA4LCJleHAiOjE3NzYxMDcwMDh9.UhNHA5TrfAFdT8fxHyE-M0p7b5EX3EvXT2osTwCZGcs",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MTI0YWZlZi1lNTBiLTRiY2UtYmVjMC0zNTkzMGY3MTdhYmMiLCJlbWFpbCI6ImUyZS1zYWxlcy0xNzc2MTAxNzMyMTk1QGhheXBib29rcy50ZXN0Iiwicm9sZSI6ImJ1c2luZXNzIiwiaWF0IjoxNzc2MTAxNzM0LCJleHAiOjE3NzYxMDg5MzR9.pFOA157AlVuoOvpTzWX5LwygZjuZsyKbufnzae9hx_o",
       "domain": "localhost",
       "path": "/",
-      "expires": 1776107008.092708,
+      "expires": 1776108934.398594,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "refreshToken",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwYWYwODhiOS0zNGQ2LTQ5N2UtOTdhMC0zMjJhN2ZmNjcwZDIiLCJub25jZSI6ImIwMWQ1MWIwLTkwM2EtNDhjZC1hYTNlLTA3ODM3NDg1MDgyZiIsImZhbWlseSI6IjY4MTg2NjhjLTU0ZWYtNGFlMC05NTFlLTI2YThhMGEyM2E0OSIsImlhdCI6MTc3NjA5OTgwOCwiZXhwIjoxNzc2NzA0NjA4fQ.TqQ8APKzknMNaZVF2P7NPa2nJTYq-NjJW6HIlV_SDnQ",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MTI0YWZlZi1lNTBiLTRiY2UtYmVjMC0zNTkzMGY3MTdhYmMiLCJub25jZSI6ImVhNzExZmM1LTc3N2ItNGZiMC05OTdiLTI0ZjFjNDM2ZDNhOCIsImZhbWlseSI6IjFjZWEwNjAzLTI5ZmEtNGUxZC05NWYxLWQ4MWNkYzc5N2I2ZSIsImlhdCI6MTc3NjEwMTczNCwiZXhwIjoxNzc2NzA2NTM0fQ.lHP-zreoEy6LLxamqlisO1J2tzsiR5qgo6IvvIR_TLM",
       "domain": "localhost",
       "path": "/",
-      "expires": 1776704608.094246,
+      "expires": 1776706534.399882,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "email",
-      "value": "e2e-sales-1776099804480%40haypbooks.test",
+      "value": "e2e-sales-1776101732195%40haypbooks.test",
       "domain": "localhost",
       "path": "/",
-      "expires": 1776704608.094326,
+      "expires": 1776706534.399944,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "userId",
-      "value": "0af088b9-34d6-497e-97a0-322a7ff670d2",
+      "value": "5124afef-e50b-4bce-bec0-35930f717abc",
       "domain": "localhost",
       "path": "/",
-      "expires": 1776704608.094368,
+      "expires": 1776706534.39999,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -45,7 +45,7 @@
       "value": "admin",
       "domain": "localhost",
       "path": "/",
-      "expires": 1776704608.0944,
+      "expires": 1776706534.400027,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -55,7 +55,7 @@
       "value": "false",
       "domain": "localhost",
       "path": "/",
-      "expires": 1776704608.094487,
+      "expires": 1776706534.400087,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -87,7 +87,7 @@
       "localStorage": [
         {
           "name": "user",
-          "value": "{\"id\":\"0af088b9-34d6-497e-97a0-322a7ff670d2\",\"email\":\"e2e-sales-1776099804480@haypbooks.test\",\"name\":\"E2E Sales Tester\",\"role\":\"business\",\"isAccountant\":false,\"onboardingCompleted\":false,\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"isEmailVerified\":true,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"preferredHub\":null,\"requiresHubSelection\":false}"
+          "value": "{\"id\":\"5124afef-e50b-4bce-bec0-35930f717abc\",\"email\":\"e2e-sales-1776101732195@haypbooks.test\",\"name\":\"E2E Sales Tester\",\"role\":\"business\",\"isAccountant\":false,\"onboardingCompleted\":false,\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"isEmailVerified\":true,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"preferredHub\":null,\"requiresHubSelection\":false}"
         }
       ]
     }
