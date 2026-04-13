@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { ArrowUpDown } from 'lucide-react'
 
 type DeferredRevenueRow = {
   id: string
@@ -43,6 +44,22 @@ function dateISO(offsetDays = 0) {
   return d.toISOString().split('T')[0]
 }
 
+type DeferredSortKey = 'contractId' | 'customer' | 'description' | 'frequency' | 'totalDeferredAmount' | 'recognizedAmount' | 'remainingDeferred' | 'nextRecognitionDate' | 'status'
+type DeferredSortDir = 'asc' | 'desc'
+
+function compareDeferredRevenue(a: DeferredRevenueRow, b: DeferredRevenueRow, key: DeferredSortKey, dir: DeferredSortDir): number {
+  if (key === 'totalDeferredAmount' || key === 'recognizedAmount' || key === 'remainingDeferred') {
+    const av = a[key] ?? 0; const bv = b[key] ?? 0
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'nextRecognitionDate') {
+    const av = new Date(a[key] ?? '').getTime() || 0; const bv = new Date(b[key] ?? '').getTime() || 0
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  const as = String(a[key] ?? '').toLowerCase(); const bs = String(b[key] ?? '').toLowerCase()
+  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+}
+
 export default function DeferredRevenuePage() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -50,6 +67,12 @@ export default function DeferredRevenuePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<DeferredSortKey>('contractId')
+  const [sortDir, setSortDir] = useState<DeferredSortDir>('asc')
+  const toggleSort = (key: DeferredSortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir(key === 'totalDeferredAmount' || key === 'recognizedAmount' || key === 'remainingDeferred' ? 'desc' : 'asc') }
+  }
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [showCreate, setShowCreate] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -165,6 +188,11 @@ export default function DeferredRevenuePage() {
     return list
   }, [items, search, statusFilter])
 
+  const sorted = useMemo(
+    () => [...filtered].sort((a, b) => compareDeferredRevenue(a, b, sortKey, sortDir)),
+    [filtered, sortKey, sortDir]
+  )
+
   const totalDeferred = useMemo(() => items.filter((r) => r.status === 'Active').reduce((s, r) => s + (r.remainingDeferred ?? 0), 0), [items])
   const totalRecognized = useMemo(() => items.reduce((s, r) => s + (r.recognizedAmount ?? 0), 0), [items])
 
@@ -269,34 +297,39 @@ export default function DeferredRevenuePage() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {['Contract ID', 'Customer', 'Description', 'Frequency', 'Total Deferred', 'Recognized', 'Remaining', 'Next Recognition', 'Status', 'Actions'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('contractId')} className="flex items-center gap-1"><span>Contract ID</span><ArrowUpDown size={10} className={sortKey === 'contractId' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('customer')} className="flex items-center gap-1"><span>Customer</span><ArrowUpDown size={10} className={sortKey === 'customer' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('description')} className="flex items-center gap-1"><span>Description</span><ArrowUpDown size={10} className={sortKey === 'description' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('frequency')} className="flex items-center gap-1"><span>Frequency</span><ArrowUpDown size={10} className={sortKey === 'frequency' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('totalDeferredAmount')} className="flex items-center gap-1"><span>Total Deferred</span><ArrowUpDown size={10} className={sortKey === 'totalDeferredAmount' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('recognizedAmount')} className="flex items-center gap-1"><span>Recognized</span><ArrowUpDown size={10} className={sortKey === 'recognizedAmount' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('remainingDeferred')} className="flex items-center gap-1"><span>Remaining</span><ArrowUpDown size={10} className={sortKey === 'remainingDeferred' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('nextRecognitionDate')} className="flex items-center gap-1"><span>Next Recognition</span><ArrowUpDown size={10} className={sortKey === 'nextRecognitionDate' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('status')} className="flex items-center gap-1"><span>Status</span><ArrowUpDown size={10} className={sortKey === 'status' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((row) => {
+                  {sorted.map((row) => {
                     const pct = row.totalDeferredAmount > 0
                       ? Math.round((row.recognizedAmount / row.totalDeferredAmount) * 100)
                       : 0
                     return (
                       <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-slate-800">{row.contractId}</td>
-                        <td className="px-4 py-3 text-slate-700">{row.customer}</td>
-                        <td className="px-4 py-3 text-slate-600 max-w-[180px] truncate">{row.description}</td>
-                        <td className="px-4 py-3 text-slate-600">{row.frequency}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-800">{formatCurrency(row.totalDeferredAmount, currency)}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 font-medium text-slate-800 border-r border-slate-100">{row.contractId}</td>
+                        <td className="px-4 py-3 text-slate-700 border-r border-slate-100">{row.customer}</td>
+                        <td className="px-4 py-3 text-slate-600 max-w-[180px] truncate border-r border-slate-100">{row.description}</td>
+                        <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.frequency}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-800 border-r border-slate-100">{formatCurrency(row.totalDeferredAmount, currency)}</td>
+                        <td className="px-4 py-3 border-r border-slate-100">
                           <div className="flex flex-col gap-1">
                             <span className="text-emerald-700 font-semibold">{formatCurrency(row.recognizedAmount, currency)}</span>
                             <span className="text-xs text-slate-400">{pct}%</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-semibold text-amber-700">{formatCurrency(row.remainingDeferred, currency)}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.nextRecognitionDate}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 font-semibold text-amber-700 border-r border-slate-100">{formatCurrency(row.remainingDeferred, currency)}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-100">{row.nextRecognitionDate}</td>
+                        <td className="px-4 py-3 border-r border-slate-100">
                           <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
                             {row.status}
                           </span>

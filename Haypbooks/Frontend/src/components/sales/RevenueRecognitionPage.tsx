@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { ArrowUpDown } from 'lucide-react'
 
 type RecognitionRow = {
   id: string
@@ -49,6 +50,18 @@ function dateISO(offsetDays = 0) {
   return d.toISOString().split('T')[0]
 }
 
+type RevRecSortKey = 'contractId' | 'customer' | 'description' | 'method' | 'totalContractValue' | 'recognizedToDate' | 'remaining' | 'status'
+type RevRecSortDir = 'asc' | 'desc'
+
+function compareRecognition(a: RecognitionRow, b: RecognitionRow, key: RevRecSortKey, dir: RevRecSortDir): number {
+  if (key === 'totalContractValue' || key === 'recognizedToDate' || key === 'remaining') {
+    const av = a[key] ?? 0; const bv = b[key] ?? 0
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  const as = String(a[key] ?? '').toLowerCase(); const bs = String(b[key] ?? '').toLowerCase()
+  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+}
+
 export default function RevenueRecognitionPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -56,6 +69,12 @@ export default function RevenueRecognitionPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<RevRecSortKey>('contractId')
+  const [sortDir, setSortDir] = useState<RevRecSortDir>('asc')
+  const toggleSort = (key: RevRecSortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir(key === 'totalContractValue' || key === 'recognizedToDate' || key === 'remaining' ? 'desc' : 'asc') }
+  }
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [showCreate, setShowCreate] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -171,6 +190,11 @@ export default function RevenueRecognitionPage() {
     return list
   }, [items, search, statusFilter])
 
+  const sorted = useMemo(
+    () => [...filtered].sort((a, b) => compareRecognition(a, b, sortKey, sortDir)),
+    [filtered, sortKey, sortDir]
+  )
+
   const totalRecognized = useMemo(() => filtered.reduce((s, r) => s + (r.recognizedToDate ?? 0), 0), [filtered])
   const totalRemaining = useMemo(() => filtered.reduce((s, r) => s + (r.remaining ?? 0), 0), [filtered])
 
@@ -275,34 +299,39 @@ export default function RevenueRecognitionPage() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {['Contract ID', 'Customer', 'Description', 'Method', 'Total Value', 'Recognized', 'Remaining', 'Period', 'Status', 'Actions'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('contractId')} className="flex items-center gap-1"><span>Contract ID</span><ArrowUpDown size={10} className={sortKey === 'contractId' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('customer')} className="flex items-center gap-1"><span>Customer</span><ArrowUpDown size={10} className={sortKey === 'customer' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('description')} className="flex items-center gap-1"><span>Description</span><ArrowUpDown size={10} className={sortKey === 'description' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('method')} className="flex items-center gap-1"><span>Method</span><ArrowUpDown size={10} className={sortKey === 'method' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('totalContractValue')} className="flex items-center gap-1"><span>Total Value</span><ArrowUpDown size={10} className={sortKey === 'totalContractValue' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('recognizedToDate')} className="flex items-center gap-1"><span>Recognized</span><ArrowUpDown size={10} className={sortKey === 'recognizedToDate' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('remaining')} className="flex items-center gap-1"><span>Remaining</span><ArrowUpDown size={10} className={sortKey === 'remaining' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200">Period</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200"><button onClick={() => toggleSort('status')} className="flex items-center gap-1"><span>Status</span><ArrowUpDown size={10} className={sortKey === 'status' ? 'text-emerald-600' : 'text-slate-300'} /></button></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((row) => {
+                  {sorted.map((row) => {
                     const pct = row.totalContractValue > 0
                       ? Math.round((row.recognizedToDate / row.totalContractValue) * 100)
                       : 0
                     return (
                       <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-slate-800">{row.contractId}</td>
-                        <td className="px-4 py-3 text-slate-700">{row.customer}</td>
-                        <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">{row.description}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.method}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-800">{formatCurrency(row.totalContractValue, currency)}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 font-medium text-slate-800 border-r border-slate-100">{row.contractId}</td>
+                        <td className="px-4 py-3 text-slate-700 border-r border-slate-100">{row.customer}</td>
+                        <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate border-r border-slate-100">{row.description}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-100">{row.method}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-800 border-r border-slate-100">{formatCurrency(row.totalContractValue, currency)}</td>
+                        <td className="px-4 py-3 border-r border-slate-100">
                           <div className="flex flex-col gap-1">
                             <span className="font-semibold text-emerald-700">{formatCurrency(row.recognizedToDate, currency)}</span>
                             <span className="text-xs text-slate-400">{pct}%</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-slate-600">{formatCurrency(row.remaining, currency)}</td>
-                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap text-xs">{row.startDate} – {row.endDate}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{formatCurrency(row.remaining, currency)}</td>
+                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap text-xs border-r border-slate-100">{row.startDate} – {row.endDate}</td>
+                        <td className="px-4 py-3 border-r border-slate-100">
                           <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
                             {row.status}
                           </span>

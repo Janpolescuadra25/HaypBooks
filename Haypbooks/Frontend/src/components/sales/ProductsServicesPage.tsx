@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Search, Plus, MoreHorizontal, Package, Wrench, Tag,
   Pencil, Trash2, Loader2, AlertCircle, RefreshCw,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -27,6 +27,24 @@ export interface Item {
   trackingType: string | null
   deletedAt: string | null
   stockLevels?: { quantity: number }[]
+}
+
+type SortKey = 'name' | 'sku' | 'type' | 'salesPrice' | 'purchaseCost' | 'stock'
+type SortDirection = 'asc' | 'desc'
+
+function compareProducts(a: Item, b: Item, key: SortKey, dir: SortDirection): number {
+  if (key === 'salesPrice' || key === 'purchaseCost') {
+    const av = (a[key] as number | null) ?? -Infinity; const bv = (b[key] as number | null) ?? -Infinity
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'stock') {
+    const av = a.stockLevels?.reduce((s, l) => s + (l.quantity ?? 0), 0) ?? 0
+    const bv = b.stockLevels?.reduce((s, l) => s + (l.quantity ?? 0), 0) ?? 0
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  const as = String(a[key as keyof Item] ?? '').toLowerCase()
+  const bs = String(b[key as keyof Item] ?? '').toLowerCase()
+  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
 }
 
 type FilterType = 'ALL' | 'PRODUCT' | 'SERVICE' | 'INVENTORY' | 'BUNDLE'
@@ -57,6 +75,17 @@ export default function ProductsServicesPage() {
   const [modalItem, setModalItem] = useState<Item | null | 'new'>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortDir, setSortDir] = useState<SortDirection>('asc')
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir('asc') }
+  }
+  const sorted = useMemo(
+    () => [...items].sort((a, b) => compareProducts(a, b, sortKey, sortDir)),
+    [items, sortKey, sortDir]
+  )
 
   // Debounce search input — waits 300ms after typing stops
   useEffect(() => {
@@ -243,13 +272,37 @@ export default function ProductsServicesPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Name</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">
+                    <button onClick={() => toggleSort('name')} className="flex items-center gap-1">
+                      <span>Name</span><ArrowUpDown size={11} className={sortKey === 'name' ? 'text-emerald-600' : 'text-gray-300'} />
+                    </button>
+                  </th>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 max-w-[220px]">Description</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">SKU</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">Type</th>
-                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">Sales Price</th>
-                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">Cost</th>
-                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-24">In Stock</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">
+                    <button onClick={() => toggleSort('sku')} className="flex items-center gap-1">
+                      <span>SKU</span><ArrowUpDown size={11} className={sortKey === 'sku' ? 'text-emerald-600' : 'text-gray-300'} />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-28">
+                    <button onClick={() => toggleSort('type')} className="flex items-center gap-1">
+                      <span>Type</span><ArrowUpDown size={11} className={sortKey === 'type' ? 'text-emerald-600' : 'text-gray-300'} />
+                    </button>
+                  </th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">
+                    <button onClick={() => toggleSort('salesPrice')} className="flex items-center gap-1 ml-auto">
+                      <span>Sales Price</span><ArrowUpDown size={11} className={sortKey === 'salesPrice' ? 'text-emerald-600' : 'text-gray-300'} />
+                    </button>
+                  </th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">
+                    <button onClick={() => toggleSort('purchaseCost')} className="flex items-center gap-1 ml-auto">
+                      <span>Cost</span><ArrowUpDown size={11} className={sortKey === 'purchaseCost' ? 'text-emerald-600' : 'text-gray-300'} />
+                    </button>
+                  </th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-24">
+                    <button onClick={() => toggleSort('stock')} className="flex items-center gap-1 ml-auto">
+                      <span>In Stock</span><ArrowUpDown size={11} className={sortKey === 'stock' ? 'text-emerald-600' : 'text-gray-300'} />
+                    </button>
+                  </th>
                   <th className="w-10 px-2 py-2.5"></th>
                 </tr>
               </thead>
@@ -262,7 +315,7 @@ export default function ProductsServicesPage() {
                       <p className="text-xs mt-1">Click <strong>New Item</strong> to add your first product or service.</p>
                     </td>
                   </tr>
-                ) : items.map(row => {
+                ) : sorted.map(row => {
                   const stockQty = row.stockLevels?.reduce((s, l) => s + (l.quantity ?? 0), 0) ?? null
                   const isDeleting = deletingId === row.id
                   return (

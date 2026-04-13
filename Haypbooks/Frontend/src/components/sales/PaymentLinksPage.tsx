@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { ArrowUpDown } from 'lucide-react'
 
 type PaymentLinkRow = {
   id: string
@@ -24,6 +25,22 @@ type NewPaymentLinkForm = {
   amount: string
   invoiceId: string
   expiryDate: string
+}
+
+type PaymentLinkSortKey = 'linkId' | 'description' | 'amount' | 'createdDate' | 'expiryDate' | 'views' | 'status'
+type SortDirection = 'asc' | 'desc'
+
+function compareLinks(a: PaymentLinkRow, b: PaymentLinkRow, key: PaymentLinkSortKey, dir: SortDirection): number {
+  if (key === 'amount' || key === 'views') {
+    const av = Number(a[key] ?? 0); const bv = Number(b[key] ?? 0)
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'createdDate' || key === 'expiryDate') {
+    const av = new Date(a[key] ?? '').getTime() || 0; const bv = new Date(b[key] ?? '').getTime() || 0
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  const as = String(a[key] ?? '').toLowerCase(); const bs = String(b[key] ?? '').toLowerCase()
+  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
 }
 
 export default function PaymentLinksPage() {
@@ -52,6 +69,12 @@ export default function PaymentLinksPage() {
   useEffect(() => { fetchData() }, [fetchData])
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [sortKey, setSortKey] = useState<PaymentLinkSortKey>('createdDate')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
+  const toggleSort = (key: PaymentLinkSortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir(key === 'createdDate' ? 'desc' : 'asc') }
+  }
   const [form, setForm] = useState<NewPaymentLinkForm>({
     description: '',
     amount: '',
@@ -106,6 +129,11 @@ export default function PaymentLinksPage() {
     )
   }, [search, items])
 
+  const sortedLinks = useMemo(
+    () => [...filtered].sort((a, b) => compareLinks(a, b, sortKey, sortDir)),
+    [filtered, sortKey, sortDir]
+  )
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
@@ -142,13 +170,13 @@ export default function PaymentLinksPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="text-left px-4 py-3">Link ID</th>
-                <th className="text-left px-4 py-3">Description</th>
-                <th className="text-left px-4 py-3">Amount</th>
-                <th className="text-left px-4 py-3">Created Date</th>
-                <th className="text-left px-4 py-3">Expiry Date</th>
-                <th className="text-left px-4 py-3">Views</th>
-                <th className="text-left px-4 py-3">Status</th>
+                {([['linkId','Link ID','left'],['description','Description','left'],['amount','Amount','left'],['createdDate','Created Date','left'],['expiryDate','Expiry Date','left'],['views','Views','left'],['status','Status','left']] as [PaymentLinkSortKey, string, string][]).map(([k, label]) => (
+                  <th key={k} className="text-left px-4 py-3 border-r border-slate-200">
+                    <button onClick={() => toggleSort(k)} className="flex items-center gap-1">
+                      <span>{label}</span><ArrowUpDown size={11} className={sortKey === k ? 'text-emerald-600' : 'text-slate-300'} />
+                    </button>
+                  </th>
+                ))}
                 <th className="text-left px-4 py-3">Actions</th>
               </tr>
             </thead>
@@ -172,15 +200,15 @@ export default function PaymentLinksPage() {
                   <td colSpan={8} className="px-4 py-10 text-center text-slate-500">No payment links found.</td>
                 </tr>
               ) : (
-                filtered.map((row) => (
+                sortedLinks.map((row) => (
                   <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.linkId}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.description}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatCurrency(row.amount, row.currency ?? currency)}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.createdDate}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.expiryDate}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.views}</td>
-                    <td className={`px-4 py-3 text-sm font-semibold ${
+                    <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-100">{row.linkId}</td>
+                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.description}</td>
+                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{formatCurrency(row.amount, row.currency ?? currency)}</td>
+                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.createdDate}</td>
+                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.expiryDate}</td>
+                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.views}</td>
+                    <td className={`px-4 py-3 text-sm font-semibold border-r border-slate-100 ${
                       row.status === 'Active' ? 'text-emerald-700' :
                       row.status === 'Paid' ? 'text-sky-700' :
                       'text-rose-700'

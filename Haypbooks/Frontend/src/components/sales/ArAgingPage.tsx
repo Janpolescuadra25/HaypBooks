@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, AlertCircle, X, Download, Search } from 'lucide-react'
+import { Loader2, AlertCircle, X, Download, Search, ArrowUpDown } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -24,6 +24,18 @@ interface AgingCustomer {
   total: number
 }
 
+type AgingSortKey = 'customerName' | 'current' | 'days30' | 'days60' | 'days90' | 'over90' | 'total'
+type AgingSortDir = 'asc' | 'desc'
+
+function compareAging(a: AgingCustomer, b: AgingCustomer, key: AgingSortKey, dir: AgingSortDir): number {
+  if (key === 'customerName') {
+    const as = (a.customerName ?? '').toLowerCase(); const bs = (b.customerName ?? '').toLowerCase()
+    return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+  }
+  const av = a[key] ?? 0; const bv = b[key] ?? 0
+  return dir === 'asc' ? (av as number) - (bv as number) : (bv as number) - (av as number)
+}
+
 export default function ArAgingPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -32,6 +44,12 @@ export default function ArAgingPage() {
   const [error, setError] = useState('')
   const [asOf, setAsOf] = useState(new Date().toISOString().split('T')[0])
   const [search, setSearch] = useState('')
+  const [agingSortKey, setAgingSortKey] = useState<AgingSortKey>('total')
+  const [agingSortDir, setAgingSortDir] = useState<AgingSortDir>('desc')
+  const toggleAgingSort = (key: AgingSortKey) => {
+    if (agingSortKey === key) { setAgingSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setAgingSortKey(key); setAgingSortDir(key === 'customerName' ? 'asc' : 'desc') }
+  }
 
   const fetchAging = useCallback(async () => {
     if (!companyId) return
@@ -54,10 +72,11 @@ export default function ArAgingPage() {
   const totalOutstanding = data?.total ?? allCustomers.reduce((s: number, c: AgingCustomer) => s + c.total, 0) ?? 0
 
   const customers = useMemo(() => {
-    if (!search) return allCustomers
-    const q = search.toLowerCase()
-    return allCustomers.filter(c => c.customerName?.toLowerCase().includes(q))
-  }, [allCustomers, search])
+    const filtered = !search
+      ? allCustomers
+      : allCustomers.filter(c => c.customerName?.toLowerCase().includes(search.toLowerCase()))
+    return [...filtered].sort((a, b) => compareAging(a, b, agingSortKey, agingSortDir))
+  }, [allCustomers, search, agingSortKey, agingSortDir])
 
   function exportCsv() {
     const headers = ['Customer', 'Current', '1-30', '31-60', '61-90', '90+', 'Total']
@@ -150,13 +169,21 @@ export default function ArAgingPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-emerald-50/50 border-b border-emerald-100">
-                    <th className="text-left px-4 py-3 font-medium text-emerald-700">Customer</th>
-                    <th className="text-right px-4 py-3 font-medium text-emerald-700">Current</th>
-                    <th className="text-right px-4 py-3 font-medium text-emerald-700">1-30</th>
-                    <th className="text-right px-4 py-3 font-medium text-emerald-700">31-60</th>
-                    <th className="text-right px-4 py-3 font-medium text-emerald-700">61-90</th>
-                    <th className="text-right px-4 py-3 font-medium text-emerald-700">90+</th>
-                    <th className="text-right px-4 py-3 font-medium text-emerald-700">Total</th>
+                    <th className="text-left px-4 py-3 font-medium text-emerald-700 border-r border-emerald-100">
+                      <button onClick={() => toggleAgingSort('customerName')} className="flex items-center gap-1">
+                        <span>Customer</span><ArrowUpDown size={11} className={agingSortKey === 'customerName' ? 'text-emerald-600' : 'text-emerald-300'} />
+                      </button>
+                    </th>
+                    {(['current', 'days30', 'days60', 'days90', 'over90', 'total'] as AgingSortKey[]).map((k, i) => {
+                      const labels: Record<string, string> = { current: 'Current', days30: '1-30', days60: '31-60', days90: '61-90', over90: '90+', total: 'Total' }
+                      return (
+                        <th key={k} className="text-right px-4 py-3 font-medium text-emerald-700 border-r border-emerald-100">
+                          <button onClick={() => toggleAgingSort(k)} className="flex items-center gap-1 ml-auto">
+                            <span>{labels[k]}</span><ArrowUpDown size={11} className={agingSortKey === k ? 'text-emerald-600' : 'text-emerald-300'} />
+                          </button>
+                        </th>
+                      )
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -164,13 +191,13 @@ export default function ArAgingPage() {
                     <tr><td colSpan={7} className="px-4 py-8 text-center text-emerald-400">No customers found.</td></tr>
                   ) : customers.map(c => (
                     <tr key={c.customerId} className="border-t border-emerald-50 hover:bg-emerald-50/30">
-                      <td className="px-4 py-2.5 font-medium text-emerald-900">{c.customerName}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{c.current ? fmt(c.current) : '—'}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{c.days30 ? fmt(c.days30) : '—'}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{c.days60 ? fmt(c.days60) : '—'}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{c.days90 ? fmt(c.days90) : '—'}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-red-600">{c.over90 ? fmt(c.over90) : '—'}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-emerald-800">{fmt(c.total)}</td>
+                      <td className="px-4 py-2.5 font-medium text-emerald-900 border-r border-emerald-50">{c.customerName}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.current ? fmt(c.current) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.days30 ? fmt(c.days30) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.days60 ? fmt(c.days60) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.days90 ? fmt(c.days90) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-red-600 border-r border-emerald-50">{c.over90 ? fmt(c.over90) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-emerald-800 border-r border-emerald-50">{fmt(c.total)}</td>
                     </tr>
                   ))}
                 </tbody>

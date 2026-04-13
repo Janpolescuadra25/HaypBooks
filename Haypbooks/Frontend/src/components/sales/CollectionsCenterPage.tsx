@@ -1,11 +1,27 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Download, Plus, RefreshCw, X } from 'lucide-react'
+import { Download, Plus, RefreshCw, X, ArrowUpDown } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+
+type SortKey = 'caseNumber' | 'subject' | 'status' | 'priority' | 'assignedTo' | 'promisedAmount' | 'createdAt'
+type SortDirection = 'asc' | 'desc'
+
+function compareCases(a: CaseRow, b: CaseRow, key: SortKey, dir: SortDirection): number {
+  if (key === 'promisedAmount') {
+    const av = a.promisedAmount ?? -Infinity; const bv = b.promisedAmount ?? -Infinity
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'createdAt') {
+    const av = new Date(a.createdAt).getTime() || 0; const bv = new Date(b.createdAt).getTime() || 0
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  const as = String((a as any)[key] ?? '').toLowerCase(); const bs = String((b as any)[key] ?? '').toLowerCase()
+  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+}
 
 type CaseStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
 type CasePriority = 'LOW' | 'MEDIUM' | 'HIGH'
@@ -346,6 +362,17 @@ export default function CollectionsCenterPage() {
     return rows
   }, [items, search])
 
+  const [sortKey, setSortKey] = useState<SortKey>('createdAt')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir(key === 'createdAt' ? 'desc' : 'asc') }
+  }
+  const sorted = useMemo(
+    () => [...filtered].sort((a, b) => compareCases(a, b, sortKey, sortDir)),
+    [filtered, sortKey, sortDir] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
   const visibleCols = cols.filter(c => c.visible)
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -459,16 +486,23 @@ export default function CollectionsCenterPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
-                <th className="px-3 py-3 w-10">
+                <th className="px-3 py-3 w-10 border-r border-slate-200">
                   <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleAll} className="accent-emerald-600" />
                 </th>
                 {visibleCols.map((col, ci) => (
                   <th
                     key={col.key}
                     style={{ width: col.width, minWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 ${col.align === 'right' ? 'text-right' : 'text-left'}`}
                   >
-                    {col.label}
+                    <button
+                      onClick={() => toggleSort(col.key as SortKey)}
+                      className="flex items-center gap-1 w-full"
+                      style={{ justifyContent: col.align === 'right' ? 'flex-end' : 'flex-start' }}
+                    >
+                      <span>{col.label}</span>
+                      <ArrowUpDown size={11} className={sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'} />
+                    </button>
                     {ci < visibleCols.length - 1 && (
                       <span onMouseDown={e => onResizeStart(e, col.key, col.width)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />
                     )}
@@ -490,13 +524,13 @@ export default function CollectionsCenterPage() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No collection cases found.</td></tr>
               ) : (
-                filtered.map(row => (
+                sorted.map(row => (
                   <tr key={row.id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 border-r border-slate-100">
                       <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-4 py-3 cursor-pointer ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCase(row)}>
+                      <td key={col.key} className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCase(row)}>
                         {col.key === 'caseNumber' && <span className="font-mono text-xs text-slate-700">{row.caseNumber}</span>}
                         {col.key === 'subject' && <span className="font-medium text-slate-900 truncate max-w-[180px] inline-block" title={row.subject}>{row.subject}</span>}
                         {col.key === 'customerId' && <span className="text-slate-600 font-mono text-xs">{row.customerId ? row.customerId.slice(0, 12) + '…' : '—'}</span>}

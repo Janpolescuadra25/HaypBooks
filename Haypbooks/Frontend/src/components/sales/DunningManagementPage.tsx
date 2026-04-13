@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, Bell, BellRing, FileX, ChevronDown,
+  Download, Eye, Bell, BellRing, FileX, ChevronDown, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -24,6 +24,34 @@ interface OverdueInvoice {
   balanceDue?: number
   dunningLevel?: number
   status?: string
+}
+
+type SortKey = 'invoiceNumber' | 'customer' | 'dueDate' | 'daysOverdue' | 'amount' | 'dunningLevel'
+type SortDirection = 'asc' | 'desc'
+
+function compareOverdue(a: OverdueInvoice, b: OverdueInvoice, key: SortKey, dir: SortDirection): number {
+  if (key === 'amount') {
+    const av = getAmount(a); const bv = getAmount(b)
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'daysOverdue') {
+    const av = calcDaysOverdue(a.dueDate); const bv = calcDaysOverdue(b.dueDate)
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'dunningLevel') {
+    const av = getLevel(a); const bv = getLevel(b)
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'dueDate') {
+    const av = new Date(a.dueDate).getTime() || 0; const bv = new Date(b.dueDate).getTime() || 0
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  if (key === 'customer') {
+    const as = getCustomer(a).toLowerCase(); const bs = getCustomer(b).toLowerCase()
+    return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+  }
+  const as = String((a as any)[key] ?? '').toLowerCase(); const bs = String((b as any)[key] ?? '').toLowerCase()
+  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
 }
 
 interface ColDef { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right' }
@@ -112,7 +140,18 @@ export default function DunningManagementPage() {
     return matchSearch && matchLevel
   })
 
-  const paginated = filtered.slice(page * pageSize, page * pageSize + pageSize)
+  const [sortKey, setSortKey] = useState<SortKey>('dueDate')
+  const [sortDir, setSortDir] = useState<SortDirection>('asc')
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir(key === 'daysOverdue' ? 'desc' : 'asc') }
+  }
+  const sorted = useMemo(
+    () => [...filtered].sort((a, b) => compareOverdue(a, b, sortKey, sortDir)),
+    [filtered, sortKey, sortDir] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
+  const paginated = sorted.slice(page * pageSize, page * pageSize + pageSize)
   const totalPages = Math.ceil(filtered.length / pageSize)
   const allSelected = paginated.length > 0 && paginated.every(r => selectedIds.has(r.id))
   const toggleAll = () => { if (allSelected) setSelectedIds(new Set()); else setSelectedIds(new Set(paginated.map(r => r.id))) }
@@ -281,10 +320,17 @@ export default function DunningManagementPage() {
           </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
+              <th className="px-3 py-3 border-r border-gray-200"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                  {c.label}
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none border-r border-gray-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                  <button
+                    onClick={() => toggleSort(c.key as SortKey)}
+                    className="flex items-center gap-1 w-full"
+                    style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}
+                  >
+                    <span>{c.label}</span>
+                    <ArrowUpDown size={12} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                  </button>
                   <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
                 </th>
               ))}
@@ -295,8 +341,8 @@ export default function DunningManagementPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-gray-100 animate-pulse">
-                  <td className="px-3 py-3"><div className="h-4 w-4 bg-gray-100 rounded" /></td>
-                  {visibleCols.map(c => <td key={c.key} className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-3/4" /></td>)}
+                  <td className="px-3 py-3 border-r border-gray-100"><div className="h-4 w-4 bg-gray-100 rounded" /></td>
+                  {visibleCols.map(c => <td key={c.key} className="px-3 py-3 border-r border-gray-100"><div className="h-4 bg-gray-100 rounded w-3/4" /></td>)}
                   <td className="px-3 py-3"><div className="h-4 w-20 bg-gray-100 rounded ml-auto" /></td>
                 </tr>
               ))
@@ -314,9 +360,9 @@ export default function DunningManagementPage() {
                 const meta = LEVEL_META[level] ?? LEVEL_META[0]
                 return (
                   <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="px-3 py-3"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
+                    <td className="px-3 py-3 border-r border-gray-100"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
                     {visibleCols.map(c => (
-                      <td key={c.key} className="px-3 py-3 truncate" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(c, row)}</td>
+                      <td key={c.key} className="px-3 py-3 truncate border-r border-gray-100" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(c, row)}</td>
                     ))}
                     <td className="px-3 py-3">
                       <div className="flex items-center justify-end gap-1">

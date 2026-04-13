@@ -1,0 +1,95 @@
+{
+  "cookies": [
+    {
+      "name": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwYWYwODhiOS0zNGQ2LTQ5N2UtOTdhMC0zMjJhN2ZmNjcwZDIiLCJlbWFpbCI6ImUyZS1zYWxlcy0xNzc2MDk5ODA0NDgwQGhheXBib29rcy50ZXN0Iiwicm9sZSI6ImJ1c2luZXNzIiwiaWF0IjoxNzc2MDk5ODA4LCJleHAiOjE3NzYxMDcwMDh9.UhNHA5TrfAFdT8fxHyE-M0p7b5EX3EvXT2osTwCZGcs",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776107008.092708,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "refreshToken",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwYWYwODhiOS0zNGQ2LTQ5N2UtOTdhMC0zMjJhN2ZmNjcwZDIiLCJub25jZSI6ImIwMWQ1MWIwLTkwM2EtNDhjZC1hYTNlLTA3ODM3NDg1MDgyZiIsImZhbWlseSI6IjY4MTg2NjhjLTU0ZWYtNGFlMC05NTFlLTI2YThhMGEyM2E0OSIsImlhdCI6MTc3NjA5OTgwOCwiZXhwIjoxNzc2NzA0NjA4fQ.TqQ8APKzknMNaZVF2P7NPa2nJTYq-NjJW6HIlV_SDnQ",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776704608.094246,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "email",
+      "value": "e2e-sales-1776099804480%40haypbooks.test",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776704608.094326,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "userId",
+      "value": "0af088b9-34d6-497e-97a0-322a7ff670d2",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776704608.094368,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "role",
+      "value": "admin",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776704608.0944,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "isAccountant",
+      "value": "false",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776704608.094487,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "onboardingComplete",
+      "value": "true",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "ownerOnboardingComplete",
+      "value": "true",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "user",
+          "value": "{\"id\":\"0af088b9-34d6-497e-97a0-322a7ff670d2\",\"email\":\"e2e-sales-1776099804480@haypbooks.test\",\"name\":\"E2E Sales Tester\",\"role\":\"business\",\"isAccountant\":false,\"onboardingCompleted\":false,\"onboardingComplete\":false,\"onboardingMode\":\"full\",\"isEmailVerified\":true,\"ownerOnboardingCompleted\":false,\"accountantOnboardingCompleted\":false,\"preferredHub\":null,\"requiresHubSelection\":false}"
+        }
+      ]
+    }
+  ]
+}

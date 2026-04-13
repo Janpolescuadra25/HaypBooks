@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, Edit2, Trash2, X, AlertCircle, Loader2, Users, RefreshCw,
-  ChevronLeft, ChevronRight, Download, Eye, UserCheck, UserX, Clock,
+  ChevronLeft, ChevronRight, Download, Eye, UserCheck, UserX, Clock, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -44,6 +44,20 @@ interface ColDef {
   visible: boolean
   width: number
   align?: 'left' | 'right'
+}
+
+type SortKey = 'name' | 'email' | 'phone' | 'status' | 'groupName' | 'paymentTermName' | 'openBalance' | 'creditLimit'
+type SortDirection = 'asc' | 'desc'
+
+function compareCustomers(a: Customer, b: Customer, key: SortKey, dir: SortDirection): number {
+  let av: any = a[key as keyof Customer] ?? ''
+  let bv: any = b[key as keyof Customer] ?? ''
+  if (key === 'openBalance' || key === 'creditLimit') {
+    av = Number(av); bv = Number(bv)
+    return dir === 'asc' ? av - bv : bv - av
+  }
+  const as = String(av).toLowerCase(); const bs = String(bv).toLowerCase()
+  return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
 }
 
 const DEFAULT_COLS: ColDef[] = [
@@ -93,6 +107,18 @@ export default function CustomersPage() {
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
   const [showColMenu, setShowColMenu] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortDir, setSortDir] = useState<SortDirection>('asc')
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir('asc') }
+  }
+
+  const sortedCustomers = useMemo(
+    () => [...customers].sort((a, b) => compareCustomers(a, b, sortKey, sortDir)),
+    [customers, sortKey, sortDir]
+  )
 
   const searchRef = useRef(search)
   searchRef.current = search
@@ -363,13 +389,20 @@ export default function CustomersPage() {
           </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-3">
+              <th className="px-3 py-3 border-r border-gray-200">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" />
               </th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none"
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none border-r border-gray-200"
                   style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                  {c.label}
+                  <button
+                    onClick={() => toggleSort(c.key as SortKey)}
+                    className="flex items-center gap-1 w-full"
+                    style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}
+                  >
+                    <span>{c.label}</span>
+                    <ArrowUpDown size={12} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                  </button>
                   <div
                     className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60"
                     onMouseDown={e => startResize(e, c.key, c.width)}
@@ -392,7 +425,7 @@ export default function CustomersPage() {
                   <td className="px-3 py-3"><div className="h-4 w-8 bg-gray-100 rounded ml-auto" /></td>
                 </tr>
               ))
-            ) : customers.length === 0 ? (
+            ) : sortedCustomers.length === 0 ? (
               <tr>
                 <td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-gray-300">
                   <Users size={28} className="mx-auto mb-2 opacity-40" />
@@ -401,15 +434,15 @@ export default function CustomersPage() {
                 </td>
               </tr>
             ) : (
-              customers.map(c => (
+              sortedCustomers.map(c => (
                 <tr key={c.id}
                   className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selectedIds.has(c.id) ? 'bg-blue-50/20' : ''}`}>
-                  <td className="px-3 py-2.5">
+                  <td className="px-3 py-2.5 border-r border-gray-100">
                     <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleOne(c.id)} className="accent-blue-600" />
                   </td>
                   {visibleCols.map(col => {
                     if (col.key === 'name') return (
-                      <td key={col.key} className="px-3 py-2.5 truncate">
+                      <td key={col.key} className="px-3 py-2.5 truncate border-r border-gray-100">
                         <button onClick={() => router.push(`/sales/customers/${c.id}`)}
                           className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline text-left truncate w-full block">
                           {c.name}
@@ -417,7 +450,7 @@ export default function CustomersPage() {
                       </td>
                     )
                     if (col.key === 'status') return (
-                      <td key={col.key} className="px-3 py-2.5">
+                      <td key={col.key} className="px-3 py-2.5 border-r border-gray-100">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                           c.status === 'INACTIVE' ? 'bg-gray-100 text-gray-600' : 'bg-emerald-100 text-emerald-700'
                         }`}>
@@ -426,12 +459,12 @@ export default function CustomersPage() {
                       </td>
                     )
                     if (col.key === 'openBalance' || col.key === 'creditLimit') return (
-                      <td key={col.key} className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-800 truncate">
+                      <td key={col.key} className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-800 truncate border-r border-gray-100">
                         {fmt(Number(c[col.key as keyof Customer] ?? 0))}
                       </td>
                     )
                     return (
-                      <td key={col.key} className={`px-3 py-2.5 text-slate-500 truncate ${col.align === 'right' ? 'text-right' : ''}` }>
+                      <td key={col.key} className={`px-3 py-2.5 text-slate-500 truncate border-r border-gray-100 ${col.align === 'right' ? 'text-right' : ''}` }>
                         {String(c[col.key as keyof Customer] ?? '') || '—'}
                       </td>
                     )
