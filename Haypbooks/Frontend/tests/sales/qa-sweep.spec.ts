@@ -763,3 +763,209 @@ test.describe('E. Table Feature Tests', () => {
     })
   }
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// F. CUSTOMER DROPDOWN FIX VERIFICATION (regression guard for commit 2ea30631)
+//    Verifies that customers created on the Customers page actually appear
+//    in the dropdowns on InvoiceCreatePage and SalesOrdersPage.
+// ═══════════════════════════════════════════════════════════════════════════
+
+test.describe('F. Customer Dropdown Fix Verification', () => {
+  const F_UNIQUE = Date.now()
+  const F_CUSTOMER_NAME = `DropdownFix Customer ${F_UNIQUE}`
+  let fCustomerCreated = false
+
+  test.beforeEach(() => {
+    loadCompany()
+  })
+
+  // Step 1 — Create a customer on the Customers page
+  test('[F1] Create customer on Customers page', async ({ page }) => {
+    await gotoSalesPage(page, '/sales/customers', companyId)
+    await waitForTableToLoad(page)
+
+    // Click any "Add / New Customer" button
+    const createBtn = page
+      .getByRole('button', { name: /add customer|new customer|\+\s*new|create customer/i })
+      .first()
+    const genericBtn = page.getByRole('button', { name: /^\+\s*new$/i }).first()
+    const btn = (await createBtn.isVisible({ timeout: 4000 }).catch(() => false))
+      ? createBtn
+      : genericBtn
+
+    if (!(await btn.isVisible({ timeout: 4000 }).catch(() => false))) {
+      console.log('[F1] No create button — skipping')
+      test.skip()
+      return
+    }
+    await btn.click()
+
+    const modal = page.locator('[role="dialog"]').first()
+    if (!(await modal.isVisible({ timeout: 6000 }).catch(() => false))) {
+      console.log('[F1] Modal did not open — skipping')
+      test.skip()
+      return
+    }
+
+    const nameInput = modal
+      .locator('input[name="name"], input[id*="name" i], input[placeholder*="name" i]')
+      .first()
+    if (!(await nameInput.isVisible({ timeout: 3000 }).catch(() => false))) {
+      await dismissModal(page)
+      test.skip()
+      return
+    }
+
+    await nameInput.fill(F_CUSTOMER_NAME)
+
+    const emailInput = modal
+      .locator('input[type="email"], input[name="email"], input[placeholder*="email" i]')
+      .first()
+    if (await emailInput.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await emailInput.fill(`f-fix-${F_UNIQUE}@haypbooks.test`)
+    }
+
+    const saveBtn = modal.getByRole('button', { name: /save|create|add/i }).first()
+    await saveBtn.click()
+    await modal.waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {})
+    await waitForTableToLoad(page)
+
+    fCustomerCreated = await page.getByText(F_CUSTOMER_NAME).first().isVisible({ timeout: 6000 }).catch(() => false)
+    console.log(`[F1] Customer created: ${fCustomerCreated} (${F_CUSTOMER_NAME})`)
+    expect(fCustomerCreated, '[F1] Newly created customer must appear in the Customers table').toBe(true)
+  })
+
+  // Step 2 — Verify customer appears in New Invoice customer dropdown
+  test('[F2] New Invoice page — customer dropdown shows created customer', async ({ page }) => {
+    await gotoSalesPage(page, '/sales/billing/invoices/new', companyId)
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(1000) // allow loadCustomers(true) to fire
+
+    // The InvoiceCreatePage has an inline search input (not inside a dialog)
+    const searchInput = page.locator(
+      'input[placeholder*="Search customers" i], input[placeholder*="search customers" i]',
+    ).first()
+
+    if (!(await searchInput.isVisible({ timeout: 8000 }).catch(() => false))) {
+      console.log('[F2] Customer search input not found on invoice page')
+      test.skip()
+      return
+    }
+
+    if (!fCustomerCreated) {
+      console.log('[F2] No customer was created in F1 — cannot verify dropdown fix without data, skipping')
+      test.skip()
+      return
+    }
+
+    // Focus to open dropdown (triggers onFocus → setShowCustomerDD(true))
+    await searchInput.click()
+    await page.waitForTimeout(800)
+
+    // The dropdown renders customer buttons inside an absolute div
+    const dropdown = page.locator('.absolute.z-30, .absolute[class*="z-"]').first()
+    const dropdownVisible = await dropdown.isVisible({ timeout: 4000 }).catch(() => false)
+
+    if (!dropdownVisible) {
+      // Retry: type a space to force open
+      await searchInput.fill(' ')
+      await page.waitForTimeout(500)
+    }
+
+    // Check for "No customers found" — if present, the fix is NOT working
+    // (fCustomerCreated guarantees at least one customer exists in the DB)
+    const noCustomers = await page
+      .getByText(/no customers found/i)
+      .isVisible({ timeout: 2000 })
+      .catch(() => false)
+
+    expect(noCustomers, '[F2] "No customers found" must NOT appear — fix must have worked').toBe(false)
+
+    // Type the customer name to confirm the specific customer is findable
+    await searchInput.fill(F_CUSTOMER_NAME.substring(0, 8))
+    await page.waitForTimeout(600)
+
+    const customerBtn = page.locator(`button:has-text("${F_CUSTOMER_NAME}")`).first()
+    const found = await customerBtn.isVisible({ timeout: 4000 }).catch(() => false)
+    console.log(`[F2] Customer visible in invoice dropdown: ${found}`)
+    expect(found, `[F2] "${F_CUSTOMER_NAME}" must appear in the New Invoice customer dropdown`).toBe(true)
+  })
+
+  // Step 3 — Verify customer appears in Sales Orders "+ New" modal dropdown
+  test('[F3] Sales Orders "+ New" modal — customer dropdown shows created customer', async ({ page }) => {
+    await gotoSalesPage(page, '/sales/sales/orders', companyId)
+    await waitForTableToLoad(page)
+
+    const newBtn = page.getByRole('button', { name: /^\+\s*new$/i }).first()
+    if (!(await newBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
+      console.log('[F3] No "+ New" button found — skipping')
+      test.skip()
+      return
+    }
+
+    await newBtn.click()
+    const modal = page.locator('[role="dialog"]').first()
+    if (!(await modal.isVisible({ timeout: 6000 }).catch(() => false))) {
+      console.log('[F3] Modal did not open — skipping')
+      test.skip()
+      return
+    }
+
+    // CustomerPickerField renders a button with text "Select customer..."
+    const pickerBtn = modal
+      .locator('button:has-text("Select customer"), button:has-text("Select customer...")')
+      .first()
+
+    if (!(await pickerBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
+      console.log('[F3] Customer picker button not found in modal')
+      await dismissModal(page)
+      test.skip()
+      return
+    }
+
+    await pickerBtn.click()
+    await page.waitForTimeout(700)
+
+    // After click, CustomerPickerField renders its open dropdown with a search input
+    const pickerSearch = modal
+      .locator('input[placeholder="Search customers..."]')
+      .first()
+
+    const pickerOpen = await pickerSearch.isVisible({ timeout: 4000 }).catch(() => false)
+    expect(pickerOpen, '[F3] CustomerPickerField dropdown must open after click').toBe(true)
+
+    if (!pickerOpen) {
+      await dismissModal(page)
+      return
+    }
+
+    // Check NOT "No customers found"
+    const noCustomers = await modal
+      .getByText(/no customers found/i)
+      .isVisible({ timeout: 2000 })
+      .catch(() => false)
+
+    expect(noCustomers, '[F3] "No customers found" must NOT appear — fix must have worked').toBe(false)
+
+    // Search for the created customer
+    if (fCustomerCreated) {
+      await pickerSearch.fill(F_CUSTOMER_NAME.substring(0, 8))
+      await page.waitForTimeout(500)
+
+      const customerOption = modal.locator(`button:has-text("${F_CUSTOMER_NAME}")`).first()
+      const found = await customerOption.isVisible({ timeout: 4000 }).catch(() => false)
+      console.log(`[F3] Customer visible in Sales Orders modal dropdown: ${found}`)
+      expect(found, `[F3] "${F_CUSTOMER_NAME}" must appear in the Sales Orders customer picker`).toBe(true)
+    } else {
+      // Without a specific customer, at least one option or create-new button must be visible
+      const hasOption = await modal
+        .locator('button:has(p.text-sm), button:has-text("+ Create New")')
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)
+      expect(hasOption, '[F3] Sales Orders picker must show at least one option or create-new').toBe(true)
+    }
+
+    await dismissModal(page)
+  })
+})
