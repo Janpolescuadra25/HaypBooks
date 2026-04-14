@@ -1,5 +1,5 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <TabComingSoon title="Rules" description="Bank rules automatically categorize your transactions based on conditions you set." />
+  redirect('/banking-cash/transactions/rules')
 }

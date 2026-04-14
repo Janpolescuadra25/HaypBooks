@@ -1,5 +1,5 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <TabComingSoon title="CSV Upload" description="Import transactions from a CSV file exported from your bank." />
+  redirect('/banking-cash/transactions/rules')
 }

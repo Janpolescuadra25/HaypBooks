@@ -71,7 +71,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         label: 'Management',
         label: 'Management',
         tabs: [
-          { id: 'transaction-rules',    label: 'Transaction Rules',    path: '/banking-cash/management/transaction-rules' },
+          { id: 'transaction-rules',    label: 'Transaction Rules',    path: '/banking-cash/transactions/rules' },
           { id: 'recurring-transactions', label: 'Recurring Transactions', path: '/banking-cash/management/recurring-transactions' },
           { id: 'app-transactions',     label: 'App Transactions',     path: '/banking-cash/management/app-transactions' },
         ],

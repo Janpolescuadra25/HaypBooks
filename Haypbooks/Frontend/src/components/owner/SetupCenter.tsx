@@ -62,7 +62,7 @@ const SETUP_PHASES: SetupPhase[] = [
     title: 'Setup Center - Banking Setup',
     tasks: [
       { id: 'bank_feeds', title: 'Connect Bank Feeds', description: 'Enable bank connection and reconciliation', path: '/banking-cash/bank-connections/connected-banks', required: true },
-      { id: 'transaction_rules', title: 'Transaction Rules', description: 'Set auto-categorization rules for bank records', path: '/banking-cash/transactions/transaction-rules' },
+      { id: 'transaction_rules', title: 'Transaction Rules', description: 'Set auto-categorization rules for bank records', path: '/banking-cash/transactions/rules' },
       { id: 'bank_reconciliation', title: 'Bank Reconciliation', description: 'Reconcile bank balances and transactions', path: '/banking-cash/reconciliation/reconcile' },
       { id: 'payouts', title: 'Payout Accounts', description: 'Configure disbursement accounts', path: '/banking-cash/payments/payment-runs' },
     ],

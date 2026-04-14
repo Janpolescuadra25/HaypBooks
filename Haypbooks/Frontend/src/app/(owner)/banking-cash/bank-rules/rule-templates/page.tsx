@@ -1,5 +1,5 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <TabComingSoon title="Rule Templates" description="Pre-built rule templates to get started with common categorization patterns." />
+  redirect('/banking-cash/transactions/rules')
 }
