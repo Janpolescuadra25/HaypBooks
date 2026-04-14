@@ -190,7 +190,7 @@ export default function BankTransactionsPage() {
       <div className="bg-white border-b border-slate-200 px-6 py-5">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking & Cash / Transactions</p>
+            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking / Transactions</p>
             <h1 className="text-2xl font-bold text-slate-900">{view === 'register' ? 'Bank Register' : 'Bank Transactions'}</h1>
             <p className="text-sm text-slate-500 mt-0.5">{view === 'register' ? 'Running balance by account' : 'All bank movements across your connected accounts'}</p>
           </div>

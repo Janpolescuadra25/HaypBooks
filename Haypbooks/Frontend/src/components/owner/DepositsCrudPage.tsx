@@ -43,7 +43,7 @@ export default function DepositsPage() {
     <>
       <OwnerPageTemplate
         title="Deposit"
-        section="Banking & Cash"
+        section="Banking"
         icon={<ArrowDownCircle size={20} />}
         columns={columns}
         data={crud.filteredData}

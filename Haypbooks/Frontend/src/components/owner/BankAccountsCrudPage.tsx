@@ -59,7 +59,7 @@ export default function BankAccountsPage() {
     <>
       <OwnerPageTemplate
         title="Bank Account"
-        section="Banking & Cash"
+        section="Banking"
         icon={<Landmark size={20} />}
         columns={columns}
         data={crud.filteredData}

@@ -96,7 +96,7 @@ export const navigationData: NavSection[] = [
     // ── Nested 2-level structure: sections → subsections ──────────────────────
     groups: [
       {
-        title: 'Cash & Banking',
+        title: 'Banking',
         items: [
           {
             title: 'Bank Transactions',

@@ -47,7 +47,7 @@ export const MODULE_COLORS = {
   /** Accounts Payable / Expenses — orange */
   ap:              mc('orange'),
   expenses:        mc('orange'),
-  /** Banking & Cash — sky */
+  /** Banking — sky */
   banking:         mc('sky'),
   /** Payroll — violet */
   payroll:         mc('violet'),

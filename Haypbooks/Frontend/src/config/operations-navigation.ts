@@ -42,11 +42,11 @@ export interface OperationsSection {
 export const OPERATIONS_NAV: OperationsSection[] = [
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 1. Cash & Banking
+  // 1. Banking
   // ───────────────────────────────────────────────────────────────────────────
   {
     id: 'cash-banking',
-    label: 'Cash & Banking',
+    label: 'Banking',
     subsections: [
       {
         id: 'transactions',

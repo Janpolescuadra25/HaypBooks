@@ -227,7 +227,7 @@ export default function BankDepositsPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking & Cash</p>
+          <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking</p>
           <h1 className="text-2xl font-bold text-slate-900">Bank Deposits</h1>
           <p className="text-sm text-slate-500 mt-0.5">Bundle received payments into bank deposits</p>
         </div>

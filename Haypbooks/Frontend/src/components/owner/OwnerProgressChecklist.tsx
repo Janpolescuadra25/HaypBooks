@@ -17,7 +17,7 @@ const BUILT_PATHS = new Set([
 const PRIORITY_ORDER = [
   'HOME',
   'ACCOUNTING',
-  'BANKING & CASH',
+  'BANKING',
   'SALES',
   'EXPENSES',
   'REPORTING',

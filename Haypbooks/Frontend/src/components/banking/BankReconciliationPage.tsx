@@ -215,7 +215,7 @@ export default function BankReconciliationPage() {
 
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking &amp; Cash</p>
+            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Banking</p>
             <h1 className="text-2xl font-bold text-slate-900">Bank Reconciliation</h1>
             <p className="text-sm text-slate-500 mt-0.5">Reconcile your bank statements to your books</p>
           </div>

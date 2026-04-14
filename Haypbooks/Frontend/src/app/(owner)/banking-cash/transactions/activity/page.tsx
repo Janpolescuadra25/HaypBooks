@@ -142,7 +142,7 @@ export default function ActivityPage() {
 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Banking & Cash / Bank Transactions</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Banking / Bank Transactions</p>
               <h1 className="mt-1 text-2xl font-bold text-slate-900">Activity Log</h1>
               <p className="mt-1 text-sm text-slate-500">A full audit trail for categorizations, matches, rules, edits, reconciliation, and register changes.</p>
             </div>

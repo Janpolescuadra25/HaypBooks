@@ -42,7 +42,7 @@ export default function CreditCardsPage() {
     <>
       <OwnerPageTemplate
         title="Credit Card"
-        section="Banking & Cash"
+        section="Banking"
         icon={<CreditCard size={20} />}
         columns={columns}
         data={crud.filteredData}

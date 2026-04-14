@@ -43,7 +43,7 @@ export default function ChecksPage() {
     <>
       <OwnerPageTemplate
         title="Check"
-        section="Banking & Cash"
+        section="Banking"
         icon={<FileText size={20} />}
         columns={columns}
         data={crud.filteredData}

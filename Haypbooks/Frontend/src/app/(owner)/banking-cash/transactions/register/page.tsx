@@ -785,7 +785,7 @@ export default function RegisterPage() {
                 <ArrowLeft className="h-4 w-4" />
                 Back to Bank Feed
               </button>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Banking & Cash / Bank Transactions</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Banking / Bank Transactions</p>
               <h1 className="mt-1 text-2xl font-bold text-slate-900">Bank Register</h1>
               <p className="mt-1 text-sm text-slate-500">Processed transactions, manual entries, and reconciliation for a single bank account.</p>
             </div>

@@ -15,7 +15,7 @@ $icons = @{
 }
 $labels = @{
     home='Home';accounting='Accounting';sales='Sales & Revenue';expenses='Expenses';
-    'banking-cash'='Banking & Cash';inventory='Inventory';projects='Projects';
+    'banking-cash'='Banking';inventory='Inventory';projects='Projects';
     'payroll-workforce'='Payroll & Workforce';taxes='Tax';'philippine-tax'='Philippine Tax';
     reporting='Reporting';settings='Settings';compliance='Compliance';automation='Automation';
     'ai-analytics'='AI Analytics';'apps-integrations'='Apps & Integrations';
