@@ -157,11 +157,11 @@ export default function VendorCreditsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[1080px] table-fixed text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     {['Credit #', 'Vendor', 'Bill #', 'Date', 'Amount', 'Applied', 'Remaining', 'Reason', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" title={h}>
                         {h}
                       </th>
                     ))}
@@ -170,14 +170,14 @@ export default function VendorCreditsPage() {
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                      <td className="px-4 py-3 font-medium text-slate-800">{row.creditNumber}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.vendor}</td>
-                      <td className="px-4 py-3 text-slate-600">{row.billNumber}</td>
+                      <td className="px-4 py-3 font-medium text-slate-800 truncate" title={row.creditNumber}>{row.creditNumber}</td>
+                      <td className="px-4 py-3 text-slate-700 truncate" title={row.vendor}>{row.vendor}</td>
+                      <td className="px-4 py-3 text-slate-600 truncate" title={row.billNumber ?? ''}>{row.billNumber}</td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.date}</td>
                       <td className="px-4 py-3 font-semibold text-slate-800">{formatCurrency(row.amount, currency)}</td>
                       <td className="px-4 py-3 text-emerald-700">{formatCurrency(row.appliedAmount, currency)}</td>
                       <td className="px-4 py-3 font-semibold text-indigo-700">{formatCurrency(row.remainingCredit, currency)}</td>
-                      <td className="px-4 py-3 text-slate-600 max-w-[160px] truncate">{row.reason}</td>
+                      <td className="px-4 py-3 text-slate-600 truncate" title={row.reason}>{row.reason}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
                           {row.status}

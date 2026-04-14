@@ -217,7 +217,7 @@ export default function UndepositedFundsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full min-w-[940px] table-fixed text-left">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                   <th className="px-4 py-3 w-10">
@@ -227,12 +227,12 @@ export default function UndepositedFundsPage() {
                         : <Square size={15} />}
                     </button>
                   </th>
-                  <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                  <th className="px-4 py-3">Customer</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Invoice #</th>
-                  <th className="px-4 py-3">Method</th>
-                  <th className="px-4 py-3 text-center whitespace-nowrap">Days Pending</th>
-                  <th className="px-4 py-3 text-right whitespace-nowrap">Amount</th>
+                  <th className="px-4 py-3 w-32 truncate whitespace-nowrap" title="Date">Date</th>
+                  <th className="px-4 py-3 w-48 truncate" title="Customer">Customer</th>
+                  <th className="px-4 py-3 w-32 truncate whitespace-nowrap" title="Invoice #">Invoice #</th>
+                  <th className="px-4 py-3 w-36 truncate" title="Method">Method</th>
+                  <th className="px-4 py-3 w-32 truncate text-center whitespace-nowrap" title="Days Pending">Days Pending</th>
+                  <th className="px-4 py-3 w-32 truncate text-right whitespace-nowrap" title="Amount">Amount</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -252,10 +252,10 @@ export default function UndepositedFundsPage() {
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
                       {new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-medium text-slate-800">{p.customerName ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">{p.invoiceNumber ?? '—'}</td>
-                    <td className="px-4 py-3.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 capitalize">
+                    <td className="px-4 py-3.5 text-sm font-medium text-slate-800 truncate" title={p.customerName ?? '—'}>{p.customerName ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-500 font-mono truncate" title={p.invoiceNumber ?? '—'}>{p.invoiceNumber ?? '—'}</td>
+                    <td className="px-4 py-3.5 overflow-hidden">
+                      <span className="inline-flex max-w-full items-center truncate px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 capitalize" title={p.paymentMethod ?? 'Unknown'}>
                         {p.paymentMethod ?? 'Unknown'}
                       </span>
                     </td>

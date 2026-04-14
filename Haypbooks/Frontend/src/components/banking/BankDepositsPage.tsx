@@ -308,15 +308,15 @@ export default function BankDepositsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full min-w-[920px] table-fixed text-left">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                  <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Deposit #</th>
-                  <th className="px-4 py-3">Bank Account</th>
-                  <th className="px-4 py-3">Reference / Memo</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-right whitespace-nowrap">Amount</th>
+                  <th className="px-4 py-3 w-32 truncate whitespace-nowrap" title="Date">Date</th>
+                  <th className="px-4 py-3 w-36 truncate whitespace-nowrap" title="Deposit #">Deposit #</th>
+                  <th className="px-4 py-3 w-48 truncate" title="Bank Account">Bank Account</th>
+                  <th className="px-4 py-3 truncate" title="Reference / Memo">Reference / Memo</th>
+                  <th className="px-4 py-3 w-32 truncate text-center" title="Status">Status</th>
+                  <th className="px-4 py-3 w-32 truncate text-right whitespace-nowrap" title="Amount">Amount</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -330,9 +330,9 @@ export default function BankDepositsPage() {
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
                       {new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-mono text-slate-700">{d.depositNumber ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-800">{d.bankAccountName ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-500 max-w-[180px] truncate">{d.reference ?? d.memo ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-sm font-mono text-slate-700 truncate" title={d.depositNumber ?? '—'}>{d.depositNumber ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-800 truncate" title={d.bankAccountName ?? '—'}>{d.bankAccountName ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-500 truncate" title={d.reference ?? d.memo ?? '—'}>{d.reference ?? d.memo ?? '—'}</td>
                     <td className="px-4 py-3.5 text-center">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_META[d.status].cls}`}>
                         {STATUS_META[d.status].icon} {STATUS_META[d.status].label}

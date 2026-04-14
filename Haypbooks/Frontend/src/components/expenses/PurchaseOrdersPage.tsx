@@ -157,11 +157,11 @@ export default function PurchaseOrdersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[980px] table-fixed text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     {['PO #', 'Vendor', 'Description', 'Order Date', 'Expected Date', 'Total', 'Received', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" title={h}>
                         {h}
                       </th>
                     ))}
@@ -172,9 +172,9 @@ export default function PurchaseOrdersPage() {
                     const pct = row.totalAmount > 0 ? Math.round((row.receivedAmount / row.totalAmount) * 100) : 0
                     return (
                       <tr key={row.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                        <td className="px-4 py-3 font-medium text-slate-800">{row.poNumber}</td>
-                        <td className="px-4 py-3 text-slate-700">{row.vendor}</td>
-                        <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">{row.description}</td>
+                        <td className="px-4 py-3 font-medium text-slate-800 truncate" title={row.poNumber}>{row.poNumber}</td>
+                        <td className="px-4 py-3 text-slate-700 truncate" title={row.vendor}>{row.vendor}</td>
+                        <td className="px-4 py-3 text-slate-600 truncate" title={row.description}>{row.description}</td>
                         <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.orderDate}</td>
                         <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.expectedDate}</td>
                         <td className="px-4 py-3 font-semibold text-slate-800">{formatCurrency(row.totalAmount, currency)}</td>

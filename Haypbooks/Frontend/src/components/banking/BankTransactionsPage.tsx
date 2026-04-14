@@ -298,18 +298,18 @@ export default function BankTransactionsPage() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-left">
+            <table className="w-full min-w-[1000px] table-fixed text-left">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                   <th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all" className="rounded border-slate-300 accent-emerald-600" /></th>
-                  <th className="px-4 py-3 w-28 whitespace-nowrap">Date</th>
-                  <th className="px-4 py-3 min-w-[280px]">Reference / Description</th>
-                  <th className="px-4 py-3 w-44 whitespace-nowrap">Account</th>
-                  <th className="px-4 py-3 w-40 whitespace-nowrap">Category</th>
-                  <th className="px-4 py-3 text-right whitespace-nowrap">Debit</th>
-                  <th className="px-4 py-3 text-right whitespace-nowrap">Credit</th>
-                  <th className="px-4 py-3 text-right whitespace-nowrap">Balance</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 w-28 truncate whitespace-nowrap" title="Date">Date</th>
+                  <th className="px-4 py-3 w-[280px] truncate" title="Reference / Description">Reference / Description</th>
+                  <th className="px-4 py-3 w-44 truncate whitespace-nowrap" title="Account">Account</th>
+                  <th className="px-4 py-3 w-40 truncate whitespace-nowrap" title="Category">Category</th>
+                  <th className="px-4 py-3 text-right truncate whitespace-nowrap" title="Debit">Debit</th>
+                  <th className="px-4 py-3 text-right truncate whitespace-nowrap" title="Credit">Credit</th>
+                  <th className="px-4 py-3 text-right truncate whitespace-nowrap" title="Balance">Balance</th>
+                  <th className="px-4 py-3 truncate whitespace-nowrap" title="Status">Status</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -324,13 +324,13 @@ export default function BankTransactionsPage() {
                     <tr className="hover:bg-slate-50 transition-colors group">
                     <td className="px-4 py-3.5"><input type="checkbox" aria-label="Select transaction" className="rounded border-slate-300 accent-emerald-600" /></td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{tx.date}</td>
-                    <td className="px-4 py-3.5">
-                      <div className="text-sm font-medium text-slate-800">{tx.description}</div>
-                      <div className="text-[11px] text-slate-400 font-mono">{tx.reference}{tx.bankRef && ` · ${tx.bankRef}`}</div>
+                    <td className="px-4 py-3.5 overflow-hidden">
+                      <div className="text-sm font-medium text-slate-800 truncate" title={tx.description}>{tx.description}</div>
+                      <div className="text-[11px] text-slate-400 font-mono truncate" title={`${tx.reference}${tx.bankRef ? ` · ${tx.bankRef}` : ''}`}>{tx.reference}{tx.bankRef && ` · ${tx.bankRef}`}</div>
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap">{tx.account.split(' - ')[0]}</td>
-                    <td className="px-4 py-3.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">{tx.category}</span>
+                    <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap truncate" title={tx.account.split(' - ')[0]}>{tx.account.split(' - ')[0]}</td>
+                    <td className="px-4 py-3.5 overflow-hidden">
+                      <span className="inline-flex max-w-full items-center truncate px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600" title={tx.category}>{tx.category}</span>
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono text-sm">
                       {tx.type === 'Debit' ? <span className="text-rose-600 font-semibold">{fmt(tx.amount)}</span> : <span className="text-slate-300">—</span>}
