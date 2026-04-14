@@ -82,6 +82,9 @@ export class ApService {
         const displayName = data.displayName || data.name
         if (!displayName) throw new BadRequestException('displayName is required')
         const result = await this.repo.createVendor(wid, { ...data, displayName })
+        await this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'Vendor', recordId: result.contactId, changes: { displayName } },
+        }).catch(() => { /* non-critical */ })
         return this.normalizeVendor(result)
     }
 
@@ -92,6 +95,9 @@ export class ApService {
         if (!v) throw new NotFoundException('Vendor not found')
         if (data.name && !data.displayName) data.displayName = data.name
         const result = await this.repo.updateVendor(wid, contactId, data)
+        await this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'Vendor', recordId: contactId, changes: data },
+        }).catch(() => { /* non-critical */ })
         return this.normalizeVendor(result)
     }
 
@@ -100,7 +106,28 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const v = await this.repo.findVendorById(wid, contactId)
         if (!v) throw new NotFoundException('Vendor not found')
+        await this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'Vendor', recordId: contactId, changes: { displayName: this.normalizeVendor(v).name } },
+        }).catch(() => { /* non-critical */ })
         return this.repo.softDeleteVendor(contactId)
+    }
+
+    async getVendorActivity(userId: string, companyId: string, contactId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where = { tableName: 'Vendor', recordId: contactId, companyId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({
+                where,
+                include: { user: { select: { id: true, name: true, email: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
     }
 
     // ─── Bills ────────────────────────────────────────────────────────────────
@@ -147,6 +174,9 @@ export class ApService {
                 itemId: l.itemId ?? null,
             })),
         })
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Bill', recordId: result.id, changes: { vendorId: data.vendorId, total: Number(result.total ?? 0) } },
+        }).catch(() => { /* non-critical */ })
         return this.normalizeBill(result)
     }
 
@@ -165,6 +195,10 @@ export class ApService {
         const result = await this.repo.approveBill(companyId, billId)
         // Post bill to the General Ledger (DR: Expense + Input VAT, CR: Accounts Payable)
         await this.subLedger.postBillToGL(billId, userId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'APPROVE', tableName: 'Bill', recordId: billId, changes: { status: 'APPROVED' } },
+        }).catch(() => { /* non-critical */ })
         return result
     }
 
@@ -174,7 +208,29 @@ export class ApService {
         if (!b) throw new NotFoundException('Bill not found')
         if (b.status === 'CANCELLED') throw new BadRequestException('Bill is already void')
         if (Number(b.total) - Number(b.balance) > 0) throw new BadRequestException('Cannot void a bill that has payments applied')
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'VOID', tableName: 'Bill', recordId: billId, changes: { status: 'CANCELLED' } },
+        }).catch(() => { /* non-critical */ })
         return this.repo.voidBill(companyId, billId)
+    }
+
+    async getBillActivity(userId: string, companyId: string, billId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where = { tableName: 'Bill', recordId: billId, companyId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({
+                where,
+                include: { user: { select: { id: true, name: true, email: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
     }
 
     // ─── Bill Payments ────────────────────────────────────────────────────────

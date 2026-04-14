@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, FileText, FileX, ArrowUpDown,
+  Download, Eye, FileText, FileX, ArrowUpDown, Clock,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -112,6 +112,9 @@ export default function SalesOrdersPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<SalesOrder | null>(null)
   const [detailItem, setDetailItem] = useState<SalesOrder | null>(null)
+  const [detailTab, setDetailTab] = useState<'details' | 'activity'>('details')
+  const [soActivity, setSoActivity] = useState<any[]>([])
+  const [soActivityLoading, setSoActivityLoading] = useState(false)
   const [formData, setFormData] = useState<SOFormData>({ customerId: '', orderDate: new Date().toISOString().split('T')[0], shipDate: '', lines: [emptyLine()] })
   const [formSaving, setFormSaving] = useState(false)
   const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
@@ -408,7 +411,7 @@ export default function SalesOrdersPage() {
               </tr>
             ) : (
               paginated.map(row => (
-                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setDetailItem(row)}>
+                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => { setDetailItem(row); setDetailTab('details'); setSoActivity([]) }}>
                   <td className="px-3 py-3 border-r border-gray-100" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
                   {visibleCols.map(c => (
                     <td key={c.key} className="px-3 py-3 truncate border-r border-gray-100" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
@@ -533,6 +536,44 @@ export default function SalesOrdersPage() {
               <h2 className="text-lg font-semibold text-gray-900">{detailItem.orderNumber}</h2>
               <button onClick={() => setDetailItem(null)} className="p-1.5 rounded hover:bg-gray-100"><X size={18} /></button>
             </div>
+            {/* Tabs */}
+            <div className="flex border-b border-slate-200 px-6 bg-slate-50">
+              {(['details', 'activity'] as const).map(tab => (
+                <button key={tab} type="button" onClick={() => {
+                  setDetailTab(tab)
+                  if (tab === 'activity' && soActivity.length === 0 && companyId) {
+                    setSoActivityLoading(true)
+                    apiClient.get(`/companies/${companyId}/ar/sales-orders/${detailItem.id}/activity`)
+                      .then(r => setSoActivity(r.data.data ?? []))
+                      .catch(() => {})
+                      .finally(() => setSoActivityLoading(false))
+                  }
+                }}
+                  className={`px-4 py-2.5 text-sm font-semibold capitalize border-b-2 transition-colors ${
+                    detailTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}>
+                  {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                </button>
+              ))}
+            </div>
+            {detailTab === 'activity' ? (
+              <div className="p-6 space-y-3">
+                {soActivityLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+                ) : soActivity.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">No activity recorded yet.</p>
+                ) : soActivity.map((log: any) => (
+                  <div key={log.id} className="flex items-start gap-3 text-sm">
+                    <Clock size={13} className="mt-0.5 text-slate-400 shrink-0" />
+                    <div>
+                      <span className="font-semibold text-slate-700">{log.action}</span>
+                      {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                      <span className="text-slate-400 ml-2">{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
             <div className="p-6 space-y-4 flex-1">
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -556,6 +597,7 @@ export default function SalesOrdersPage() {
                 </button>
               )}
             </div>
+            )}
           </div>
         </div>
       )}

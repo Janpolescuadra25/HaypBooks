@@ -72,6 +72,18 @@ function loadProdCols(): ProdColDef[] {
   return DEFAULT_PROD_COLS
 }
 
+export const extractItems = (payload: any): Item[] => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.items)) return payload.items
+  return []
+}
+
+export const extractTotal = (payload: any): number => {
+  if (typeof payload?.total === 'number') return payload.total
+  return extractItems(payload).length
+}
+
 export default function ProductsServicesPage() {
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -142,9 +154,10 @@ export default function ProductsServicesPage() {
       if (typeFilter !== 'ALL') params.set('type', typeFilter)
       if (debouncedSearch) params.set('search', debouncedSearch)
       const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?${params}`)
-      const raw: Item[] = Array.isArray(data) ? data : data.items ?? []
+      const raw = extractItems(data)
+      const total = extractTotal(data)
       setItems(raw)
-      setHasMore(raw.length === PAGE_SIZE)
+      setHasMore(total > (pg + 1) * PAGE_SIZE)
     } catch {
       setError('Failed to load products & services.')
     } finally {
@@ -159,7 +172,7 @@ export default function ProductsServicesPage() {
     if (!companyId) return
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?limit=1000`)
-      setStatsData(Array.isArray(data) ? data : data.items ?? [])
+      setStatsData(extractItems(data))
     } catch {
       // non-blocking
     }

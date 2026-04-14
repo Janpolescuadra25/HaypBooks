@@ -5749,6 +5749,7 @@ model Item {
   companyId          String
   sku                String?
   name               String
+  description        String?
   type               String
   category           String?
   unit               String?

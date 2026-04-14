@@ -30,6 +30,11 @@ export class BankingController {
         return this.svc.createBankAccount(req.user.userId, cid, body)
     }
 
+    @Get('accounts/:bankAccountId/activity')
+    getBankAccountActivity(@Req() req: any, @Param('companyId') cid: string, @Param('bankAccountId') bid: string, @Query() q: any) {
+        return this.svc.getBankAccountActivity(req.user.userId, cid, bid, q)
+    }
+
     @Get('accounts/:bankAccountId')
     getBankAccount(@Req() req: any, @Param('companyId') cid: string, @Param('bankAccountId') bid: string) {
         return this.svc.getBankAccount(req.user.userId, cid, bid)

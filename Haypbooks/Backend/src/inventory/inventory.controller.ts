@@ -53,6 +53,11 @@ export class InventoryController {
         return this.svc.batchUpdateItemStatus(req.user.userId, cid, body.ids, body.status)
     }
 
+    @Get('items/:itemId/activity')
+    getItemActivity(@Req() req: any, @Param('companyId') cid: string, @Param('itemId') iid: string, @Query() q: any) {
+        return this.svc.getItemActivity(req.user.userId, cid, iid, q)
+    }
+
     @Get('items/:itemId')
     getItem(@Req() req: any, @Param('companyId') cid: string, @Param('itemId') iid: string) {
         return this.svc.getItem(req.user.userId, cid, iid)

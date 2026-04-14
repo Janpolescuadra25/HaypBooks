@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Plus, Search, Eye, X, AlertCircle, Loader2, FileText, Check, Ban } from 'lucide-react'
+import { Plus, Search, Eye, X, AlertCircle, Loader2, FileText, Check, Ban, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -32,6 +32,9 @@ export default function BillsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [showForm, setShowForm] = useState(false)
   const [viewBill, setViewBill] = useState<Bill | null>(null)
+  const [viewTab, setViewTab] = useState<'details' | 'activity'>('details')
+  const [billActivity, setBillActivity] = useState<any[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
 
   const fetchBills = useCallback(async () => {
     if (!companyId) return; setLoading(true)
@@ -62,6 +65,17 @@ export default function BillsPage() {
     try { await apiClient.post(`/companies/${companyId}/bills/${id}/void`); fetchBills() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
   }
+
+  const openViewBill = (bill: Bill) => { setViewBill(bill); setViewTab('details'); setBillActivity([]) }
+
+  useEffect(() => {
+    if (viewTab !== 'activity' || !viewBill?.id || !companyId) return
+    setActivityLoading(true)
+    apiClient.get(`/companies/${companyId}/ap/bills/${viewBill.id}/activity`)
+      .then(({ data }) => setBillActivity(data.data ?? []))
+      .catch(() => setBillActivity([]))
+      .finally(() => setActivityLoading(false))
+  }, [viewTab, viewBill?.id, companyId])
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
   const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return d } }
@@ -111,7 +125,7 @@ export default function BillsPage() {
                   <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(bill.total)}</td>
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => setViewBill(bill)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Eye size={14} /></button>
+                      <button onClick={() => openViewBill(bill)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Eye size={14} /></button>
                       {(bill.status === 'DRAFT' || bill.status === 'PENDING') && <button onClick={() => handleApprove(bill.id)} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" title="Approve"><Check size={14} /></button>}
                       {bill.status !== 'VOIDED' && bill.status !== 'PAID' && <button onClick={() => handleVoid(bill.id)} className="p-1 rounded hover:bg-red-100 text-red-400" title="Void"><Ban size={14} /></button>}
                     </div>
@@ -126,14 +140,51 @@ export default function BillsPage() {
       <AnimatePresence>
         {viewBill && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setViewBill(null)}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-              <div className="flex justify-between mb-4"><h2 className="text-lg font-bold text-emerald-900">Bill #{viewBill.billNumber ?? viewBill.id.slice(0, 8)}</h2><button onClick={() => setViewBill(null)} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button></div>
-              <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                <div><span className="text-emerald-600/60">Vendor:</span> <span className="font-medium">{viewBill.vendorName}</span></div>
-                <div><span className="text-emerald-600/60">Status:</span> <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[viewBill.status]}`}>{viewBill.status}</span></div>
-                <div><span className="text-emerald-600/60">Date:</span> {viewBill.date}</div><div><span className="text-emerald-600/60">Due:</span> {viewBill.dueDate}</div>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+              <div className="px-6 pt-4 pb-0 border-b border-emerald-100">
+                <div className="flex justify-between mb-3">
+                  <h2 className="text-lg font-bold text-emerald-900">Bill #{viewBill.billNumber ?? viewBill.id.slice(0, 8)}</h2>
+                  <button onClick={() => setViewBill(null)} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
+                </div>
+                <div className="flex gap-1">
+                  {(['details', 'activity'] as const).map(tab => (
+                    <button key={tab} onClick={() => setViewTab(tab)}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${viewTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-emerald-400 hover:text-emerald-600'}`}>
+                      {tab === 'details' ? 'Details' : 'Activity'}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="text-2xl font-bold text-emerald-800 text-center">{fmt(viewBill.total)}</p>
+              {viewTab === 'details' ? (
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                    <div><span className="text-emerald-600/60">Vendor:</span> <span className="font-medium">{viewBill.vendorName}</span></div>
+                    <div><span className="text-emerald-600/60">Status:</span> <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${statusStyles[viewBill.status]}`}>{viewBill.status}</span></div>
+                    <div><span className="text-emerald-600/60">Date:</span> {viewBill.date}</div><div><span className="text-emerald-600/60">Due:</span> {viewBill.dueDate}</div>
+                  </div>
+                  <p className="text-2xl font-bold text-emerald-800 text-center">{fmt(viewBill.total)}</p>
+                </div>
+              ) : (
+                <div className="p-6 max-h-[50vh] overflow-y-auto">
+                  {activityLoading ? (
+                    <div className="flex items-center justify-center py-8"><Loader2 size={20} className="animate-spin text-emerald-500" /></div>
+                  ) : billActivity.length === 0 ? (
+                    <div className="text-center py-8 text-emerald-400"><Clock size={24} className="mx-auto mb-2 opacity-50" /><p className="text-sm">No activity recorded yet.</p></div>
+                  ) : (
+                    <div className="space-y-2">
+                      {billActivity.map((entry: any) => (
+                        <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5"><Clock size={13} className="text-emerald-600" /></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-emerald-900">{entry.action}</p>
+                            <p className="text-xs text-emerald-500 mt-0.5">{entry.user?.name ?? entry.user?.email ?? 'System'} · {new Date(entry.createdAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

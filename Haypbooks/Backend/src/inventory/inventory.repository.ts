@@ -114,10 +114,10 @@ export class InventoryRepository {
                     orderBy: { invoice: { date: 'desc' } },
                     take: 5,
                 },
-                QuoteLine: {
-                    where: { quote: { status: { not: 'VOID' } } },
-                    include: { quote: { select: { id: true, quoteNumber: true, date: true, status: true } } },
-                    orderBy: { quote: { date: 'desc' } },
+                quoteLines: {
+                    where: { quote: { status: { not: 'CONVERTED' } } },
+                    include: { quote: { select: { id: true, quoteNumber: true, issuedAt: true, status: true } } },
+                    orderBy: { quote: { issuedAt: 'desc' } },
                     take: 5,
                 },
             },
@@ -125,15 +125,25 @@ export class InventoryRepository {
     }
 
     async createItem(companyId: string, data: {
-        name: string; type: string; sku?: string; salesPrice?: number; purchaseCost?: number
+        name: string; type: string; description?: string; sku?: string; category?: string; unit?: string;
+        status?: string; salesPrice?: number; purchaseCost?: number;
         trackingType?: string; costMethod?: string; inventoryAssetAccountId?: string; cogsAccountId?: string
     }) {
         return this.prisma.item.create({
             data: {
-                companyId, name: data.name, type: data.type, sku: data.sku ?? null,
-                salesPrice: data.salesPrice ?? null, purchaseCost: data.purchaseCost ?? null,
+                companyId,
+                name: data.name,
+                type: data.type,
+                description: data.description ?? null,
+                sku: data.sku ?? null,
+                category: data.category ?? null,
+                unit: data.unit ?? null,
+                status: data.status ?? 'ACTIVE',
+                salesPrice: data.salesPrice ?? null,
+                purchaseCost: data.purchaseCost ?? null,
                 standardCost: data.purchaseCost ?? null,
-                trackingType: data.trackingType ?? 'NONE', costMethod: data.costMethod ?? 'FIFO',
+                trackingType: data.trackingType ?? 'NONE',
+                costMethod: data.costMethod ?? 'FIFO',
                 inventoryAssetAccountId: data.inventoryAssetAccountId ?? null,
                 cogsAccountId: data.cogsAccountId ?? null,
             },
@@ -141,7 +151,27 @@ export class InventoryRepository {
     }
 
     async updateItem(companyId: string, itemId: string, data: any) {
-        return this.prisma.item.update({ where: { id: itemId }, data })
+        const { name, description, type, sku, category, unit, status,
+                salesPrice, purchaseCost, trackingType, costMethod,
+                inventoryAssetAccountId, cogsAccountId } = data
+        return this.prisma.item.update({
+            where: { id: itemId },
+            data: {
+                ...(name !== undefined && { name }),
+                ...(description !== undefined && { description }),
+                ...(type !== undefined && { type }),
+                ...(sku !== undefined && { sku }),
+                ...(category !== undefined && { category }),
+                ...(unit !== undefined && { unit }),
+                ...(status !== undefined && { status }),
+                ...(salesPrice !== undefined && { salesPrice }),
+                ...(purchaseCost !== undefined && { purchaseCost }),
+                ...(trackingType !== undefined && { trackingType }),
+                ...(costMethod !== undefined && { costMethod }),
+                ...(inventoryAssetAccountId !== undefined && { inventoryAssetAccountId }),
+                ...(cogsAccountId !== undefined && { cogsAccountId }),
+            },
+        })
     }
 
     async softDeleteItem(itemId: string, deletedBy: string) {

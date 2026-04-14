@@ -1323,6 +1323,7 @@ export class ArService {
                 date: new Date(),
                 dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 totalAmount: template?.totalAmount ?? 0,
+                balance: template?.totalAmount ?? 0,
             },
         })
         await this.prisma.recurringInvoice.update({
@@ -1564,5 +1565,41 @@ export class ArService {
             data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'Invoice', recordId: invoiceId, changes: { dunningLevel: level } },
         }).catch(() => {})
         return { success: true, invoiceId, level }
+    }
+
+    async getSalesOrderActivity(userId: string, companyId: string, orderId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where: any = { tableName: 'SalesOrder', recordId: orderId, companyId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({ where, include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'desc' }, take: limit, skip: offset }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
+    }
+
+    async getCreditNoteActivity(userId: string, companyId: string, creditNoteId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where: any = { tableName: 'CreditNote', recordId: creditNoteId, companyId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({ where, include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'desc' }, take: limit, skip: offset }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
+    }
+
+    async getCustomerPaymentActivity(userId: string, companyId: string, paymentId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where: any = { tableName: 'CustomerPayment', recordId: paymentId, companyId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({ where, include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'desc' }, take: limit, skip: offset }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
     }
 }

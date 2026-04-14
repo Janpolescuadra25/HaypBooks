@@ -415,6 +415,16 @@ export class ArController {
         return this.svc.recordPayment(req.user.userId, companyId, body)
     }
 
+    @Get('payments/:paymentId/activity')
+    getCustomerPaymentActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('paymentId') paymentId: string,
+        @Query() q: any,
+    ) {
+        return this.svc.getCustomerPaymentActivity(req.user.userId, companyId, paymentId, q)
+    }
+
     @Get('payments/:paymentId')
     getPayment(
         @Req() req: any,
@@ -656,6 +666,16 @@ export class ArController {
         return this.svc.batchDeleteCreditNotes(req.user.userId, companyId, body.ids)
     }
 
+    @Get('credit-notes/:creditNoteId/activity')
+    getCreditNoteActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('creditNoteId') creditNoteId: string,
+        @Query() q: any,
+    ) {
+        return this.svc.getCreditNoteActivity(req.user.userId, companyId, creditNoteId, q)
+    }
+
     @Get('credit-notes/:creditNoteId')
     getCreditNote(
         @Req() req: any,
@@ -864,6 +884,16 @@ export class ArController {
         @Body() body: { ids: string[] },
     ) {
         return this.svc.batchDeleteSalesOrders(req.user.userId, companyId, body.ids)
+    }
+
+    @Get('sales-orders/:id/activity')
+    getSalesOrderActivity(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('id') id: string,
+        @Query() q: any,
+    ) {
+        return this.svc.getSalesOrderActivity(req.user.userId, companyId, id, q)
     }
 
     @Get('sales-orders/:id')

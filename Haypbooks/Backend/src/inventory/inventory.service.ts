@@ -46,7 +46,7 @@ export class InventoryService {
         })
 
         const quoteAgg = await this.prisma.quoteLine.aggregate({
-            where: { itemId, companyId, quote: { status: { not: 'VOID' } } },
+            where: { itemId, companyId, quote: { status: { notIn: ['REJECTED', 'EXPIRED', 'CONVERTED'] } } },
             _sum: { quantity: true },
         })
 
@@ -72,10 +72,10 @@ export class InventoryService {
             total: Number(line.totalPrice),
         })) ?? []
 
-        const recentQuotes = item.QuoteLine?.map(line => ({
+        const recentQuotes = item.quoteLines?.map(line => ({
             id: line.quote.id,
             number: line.quote.quoteNumber,
-            date: line.quote.date,
+            date: line.quote.issuedAt,
             status: line.quote.status,
             quantity: Number(line.quantity),
             total: Number(line.amount),
@@ -85,7 +85,7 @@ export class InventoryService {
             ...item,
             soldCount: Number(soldAgg._sum.quantity ?? 0),
             revenueGenerated: Number(soldAgg._sum.totalPrice ?? 0),
-            quotedCount: Number(quoteAgg._sum.quantity ?? 0),
+            quotedCount: Number(quoteAgg._sum?.quantity ?? 0),
             inStock: stockQty,
             usedInPriceLists: priceListItemCount + priceListEntryCount,
             recentInvoices,
@@ -171,10 +171,10 @@ export class InventoryService {
             where: { itemId, companyId, invoice: { status: { not: 'VOID' } } },
         })
         const activeQuoteCount = await this.prisma.quoteLine.count({
-            where: { itemId, companyId, quote: { status: { not: 'VOID' } } },
+            where: { itemId, companyId, quote: { status: { notIn: ['REJECTED', 'EXPIRED', 'CONVERTED'] } } },
         })
         if (activeInvoiceCount > 0 || activeQuoteCount > 0) {
-            const details = []
+            const details: string[] = []
             if (activeInvoiceCount > 0) details.push(`${activeInvoiceCount} invoice line${activeInvoiceCount === 1 ? '' : 's'}`)
             if (activeQuoteCount > 0) details.push(`${activeQuoteCount} quote line${activeQuoteCount === 1 ? '' : 's'}`)
             throw new BadRequestException(`Cannot delete item: referenced by ${details.join(' and ')}`)
@@ -212,11 +212,11 @@ export class InventoryService {
                 where: { itemId: id, companyId, invoice: { status: { not: 'VOID' } } },
             })
             const quoteCount = await this.prisma.quoteLine.count({
-                where: { itemId: id, companyId, quote: { status: { not: 'VOID' } } },
+                where: { itemId: id, companyId, quote: { status: { notIn: ['REJECTED', 'EXPIRED', 'CONVERTED'] } } },
             })
 
             if (invoiceCount > 0 || quoteCount > 0) {
-                const parts = []
+                const parts: string[] = []
                 if (invoiceCount > 0) parts.push(`${invoiceCount} invoice line${invoiceCount === 1 ? '' : 's'}`)
                 if (quoteCount > 0) parts.push(`${quoteCount} quote line${quoteCount === 1 ? '' : 's'}`)
                 skipped.push({ id, reason: `Referenced by ${parts.join(' and ')}` })
@@ -586,5 +586,17 @@ export class InventoryService {
                 status: data.status ?? 'available',
             },
         })
+    }
+
+    async getItemActivity(userId: string, companyId: string, itemId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where: any = { tableName: 'Item', recordId: itemId, companyId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({ where, include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'desc' }, take: limit, skip: offset }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
     }
 }

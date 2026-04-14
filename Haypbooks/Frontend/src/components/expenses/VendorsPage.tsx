@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Plus, Search, Edit2, Trash2, X, AlertCircle, Loader2, Building } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, X, AlertCircle, Loader2, Building, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -107,12 +107,26 @@ export default function VendorsPage() {
   )
 }
 
+interface ActivityEntry { id: string; action: string; createdAt: string; user?: { name?: string; email?: string } | null; changes?: Record<string, unknown> | null }
+
 function VendorFormModal({ companyId, vendor, onClose, onSaved }: { companyId: string; vendor: Vendor | null; onClose: () => void; onSaved: () => void }) {
   const isEdit = !!vendor
   const [form, setForm] = useState({ name: vendor?.name ?? '', email: vendor?.email ?? '', phone: vendor?.phone ?? '', address: vendor?.address ?? '', city: vendor?.city ?? '', state: vendor?.state ?? '', country: vendor?.country ?? '', taxId: vendor?.taxId ?? '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [modalTab, setModalTab] = useState<'form' | 'activity'>('form')
+  const [activityLog, setActivityLog] = useState<ActivityEntry[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
   const set = (f: string, v: string) => setForm(p => ({ ...p, [f]: v }))
+
+  useEffect(() => {
+    if (modalTab !== 'activity' || !isEdit || !vendor?.id) return
+    setActivityLoading(true)
+    apiClient.get(`/companies/${companyId}/ap/vendors/${vendor.id}/activity`)
+      .then(({ data }) => setActivityLog(data.data ?? []))
+      .catch(() => setActivityLog([]))
+      .finally(() => setActivityLoading(false))
+  }, [modalTab, isEdit, vendor?.id, companyId])
 
   const handleSave = async () => {
     if (!form.name.trim()) { setError('Name is required.'); return }
@@ -125,30 +139,71 @@ function VendorFormModal({ companyId, vendor, onClose, onSaved }: { companyId: s
     finally { setSaving(false) }
   }
 
+  const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) } catch { return d } }
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
       <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-        <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between"><h2 className="text-lg font-bold text-emerald-900">{isEdit ? 'Edit Vendor' : 'New Vendor'}</h2><button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button></div>
-        <div className="p-6 space-y-4">
-          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700"><AlertCircle size={14} className="inline mr-1" />{error}</div>}
-          <div><label className="block text-xs font-medium text-emerald-700 mb-1">Name *</label><input value={form.name} onChange={e => set('name', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">Email</label><input value={form.email} onChange={e => set('email', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">Phone</label><input value={form.phone} onChange={e => set('phone', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-          </div>
-          <div><label className="block text-xs font-medium text-emerald-700 mb-1">Address</label><input value={form.address} onChange={e => set('address', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-          <div className="grid grid-cols-3 gap-4">
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">City</label><input value={form.city} onChange={e => set('city', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">State</label><input value={form.state} onChange={e => set('state', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">Tax ID</label><input value={form.taxId} onChange={e => set('taxId', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-          </div>
+        <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-emerald-900">{isEdit ? 'Edit Vendor' : 'New Vendor'}</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
         </div>
-        <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
-            {saving && <Loader2 size={14} className="animate-spin" />} {isEdit ? 'Update' : 'Create'}
-          </button>
-        </div>
+        {isEdit && (
+          <div className="flex border-b border-emerald-100 px-6 pt-3">
+            {(['form', 'activity'] as const).map(tab => (
+              <button key={tab} onClick={() => setModalTab(tab)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${modalTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-emerald-400 hover:text-emerald-600'}`}>
+                {tab === 'form' ? 'Details' : 'Activity'}
+              </button>
+            ))}
+          </div>
+        )}
+        {modalTab === 'form' || !isEdit ? (
+          <>
+            <div className="p-6 space-y-4">
+              {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700"><AlertCircle size={14} className="inline mr-1" />{error}</div>}
+              <div><label className="block text-xs font-medium text-emerald-700 mb-1">Name *</label><input value={form.name} onChange={e => set('name', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-xs font-medium text-emerald-700 mb-1">Email</label><input value={form.email} onChange={e => set('email', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+                <div><label className="block text-xs font-medium text-emerald-700 mb-1">Phone</label><input value={form.phone} onChange={e => set('phone', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+              </div>
+              <div><label className="block text-xs font-medium text-emerald-700 mb-1">Address</label><input value={form.address} onChange={e => set('address', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-xs font-medium text-emerald-700 mb-1">City</label><input value={form.city} onChange={e => set('city', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+                <div><label className="block text-xs font-medium text-emerald-700 mb-1">State</label><input value={form.state} onChange={e => set('state', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+                <div><label className="block text-xs font-medium text-emerald-700 mb-1">Tax ID</label><input value={form.taxId} onChange={e => set('taxId', e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2">
+              <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
+                {saving && <Loader2 size={14} className="animate-spin" />} {isEdit ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="p-6 max-h-[60vh] overflow-y-auto">
+            {activityLoading ? (
+              <div className="flex items-center justify-center py-8"><Loader2 size={20} className="animate-spin text-emerald-500" /></div>
+            ) : activityLog.length === 0 ? (
+              <div className="text-center py-8 text-emerald-400"><Clock size={24} className="mx-auto mb-2 opacity-50" /><p className="text-sm">No activity recorded yet.</p></div>
+            ) : (
+              <div className="space-y-2">
+                {activityLog.map(entry => (
+                  <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                    <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Clock size={13} className="text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-emerald-900">{entry.action}</p>
+                      <p className="text-xs text-emerald-500 mt-0.5">{entry.user?.name ?? entry.user?.email ?? 'System'} · {fmtDate(entry.createdAt)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )

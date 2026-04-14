@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useMemo, useState, useCallback, useEffect } from 'react'
-import { Loader2, X, ArrowRightLeft } from 'lucide-react'
+import { Loader2, X, ArrowRightLeft, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -70,6 +70,25 @@ export default function BankTransactionsPage() {
   const [transferLoading, setTransferLoading] = useState(false)
   const [transferError, setTransferError] = useState('')
   const [toast, setToast] = useState('')
+
+  // ── Activity Drawer ─────────────────────────────────────────────────────
+  const [showActivityDrawer, setShowActivityDrawer] = useState(false)
+  const [activityAccountId, setActivityAccountId] = useState('')
+  const [bankActivity, setBankActivity] = useState<any[]>([])
+  const [bankActivityLoading, setBankActivityLoading] = useState(false)
+
+  const openActivityDrawer = async (accountId: string) => {
+    setActivityAccountId(accountId)
+    setShowActivityDrawer(true)
+    setBankActivity([])
+    if (!companyId || !accountId) return
+    setBankActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/banking/accounts/${accountId}/activity`)
+      setBankActivity(data.data ?? [])
+    } catch { /* non-critical */ }
+    finally { setBankActivityLoading(false) }
+}
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -190,6 +209,14 @@ export default function BankTransactionsPage() {
             >
               <ArrowRightLeft className="w-4 h-4" />
               Transfer Funds
+            </button>
+            <button
+              onClick={() => openActivityDrawer(bankAccounts[0]?.id ?? '')}
+              disabled={bankAccounts.length === 0}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-40"
+            >
+              <Clock className="w-4 h-4" />
+              Activity Log
             </button>
             <button className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
@@ -475,6 +502,49 @@ export default function BankTransactionsPage() {
                 {transferLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
                 {transferLoading ? 'Transferring…' : 'Transfer Funds'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Activity Log Drawer ── */}
+      {showActivityDrawer && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="fixed inset-0 bg-black/30" onClick={() => setShowActivityDrawer(false)} />
+          <div className="relative bg-white w-full max-w-md shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Account Activity Log</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{bankAccounts.find(a => a.id === activityAccountId)?.name ?? 'Bank Account'}</p>
+              </div>
+              <button onClick={() => setShowActivityDrawer(false)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            {bankAccounts.length > 1 && (
+              <div className="px-6 py-3 border-b border-slate-100">
+                <select
+                  value={activityAccountId}
+                  onChange={e => openActivityDrawer(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                >
+                  {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="p-6 space-y-3 overflow-y-auto flex-1">
+              {bankActivityLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
+              ) : bankActivity.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">No activity recorded for this account yet.</p>
+              ) : bankActivity.map((log: any) => (
+                <div key={log.id} className="flex items-start gap-3 text-sm">
+                  <Clock className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-slate-700">{log.action}</span>
+                    {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                    <span className="text-slate-400 ml-2">{new Date(log.createdAt).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

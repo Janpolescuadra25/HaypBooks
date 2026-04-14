@@ -23,6 +23,11 @@ export class ApController {
         return this.svc.createVendor(req.user.userId, cid, body)
     }
 
+    @Get('vendors/:contactId/activity')
+    getVendorActivity(@Req() req: any, @Param('companyId') cid: string, @Param('contactId') vid: string, @Query() q: any) {
+        return this.svc.getVendorActivity(req.user.userId, cid, vid, q)
+    }
+
     @Get('vendors/:contactId')
     getVendor(@Req() req: any, @Param('companyId') cid: string, @Param('contactId') vid: string) {
         return this.svc.getVendor(req.user.userId, cid, vid)
@@ -48,6 +53,11 @@ export class ApController {
     @Post('bills')
     createBill(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
         return this.svc.createBill(req.user.userId, cid, body)
+    }
+
+    @Get('bills/:billId/activity')
+    getBillActivity(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string, @Query() q: any) {
+        return this.svc.getBillActivity(req.user.userId, cid, bid, q)
     }
 
     @Get('bills/:billId')

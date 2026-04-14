@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { X, Loader2, AlertCircle } from 'lucide-react'
+import { X, Loader2, AlertCircle, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -54,6 +54,21 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Activity tab
+  const [modalTab, setModalTab] = useState<'details' | 'activity'>('details')
+  const [activityLog, setActivityLog] = useState<any[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
+
+  useEffect(() => {
+    if (modalTab === 'activity' && isEdit && item?.id && companyId) {
+      setActivityLoading(true)
+      apiClient.get(`/companies/${companyId}/inventory/items/${item.id}/activity`)
+        .then(r => setActivityLog(r.data.data ?? []))
+        .catch(() => {})
+        .finally(() => setActivityLoading(false))
+    }
+  }, [modalTab, isEdit, item?.id, companyId])
 
   // Focus name on mount
   useEffect(() => {
@@ -112,6 +127,43 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
           </button>
         </div>
 
+        {/* Tabs — edit mode only */}
+        {isEdit && (
+          <div className="flex border-b border-slate-200 px-6 bg-slate-50">
+            {(['details', 'activity'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setModalTab(tab)}
+                className={`px-4 py-2.5 text-sm font-semibold capitalize border-b-2 transition-colors ${
+                  modalTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {modalTab === 'activity' ? (
+          <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
+            {activityLoading ? (
+              <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+            ) : activityLog.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">No activity recorded yet.</p>
+            ) : activityLog.map((log: any) => (
+              <div key={log.id} className="flex items-start gap-3 text-sm">
+                <Clock size={13} className="mt-0.5 text-slate-400 shrink-0" />
+                <div>
+                  <span className="font-semibold text-slate-700">{log.action}</span>
+                  {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                  <span className="text-slate-400 ml-2">{new Date(log.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[75vh]">
           {error && (
@@ -264,8 +316,11 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
             </div>
           )}
         </form>
+        </>
+        )}
 
         {/* Footer */}
+        {modalTab === 'details' && (
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50">
           <button
             type="button"
@@ -283,6 +338,14 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
             {isEdit ? 'Save Changes' : 'Create Item'}
           </button>
         </div>
+        )}
+        {modalTab === 'activity' && (
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+            Close
+          </button>
+        </div>
+        )}
       </div>
     </div>
   )

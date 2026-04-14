@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpDown, Download, Plus, RefreshCw, X } from 'lucide-react'
+import { ArrowUpDown, Clock, Download, Loader2, Plus, RefreshCw, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -124,6 +124,9 @@ export default function CreditNotesPage() {
 
   // Detail drawer
   const [drawerCN, setDrawerCN] = useState<CreditNoteRow | null>(null)
+  const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
+  const [cnActivity, setCnActivity] = useState<any[]>([])
+  const [cnActivityLoading, setCnActivityLoading] = useState(false)
 
   // Create modal
   const [newOpen, setNewOpen] = useState(false)
@@ -497,7 +500,7 @@ export default function CreditNotesPage() {
                       <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCN(row)}>
+                      <td key={col.key} className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => { setDrawerCN(row); setDrawerTab('details'); setCnActivity([]) }}>
                         {col.key === 'creditNoteNumber' && <span className="font-mono text-xs text-slate-700">{row.creditNoteNumber}</span>}
                         {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
                         {col.key === 'invoiceNumber' && <span className="text-slate-600">{row.invoiceNumber ?? '—'}</span>}
@@ -557,6 +560,45 @@ export default function CreditNotesPage() {
               </div>
               <button onClick={() => setDrawerCN(null)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button>
             </div>
+            {/* Tabs */}
+            <div className="flex border-b border-slate-200 px-5 bg-slate-50">
+              {(['details', 'activity'] as const).map(tab => (
+                <button key={tab} type="button" onClick={() => {
+                  setDrawerTab(tab)
+                  if (tab === 'activity' && cnActivity.length === 0 && companyId) {
+                    setCnActivityLoading(true)
+                    apiClient.get(`/companies/${companyId}/ar/credit-notes/${drawerCN.id}/activity`)
+                      .then(r => setCnActivity(r.data.data ?? []))
+                      .catch(() => {})
+                      .finally(() => setCnActivityLoading(false))
+                  }
+                }}
+                  className={`px-4 py-2.5 text-sm font-semibold capitalize border-b-2 transition-colors ${
+                    drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}>
+                  {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                </button>
+              ))}
+            </div>
+            {drawerTab === 'activity' ? (
+              <div className="px-5 py-4 space-y-3">
+                {cnActivityLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+                ) : cnActivity.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">No activity recorded yet.</p>
+                ) : cnActivity.map((log: any) => (
+                  <div key={log.id} className="flex items-start gap-3 text-sm">
+                    <Clock size={13} className="mt-0.5 text-slate-400 shrink-0" />
+                    <div>
+                      <span className="font-semibold text-slate-700">{log.action}</span>
+                      {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                      <span className="text-slate-400 ml-2">{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+            <>
             <div className="px-5 py-4 space-y-4 flex-1">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -599,6 +641,8 @@ export default function CreditNotesPage() {
                   Void
                 </button>
               </div>
+            )}
+            </>
             )}
           </div>
         </div>

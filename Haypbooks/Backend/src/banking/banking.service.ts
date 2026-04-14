@@ -44,7 +44,11 @@ export class BankingService {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
         if (!data.name) throw new BadRequestException('Bank account name is required')
-        return this.repo.createBankAccount(wid, data)
+        const result = await this.repo.createBankAccount(wid, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'BankAccount', recordId: result.id, changes: { name: data.name } },
+        }).catch(() => {})
+        return result
     }
 
     async updateBankAccount(userId: string, companyId: string, bankAccountId: string, data: any) {
@@ -52,7 +56,11 @@ export class BankingService {
         await this.assertAccess(userId, companyId)
         const acct = await this.repo.findBankAccountById(wid, bankAccountId)
         if (!acct) throw new NotFoundException('Bank account not found')
-        return this.repo.updateBankAccount(wid, bankAccountId, data)
+        const result = await this.repo.updateBankAccount(wid, bankAccountId, data)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'BankAccount', recordId: bankAccountId, changes: data },
+        }).catch(() => {})
+        return result
     }
 
     async deleteBankAccount(userId: string, companyId: string, bankAccountId: string) {
@@ -60,7 +68,11 @@ export class BankingService {
         await this.assertAccess(userId, companyId)
         const acct = await this.repo.findBankAccountById(wid, bankAccountId)
         if (!acct) throw new NotFoundException('Bank account not found')
-        return this.repo.softDeleteBankAccount(bankAccountId)
+        const result = await this.repo.softDeleteBankAccount(bankAccountId)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'BankAccount', recordId: bankAccountId, changes: {} },
+        }).catch(() => {})
+        return result
     }
 
     // ─── Transactions ─────────────────────────────────────────────────────────
@@ -94,13 +106,17 @@ export class BankingService {
         if (!data.date) throw new BadRequestException('date is required')
         if (!data.description) throw new BadRequestException('description is required')
         if (data.amount === undefined || data.amount === null) throw new BadRequestException('amount is required')
-        return this.repo.createTransaction(wid, bankAccountId, {
+        const result = await this.repo.createTransaction(wid, bankAccountId, {
             date: new Date(data.date),
             description: data.description,
             amount: Number(data.amount),
             category: data.category,
             memo: data.memo,
         })
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'BankTransaction', recordId: result.id, changes: { bankAccountId, amount: data.amount, description: data.description } },
+        }).catch(() => {})
+        return result
     }
 
     async updateTransaction(userId: string, companyId: string, bankAccountId: string, bankTransactionId: string, data: any) {
@@ -422,7 +438,11 @@ export class BankingService {
         const recon = await this.repo.findReconciliationById(wid, reconId)
         if (!recon) throw new NotFoundException('Reconciliation not found')
         if (recon.status === 'COMPLETED') throw new BadRequestException('Reconciliation is already completed')
-        return this.repo.completeReconciliation(wid, reconId)
+        const result = await this.repo.completeReconciliation(wid, reconId)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'COMPLETE', tableName: 'BankReconciliation', recordId: reconId, changes: { status: 'COMPLETED' } },
+        }).catch(() => {})
+        return result
     }
 
     async undoReconciliation(userId: string, companyId: string, reconId: string) {
@@ -431,10 +451,14 @@ export class BankingService {
         const recon = await this.repo.findReconciliationById(wid, reconId)
         if (!recon) throw new NotFoundException('Reconciliation not found')
         if (recon.status !== 'COMPLETED') throw new BadRequestException('Only completed reconciliations can be undone')
-        return this.prisma.bankReconciliation.update({
+        const result = await this.prisma.bankReconciliation.update({
             where: { id: reconId },
             data: { status: 'IN_PROGRESS' },
         })
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'UNDO', tableName: 'BankReconciliation', recordId: reconId, changes: { status: 'IN_PROGRESS' } },
+        }).catch(() => {})
+        return result
     }
 
     async autoMatchReconciliation(userId: string, companyId: string, reconId: string) {
@@ -539,12 +563,16 @@ export class BankingService {
         await this.assertAccess(userId, companyId)
         if (!data.bankAccountId) throw new BadRequestException('bankAccountId is required')
         if (!data.paymentIds?.length) throw new BadRequestException('At least one payment is required')
-        return this.repo.createDeposit({
+        const result = await this.repo.createDeposit({
             workspaceId: wid, companyId, bankAccountId: data.bankAccountId,
             depositDate: data.depositDate ? new Date(data.depositDate) : new Date(),
             currency: data.currency, referenceNumber: data.referenceNumber,
             paymentIds: data.paymentIds,
         })
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'BankDeposit', recordId: result.id, changes: { bankAccountId: data.bankAccountId, paymentCount: data.paymentIds.length } },
+        }).catch(() => {})
+        return result
     }
 
     async postDeposit(userId: string, companyId: string, depositId: string) {
@@ -557,11 +585,16 @@ export class BankingService {
     }
 
     async voidDeposit(userId: string, companyId: string, depositId: string) {
+        const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
         const d = await this.repo.findDepositById(companyId, depositId)
         if (!d) throw new NotFoundException('Deposit not found')
         if (d.status === 'VOID') throw new BadRequestException('Deposit is already voided')
-        return this.repo.voidDeposit(companyId, depositId)
+        const result = await this.repo.voidDeposit(companyId, depositId)
+        this.prisma.auditLog.create({
+            data: { workspaceId: wid, companyId, userId, action: 'VOID', tableName: 'BankDeposit', recordId: depositId, changes: { status: 'VOID' } },
+        }).catch(() => {})
+        return result
     }
 
     // ─── Undeposited Funds ────────────────────────────────────────────────────
@@ -791,5 +824,17 @@ export class BankingService {
                 ...(data.status === 'PRINTED' && { printedAt: new Date() }),
             },
         })
+    }
+
+    async getBankAccountActivity(userId: string, companyId: string, bankAccountId: string, opts: any) {
+        await this.assertAccess(userId, companyId)
+        const limit = opts.limit ? parseInt(opts.limit) : 20
+        const offset = opts.offset ? parseInt(opts.offset) : 0
+        const where: any = { companyId, tableName: 'BankAccount', recordId: bankAccountId }
+        const [logs, total] = await Promise.all([
+            this.prisma.auditLog.findMany({ where, include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'desc' }, take: limit, skip: offset }),
+            this.prisma.auditLog.count({ where }),
+        ])
+        return { data: logs, total }
     }
 }

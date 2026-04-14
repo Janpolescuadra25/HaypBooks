@@ -1403,6 +1403,7 @@ export class ArRepository {
                 date: new Date(),
                 dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 totalAmount: order.totalAmount,
+                balance: order.totalAmount,
                 lines: {
                     create: order.lines.map((l: any) => ({
                         companyId,
@@ -1514,7 +1515,7 @@ export class ArRepository {
                 customer: { include: { contact: { select: { displayName: true } } } },
                 invoice: { select: { invoiceNumber: true } },
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { issuedAt: 'desc' },
         })
         const header = 'CreditNoteNumber,Customer,InvoiceNumber,Date,Amount,Status,Memo'
         const lines = rows.map((cn: any) => {
