@@ -130,7 +130,7 @@ export default function ProductsServicesPage() {
     prodResizeRef.current = { key, startX: e.clientX, startW: w }
     const onMove = (mv: MouseEvent) => {
       if (!prodResizeRef.current) return
-      saveProdCols(prodColsRef.current.map(c => c.key === prodResizeRef.current!.key ? { ...c, width: Math.max(60, prodResizeRef.current!.startW + mv.clientX - prodResizeRef.current!.startX) } : c))
+      saveProdCols(prodColsRef.current.map(c => c.key === prodResizeRef.current!.key ? { ...c, width: Math.max(80, prodResizeRef.current!.startW + mv.clientX - prodResizeRef.current!.startX) } : c))
     }
     const onUp = () => { prodResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
@@ -313,7 +313,7 @@ export default function ProductsServicesPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-slate-400">
               <Loader2 size={18} className="animate-spin" /> Loading…
@@ -355,7 +355,7 @@ export default function ProductsServicesPage() {
                     onClick={() => router.push(`/sales/sales/products-services/${row.id}`)}
                     className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer ${isDeleting ? 'opacity-50' : ''}`}
                   >
-                      <td className="px-4 py-2.5 text-slate-700 border-r border-gray-100 font-medium">{row.name}</td>
+                      <td className="px-4 py-2.5 text-slate-700 truncate border-r border-gray-100 font-medium" title={row.name}>{row.name}</td>
                       <td className="px-4 py-2.5 border-r border-gray-100 max-w-[220px]">
                         {row.description
                           ? <span className="text-slate-500 text-xs block truncate" title={row.description}>{row.description}</span>

@@ -192,7 +192,7 @@ export default function QuotesEstimatesPage() {
       if (!resizingRef.current) return
       const { colKey: k, startX, startW: sw } = resizingRef.current
       const delta = me.clientX - startX
-      const newW = Math.max(60, sw + delta)
+      const newW = Math.max(80, sw + delta)
       saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: newW } : c))
     }
     const onUp = () => {
@@ -586,7 +586,7 @@ export default function QuotesEstimatesPage() {
       {/* Table */}
       <div className="px-6 py-5 flex-1">
         <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 650 }}>
             <thead>
               <tr className="bg-slate-100 text-slate-700">
                 <th className="px-3 py-3 w-10 border-r border-slate-200">
@@ -653,7 +653,7 @@ export default function QuotesEstimatesPage() {
                     {visibleCols.map(col => (
                       <td
                         key={col.key}
-                        className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
+                        className={`px-4 py-3 truncate cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
                         onClick={() => setDrawerQuote(row)}
                       >
                         {col.key === 'quoteNumber' && <span className="font-mono text-xs text-slate-700">{row.quoteNumber}</span>}

@@ -167,7 +167,7 @@ export default function WriteOffsPage() {
     resizeRef.current = { key, startX: e.clientX, startW: w }
     const onMove = (mv: MouseEvent) => {
       if (!resizeRef.current) return
-      const newW = Math.max(60, resizeRef.current.startW + mv.clientX - resizeRef.current.startX)
+      const newW = Math.max(80, resizeRef.current.startW + mv.clientX - resizeRef.current.startX)
       saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: newW } : c))
     }
     const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }

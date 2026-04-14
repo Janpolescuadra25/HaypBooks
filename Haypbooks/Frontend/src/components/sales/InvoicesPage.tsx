@@ -206,7 +206,7 @@ export default function InvoicesPage() {
     invResizeRef.current = { key, startX: e.clientX, startW: w }
     const onMove = (mv: MouseEvent) => {
       if (!invResizeRef.current) return
-      saveInvCols(invColsRef.current.map(c => c.key === invResizeRef.current!.key ? { ...c, width: Math.max(60, invResizeRef.current!.startW + mv.clientX - invResizeRef.current!.startX) } : c))
+      saveInvCols(invColsRef.current.map(c => c.key === invResizeRef.current!.key ? { ...c, width: Math.max(80, invResizeRef.current!.startW + mv.clientX - invResizeRef.current!.startX) } : c))
     }
     const onUp = () => { invResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
@@ -380,8 +380,8 @@ export default function InvoicesPage() {
                       {inv.invoiceNumber ?? inv.id.slice(0, 8).toUpperCase()}
                     </button>
                   </td>
-                  <td className="px-4 py-2.5 border-r border-gray-100">
-                    <span className="font-medium text-slate-800 max-w-[160px] truncate block">{inv.customerName ?? '—'}</span>
+                  <td className="px-4 py-2.5 truncate border-r border-gray-100">
+                    <span className="font-medium text-slate-800">{inv.customerName ?? '—'}</span>
                   </td>
                   <td className="px-4 py-2.5 text-slate-500 hidden md:table-cell border-r border-gray-100 text-xs whitespace-nowrap">{fmtDate(inv.date)}</td>
                   <td className="px-4 py-2.5 hidden lg:table-cell border-r border-gray-100 text-xs whitespace-nowrap">

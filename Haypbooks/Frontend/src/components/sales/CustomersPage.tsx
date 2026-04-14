@@ -195,7 +195,7 @@ export default function CustomersPage() {
     const onMove = (mv: MouseEvent) => {
       if (!resizeRef.current) return
       const delta = mv.clientX - resizeRef.current.startX
-      const newW = Math.max(60, resizeRef.current.startW + delta)
+      const newW = Math.max(80, resizeRef.current.startW + delta)
       saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: newW } : c))
     }
     const onUp = () => {

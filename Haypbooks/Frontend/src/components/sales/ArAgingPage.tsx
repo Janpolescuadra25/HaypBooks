@@ -106,7 +106,7 @@ export default function ArAgingPage() {
   const startAgingResize = (e: React.MouseEvent, key: string, w: number) => {
     e.preventDefault()
     agingResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!agingResizeRef.current) return; saveAgingCols(agingColsRef.current.map(c => c.key === agingResizeRef.current!.key ? { ...c, width: Math.max(60, agingResizeRef.current!.startW + mv.clientX - agingResizeRef.current!.startX) } : c)) }
+    const onMove = (mv: MouseEvent) => { if (!agingResizeRef.current) return; saveAgingCols(agingColsRef.current.map(c => c.key === agingResizeRef.current!.key ? { ...c, width: Math.max(80, agingResizeRef.current!.startW + mv.clientX - agingResizeRef.current!.startX) } : c)) }
     const onUp = () => { agingResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
   }
@@ -199,6 +199,7 @@ export default function ArAgingPage() {
                   />
                 </div>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 710 }}>
                 <colgroup>
                   {agingCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
@@ -220,7 +221,7 @@ export default function ArAgingPage() {
                     <tr><td colSpan={7} className="px-4 py-8 text-center text-emerald-400">No customers found.</td></tr>
                   ) : customers.map(c => (
                     <tr key={c.customerId} className="border-t border-emerald-50 hover:bg-emerald-50/30">
-                      <td className="px-4 py-2.5 font-medium text-emerald-900 border-r border-emerald-50">{c.customerName}</td>
+                      <td className="px-4 py-2.5 font-medium text-emerald-900 truncate border-r border-emerald-50" title={c.customerName}>{c.customerName}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.current ? fmt(c.current) : '—'}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.days30 ? fmt(c.days30) : '—'}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.days60 ? fmt(c.days60) : '—'}</td>
@@ -231,6 +232,7 @@ export default function ArAgingPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </>

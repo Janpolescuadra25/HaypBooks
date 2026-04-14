@@ -167,7 +167,7 @@ export default function CreditNotesPage() {
     const onMove = (me: MouseEvent) => {
       if (!resizingRef.current) return
       const { colKey: k, startX, startW: sw } = resizingRef.current
-      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: Math.max(60, sw + me.clientX - startX) } : c))
+      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: Math.max(80, sw + me.clientX - startX) } : c))
     }
     const onUp = () => { resizingRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove)
@@ -500,7 +500,7 @@ export default function CreditNotesPage() {
                       <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => { setDrawerCN(row); setDrawerTab('details'); setCnActivity([]) }}>
+                      <td key={col.key} className={`px-4 py-3 truncate cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => { setDrawerCN(row); setDrawerTab('details'); setCnActivity([]) }}>
                         {col.key === 'creditNoteNumber' && <span className="font-mono text-xs text-slate-700">{row.creditNoteNumber}</span>}
                         {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
                         {col.key === 'invoiceNumber' && <span className="text-slate-600">{row.invoiceNumber ?? '—'}</span>}

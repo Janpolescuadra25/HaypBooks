@@ -192,7 +192,7 @@ export default function RefundsPage() {
     resizeRef.current = { key, startX: e.clientX, startW: w }
     const onMove = (mv: MouseEvent) => {
       if (!resizeRef.current) return
-      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(60, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
+      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(80, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
     }
     const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)

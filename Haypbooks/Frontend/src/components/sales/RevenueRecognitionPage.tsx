@@ -224,7 +224,7 @@ export default function RevenueRecognitionPage() {
   const startRevRecResize = (e: React.MouseEvent, key: string, w: number) => {
     e.preventDefault()
     revRecResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!revRecResizeRef.current) return; saveRevRecCols(revRecColsRef.current.map(c => c.key === revRecResizeRef.current!.key ? { ...c, width: Math.max(60, revRecResizeRef.current!.startW + mv.clientX - revRecResizeRef.current!.startX) } : c)) }
+    const onMove = (mv: MouseEvent) => { if (!revRecResizeRef.current) return; saveRevRecCols(revRecColsRef.current.map(c => c.key === revRecResizeRef.current!.key ? { ...c, width: Math.max(80, revRecResizeRef.current!.startW + mv.clientX - revRecResizeRef.current!.startX) } : c)) }
     const onUp = () => { revRecResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
   }

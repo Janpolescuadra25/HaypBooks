@@ -162,7 +162,7 @@ export default function PaymentLinksPage() {
   const startPlinkResize = (e: React.MouseEvent, key: string, w: number) => {
     e.preventDefault()
     plinkResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!plinkResizeRef.current) return; savePlinkCols(plinkColsRef.current.map(c => c.key === plinkResizeRef.current!.key ? { ...c, width: Math.max(60, plinkResizeRef.current!.startW + mv.clientX - plinkResizeRef.current!.startX) } : c)) }
+    const onMove = (mv: MouseEvent) => { if (!plinkResizeRef.current) return; savePlinkCols(plinkColsRef.current.map(c => c.key === plinkResizeRef.current!.key ? { ...c, width: Math.max(80, plinkResizeRef.current!.startW + mv.clientX - plinkResizeRef.current!.startX) } : c)) }
     const onUp = () => { plinkResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
   }
@@ -199,7 +199,7 @@ export default function PaymentLinksPage() {
       </div>
 
       <div className="px-6 py-5">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
           <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 710 }}>
             <colgroup>
               {plinkCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
@@ -240,12 +240,12 @@ export default function PaymentLinksPage() {
               ) : (
                 sortedLinks.map((row) => (
                   <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-100">{row.linkId}</td>
-                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.description}</td>
-                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{formatCurrency(row.amount, row.currency ?? currency)}</td>
-                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.createdDate}</td>
-                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.expiryDate}</td>
-                    <td className="px-4 py-3 text-slate-600 border-r border-slate-100">{row.views}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900 truncate border-r border-slate-100" title={row.linkId ?? ''}>{row.linkId}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate border-r border-slate-100" title={row.description ?? ''}>{row.description}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate border-r border-slate-100">{formatCurrency(row.amount, row.currency ?? currency)}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate border-r border-slate-100">{row.createdDate}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate border-r border-slate-100">{row.expiryDate}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate border-r border-slate-100">{row.views}</td>
                     <td className={`px-4 py-3 text-sm font-semibold border-r border-slate-100 ${
                       row.status === 'Active' ? 'text-emerald-700' :
                       row.status === 'Paid' ? 'text-sky-700' :

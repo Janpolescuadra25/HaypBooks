@@ -154,7 +154,7 @@ export default function CustomerPaymentsPage() {
     resizeRef.current = { key, startX: e.clientX, startW: w }
     const onMove = (mv: MouseEvent) => {
       if (!resizeRef.current) return
-      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(60, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
+      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(80, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
     }
     const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
@@ -434,7 +434,7 @@ export default function CustomerPaymentsPage() {
 
       {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
           <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 700 }}>
             <colgroup>
               {cols.map(c => <col key={c.key} style={{ width: c.width }} />)}
@@ -479,14 +479,14 @@ export default function CustomerPaymentsPage() {
               ) : (
                 sorted.map((row) => (
                   <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-700 border-r border-slate-100">{row.paymentNumber}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-100">{row.customer}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden md:table-cell border-r border-slate-100">{fmtDate(row.date)}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell border-r border-slate-100">{row.method}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-700 truncate border-r border-slate-100" title={row.paymentNumber ?? ''}>{row.paymentNumber}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900 truncate border-r border-slate-100" title={row.customer ?? ''}>{row.customer}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate hidden md:table-cell border-r border-slate-100" title={fmtDate(row.date)}>{fmtDate(row.date)}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate hidden sm:table-cell border-r border-slate-100" title={row.method ?? ''}>{row.method}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800 border-r border-slate-100">
                       {formatCurrency(row.amount, currency)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600 hidden lg:table-cell border-r border-slate-100">{row.appliedTo}</td>
+                    <td className="px-4 py-3 text-slate-600 truncate hidden lg:table-cell border-r border-slate-100" title={row.appliedTo ?? ''}>{row.appliedTo}</td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleVoid(row.id)}

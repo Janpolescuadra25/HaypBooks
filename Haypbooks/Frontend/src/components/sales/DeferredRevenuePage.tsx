@@ -223,7 +223,7 @@ export default function DeferredRevenuePage() {
   const startDeferredResize = (e: React.MouseEvent, key: string, w: number) => {
     e.preventDefault()
     deferredResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!deferredResizeRef.current) return; saveDeferredCols(deferredColsRef.current.map(c => c.key === deferredResizeRef.current!.key ? { ...c, width: Math.max(60, deferredResizeRef.current!.startW + mv.clientX - deferredResizeRef.current!.startX) } : c)) }
+    const onMove = (mv: MouseEvent) => { if (!deferredResizeRef.current) return; saveDeferredCols(deferredColsRef.current.map(c => c.key === deferredResizeRef.current!.key ? { ...c, width: Math.max(80, deferredResizeRef.current!.startW + mv.clientX - deferredResizeRef.current!.startX) } : c)) }
     const onUp = () => { deferredResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
   }

@@ -161,7 +161,7 @@ export default function CollectionsCenterPage() {
     const onMove = (me: MouseEvent) => {
       if (!resizingRef.current) return
       const { colKey: k, startX, startW: sw } = resizingRef.current
-      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: Math.max(60, sw + me.clientX - startX) } : c))
+      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: Math.max(80, sw + me.clientX - startX) } : c))
     }
     const onUp = () => { resizingRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove)
@@ -530,7 +530,7 @@ export default function CollectionsCenterPage() {
                       <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-4 py-3 cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCase(row)}>
+                      <td key={col.key} className={`px-4 py-3 truncate cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => setDrawerCase(row)}>
                         {col.key === 'caseNumber' && <span className="font-mono text-xs text-slate-700">{row.caseNumber}</span>}
                         {col.key === 'subject' && <span className="font-medium text-slate-900 truncate max-w-[180px] inline-block" title={row.subject}>{row.subject}</span>}
                         {col.key === 'customerId' && <span className="text-slate-600 font-mono text-xs">{row.customerId ? row.customerId.slice(0, 12) + '…' : '—'}</span>}
