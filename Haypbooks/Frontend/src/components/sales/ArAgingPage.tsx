@@ -6,6 +6,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 
 interface AgingBucket {
   label: string
@@ -102,14 +103,11 @@ export default function ArAgingPage() {
   const agingColsRef = useRef(agingCols)
   useEffect(() => { agingColsRef.current = agingCols }, [agingCols])
   const saveAgingCols = (next: AgingColDef[]) => { setAgingCols(next); try { localStorage.setItem('ar-aging-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const agingResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startAgingResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    agingResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!agingResizeRef.current) return; saveAgingCols(agingColsRef.current.map(c => c.key === agingResizeRef.current!.key ? { ...c, width: Math.max(80, agingResizeRef.current!.startW + mv.clientX - agingResizeRef.current!.startX) } : c)) }
-    const onUp = () => { agingResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: startAgingResize } = useFixedWidthResizableColumns({
+    columns: agingCols,
+    columnsRef: agingColsRef,
+    saveColumns: saveAgingCols,
+  })
 
   function exportCsv() {
     const headers = ['Customer', 'Current', '1-30', '31-60', '61-90', '90+', 'Total']
@@ -199,8 +197,8 @@ export default function ArAgingPage() {
                   />
                 </div>
               </div>
-              <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 710 }}>
+              <div ref={containerRef} className={`${arAgingIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <colgroup>
                   {agingCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
                 </colgroup>
@@ -211,7 +209,7 @@ export default function ArAgingPage() {
                         <button onClick={() => toggleAgingSort(c.key as AgingSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                           <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${agingSortKey === c.key ? 'text-emerald-600' : 'text-emerald-300'}`} />
                         </button>
-                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startAgingResize(e, c.key, c.width)} />
+                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startAgingResize(e, c.key)} />
                       </th>
                     ))}
                   </tr>

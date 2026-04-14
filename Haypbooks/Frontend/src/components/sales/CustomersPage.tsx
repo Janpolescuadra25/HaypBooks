@@ -10,6 +10,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { useToast } from '@/components/ToastProvider'
 
 const PAGE_SIZE = 25
@@ -132,6 +133,13 @@ export default function CustomersPage() {
     try { localStorage.setItem('customers-cols-v2', JSON.stringify(next)) } catch { /* ignore */ }
   }
 
+  const { containerRef, startResize, isOverflowing: customersIsOverflowing } = useFixedWidthResizableColumns({
+    columns: cols,
+    columnsRef: colsRef,
+    saveColumns: saveCols,
+    fixedWidth: 124,
+  })
+
   const fetchCustomers = useCallback(async (pg = 0) => {
     if (!companyId) return
     setLoading(true)
@@ -186,26 +194,6 @@ export default function CustomersPage() {
   }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const goToPage = (pg: number) => { setPage(pg); fetchCustomers(pg) }
-
-  // Column resize via mouse drag
-  const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startResize = (e: React.MouseEvent, key: string, currentWidth: number) => {
-    e.preventDefault()
-    resizeRef.current = { key, startX: e.clientX, startW: currentWidth }
-    const onMove = (mv: MouseEvent) => {
-      if (!resizeRef.current) return
-      const delta = mv.clientX - resizeRef.current.startX
-      const newW = Math.max(80, resizeRef.current.startW + delta)
-      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: newW } : c))
-    }
-    const onUp = () => {
-      resizeRef.current = null
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
 
   const allSelected = customers.length > 0 && customers.every(c => selectedIds.has(c.id))
   const toggleAll = () => {
@@ -380,8 +368,8 @@ export default function CustomersPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
-        <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 600 }}>
+      <div ref={containerRef} className={`bg-white rounded-xl border border-gray-200 ${customersIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} shadow-sm`}>
+        <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 44 }} />
             {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
@@ -405,7 +393,7 @@ export default function CustomersPage() {
                   </button>
                   <div
                     className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60"
-                    onMouseDown={e => startResize(e, c.key, c.width)}
+                    onMouseDown={e => startResize(e, c.key)}
                   />
                 </th>
               ))}

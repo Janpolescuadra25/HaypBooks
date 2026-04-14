@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { useToast } from '@/components/ToastProvider'
 import CustomerPickerField, { type CustomerPickerOption } from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
@@ -131,6 +132,13 @@ export default function SalesOrdersPage() {
     try { localStorage.setItem('sales-orders-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
   }
 
+  const { containerRef, startResize, isOverflowing: salesOrdersIsOverflowing } = useFixedWidthResizableColumns({
+    columns: cols,
+    columnsRef: colsRef,
+    saveColumns: saveCols,
+    fixedWidth: 164,
+  })
+
   const fetchItems = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
@@ -185,18 +193,6 @@ export default function SalesOrdersPage() {
   const allSelected = paginated.length > 0 && paginated.every(r => selectedIds.has(r.id))
   const toggleAll = () => { if (allSelected) setSelectedIds(new Set()); else setSelectedIds(new Set(paginated.map(r => r.id))) }
   const toggleOne = (id: string) => { const n = new Set(selectedIds); if (n.has(id)) n.delete(id); else n.add(id); setSelectedIds(n) }
-
-  const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    resizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => {
-      if (!resizeRef.current) return
-      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(80, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
-    }
-    const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
 
   const handleDelete = async (id: string) => {
     if (!companyId || !window.confirm('Delete this sales order?')) return
@@ -366,8 +362,8 @@ export default function SalesOrdersPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
-        <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 650 }}>
+      <div ref={containerRef} className={`bg-white rounded-xl border border-gray-200 ${salesOrdersIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} shadow-sm`}>
+        <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 44 }} />
             {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
@@ -387,7 +383,7 @@ export default function SalesOrdersPage() {
                     <span className="truncate">{c.label}</span>
                     <ArrowUpDown size={12} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
                   </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
+                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key)} />
                 </th>
               ))}
               <th className="px-3 py-3 text-right font-semibold text-gray-600">Actions</th>

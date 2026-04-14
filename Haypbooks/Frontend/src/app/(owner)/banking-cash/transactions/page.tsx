@@ -10,6 +10,7 @@ import {
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 import { formatCurrency } from '@/lib/format'
 import {
   MOCK_COA_ACCOUNTS,
@@ -132,6 +133,18 @@ const PAGE_SIZE = 25
 const DEFAULT_COL_W: Record<string, number> = {
   checkbox: 40, date: 110, description: 260, name: 150,
   account: 180, withdrawal: 120, deposit: 120, actions: 100,
+}
+
+const BANK_TX_COL_ORDER = ['checkbox', 'date', 'description', 'name', 'account', 'withdrawal', 'deposit', 'actions']
+const BANK_TX_MIN_COL_W: Record<string, number> = {
+  checkbox: 40,
+  date: 80,
+  description: 80,
+  name: 80,
+  account: 80,
+  withdrawal: 80,
+  deposit: 80,
+  actions: 100,
 }
 
 // ─── Mock fallback — convert from mockGLState types ───────────────────────────
@@ -424,7 +437,18 @@ export default function BankFeedPage() {
 
   // ── Column widths ──────────────────────────────────────────────────────────
   const [colW, setColW] = useState<Record<string, number>>(DEFAULT_COL_W)
-  const resizingRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
+  const colWRef = useRef(colW)
+  useEffect(() => { colWRef.current = colW }, [colW])
+  const saveColW = useCallback((next: Record<string, number>) => {
+    setColW(next)
+  }, [])
+  const { containerRef, startResize } = useFixedWidthResizableMap({
+    widths: colW,
+    widthsRef: colWRef,
+    order: BANK_TX_COL_ORDER,
+    saveWidths: saveColW,
+    minWidth: BANK_TX_MIN_COL_W,
+  })
 
   // ── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState('')
@@ -551,26 +575,6 @@ export default function BankFeedPage() {
     if (selectedAcct) { setPage(1); setSelected(new Set()); loadTransactions(selectedAcct) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAcct])
-
-  // ─── Column resize ─────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const r = resizingRef.current; if (!r) return
-      const min = DEFAULT_COL_W[r.key] ?? 60
-      setColW(prev => ({ ...prev, [r.key]: Math.max(min, r.startW + e.clientX - r.startX) }))
-    }
-    const onUp = () => { resizingRef.current = null; document.body.style.cursor = '' }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
-  }, [])
-
-  const startResize = (e: React.MouseEvent, key: string) => {
-    e.preventDefault(); e.stopPropagation()
-    resizingRef.current = { key, startX: e.clientX, startW: colW[key] ?? DEFAULT_COL_W[key] ?? 100 }
-    document.body.style.cursor = 'col-resize'
-  }
 
   // ─── Click-outside for dropdowns ──────────────────────────────────────────
 
@@ -1033,8 +1037,6 @@ export default function BankFeedPage() {
     )
   }
 
-  const totalMinW = Object.values(colW).reduce((s, v) => s + v, 0)
-
   return (
     <div className="min-h-screen bg-slate-50">
 
@@ -1258,10 +1260,10 @@ export default function BankFeedPage() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 
           {/* ── E. Table ─────────────────────────────────────────────────── */}
-          <div className="overflow-x-auto">
+          <div ref={containerRef} className={`${txTableIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
             <table
               className="w-full text-left border-collapse"
-              style={{ tableLayout: 'fixed', minWidth: totalMinW }}
+              style={{ tableLayout: 'fixed', width: '100%' }}
             >
               <thead>
                 <tr className="border-b-2 border-slate-200">

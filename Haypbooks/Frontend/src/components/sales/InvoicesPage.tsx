@@ -14,6 +14,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import InvoiceDetailPage from './InvoiceDetailPage'
 import TemplateGallery from './invoice-templates/TemplateGallery'
 import EmailPreviewModal from './EmailPreviewModal'
@@ -200,17 +201,12 @@ export default function InvoicesPage() {
   const invColsRef = useRef(invCols)
   useEffect(() => { invColsRef.current = invCols }, [invCols])
   const saveInvCols = (next: InvColDef[]) => { setInvCols(next); try { localStorage.setItem('invoices-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const invResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startInvResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    invResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => {
-      if (!invResizeRef.current) return
-      saveInvCols(invColsRef.current.map(c => c.key === invResizeRef.current!.key ? { ...c, width: Math.max(80, invResizeRef.current!.startW + mv.clientX - invResizeRef.current!.startX) } : c))
-    }
-    const onUp = () => { invResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: startInvResize, isOverflowing: invoicesIsOverflowing } = useFixedWidthResizableColumns({
+    columns: invCols,
+    columnsRef: invColsRef,
+    saveColumns: saveInvCols,
+    fixedWidth: 92,
+  })
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
   const fmtDate = (d: string) => {
@@ -328,8 +324,8 @@ export default function InvoicesPage() {
       </AnimatePresence>
 
       {/* Table */}
-      <div className="rounded-xl border border-gray-200 overflow-x-auto bg-white shadow-sm">
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: 750 }}>
+      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${invoicesIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
+        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 44 }} />
             {invCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
@@ -349,7 +345,7 @@ export default function InvoicesPage() {
                   <button onClick={() => toggleSort(c.key as InvSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                     <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
                   </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startInvResize(e, c.key, c.width)} />
+                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startInvResize(e, c.key)} />
                 </th>
               ))}
               <th className="w-12 px-4 py-2.5"></th>

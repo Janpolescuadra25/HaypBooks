@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { useToast } from '@/components/ToastProvider'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -108,6 +109,13 @@ export default function WriteOffsPage() {
     try { localStorage.setItem('write-offs-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
   }
 
+  const { containerRef, startResize, isOverflowing: writeOffsIsOverflowing } = useFixedWidthResizableColumns({
+    columns: cols,
+    columnsRef: colsRef,
+    saveColumns: saveCols,
+    fixedWidth: 154,
+  })
+
   const fetchItems = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
@@ -159,20 +167,6 @@ export default function WriteOffsPage() {
     const next = new Set(selectedIds)
     if (next.has(id)) next.delete(id); else next.add(id)
     setSelectedIds(next)
-  }
-
-  const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    resizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => {
-      if (!resizeRef.current) return
-      const newW = Math.max(80, resizeRef.current.startW + mv.clientX - resizeRef.current.startX)
-      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: newW } : c))
-    }
-    const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
   }
 
   const handleApprove = async (id: string) => {
@@ -337,8 +331,8 @@ export default function WriteOffsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
-        <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 700 }}>
+      <div ref={containerRef} className={`bg-white rounded-xl border border-gray-200 ${writeOffsIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} shadow-sm`}>
+        <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 44 }} />
             {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
@@ -357,7 +351,7 @@ export default function WriteOffsPage() {
                     <span className="truncate">{c.label}</span>
                     <ArrowUpDown size={12} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
                   </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
+                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key)} />
                 </th>
               ))}
               <th className="px-3 py-3 text-right font-semibold text-gray-600">Actions</th>

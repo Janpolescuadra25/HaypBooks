@@ -6,6 +6,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
 
@@ -182,27 +183,12 @@ export default function QuotesEstimatesPage() {
     try { localStorage.setItem('quotes-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
   }
 
-  // Column resize
-  const resizingRef = useRef<{ colKey: string; startX: number; startW: number } | null>(null)
-
-  const onResizeStart = (e: React.MouseEvent, colKey: string, startW: number) => {
-    e.preventDefault()
-    resizingRef.current = { colKey, startX: e.clientX, startW }
-    const onMove = (me: MouseEvent) => {
-      if (!resizingRef.current) return
-      const { colKey: k, startX, startW: sw } = resizingRef.current
-      const delta = me.clientX - startX
-      const newW = Math.max(80, sw + delta)
-      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: newW } : c))
-    }
-    const onUp = () => {
-      resizingRef.current = null
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: onResizeStart, isOverflowing: quotesIsOverflowing } = useFixedWidthResizableColumns({
+    columns: cols,
+    columnsRef: colsRef,
+    saveColumns: saveCols,
+    fixedWidth: 160,
+  })
 
   const searchRef = useRef(search)
   useEffect(() => { searchRef.current = search }, [search])
@@ -585,8 +571,8 @@ export default function QuotesEstimatesPage() {
 
       {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 650 }}>
+        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${quotesIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
             <thead>
               <tr className="bg-slate-100 text-slate-700">
                 <th className="px-3 py-3 w-10 border-r border-slate-200">
@@ -614,7 +600,7 @@ export default function QuotesEstimatesPage() {
                     </button>
                     {ci < visibleCols.length - 1 && (
                       <span
-                        onMouseDown={e => onResizeStart(e, col.key, col.width)}
+                        onMouseDown={e => onResizeStart(e, col.key)}
                         className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30"
                       />
                     )}

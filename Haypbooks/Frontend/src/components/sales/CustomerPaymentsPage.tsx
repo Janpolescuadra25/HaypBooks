@@ -6,6 +6,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
 
@@ -148,17 +149,12 @@ export default function CustomerPaymentsPage() {
   const colsRef = useRef(cols)
   useEffect(() => { colsRef.current = cols }, [cols])
   const saveCols = (next: ColDef[]) => { setCols(next); try { localStorage.setItem('customer-payments-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    resizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => {
-      if (!resizeRef.current) return
-      saveCols(colsRef.current.map(c => c.key === resizeRef.current!.key ? { ...c, width: Math.max(80, resizeRef.current!.startW + mv.clientX - resizeRef.current!.startX) } : c))
-    }
-    const onUp = () => { resizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize, isOverflowing: customerPaymentsIsOverflowing } = useFixedWidthResizableColumns({
+    columns: cols,
+    columnsRef: colsRef,
+    saveColumns: saveCols,
+    fixedWidth: 80,
+  })
 
   // ─── Fetch payments ──────────────────────────────────────────────────────────
 
@@ -434,8 +430,8 @@ export default function CustomerPaymentsPage() {
 
       {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 700 }}>
+        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${customerPaymentsIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
             <colgroup>
               {cols.map(c => <col key={c.key} style={{ width: c.width }} />)}
               <col style={{ width: 80 }} />
@@ -447,7 +443,7 @@ export default function CustomerPaymentsPage() {
                     <button type="button" onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                       <span className="truncate">{c.label}</span><ArrowUpDown size={12} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                     </button>
-                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key)} />
                   </th>
                 ))}
                 <th className="text-right px-4 py-3 w-20">Actions</th>

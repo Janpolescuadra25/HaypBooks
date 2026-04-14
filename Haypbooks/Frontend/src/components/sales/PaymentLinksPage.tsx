@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { ArrowUpDown } from 'lucide-react'
 
 type PaymentLinkRow = {
@@ -158,14 +159,12 @@ export default function PaymentLinksPage() {
   const plinkColsRef = useRef(plinkCols)
   useEffect(() => { plinkColsRef.current = plinkCols }, [plinkCols])
   const savePlinkCols = (next: PlinkColDef[]) => { setPlinkCols(next); try { localStorage.setItem('payment-links-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const plinkResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startPlinkResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    plinkResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!plinkResizeRef.current) return; savePlinkCols(plinkColsRef.current.map(c => c.key === plinkResizeRef.current!.key ? { ...c, width: Math.max(80, plinkResizeRef.current!.startW + mv.clientX - plinkResizeRef.current!.startX) } : c)) }
-    const onUp = () => { plinkResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: startPlinkResize } = useFixedWidthResizableColumns({
+    columns: plinkCols,
+    columnsRef: plinkColsRef,
+    saveColumns: savePlinkCols,
+    fixedWidth: 80,
+  })
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -199,8 +198,8 @@ export default function PaymentLinksPage() {
       </div>
 
       <div className="px-6 py-5">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 710 }}>
+        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${paymentLinksIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
             <colgroup>
               {plinkCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
               <col style={{ width: 80 }} />
@@ -212,7 +211,7 @@ export default function PaymentLinksPage() {
                     <button onClick={() => toggleSort(c.key as PaymentLinkSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                       <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                     </button>
-                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPlinkResize(e, c.key, c.width)} />
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPlinkResize(e, c.key)} />
                   </th>
                 ))}
                 <th className="text-left px-4 py-3">Actions</th>

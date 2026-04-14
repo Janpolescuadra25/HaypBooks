@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { ArrowUpDown } from 'lucide-react'
 
 type RecognitionRow = {
@@ -220,14 +221,12 @@ export default function RevenueRecognitionPage() {
   const revRecColsRef = useRef(revRecCols)
   useEffect(() => { revRecColsRef.current = revRecCols }, [revRecCols])
   const saveRevRecCols = (next: RevRecColDef[]) => { setRevRecCols(next); try { localStorage.setItem('revrec-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const revRecResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startRevRecResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    revRecResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!revRecResizeRef.current) return; saveRevRecCols(revRecColsRef.current.map(c => c.key === revRecResizeRef.current!.key ? { ...c, width: Math.max(80, revRecResizeRef.current!.startW + mv.clientX - revRecResizeRef.current!.startX) } : c)) }
-    const onUp = () => { revRecResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: startRevRecResize, isOverflowing: revRecIsOverflowing } = useFixedWidthResizableColumns({
+    columns: revRecCols,
+    columnsRef: revRecColsRef,
+    saveColumns: saveRevRecCols,
+    fixedWidth: 190,
+  })
 
   const totalRecognized = useMemo(() => filtered.reduce((s, r) => s + (r.recognizedToDate ?? 0), 0), [filtered])
   const totalRemaining = useMemo(() => filtered.reduce((s, r) => s + (r.remaining ?? 0), 0), [filtered])
@@ -329,8 +328,8 @@ export default function RevenueRecognitionPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 880 }}>
+            <div ref={containerRef} className={`${revRecIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <colgroup>
                   {revRecCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
                   <col style={{ width: 110 }} />
@@ -343,7 +342,7 @@ export default function RevenueRecognitionPage() {
                         <button onClick={() => toggleSort(c.key as RevRecSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                           <span className="truncate">{c.label}</span><ArrowUpDown size={10} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                         </button>
-                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startRevRecResize(e, c.key, c.width)} />
+                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startRevRecResize(e, c.key)} />
                       </th>
                     ))}
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap border-r border-slate-200">Period</th>

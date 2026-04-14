@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { ArrowUpDown } from 'lucide-react'
 
 type DeferredRevenueRow = {
@@ -219,14 +220,12 @@ export default function DeferredRevenuePage() {
   const deferredColsRef = useRef(deferredCols)
   useEffect(() => { deferredColsRef.current = deferredCols }, [deferredCols])
   const saveDeferredCols = (next: DeferredColDef[]) => { setDeferredCols(next); try { localStorage.setItem('deferred-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const deferredResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startDeferredResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    deferredResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => { if (!deferredResizeRef.current) return; saveDeferredCols(deferredColsRef.current.map(c => c.key === deferredResizeRef.current!.key ? { ...c, width: Math.max(80, deferredResizeRef.current!.startW + mv.clientX - deferredResizeRef.current!.startX) } : c)) }
-    const onUp = () => { deferredResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: startDeferredResize } = useFixedWidthResizableColumns({
+    columns: deferredCols,
+    columnsRef: deferredColsRef,
+    saveColumns: saveDeferredCols,
+    fixedWidth: 80,
+  })
 
   const totalDeferred = useMemo(() => items.filter((r) => r.status === 'Active').reduce((s, r) => s + (r.remainingDeferred ?? 0), 0), [items])
   const totalRecognized = useMemo(() => items.reduce((s, r) => s + (r.recognizedAmount ?? 0), 0), [items])
@@ -328,8 +327,8 @@ export default function DeferredRevenuePage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: 920 }}>
+            <div ref={containerRef} className={`${deferredRevenueIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <colgroup>
                   {deferredCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
                   <col style={{ width: 80 }} />
@@ -341,7 +340,7 @@ export default function DeferredRevenuePage() {
                         <button onClick={() => toggleSort(c.key as DeferredSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                           <span className="truncate">{c.label}</span><ArrowUpDown size={10} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                         </button>
-                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDeferredResize(e, c.key, c.width)} />
+                        <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDeferredResize(e, c.key)} />
                       </th>
                     ))}
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Actions</th>

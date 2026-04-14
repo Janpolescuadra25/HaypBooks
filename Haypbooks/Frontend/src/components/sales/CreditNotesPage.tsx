@@ -6,6 +6,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
 
@@ -159,20 +160,12 @@ export default function CreditNotesPage() {
     try { localStorage.setItem('credit-notes-cols-v1', JSON.stringify(next)) } catch { /* ignore */ }
   }
 
-  // Column resize
-  const resizingRef = useRef<{ colKey: string; startX: number; startW: number } | null>(null)
-  const onResizeStart = (e: React.MouseEvent, colKey: string, startW: number) => {
-    e.preventDefault()
-    resizingRef.current = { colKey, startX: e.clientX, startW }
-    const onMove = (me: MouseEvent) => {
-      if (!resizingRef.current) return
-      const { colKey: k, startX, startW: sw } = resizingRef.current
-      saveCols(colsRef.current.map(c => c.key === k ? { ...c, width: Math.max(80, sw + me.clientX - startX) } : c))
-    }
-    const onUp = () => { resizingRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: onResizeStart, isOverflowing: creditNotesIsOverflowing } = useFixedWidthResizableColumns({
+    columns: cols,
+    columnsRef: colsRef,
+    saveColumns: saveCols,
+    fixedWidth: 160,
+  })
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
@@ -452,8 +445,8 @@ export default function CreditNotesPage() {
 
       {/* Table */}
       <div className="px-6 py-5 flex-1">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: visibleCols.reduce((sum, col) => sum + col.width, 0) + 160 }}>
+        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${creditNotesIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
             <thead>
               <tr className="bg-slate-100 text-slate-700">
                 <th className="px-3 py-3 w-10 border-r border-slate-200">
@@ -476,7 +469,7 @@ export default function CreditNotesPage() {
                       <ArrowUpDown size={11} className={`shrink-0 ${sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                     </button>
                     {ci < visibleCols.length - 1 && (
-                      <span onMouseDown={e => onResizeStart(e, col.key, col.width)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />
+                      <span onMouseDown={e => onResizeStart(e, col.key)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />
                     )}
                   </th>
                 ))}

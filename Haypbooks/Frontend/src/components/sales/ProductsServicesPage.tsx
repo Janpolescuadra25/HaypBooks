@@ -11,6 +11,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import ProductFormModal from './ProductFormModal'
 
 export interface Item {
@@ -124,17 +125,12 @@ export default function ProductsServicesPage() {
   const prodColsRef = useRef(prodCols)
   useEffect(() => { prodColsRef.current = prodCols }, [prodCols])
   const saveProdCols = (next: ProdColDef[]) => { setProdCols(next); try { localStorage.setItem('products-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const prodResizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null)
-  const startProdResize = (e: React.MouseEvent, key: string, w: number) => {
-    e.preventDefault()
-    prodResizeRef.current = { key, startX: e.clientX, startW: w }
-    const onMove = (mv: MouseEvent) => {
-      if (!prodResizeRef.current) return
-      saveProdCols(prodColsRef.current.map(c => c.key === prodResizeRef.current!.key ? { ...c, width: Math.max(80, prodResizeRef.current!.startW + mv.clientX - prodResizeRef.current!.startX) } : c))
-    }
-    const onUp = () => { prodResizeRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
+  const { containerRef, startResize: startProdResize, isOverflowing: prodIsOverflowing } = useFixedWidthResizableColumns({
+    columns: prodCols,
+    columnsRef: prodColsRef,
+    saveColumns: saveProdCols,
+    fixedWidth: 40,
+  })
 
   // Debounce search input — waits 300ms after typing stops
   useEffect(() => {
@@ -313,13 +309,13 @@ export default function ProductsServicesPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+        <div ref={containerRef} className={`bg-white rounded-xl border border-slate-200 ${prodIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-slate-400">
               <Loader2 size={18} className="animate-spin" /> Loading…
             </div>
           ) : (
-            <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: 780 }}>
+            <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
                 {prodCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
                 <col style={{ width: 40 }} />
@@ -331,7 +327,7 @@ export default function ProductsServicesPage() {
                       <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                         <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
                       </button>
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startProdResize(e, c.key, c.width)} />
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startProdResize(e, c.key)} />
                     </th>
                   ))}
                   <th className="w-10 px-2 py-2.5"></th>

@@ -6,6 +6,7 @@ import { Plus, Search, Edit2, Trash2, RefreshCw, Download, Users, ChevronLeft, C
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 const PAGE_SIZE = 25
 const LS_WIDTHS = 'sales-customer-groups-col-widths'
@@ -121,29 +122,20 @@ export default function CustomerGroupsPage() {
     if (typeof window === 'undefined') return defaultWidths
     try { return { ...defaultWidths, ...JSON.parse(localStorage.getItem(LS_WIDTHS) ?? '{}') } } catch { return defaultWidths }
   })
-  const dragRef = useRef<{ col: keyof typeof defaultWidths; startX: number; startW: number } | null>(null)
-
-  const startResize = (col: keyof typeof defaultWidths, e: React.MouseEvent) => {
-    e.preventDefault()
-    dragRef.current = { col, startX: e.clientX, startW: colWidths[col] }
-    const onMove = (mv: MouseEvent) => {
-      if (!dragRef.current) return
-      const { col: dragCol, startW, startX } = dragRef.current
-      const newW = Math.max(80, startW + mv.clientX - startX)
-      setColWidths(prev => {
-        const next = { ...prev, [dragCol]: newW }
-        localStorage.setItem(LS_WIDTHS, JSON.stringify(next))
-        return next
-      })
-    }
-    const onUp = () => {
-      dragRef.current = null
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
+  const colWidthsRef = useRef(colWidths)
+  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
+  const saveColWidths = useCallback((next: typeof defaultWidths) => {
+    setColWidths(next)
+    localStorage.setItem(LS_WIDTHS, JSON.stringify(next))
+  }, [])
+  const { containerRef, startResize, isOverflowing: customerGroupsIsOverflowing } = useFixedWidthResizableMap({
+    widths: colWidths,
+    widthsRef: colWidthsRef,
+    order: ['name', 'description', 'count', 'actions'],
+    saveWidths: saveColWidths,
+    fixedWidth: 40,
+    minWidth: { name: 80, description: 80, count: 80, actions: 100 },
+  })
 
   const fetchGroups = useCallback(async () => {
     if (!companyId) return
@@ -233,7 +225,7 @@ export default function CustomerGroupsPage() {
   const ResizeHandle = ({ col }: { col: keyof typeof defaultWidths }) => (
     <span
       className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none hover:bg-blue-400 opacity-0 group-hover:opacity-100"
-      onMouseDown={e => startResize(col, e)}
+      onMouseDown={e => startResize(e, col)}
     />
   )
 
@@ -320,7 +312,7 @@ export default function CustomerGroupsPage() {
       {/* Table */}
       <div className="px-6 py-5">
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          <div ref={containerRef} className={`${customerGroupsIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
             <table className="w-full text-sm table-fixed">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
