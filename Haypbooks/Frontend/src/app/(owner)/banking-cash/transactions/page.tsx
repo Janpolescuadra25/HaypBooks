@@ -207,8 +207,8 @@ function EntityIcon({ type }: { type: string }) {
 function SortIcon({ col, sk, sd }: { col: SortKey; sk: SortKey; sd: SortDir }) {
   if (sk !== col) return <ChevronDown size={12} className="inline ml-0.5 text-slate-300" />
   return sd === 'asc'
-    ? <ChevronUp   size={12} className="inline ml-0.5 text-slate-700" />
-    : <ChevronDown size={12} className="inline ml-0.5 text-slate-700" />
+    ? <ChevronUp   size={12} className="inline ml-0.5 text-slate-500" />
+    : <ChevronDown size={12} className="inline ml-0.5 text-slate-500" />
 }
 
 // ─── CoaDropdown (module-level) ───────────────────────────────────────────────
@@ -1020,7 +1020,7 @@ export default function BankFeedPage() {
   function ResizeHandle({ col }: { col: string }) {
     return (
       <div
-        className="absolute top-0 right-0 h-full w-1.5 hover:bg-emerald-400/40 transition-colors"
+        className="absolute top-0 right-0 h-full w-1.5 hover:bg-gray-300/60 transition-colors"
         style={{ cursor: 'col-resize' }}
         onMouseDown={e => startResize(e, col)}
       />
