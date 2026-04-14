@@ -494,7 +494,7 @@ export class ArRepository {
                         quantity: l.quantity ?? 1,
                         unitPrice: l.unitPrice ?? 0,
                         amount: l.amount ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0),
-                        itemId: l.itemId ?? null,
+                        itemId: l.itemId ?? undefined,
                     })),
                 },
             },
@@ -521,7 +521,7 @@ export class ArRepository {
                     quantity: l.quantity ?? 1,
                     unitPrice: l.unitPrice ?? 0,
                     amount: l.amount ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0),
-                    itemId: l.itemId ?? null,
+                    itemId: l.itemId ?? undefined,
                 })),
             }
         }
@@ -683,7 +683,7 @@ export class ArRepository {
                         quantity: l.quantity ?? 1,
                         unitPrice: l.unitPrice ?? 0,
                         totalPrice: l.amount ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0),
-                        itemId: l.itemId ?? null,
+                        itemId: l.itemId ?? undefined,
                         discountPercent: l.discountPercent ?? null,
                         discountAmount: l.discountAmount ?? null,
                     })),
@@ -724,7 +724,7 @@ export class ArRepository {
                                 quantity: l.quantity ?? 1,
                                 unitPrice: l.unitPrice ?? 0,
                                 totalPrice: l.amount ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0),
-                                itemId: l.itemId ?? null,
+                                itemId: l.itemId ?? undefined,
                             })),
                         },
                     } : {}),
@@ -1112,7 +1112,7 @@ export class ArRepository {
                 status: data.status ?? 'ACTIVE',
                 isActive: data.status !== 'PAUSED',
                 templateData: data.templateData ?? {},
-                recurrenceRule: data.recurrenceRule ?? null,
+                recurrenceRule: data.recurrenceRule ?? undefined,
             },
             include: {
                 customer: { include: { contact: { select: { displayName: true } } } },
@@ -1327,7 +1327,7 @@ export class ArRepository {
 
     async createSalesOrder(workspaceId: string, companyId: string, data: any) {
         const count = await this.prisma.salesOrder.count({ where: { companyId } })
-        const orderNumber = data.orderNumber ?? `SO-${String(count + 1).padStart(6, '0')}`
+        const orderNumber = data.orderNumber ?? `SO-${String(count + 1).padStart(6, '0')}-${Date.now().toString(36).toUpperCase()}`
         const totalAmount = (data.lines ?? []).reduce((s: number, l: any) => s + (Number(l.quantity) * Number(l.unitPrice)), 0)
         const r = await this.prisma.salesOrder.create({
             data: {
@@ -1345,7 +1345,7 @@ export class ArRepository {
                         quantity: l.quantity,
                         unitPrice: l.unitPrice,
                         amount: Number(l.quantity) * Number(l.unitPrice),
-                        itemId: l.itemId ?? null,
+                        itemId: l.itemId ?? undefined,
                     })),
                 },
             },
@@ -1412,7 +1412,7 @@ export class ArRepository {
                         quantity: l.quantity,
                         unitPrice: l.unitPrice,
                         totalPrice: l.amount,
-                        itemId: l.itemId ?? null,
+                        itemId: l.itemId ?? undefined,
                     })),
                 },
             },

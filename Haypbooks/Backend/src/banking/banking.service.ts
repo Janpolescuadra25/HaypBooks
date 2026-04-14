@@ -44,7 +44,17 @@ export class BankingService {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
         if (!data.name) throw new BadRequestException('Bank account name is required')
-        const result = await this.repo.createBankAccount(wid, data)
+        // Filter to only schema-valid fields; map bankName → institution
+        const accountData = {
+            name: data.name,
+            institution: data.institution ?? data.bankName ?? undefined,
+            accountNumber: data.accountNumber ?? undefined,
+            routingNumber: data.routingNumber ?? undefined,
+            swiftCode: data.swiftCode ?? undefined,
+            iban: data.iban ?? undefined,
+            isDefault: data.isDefault ?? false,
+        }
+        const result = await this.repo.createBankAccount(wid, accountData)
         this.prisma.auditLog.create({
             data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'BankAccount', recordId: result.id, changes: { name: data.name } },
         }).catch(() => {})
