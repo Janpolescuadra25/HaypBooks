@@ -327,14 +327,14 @@ export default function CustomerGroupsPage() {
                   <th className="w-10 px-3 py-3">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" />
                   </th>
-                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold" style={{ width: colWidths.name }}>
-                    Name <ResizeHandle col="name" />
+                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" style={{ width: colWidths.name, minWidth: colWidths.name, maxWidth: colWidths.name }} title="Name">
+                    <span className="block truncate pr-3">Name</span><ResizeHandle col="name" />
                   </th>
-                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold" style={{ width: colWidths.description }}>
-                    Description <ResizeHandle col="description" />
+                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }} title="Description">
+                    <span className="block truncate pr-3">Description</span><ResizeHandle col="description" />
                   </th>
-                  <th className="relative group text-right px-4 py-3 text-gray-600 font-semibold" style={{ width: colWidths.count }}>
-                    Customers <ResizeHandle col="count" />
+                  <th className="relative group text-right px-4 py-3 text-gray-600 font-semibold overflow-hidden" style={{ width: colWidths.count, minWidth: colWidths.count, maxWidth: colWidths.count }} title="Customers">
+                    <span className="block truncate pr-3">Customers</span><ResizeHandle col="count" />
                   </th>
                   <th className="text-right px-4 py-3 text-gray-600 font-semibold" style={{ width: colWidths.actions }}>Actions</th>
                 </tr>

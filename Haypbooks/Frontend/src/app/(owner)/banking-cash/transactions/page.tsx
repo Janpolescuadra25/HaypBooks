@@ -1274,44 +1274,68 @@ export default function BankFeedPage() {
                     <ResizeHandle col="checkbox" />
                   </th>
                   {/* Date */}
-                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.date }}
+                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.date, maxWidth: colW.date }}
+                      title="Date"
                       onClick={() => handleSort('date')}>
-                    Date <SortIcon col="date" sk={sortKey} sd={sortDir} />
+                    <div className="flex items-center gap-1 min-w-0 overflow-hidden pr-2">
+                      <span className="truncate">Date</span>
+                      <span className="shrink-0"><SortIcon col="date" sk={sortKey} sd={sortDir} /></span>
+                    </div>
                     <ResizeHandle col="date" />
                   </th>
                   {/* Description */}
-                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.description }}
+                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.description, maxWidth: colW.description }}
+                      title="Description"
                       onClick={() => handleSort('description')}>
-                    Description <SortIcon col="description" sk={sortKey} sd={sortDir} />
+                    <div className="flex items-center gap-1 min-w-0 overflow-hidden pr-2">
+                      <span className="truncate">Description</span>
+                      <span className="shrink-0"><SortIcon col="description" sk={sortKey} sd={sortDir} /></span>
+                    </div>
                     <ResizeHandle col="description" />
                   </th>
                   {/* Name */}
-                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.name }}
+                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.name, maxWidth: colW.name }}
+                      title="Name"
                       onClick={() => handleSort('name')}>
-                    Name <SortIcon col="name" sk={sortKey} sd={sortDir} />
+                    <div className="flex items-center gap-1 min-w-0 overflow-hidden pr-2">
+                      <span className="truncate">Name</span>
+                      <span className="shrink-0"><SortIcon col="name" sk={sortKey} sd={sortDir} /></span>
+                    </div>
                     <ResizeHandle col="name" />
                   </th>
                   {/* Account */}
-                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.account }}
+                  <th className={`${thClass} cursor-pointer`} style={{ width: colW.account, maxWidth: colW.account }}
+                      title="Account"
                       onClick={() => handleSort('account')}>
-                    Account <SortIcon col="account" sk={sortKey} sd={sortDir} />
+                    <div className="flex items-center gap-1 min-w-0 overflow-hidden pr-2">
+                      <span className="truncate">Account</span>
+                      <span className="shrink-0"><SortIcon col="account" sk={sortKey} sd={sortDir} /></span>
+                    </div>
                     <ResizeHandle col="account" />
                   </th>
                   {/* Withdrawal */}
-                  <th className={`${thClass} text-right cursor-pointer`} style={{ width: colW.withdrawal }}
+                  <th className={`${thClass} text-right cursor-pointer`} style={{ width: colW.withdrawal, maxWidth: colW.withdrawal }}
+                      title="Withdrawal"
                       onClick={() => handleSort('withdrawal')}>
-                    Withdrawal <SortIcon col="withdrawal" sk={sortKey} sd={sortDir} />
+                    <div className="flex items-center justify-end gap-1 min-w-0 overflow-hidden pr-2">
+                      <span className="truncate">Withdrawal</span>
+                      <span className="shrink-0"><SortIcon col="withdrawal" sk={sortKey} sd={sortDir} /></span>
+                    </div>
                     <ResizeHandle col="withdrawal" />
                   </th>
                   {/* Deposit */}
-                  <th className={`${thClass} text-right cursor-pointer`} style={{ width: colW.deposit }}
+                  <th className={`${thClass} text-right cursor-pointer`} style={{ width: colW.deposit, maxWidth: colW.deposit }}
+                      title="Deposit"
                       onClick={() => handleSort('deposit')}>
-                    Deposit <SortIcon col="deposit" sk={sortKey} sd={sortDir} />
+                    <div className="flex items-center justify-end gap-1 min-w-0 overflow-hidden pr-2">
+                      <span className="truncate">Deposit</span>
+                      <span className="shrink-0"><SortIcon col="deposit" sk={sortKey} sd={sortDir} /></span>
+                    </div>
                     <ResizeHandle col="deposit" />
                   </th>
                   {/* Actions */}
-                  <th className={thClass} style={{ width: colW.actions }}>
-                    Actions
+                  <th className={thClass} style={{ width: colW.actions, maxWidth: colW.actions }} title="Actions">
+                    <span className="block truncate pr-2">Actions</span>
                     <ResizeHandle col="actions" />
                   </th>
                 </tr>

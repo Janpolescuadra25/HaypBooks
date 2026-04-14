@@ -483,7 +483,7 @@ export default function CollectionsCenterPage() {
       {/* Table */}
       <div className="px-6 py-5 flex-1">
         <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed', minWidth: visibleCols.reduce((sum, col) => sum + col.width, 0) + 160 }}>
             <thead>
               <tr className="bg-slate-100 text-slate-700">
                 <th className="px-3 py-3 w-10 border-r border-slate-200">
@@ -492,16 +492,17 @@ export default function CollectionsCenterPage() {
                 {visibleCols.map((col, ci) => (
                   <th
                     key={col.key}
-                    style={{ width: col.width, minWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
+                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 overflow-hidden ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    title={col.label}
                   >
                     <button
                       onClick={() => toggleSort(col.key as SortKey)}
-                      className="flex items-center gap-1 w-full"
+                      className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2"
                       style={{ justifyContent: col.align === 'right' ? 'flex-end' : 'flex-start' }}
                     >
-                      <span>{col.label}</span>
-                      <ArrowUpDown size={11} className={sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'} />
+                      <span className="truncate">{col.label}</span>
+                      <ArrowUpDown size={11} className={`shrink-0 ${sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                     </button>
                     {ci < visibleCols.length - 1 && (
                       <span onMouseDown={e => onResizeStart(e, col.key, col.width)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />

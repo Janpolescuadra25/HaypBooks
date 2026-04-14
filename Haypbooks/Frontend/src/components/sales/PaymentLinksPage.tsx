@@ -208,9 +208,9 @@ export default function PaymentLinksPage() {
             <thead>
               <tr className="bg-slate-100 text-slate-700">
                 {plinkCols.map(c => (
-                  <th key={c.key} className="relative px-4 py-3 border-r border-slate-200 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                    <button onClick={() => toggleSort(c.key as PaymentLinkSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
-                      <span>{c.label}</span><ArrowUpDown size={11} className={sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'} />
+                  <th key={c.key} className="relative px-4 py-3 border-r border-slate-200 select-none overflow-hidden" style={{ width: c.width, minWidth: c.width, maxWidth: c.width, textAlign: c.align === 'right' ? 'right' : 'left' }} title={c.label}>
+                    <button onClick={() => toggleSort(c.key as PaymentLinkSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                      <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                     </button>
                     <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPlinkResize(e, c.key, c.width)} />
                   </th>

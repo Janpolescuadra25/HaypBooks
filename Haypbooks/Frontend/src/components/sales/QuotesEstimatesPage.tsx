@@ -600,16 +600,17 @@ export default function QuotesEstimatesPage() {
                 {visibleCols.map((col, ci) => (
                   <th
                     key={col.key}
-                    style={{ width: col.width, minWidth: col.width }}
-                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
+                    className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide relative select-none border-r border-slate-200 overflow-hidden ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    title={col.label}
                   >
                     <button
                       type="button"
                       onClick={() => toggleSort(col.key as SortKey)}
-                      className={`inline-flex items-center gap-1 ${col.align === 'right' ? 'ml-auto' : ''}`}
+                      className={`inline-flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2 ${col.align === 'right' ? 'justify-end' : ''}`}
                     >
-                      <span>{col.label}</span>
-                      <ArrowUpDown size={11} className={sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'} />
+                      <span className="truncate">{col.label}</span>
+                      <ArrowUpDown size={11} className={`shrink-0 ${sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                     </button>
                     {ci < visibleCols.length - 1 && (
                       <span

@@ -347,14 +347,15 @@ export default function RefundsPage() {
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-3 py-3 border-r border-gray-200"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" /></th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none border-r border-gray-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                <th key={c.key} className="relative px-3 py-3 font-semibold text-gray-600 select-none border-r border-gray-200 overflow-hidden" style={{ width: c.width, minWidth: c.width, maxWidth: c.width, textAlign: c.align === 'right' ? 'right' : 'left' }} title={c.label}>
                   <button
                     type="button"
                     onClick={() => toggleSort(c.key as SortKey)}
-                    className={`inline-flex items-center gap-1 ${c.align === 'right' ? 'ml-auto' : ''}`}
+                    className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2"
+                    style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}
                   >
-                    <span>{c.label}</span>
-                    <ArrowUpDown size={12} className={sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'} />
+                    <span className="truncate">{c.label}</span>
+                    <ArrowUpDown size={12} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
                   </button>
                   <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, c.key, c.width)} />
                 </th>

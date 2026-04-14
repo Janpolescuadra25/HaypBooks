@@ -207,9 +207,9 @@ export default function ArAgingPage() {
                 <thead>
                   <tr className="bg-emerald-50/50 border-b border-emerald-100">
                     {agingCols.map(c => (
-                      <th key={c.key} className="relative px-4 py-3 font-medium text-emerald-700 border-r border-emerald-100 select-none" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                        <button onClick={() => toggleAgingSort(c.key as AgingSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
-                          <span>{c.label}</span><ArrowUpDown size={11} className={agingSortKey === c.key ? 'text-emerald-600' : 'text-emerald-300'} />
+                      <th key={c.key} className="relative px-4 py-3 font-medium text-emerald-700 border-r border-emerald-100 select-none overflow-hidden" style={{ width: c.width, minWidth: c.width, maxWidth: c.width, textAlign: c.align === 'right' ? 'right' : 'left' }} title={c.label}>
+                        <button onClick={() => toggleAgingSort(c.key as AgingSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                          <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${agingSortKey === c.key ? 'text-emerald-600' : 'text-emerald-300'}`} />
                         </button>
                         <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startAgingResize(e, c.key, c.width)} />
                       </th>

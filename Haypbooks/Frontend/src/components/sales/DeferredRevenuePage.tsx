@@ -337,9 +337,9 @@ export default function DeferredRevenuePage() {
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     {deferredCols.map(c => (
-                      <th key={c.key} className="relative px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide select-none border-r border-slate-200" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                        <button onClick={() => toggleSort(c.key as DeferredSortKey)} className="flex items-center gap-1" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
-                          <span>{c.label}</span><ArrowUpDown size={10} className={sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'} />
+                      <th key={c.key} className="relative px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide select-none border-r border-slate-200 overflow-hidden" style={{ width: c.width, minWidth: c.width, maxWidth: c.width, textAlign: c.align === 'right' ? 'right' : 'left' }} title={c.label}>
+                        <button onClick={() => toggleSort(c.key as DeferredSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                          <span className="truncate">{c.label}</span><ArrowUpDown size={10} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                         </button>
                         <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDeferredResize(e, c.key, c.width)} />
                       </th>
