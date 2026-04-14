@@ -184,9 +184,8 @@ export default function CustomerPaymentsPage() {
 
   // ─── Load customers for dropdown ─────────────────────────────────────────────
 
-  const loadCustomers = useCallback(async (force = false) => {
-    if (!companyId || customersLoading) return
-    if (!force && customers.length > 0) return
+  const loadCustomers = useCallback(async () => {
+    if (!companyId) return
     setCustomersLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
@@ -203,7 +202,7 @@ export default function CustomerPaymentsPage() {
     } finally {
       setCustomersLoading(false)
     }
-  }, [companyId, customers.length, customersLoading])
+  }, [companyId])
 
   // ─── Load open invoices when customer selected ────────────────────────────────
 
@@ -261,7 +260,7 @@ export default function CustomerPaymentsPage() {
     setInvoices([])
     setSaveError('')
     setNewPaymentOpen(true)
-    loadCustomers(true)
+    loadCustomers()
   }
 
   function closeModal() {
@@ -567,7 +566,7 @@ export default function CustomerPaymentsPage() {
                 loading={customersLoading}
                 placeholder="Select customer..."
                 createLabel="+ Create New Customer"
-                onOpen={() => loadCustomers(true)}
+                onOpen={loadCustomers}
                 onChange={(id) => setForm((f) => ({ ...f, customerId: id, invoiceId: '', amount: '' }))}
                 onCreateNew={() => setShowQuickAddCustomer(true)}
               />

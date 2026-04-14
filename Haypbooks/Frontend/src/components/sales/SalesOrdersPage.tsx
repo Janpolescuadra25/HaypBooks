@@ -143,9 +143,8 @@ export default function SalesOrdersPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const loadCustomers = useCallback(async (force = false) => {
-    if (!companyId || customersLoading) return
-    if (!force && customers.length > 0) return
+  const loadCustomers = useCallback(async () => {
+    if (!companyId) return
     setCustomersLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
@@ -160,7 +159,7 @@ export default function SalesOrdersPage() {
     } finally {
       setCustomersLoading(false)
     }
-  }, [companyId, customers.length, customersLoading])
+  }, [companyId])
 
   const filtered = useMemo(() => {
     return items.filter(row => {
@@ -242,7 +241,7 @@ export default function SalesOrdersPage() {
     setEditing(null)
     setFormData({ customerId: '', orderDate: new Date().toISOString().split('T')[0], shipDate: '', lines: [emptyLine()] })
     setShowForm(true)
-    loadCustomers(true)
+    loadCustomers()
   }
 
   const setLine = (i: number, field: keyof SalesOrderLine, value: string | number) =>
@@ -461,7 +460,7 @@ export default function SalesOrdersPage() {
                 loading={customersLoading}
                 placeholder="Select customer..."
                 createLabel="+ Create New Customer"
-                onOpen={() => loadCustomers(true)}
+                onOpen={loadCustomers}
                 onChange={(id) => setFormData((f) => ({ ...f, customerId: id }))}
                 onCreateNew={() => setShowQuickAddCustomer(true)}
               />

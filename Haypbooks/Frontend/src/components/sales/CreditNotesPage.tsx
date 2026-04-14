@@ -316,9 +316,8 @@ export default function CreditNotesPage() {
 
   // ─── Load customers ───────────────────────────────────────────────────────
 
-  const loadCustomers = useCallback(async (force = false) => {
-    if (!companyId || custLoading) return
-    if (!force && customers.length > 0) return
+  const loadCustomers = useCallback(async () => {
+    if (!companyId) return
     setCustLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
@@ -326,13 +325,13 @@ export default function CreditNotesPage() {
       setCustomers(raw.map((c: any) => ({ id: c.id || c.contactId, name: c.name || c.displayName || '—' })))
     } catch { /* non-blocking */ }
     finally { setCustLoading(false) }
-  }, [companyId, customers.length, custLoading])
+  }, [companyId])
 
   function openModal() {
     setNc({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
     setSaveError('')
     setNewOpen(true)
-    loadCustomers(true)
+    loadCustomers()
   }
 
   async function submitNewCreditNote(e: React.FormEvent) {
@@ -670,7 +669,7 @@ export default function CreditNotesPage() {
                 loading={custLoading}
                 placeholder="Select customer..."
                 createLabel="+ Create New Customer"
-                onOpen={() => loadCustomers(true)}
+                onOpen={loadCustomers}
                 onChange={(id) => { setNc((p) => ({ ...p, customerId: id })); setInvoices([]) }}
                 onCreateNew={() => setShowQuickAddCustomer(true)}
               />

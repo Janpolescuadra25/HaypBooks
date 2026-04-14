@@ -347,6 +347,57 @@ export class SubLedgerService {
     }
   }
 
+  // ─── AR: Reverse Payment Received (DR: Accounts Receivable  CR: Cash/Bank) ─
+
+  /**
+   * Called when a PaymentReceived is voided.
+   * Reverses the original receipt JournalEntry by swapping debit/credit:
+   *   DR Accounts Receivable   (payment amount)
+   *   CR Cash / Bank Account   (payment amount)
+   * Marks the original JE as VOIDED and clears journalEntryId on the payment.
+   */
+  async reversePaymentReceivedGL(paymentId: string, postedById?: string): Promise<void> {
+    try {
+      const payment = await this.prisma.paymentReceived.findUnique({ where: { id: paymentId } })
+      if (!payment) return
+      if (!(payment as any).journalEntryId) return
+
+      const originalJE = await this.prisma.journalEntry.findUnique({
+        where: { id: (payment as any).journalEntryId },
+        include: { lines: true },
+      })
+      if (!originalJE || !originalJE.lines.length) return
+
+      const reversalLines = originalJE.lines.map((line: any) => ({
+        accountId: line.accountId,
+        debit: Number(line.credit ?? 0),
+        credit: Number(line.debit ?? 0),
+        memo: line.description ? `Reversal: ${line.description}` : 'Payment receipt reversal',
+      }))
+
+      await this.prisma.$transaction(async (tx) => {
+        const entryNumber = await this.nextEntryNumber((payment as any).companyId, 'RVP')
+        const je = await this.createPostedJE(tx, {
+          workspaceId: (payment as any).workspaceId,
+          companyId: (payment as any).companyId,
+          date: new Date(),
+          description: `Payment reversal ${(payment as any).referenceNumber ?? paymentId}`,
+          currency: (payment as any).currency ?? 'PHP',
+          createdById: postedById,
+          entryNumber,
+          lines: reversalLines,
+        })
+
+        if (je) {
+          await tx.journalEntry.update({ where: { id: originalJE.id }, data: { postingStatus: 'VOIDED' as any } })
+          await tx.paymentReceived.update({ where: { id: paymentId }, data: { journalEntryId: null } })
+        }
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to reverse payment ${paymentId}: ${err?.message}`)
+    }
+  }
+
   // ─── AP: Bill Approved (DR: Expense/VAT Input/EWT  CR: Accounts Payable) ──
 
   /**

@@ -20,6 +20,7 @@ import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
 import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
 import InvoiceSettingsModal, { DEFAULT_INVOICE_SETTINGS, InvoiceSettings } from '@/components/sales/InvoiceSettingsModal'
+import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import { useToast } from '@/components/ToastProvider'
 
 // ─── Print/PDF template theme definitions ────────────────────────────────────
@@ -229,9 +230,6 @@ export default function InvoiceCreatePage() {
   // Customer
   const [customers, setCustomers] = useState<Customer[]>([])
   const [customerId, setCustomerId] = useState('')
-  const [customerSearch, setCustomerSearch] = useState('')
-  const [showCustomerDD, setShowCustomerDD] = useState(false)
-  const customerSearchRef = useRef<HTMLInputElement>(null)
 
   // Invoice fields
   const today = new Date().toISOString().split('T')[0]
@@ -295,9 +293,8 @@ export default function InvoiceCreatePage() {
   const [showSaveDraftMenu, setShowSaveDraftMenu] = useState(false)
   const [showSendMenu, setShowSendMenu] = useState(false)
 
-  const loadCatalogItems = useCallback(async (force = false) => {
+  const loadCatalogItems = useCallback(async () => {
     if (!companyId) return
-    if (!force && catalogItems.length > 0) return
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?limit=500`)
       const list: any[] = Array.isArray(data) ? data : data.items ?? []
@@ -312,11 +309,10 @@ export default function InvoiceCreatePage() {
     } catch {
       setCatalogItems([])
     }
-  }, [companyId, catalogItems.length])
+  }, [companyId])
 
-  const loadCustomers = useCallback(async (force = false) => {
+  const loadCustomers = useCallback(async () => {
     if (!companyId) return
-    if (!force && customers.length > 0) return
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
       const list: any[] = Array.isArray(data) ? data : data?.data ?? data.items ?? data.customers ?? []
@@ -334,14 +330,14 @@ export default function InvoiceCreatePage() {
     } catch {
       setCustomers([])
     }
-  }, [companyId, customers.length])
+  }, [companyId])
 
   useEffect(() => {
-    loadCatalogItems(true)
+    loadCatalogItems()
   }, [loadCatalogItems])
 
   useEffect(() => {
-    loadCustomers(true)
+    loadCustomers()
   }, [loadCustomers])
 
   useEffect(() => {
@@ -376,20 +372,6 @@ export default function InvoiceCreatePage() {
   }, [customerId, customers])
 
   const selectedCustomer = customers.find(c => c.contactId === customerId)
-  const recentCustomers = customers.slice(0, 5)
-  const filteredCustomers = customerSearch
-    ? customers.filter(c =>
-        c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        c.email.toLowerCase().includes(customerSearch.toLowerCase()))
-    : recentCustomers
-
-  useEffect(() => {
-    if (showCustomerDD) loadCustomers(true)
-  }, [showCustomerDD, loadCustomers])
-
-  useEffect(() => {
-    if (activeCatalogRow) loadCatalogItems(true)
-  }, [activeCatalogRow, loadCatalogItems])
 
   // Calculations
   const subtotal = items.reduce((s, it) => s + (it.quantity * it.unitPrice), 0)
@@ -545,7 +527,7 @@ export default function InvoiceCreatePage() {
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Customer</h3>
               {selectedCustomer && (
                 <button
-                  onClick={() => { setCustomerId(''); setCustomerSearch(''); setBillContact(''); setBillCompany('') }}
+                  onClick={() => { setCustomerId(''); setBillContact(''); setBillCompany('') }}
                   className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1">
                   <X size={12} /> Clear
                 </button>
@@ -577,58 +559,22 @@ export default function InvoiceCreatePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => { setCustomerId(''); setCustomerSearch(''); setShowCustomerDD(true); setTimeout(() => customerSearchRef.current?.focus(), 50) }}
+                  onClick={() => setCustomerId('')}
                   className="text-xs text-emerald-600 hover:text-emerald-700 font-medium border border-emerald-200 hover:border-emerald-400 px-3 py-1.5 rounded-lg transition-colors">
                   Change
                 </button>
               </div>
             ) : (
-              <div className="relative">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    ref={customerSearchRef}
-                    value={customerSearch}
-                    onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDD(true) }}
-                    onFocus={() => setShowCustomerDD(true)}
-                    placeholder="Search customers by name, email or phone…"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm border-2 border-dashed border-gray-200 hover:border-emerald-300 focus:border-emerald-400 rounded-xl focus:outline-none transition-colors bg-gray-50/50" />
-                </div>
-                <AnimatePresence>
-                  {showCustomerDD && (
-                    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      className="absolute z-30 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                      {!customerSearch && (
-                        <p className="px-3 pt-2.5 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Recent</p>
-                      )}
-                      <div className="max-h-52 overflow-y-auto">
-                        {filteredCustomers.length === 0 ? (
-                          <p className="px-3 py-4 text-xs text-gray-400 text-center">No customers found</p>
-                        ) : filteredCustomers.map(c => (
-                          <button key={c.contactId}
-                            onClick={() => { setCustomerId(c.contactId); setCustomerSearch(''); setShowCustomerDD(false) }}
-                            className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-emerald-50 text-left transition-colors">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-800">{c.name}</p>
-                              {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs font-medium text-emerald-600 tabular-nums">{fmt(c.balance)}</p>
-                              {customerId === c.contactId && <Check size={12} className="text-emerald-500 ml-auto" />}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="border-t border-gray-100 p-2">
-                        <button onClick={() => { setShowCustomerDD(false); setShowQuickAddModal(true) }}
-                          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-                          <Plus size={13} /> + Create New Customer
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <CustomerPickerField
+                label=""
+                value={customerId}
+                customers={customers.map(c => ({ id: c.contactId, name: c.name, email: c.email }))}
+                placeholder="Search customers by name or email…"
+                createLabel="+ Create New Customer"
+                onOpen={loadCustomers}
+                onChange={(id) => setCustomerId(id)}
+                onCreateNew={() => setShowQuickAddModal(true)}
+              />
             )}
           </div>
 
@@ -1479,9 +1425,6 @@ export default function InvoiceCreatePage() {
       )}
 
       {/* Dismiss overlays */}
-      {showCustomerDD && (
-        <div className="fixed inset-0 z-20" onClick={() => setShowCustomerDD(false)} />
-      )}
       {showMoreMenu && (
         <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
       )}

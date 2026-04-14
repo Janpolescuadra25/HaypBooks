@@ -352,9 +352,8 @@ export default function QuotesEstimatesPage() {
 
   // ─── Load customers ───────────────────────────────────────────────────────
 
-  const loadCustomers = useCallback(async (force = false) => {
-    if (!companyId || custLoading) return
-    if (!force && customers.length > 0) return
+  const loadCustomers = useCallback(async () => {
+    if (!companyId) return
     setCustLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
@@ -366,7 +365,7 @@ export default function QuotesEstimatesPage() {
       })))
     } catch { /* non-blocking */ }
     finally { setCustLoading(false) }
-  }, [companyId, customers.length, custLoading])
+  }, [companyId])
 
   // ─── Open create/edit modal ───────────────────────────────────────────────
 
@@ -376,7 +375,7 @@ export default function QuotesEstimatesPage() {
     setLines([emptyLine()])
     setSaveError('')
     setModalOpen(true)
-    loadCustomers(true)
+    loadCustomers()
   }
 
   function openEdit(row: QuoteRow) {
@@ -385,7 +384,7 @@ export default function QuotesEstimatesPage() {
     setLines([emptyLine()])
     setSaveError('')
     setModalOpen(true)
-    loadCustomers(true)
+    loadCustomers()
   }
 
   // ─── Line helpers ─────────────────────────────────────────────────────────
@@ -876,7 +875,7 @@ export default function QuotesEstimatesPage() {
                   loading={custLoading}
                   placeholder="Select customer..."
                   createLabel="+ Create New Customer"
-                  onOpen={() => loadCustomers(true)}
+                  onOpen={loadCustomers}
                   onChange={(id) => setForm((f) => ({ ...f, customerId: id }))}
                   onCreateNew={() => setShowQuickAddCustomer(true)}
                 />

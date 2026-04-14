@@ -796,6 +796,8 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         const result = await this.repo.voidPayment(companyId, paymentId)
         if (!result) throw new NotFoundException('Payment not found')
+        // Reverse the DR Cash / CR AR journal entry posted when the payment was recorded
+        await this.subLedger.reversePaymentReceivedGL(paymentId, userId)
         return result
     }
 

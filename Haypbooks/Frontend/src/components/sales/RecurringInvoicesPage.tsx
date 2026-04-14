@@ -147,9 +147,8 @@ export default function RecurringInvoicesPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const loadCustomers = useCallback(async (force = false) => {
-    if (!companyId || customersLoading) return
-    if (!force && customers.length > 0) return
+  const loadCustomers = useCallback(async () => {
+    if (!companyId) return
     setCustomersLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
@@ -164,7 +163,7 @@ export default function RecurringInvoicesPage() {
     } finally {
       setCustomersLoading(false)
     }
-  }, [companyId, customers.length, customersLoading])
+  }, [companyId])
 
   const filtered = useMemo(() => {
     return items.filter(row => {
@@ -299,7 +298,7 @@ export default function RecurringInvoicesPage() {
                 </div></>
             )}
           </div>
-          <button onClick={() => { setShowForm(true); loadCustomers(true) }} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Template</button>
+          <button onClick={() => { setShowForm(true); loadCustomers() }} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Template</button>
         </div>
       </div>
 
@@ -441,7 +440,7 @@ export default function RecurringInvoicesPage() {
                 loading={customersLoading}
                 placeholder="Select customer..."
                 createLabel="+ Create New Customer"
-                onOpen={() => loadCustomers(true)}
+                onOpen={loadCustomers}
                 onChange={(id) => setFormData((f) => ({ ...f, customerId: id }))}
                 onCreateNew={() => setShowQuickAddCustomer(true)}
               />
