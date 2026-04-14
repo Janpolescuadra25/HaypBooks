@@ -442,7 +442,7 @@ export default function BankFeedPage() {
   const saveColW = useCallback((next: Record<string, number>) => {
     setColW(next)
   }, [])
-  const { containerRef, startResize } = useFixedWidthResizableMap({
+  const { containerRef, startResize, isOverflowing: txTableIsOverflowing } = useFixedWidthResizableMap({
     widths: colW,
     widthsRef: colWRef,
     order: BANK_TX_COL_ORDER,
