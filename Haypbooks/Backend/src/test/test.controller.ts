@@ -185,6 +185,25 @@ export class TestController {
     return user || null
   }
 
+  @Get('journal-entries')
+  async getJournalEntries(
+    @Query('companyId') companyId?: string,
+    @Query('description') description?: string,
+    @Query('status') status?: string,
+  ) {
+    this.ensureEnabled()
+    const where: any = {}
+    if (companyId) where.companyId = companyId
+    if (description) where.description = { contains: description, mode: 'insensitive' }
+    if (status) where.status = status
+    return await this.prisma.journalEntry.findMany({
+      where,
+      include: { lines: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    })
+  }
+
   @Get('check-user-verification')
   async checkUserVerification(@Query('email') email: string) {
     this.ensureEnabled()
