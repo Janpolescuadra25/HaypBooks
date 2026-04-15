@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { ArrowUpDown, Ban, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUpDown, Ban, Plus, RefreshCw, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -117,6 +117,10 @@ export default function CustomerPaymentsPage() {
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [voidingId, setVoidingId] = useState<string | null>(null)
+  const [drawerPayment, setDrawerPayment] = useState<PaymentRow | null>(null)
+  const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
+  const [paymentActivity, setPaymentActivity] = useState<any[]>([])
+  const [paymentActivityLoading, setPaymentActivityLoading] = useState(false)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -312,6 +316,25 @@ export default function CustomerPaymentsPage() {
     }
   }
 
+  const openDrawer = (row: PaymentRow) => {
+    setDrawerPayment(row)
+    setDrawerTab('details')
+    setPaymentActivity([])
+  }
+
+  const loadPaymentActivity = useCallback(async (paymentId: string) => {
+    if (!companyId) return
+    setPaymentActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/payments/${paymentId}/activity`)
+      setPaymentActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setPaymentActivity([])
+    } finally {
+      setPaymentActivityLoading(false)
+    }
+  }, [companyId])
+
   // ─── Client-side filtering ────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
@@ -474,7 +497,7 @@ export default function CustomerPaymentsPage() {
                 </tr>
               ) : (
                 sorted.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={row.id} onClick={() => openDrawer(row)} className="cursor-pointer border-t border-slate-100 transition-colors hover:bg-slate-50">
                     <td className="px-4 py-3 font-mono text-xs text-slate-700 truncate border-r border-slate-100" title={row.paymentNumber ?? ''}>{row.paymentNumber}</td>
                     <td className="px-4 py-3 font-medium text-slate-900 truncate border-r border-slate-100" title={row.customer ?? ''}>{row.customer}</td>
                     <td className="px-4 py-3 text-slate-600 truncate hidden md:table-cell border-r border-slate-100" title={fmtDate(row.date)}>{fmtDate(row.date)}</td>
@@ -483,7 +506,7 @@ export default function CustomerPaymentsPage() {
                       {formatCurrency(row.amount, currency)}
                     </td>
                     <td className="px-4 py-3 text-slate-600 truncate hidden lg:table-cell border-r border-slate-100" title={row.appliedTo ?? ''}>{row.appliedTo}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => handleVoid(row.id)}
                         disabled={voidingId === row.id}
@@ -529,6 +552,94 @@ export default function CustomerPaymentsPage() {
               >
                 Next <ChevronRight size={14} />
               </button>
+            </div>
+          </div>
+        )}
+
+        {drawerPayment && (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-black/30" onClick={() => setDrawerPayment(null)} />
+            <div className="flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">{drawerPayment.paymentNumber}</h2>
+                  <p className="mt-0.5 text-sm text-slate-500">{drawerPayment.customer}</p>
+                </div>
+                <button onClick={() => setDrawerPayment(null)} title="Close details" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+              </div>
+              <div className="flex border-b border-slate-200 bg-slate-50 px-5">
+                {(['details', 'activity'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => {
+                      setDrawerTab(tab)
+                      if (tab === 'activity' && paymentActivity.length === 0) {
+                        loadPaymentActivity(drawerPayment.id)
+                      }
+                    }}
+                    className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                  </button>
+                ))}
+              </div>
+              {drawerTab === 'activity' ? (
+                <div className="space-y-3 px-5 py-4">
+                  {paymentActivityLoading ? (
+                    <div className="flex justify-center py-8"><Clock size={18} className="animate-pulse text-slate-400" /></div>
+                  ) : paymentActivity.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
+                  ) : paymentActivity.map((log: any) => (
+                    <div key={log.id} className="flex items-start gap-3 text-sm">
+                      <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="font-semibold text-slate-700">{log.action}</span>
+                        {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                        <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 space-y-4 px-5 py-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Date</p>
+                        <p className="font-semibold text-slate-800">{fmtDate(drawerPayment.date)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Method</p>
+                        <p className="font-semibold text-slate-800">{drawerPayment.method}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Amount</p>
+                        <p className="font-bold text-xl text-emerald-800">{formatCurrency(drawerPayment.amount, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Applied To</p>
+                        <p className="font-semibold text-slate-800">{drawerPayment.appliedTo}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 border-t border-slate-200 px-5 py-4">
+                    <button
+                      onClick={() => handleVoid(drawerPayment.id)}
+                      disabled={voidingId === drawerPayment.id}
+                      className="flex-1 rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                    >
+                      Void Payment
+                    </button>
+                    <button
+                      onClick={() => setDrawerPayment(null)}
+                      className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
