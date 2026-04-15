@@ -603,7 +603,7 @@ export default function CustomerPortalPage() {
                       )}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide w-36">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide w-36 min-w-[120px] whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -636,7 +636,7 @@ export default function CustomerPortalPage() {
                         {col.key === 'lastLogin' && <span className="text-slate-600">{fmtDate(row.lastLogin)}</span>}
                       </td>
                     ))}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-2">
                         <button onClick={() => handleResendInvite(row)} className="text-xs font-semibold text-sky-700 hover:underline flex items-center gap-0.5">
                           <RotateCcw size={11} /> Resend
