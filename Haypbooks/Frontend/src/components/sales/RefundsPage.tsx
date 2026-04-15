@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, CheckCircle, FileX, ArrowUpDown,
+  Download, Eye, CheckCircle, FileX, ArrowUpDown, Clock,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -110,6 +110,9 @@ export default function RefundsPage() {
   const [batchLoading, setBatchLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [detailItem, setDetailItem] = useState<RefundRow | null>(null)
+  const [detailTab, setDetailTab] = useState<'details' | 'activity'>('details')
+  const [refundActivity, setRefundActivity] = useState<any[]>([])
+  const [refundActivityLoading, setRefundActivityLoading] = useState(false)
   const [formData, setFormData] = useState<RefundFormData>({ customerId: '', amount: '', method: 'BANK_TRANSFER', refundDate: new Date().toISOString().split('T')[0], reason: '' })
   const [formSaving, setFormSaving] = useState(false)
   const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
@@ -240,6 +243,25 @@ export default function RefundsPage() {
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Save failed') }
     finally { setFormSaving(false) }
   }
+
+  const openDetail = (row: RefundRow) => {
+    setDetailItem(row)
+    setDetailTab('details')
+    setRefundActivity([])
+  }
+
+  const loadRefundActivity = useCallback(async (refundId: string) => {
+    if (!companyId) return
+    setRefundActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/refunds/${refundId}/activity`)
+      setRefundActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setRefundActivity([])
+    } finally {
+      setRefundActivityLoading(false)
+    }
+  }, [companyId])
 
   const visibleCols = cols.filter(c => c.visible)
 
@@ -378,7 +400,7 @@ export default function RefundsPage() {
               </tr>
             ) : (
               paginated.map(row => (
-                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setDetailItem(row)}>
+                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => openDetail(row)}>
                   <td className="px-3 py-3 border-r border-gray-100" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
                   {visibleCols.map(c => (
                     <td key={c.key} className="px-3 py-3 truncate border-r border-gray-100" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
@@ -490,37 +512,73 @@ export default function RefundsPage() {
           <div className="relative bg-white w-full max-w-md shadow-2xl overflow-y-auto flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold text-gray-900">{detailItem.refundNumber}</h2>
-              <button onClick={() => setDetailItem(null)} className="p-1.5 rounded hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={() => setDetailItem(null)} title="Close details" className="p-1.5 rounded hover:bg-gray-100"><X size={18} /></button>
             </div>
-            <div className="p-6 space-y-4 flex-1">
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  ['Customer', detailItem.customer],
-                  ['Invoice #', detailItem.invoiceNumber || '—'],
-                  ['Date', detailItem.date],
-                  ['Method', detailItem.method],
-                  ['Amount', formatCurrency(Number(detailItem.amount), currency)],
-                  ['Status', detailItem.status],
-                ].map(([label, value]) => (
-                  <div key={label} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-                    <p className="text-sm font-medium text-gray-900">{value}</p>
+            <div className="flex border-b border-slate-200 bg-slate-50 px-6">
+              {(['details', 'activity'] as const).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => {
+                    setDetailTab(tab)
+                    if (tab === 'activity' && refundActivity.length === 0) {
+                      loadRefundActivity(detailItem.id)
+                    }
+                  }}
+                  className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${detailTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                  {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                </button>
+              ))}
+            </div>
+            {detailTab === 'activity' ? (
+              <div className="space-y-3 p-6 flex-1">
+                {refundActivityLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+                ) : refundActivity.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
+                ) : refundActivity.map((log: any) => (
+                  <div key={log.id} className="flex items-start gap-3 text-sm">
+                    <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                    <div>
+                      <span className="font-semibold text-slate-700">{log.action}</span>
+                      {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                      <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
                   </div>
                 ))}
               </div>
-              {detailItem.reason && (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-0.5">Reason</p>
-                  <p className="text-sm text-gray-700">{detailItem.reason}</p>
+            ) : (
+              <div className="p-6 space-y-4 flex-1">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    ['Customer', detailItem.customer],
+                    ['Invoice #', detailItem.invoiceNumber || '—'],
+                    ['Date', detailItem.date],
+                    ['Method', detailItem.method],
+                    ['Amount', formatCurrency(Number(detailItem.amount), currency)],
+                    ['Status', detailItem.status],
+                  ].map(([label, value]) => (
+                    <div key={label} className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+                      <p className="text-sm font-medium text-gray-900">{value}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
-              {(detailItem.status === 'PENDING' || detailItem.approvalStatus === 'PENDING') && (
-                <button onClick={() => { handleProcess(detailItem.id); setDetailItem(null) }}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors">
-                  <CheckCircle size={16} /> Process Refund &amp; Post to GL
-                </button>
-              )}
-            </div>
+                {detailItem.reason && (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-0.5">Reason</p>
+                    <p className="text-sm text-gray-700">{detailItem.reason}</p>
+                  </div>
+                )}
+                {(detailItem.status === 'PENDING' || detailItem.approvalStatus === 'PENDING') && (
+                  <button onClick={() => { handleProcess(detailItem.id); setDetailItem(null) }}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors">
+                    <CheckCircle size={16} /> Process Refund &amp; Post to GL
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
