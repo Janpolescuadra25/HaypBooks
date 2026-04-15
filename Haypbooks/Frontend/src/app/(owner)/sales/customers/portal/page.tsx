@@ -1,5 +1,6 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+import CustomerPortalPage from '@/components/sales/CustomerPortalPage'
 
 export default function Page() {
-  return <TabComingSoon title="Portal" />
+  return <CustomerPortalPage />
 }
+
