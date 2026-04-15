@@ -24,6 +24,16 @@ type InvoiceRow = {
   total?: number
 }
 
+type ActivityLog = {
+  id: string
+  action: string
+  tableName: string
+  recordId: string
+  createdAt: string
+  changes?: Record<string, any> | null
+  user?: { id?: string; name?: string | null; email?: string | null } | null
+}
+
 function normalizeQuoteAmount(value: unknown) {
   const n = Number(value ?? 0)
   return Number.isFinite(n) ? n : 0
@@ -36,6 +46,8 @@ export default function Page() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [activity, setActivity] = useState<ActivityLog[]>([])
+  const [activityLoading, setActivityLoading] = useState(true)
 
   useEffect(() => {
     if (!companyId) return
@@ -72,6 +84,37 @@ export default function Page() {
     return () => { mounted = false }
   }, [companyId])
 
+  useEffect(() => {
+    if (!companyId) return
+
+    let mounted = true
+    const loadActivity = async () => {
+      setActivityLoading(true)
+      try {
+        const [quoteLogs, invoiceLogs] = await Promise.all([
+          apiClient.get(`/companies/${companyId}/integrations/audit-logs`, { params: { tableName: 'Quote', limit: 8 } }),
+          apiClient.get(`/companies/${companyId}/integrations/audit-logs`, { params: { tableName: 'Invoice', limit: 8 } }),
+        ])
+        if (!mounted) return
+
+        const quoteItems = Array.isArray(quoteLogs.data) ? quoteLogs.data : quoteLogs.data?.data ?? quoteLogs.data?.items ?? []
+        const invoiceItems = Array.isArray(invoiceLogs.data) ? invoiceLogs.data : invoiceLogs.data?.data ?? invoiceLogs.data?.items ?? []
+        const merged = [...quoteItems, ...invoiceItems]
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 8)
+        setActivity(merged)
+      } catch {
+        if (!mounted) return
+        setActivity([])
+      } finally {
+        if (mounted) setActivityLoading(false)
+      }
+    }
+
+    loadActivity()
+    return () => { mounted = false }
+  }, [companyId])
+
   const metrics = useMemo(() => {
     const openQuotes = quotes.filter((q) => !['ACCEPTED', 'CONVERTED', 'REJECTED', 'EXPIRED'].includes(String(q.status ?? '').toUpperCase()))
     const wonQuotes = quotes.filter((q) => ['ACCEPTED', 'CONVERTED'].includes(String(q.status ?? '').toUpperCase()))
@@ -103,6 +146,21 @@ export default function Page() {
       receivableSignals,
     }
   }, [quotes, invoices])
+
+  const describeActivity = (entry: ActivityLog) => {
+    const entity = entry.tableName === 'Quote' ? 'Quote' : 'Invoice'
+    const label = entry.changes?.invoiceNumber ?? entry.recordId.slice(0, 8)
+    if (entry.tableName === 'Quote' && entry.action === 'CONVERT') {
+      return `Converted ${entity.toLowerCase()} ${label} to invoice`
+    }
+    if (entry.action === 'SEND') {
+      return `Sent ${entity.toLowerCase()} ${label}`
+    }
+    if (entry.action === 'VOID') {
+      return `Voided ${entity.toLowerCase()} ${label}`
+    }
+    return `${entry.action.charAt(0) + entry.action.slice(1).toLowerCase()} ${entity.toLowerCase()} ${label}`
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -204,6 +262,37 @@ export default function Page() {
             )}
           </section>
         </div>
+
+        <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Recent Pipeline Activity</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest quote and invoice events affecting pipeline momentum</p>
+            </div>
+          </div>
+          {activityLoading ? (
+            <div className="px-4 py-10 text-sm text-slate-500">Loading activity…</div>
+          ) : activity.length === 0 ? (
+            <div className="px-4 py-10 text-sm text-slate-500">No recent quote or invoice activity recorded yet.</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {activity.map((entry) => (
+                <div key={entry.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${entry.tableName === 'Quote' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'}`}>
+                        {entry.tableName}
+                      </span>
+                      <p className="text-sm font-medium text-slate-900">{describeActivity(entry)}</p>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">{entry.user?.name ?? entry.user?.email ?? 'System'}</p>
+                  </div>
+                  <p className="text-xs text-slate-400 shrink-0">{new Date(entry.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )
