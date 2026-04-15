@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Edit2, Trash2, RefreshCw, Download, Users, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, RefreshCw, Download, Users, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -16,6 +16,15 @@ type CustomerGroup = {
   name: string
   description: string
   customerCount: number
+}
+
+type ActivityLog = {
+  id: string
+  action: string
+  recordId: string
+  createdAt: string
+  changes?: Record<string, any> | null
+  user?: { id?: string; name?: string | null; email?: string | null } | null
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
@@ -115,6 +124,8 @@ export default function CustomerGroupsPage() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
+  const [activity, setActivity] = useState<ActivityLog[]>([])
+  const [activityLoading, setActivityLoading] = useState(true)
 
   // Resizable columns
   const defaultWidths = { name: 220, description: 320, count: 120, actions: 100 }
@@ -153,6 +164,23 @@ export default function CustomerGroupsPage() {
 
   useEffect(() => { fetchGroups() }, [fetchGroups])
 
+  const loadActivity = useCallback(async () => {
+    if (!companyId) return
+    setActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/integrations/audit-logs`, {
+        params: { tableName: 'CustomerGroup', limit: 8 },
+      })
+      setActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setActivity([])
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { loadActivity() }, [loadActivity])
+
   const filtered = useMemo(() => {
     if (!search.trim()) return groups
     const q = search.toLowerCase()
@@ -184,6 +212,7 @@ export default function CustomerGroupsPage() {
       await apiClient.delete(`/companies/${companyId}/ar/customer-groups/${group.id}`)
       toast.success('Group deleted')
       fetchGroups()
+      loadActivity()
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Failed to delete group')
     }
@@ -199,6 +228,7 @@ export default function CustomerGroupsPage() {
       toast.success(`${ids.length} group(s) deleted`)
       setSelectedIds(new Set())
       fetchGroups()
+      loadActivity()
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Batch delete failed')
     } finally {
@@ -228,6 +258,16 @@ export default function CustomerGroupsPage() {
       onMouseDown={e => startResize(e, col)}
     />
   )
+
+  const describeActivity = (entry: ActivityLog) => {
+    const name = entry.changes?.name ?? entry.recordId
+    switch (entry.action) {
+      case 'CREATE': return `Created group ${name}`
+      case 'UPDATE': return `Updated group ${name}`
+      case 'DELETE': return `Deleted group ${name}`
+      default: return `${entry.action} group ${name}`
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -424,6 +464,30 @@ export default function CustomerGroupsPage() {
             </div>
           )}
         </div>
+
+        <section className="mt-5 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2"><Clock size={14} className="text-emerald-600" />Recent Activity</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Latest customer-group create, update, and delete events</p>
+          </div>
+          {activityLoading ? (
+            <div className="px-4 py-8 text-sm text-gray-500">Loading activity…</div>
+          ) : activity.length === 0 ? (
+            <div className="px-4 py-8 text-sm text-gray-500">No customer group activity recorded yet.</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {activity.map((entry) => (
+                <div key={entry.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{describeActivity(entry)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{entry.user?.name ?? entry.user?.email ?? 'System'}</p>
+                  </div>
+                  <p className="text-xs text-gray-400 shrink-0">{new Date(entry.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Form Modal */}
@@ -433,7 +497,7 @@ export default function CustomerGroupsPage() {
           initial={modal.mode === 'edit' ? modal.group : undefined}
           companyId={companyId!}
           onClose={() => setModal(null)}
-          onSaved={fetchGroups}
+          onSaved={() => { fetchGroups(); loadActivity() }}
         />
       )}
 

@@ -419,7 +419,23 @@ export class ArService {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
         if (!ids?.length) throw new BadRequestException('No IDs provided')
-        return this.repo.batchDeleteCustomerGroups(wid, ids)
+        const existing = await this.prisma.customerGroup.findMany({
+            where: { workspaceId: wid, id: { in: ids } },
+            select: { id: true, name: true },
+        })
+        const result = await this.repo.batchDeleteCustomerGroups(wid, ids)
+        await Promise.all(existing.map((group) => this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'DELETE',
+                tableName: 'CustomerGroup',
+                recordId: group.id,
+                changes: { name: group.name },
+            },
+        }).catch(() => {})))
+        return result
     }
 
     async exportCustomerGroupsCsv(userId: string, companyId: string) {
