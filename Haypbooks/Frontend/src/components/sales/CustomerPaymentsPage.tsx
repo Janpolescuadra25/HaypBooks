@@ -19,7 +19,18 @@ interface PaymentRow {
   date: string
   method: string
   amount: number
+  totalAllocated: number
+  unappliedAmount: number
+  allocationCount: number
+  allocations: PaymentAllocationLine[]
   appliedTo: string
+}
+
+interface PaymentAllocationLine {
+  invoiceId: string
+  invoiceNumber: string
+  amount: number
+  remainingBalance: number
 }
 
 interface CustomerOption {
@@ -31,8 +42,17 @@ interface CustomerOption {
 interface InvoiceOption {
   id: string
   invoiceNumber: string
-  amountDue: number
+  date: string
+  remainingBalance: number
   total: number
+}
+
+interface DraftAllocation {
+  invoiceId: string
+  invoiceNumber: string
+  date: string
+  remainingBalance: number
+  amount: number
 }
 
 const METHOD_OPTIONS = [
@@ -44,18 +64,58 @@ const METHOD_OPTIONS = [
 ]
 
 function normalizeRow(r: any): PaymentRow {
+  const toMoney = (value: any) => Number(Number(value ?? 0).toFixed(2))
+  const legacyAllocations: PaymentAllocationLine[] = Array.isArray(r.InvoicePaymentApplication)
+    ? r.InvoicePaymentApplication.map((a: any) => {
+        const invoiceId = a.invoiceId ?? a.invoice?.id ?? ''
+        return {
+          invoiceId,
+          invoiceNumber: a.invoice?.invoiceNumber ?? (invoiceId ? invoiceId.slice(0, 8) : '—'),
+          amount: toMoney(a.amount),
+          remainingBalance: toMoney(a.invoice?.balance ?? 0),
+        }
+      }).filter((a: PaymentAllocationLine) => !!a.invoiceId)
+    : []
+
+  const legacyById = new Map(legacyAllocations.map((a) => [a.invoiceId, a]))
+  const normalizedAllocations: PaymentAllocationLine[] = Array.isArray(r.allocations)
+    ? r.allocations.map((a: any) => {
+        const invoiceId = String(a?.invoiceId ?? '').trim()
+        const legacy = legacyById.get(invoiceId)
+        return {
+          invoiceId,
+          invoiceNumber: legacy?.invoiceNumber ?? (invoiceId ? invoiceId.slice(0, 8) : '—'),
+          amount: toMoney(a?.amount),
+          remainingBalance: toMoney(a?.remainingBalance ?? legacy?.remainingBalance ?? 0),
+        }
+      }).filter((a: PaymentAllocationLine) => !!a.invoiceId)
+    : []
+
+  const allocations = normalizedAllocations.length > 0 ? normalizedAllocations : legacyAllocations
+  const amount = toMoney(r.amount ?? r.totalAmount ?? 0)
+  const totalAllocated = toMoney(r.totalAllocated ?? allocations.reduce((sum, a) => sum + toMoney(a.amount), 0))
+  const unappliedAmount = toMoney(r.unappliedAmount ?? Math.max(0, amount - totalAllocated))
+  const allocationCount = allocations.filter((a) => a.amount > 0).length
+
+  let appliedTo = 'Unapplied'
+  if (allocationCount === 1) {
+    appliedTo = allocations[0]?.invoiceNumber ?? '1 invoice'
+  } else if (allocationCount > 1) {
+    appliedTo = `${allocationCount} invoices`
+  }
+
   return {
     id: r.id,
     paymentNumber: r.paymentNumber || r.referenceNumber || r.id?.slice(0, 8) || '—',
     customer: r.customerName || r.customer?.contact?.displayName || '—',
     date: r.date || r.paymentDate || '',
     method: r.method || r.paymentMethodId || '—',
-    amount: Number(r.amount ?? r.totalAmount ?? 0),
-    appliedTo:
-      (r.InvoicePaymentApplication ?? [])
-        .map((a: any) => a.invoice?.invoiceNumber)
-        .filter(Boolean)
-        .join(', ') || '—',
+    amount,
+    totalAllocated,
+    unappliedAmount,
+    allocationCount,
+    allocations,
+    appliedTo,
   }
 }
 
@@ -93,7 +153,7 @@ const DEFAULT_CP_COLS: ColDef[] = [
   { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
   { key: 'method', label: 'Method', visible: true, width: 120, align: 'left' },
   { key: 'amount', label: 'Amount', visible: true, width: 110, align: 'right' },
-  { key: 'appliedTo', label: 'Applied To', visible: true, width: 160, align: 'left' },
+  { key: 'appliedTo', label: 'Applied To', visible: true, width: 240, align: 'left' },
 ]
 function loadCPCols(): ColDef[] {
   try {
@@ -135,9 +195,10 @@ export default function CustomerPaymentsPage() {
   const [customersLoading, setCustomersLoading] = useState(false)
   const [invoices, setInvoices] = useState<InvoiceOption[]>([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
+  const [allocationSearch, setAllocationSearch] = useState('')
+  const [draftAllocations, setDraftAllocations] = useState<DraftAllocation[]>([])
   const [form, setForm] = useState({
     customerId: '',
-    invoiceId: '',
     amount: '',
     method: 'CASH',
     reference: '',
@@ -226,7 +287,8 @@ export default function CustomerPaymentsPage() {
             .map((i: any) => ({
               id: i.id,
               invoiceNumber: i.invoiceNumber || i.id?.slice(0, 8),
-              amountDue: Number(i.amountDue ?? i.balance ?? 0),
+              date: i.date ?? i.issuedAt ?? '',
+              remainingBalance: Number(Number(i.amountDue ?? i.balance ?? 0).toFixed(2)),
               total: Number(i.total ?? i.totalAmount ?? 0),
             }))
         )
@@ -235,22 +297,92 @@ export default function CustomerPaymentsPage() {
       .finally(() => setInvoicesLoading(false))
   }, [companyId, form.customerId])
 
-  // ─── Pre-fill amount when invoice selected ───────────────────────────────────
+  const selectedAllocationIds = useMemo(() => new Set(draftAllocations.map((a) => a.invoiceId)), [draftAllocations])
 
-  useEffect(() => {
-    if (!form.invoiceId) return
-    const inv = invoices.find((i) => i.id === form.invoiceId)
-    if (inv) {
-      setForm((f) => ({ ...f, amount: String(inv.amountDue > 0 ? inv.amountDue : inv.total) }))
+  const filteredOpenInvoices = useMemo(() => {
+    const q = allocationSearch.trim().toLowerCase()
+    return invoices.filter((invoice) => {
+      if (invoice.remainingBalance <= 0) return false
+      if (!q) return true
+      return (
+        invoice.invoiceNumber.toLowerCase().includes(q) ||
+        fmtDate(invoice.date).toLowerCase().includes(q) ||
+        String(invoice.remainingBalance).includes(q)
+      )
+    })
+  }, [invoices, allocationSearch])
+
+  const parsedPaymentAmount = useMemo(() => {
+    const value = Number(form.amount)
+    return Number.isFinite(value) ? Number(value.toFixed(2)) : 0
+  }, [form.amount])
+
+  const totalAllocatedDraft = useMemo(
+    () => Number(draftAllocations.reduce((sum, allocation) => sum + Number(allocation.amount || 0), 0).toFixed(2)),
+    [draftAllocations],
+  )
+  const unappliedDraft = useMemo(() => Number((parsedPaymentAmount - totalAllocatedDraft).toFixed(2)), [parsedPaymentAmount, totalAllocatedDraft])
+  const isOverAllocated = totalAllocatedDraft > parsedPaymentAmount + 0.01
+
+  const allocationLineErrors = useMemo(() => {
+    const errors: Record<string, string> = {}
+    for (const allocation of draftAllocations) {
+      if (allocation.amount < 0) {
+        errors[allocation.invoiceId] = 'Allocation amount cannot be negative.'
+      } else if (allocation.amount > allocation.remainingBalance + 0.01) {
+        errors[allocation.invoiceId] = `Allocation cannot exceed remaining balance (${formatCurrency(allocation.remainingBalance, currency)}).`
+      }
     }
-  }, [form.invoiceId, invoices])
+    return errors
+  }, [currency, draftAllocations])
+
+  const addAllocation = useCallback((invoice: InvoiceOption) => {
+    setDraftAllocations((prev) => {
+      if (prev.some((item) => item.invoiceId === invoice.id)) return prev
+      return [
+        ...prev,
+        {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          date: invoice.date,
+          remainingBalance: Number(invoice.remainingBalance.toFixed(2)),
+          amount: 0,
+        },
+      ]
+    })
+  }, [])
+
+  const removeAllocation = useCallback((invoiceId: string) => {
+    setDraftAllocations((prev) => prev.filter((allocation) => allocation.invoiceId !== invoiceId))
+  }, [])
+
+  const updateAllocationAmount = useCallback((invoiceId: string, raw: string) => {
+    const parsed = raw === '' ? 0 : Number(raw)
+    const amount = Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : 0
+    setDraftAllocations((prev) =>
+      prev.map((allocation) => (allocation.invoiceId === invoiceId ? { ...allocation, amount } : allocation)),
+    )
+  }, [])
+
+  const allocateFull = useCallback((invoiceId: string) => {
+    setDraftAllocations((prev) =>
+      prev.map((allocation) =>
+        allocation.invoiceId === invoiceId
+          ? { ...allocation, amount: Number(allocation.remainingBalance.toFixed(2)) }
+          : allocation,
+      ),
+    )
+  }, [])
+
+  const clearAllAllocations = useCallback(() => {
+    setDraftAllocations([])
+  }, [])
 
   // ─── Modal open / close ───────────────────────────────────────────────────────
 
   function openModal() {
     setForm({
       customerId: '',
-      invoiceId: '',
       amount: '',
       method: 'CASH',
       reference: '',
@@ -258,6 +390,8 @@ export default function CustomerPaymentsPage() {
       memo: '',
     })
     setInvoices([])
+    setAllocationSearch('')
+    setDraftAllocations([])
     setSaveError('')
     setNewPaymentOpen(true)
     loadCustomers()
@@ -273,22 +407,43 @@ export default function CustomerPaymentsPage() {
   async function submitPayment(e: React.FormEvent) {
     e.preventDefault()
     if (!companyId) return
+    if (!form.customerId) {
+      setSaveError('Select a customer before recording payment.')
+      return
+    }
     const parsedAmount = parseFloat(form.amount)
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setSaveError('Enter a valid amount greater than 0')
       return
     }
+    if (isOverAllocated) {
+      setSaveError('Total allocated amount cannot exceed payment amount.')
+      return
+    }
+    const firstLineError = Object.values(allocationLineErrors)[0]
+    if (firstLineError) {
+      setSaveError(firstLineError)
+      return
+    }
+
+    const payloadAllocations = draftAllocations
+      .filter((allocation) => allocation.amount > 0)
+      .map((allocation) => ({
+        invoiceId: allocation.invoiceId,
+        amount: Number(allocation.amount.toFixed(2)),
+      }))
+
     setSaving(true)
     setSaveError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/payments`, {
         customerId: form.customerId || undefined,
-        invoiceId: form.invoiceId || undefined,
         amount: parsedAmount,
         paymentDate: form.date,
         method: form.method,
         referenceNumber: form.reference || undefined,
         memo: form.memo || undefined,
+        allocations: payloadAllocations,
       })
       closeModal()
       setPage(0)
@@ -350,7 +505,10 @@ export default function CustomerPaymentsPage() {
         r.customer.toLowerCase().includes(q) ||
         r.method.toLowerCase().includes(q) ||
         r.appliedTo.toLowerCase().includes(q) ||
-        String(r.amount).includes(q)
+        String(r.amount).includes(q) ||
+        String(r.totalAllocated).includes(q) ||
+        String(r.unappliedAmount).includes(q) ||
+        r.allocations.some((allocation) => allocation.invoiceNumber.toLowerCase().includes(q))
     )
   }, [items, search, dateStart, dateEnd, methodFilter])
 
@@ -505,7 +663,12 @@ export default function CustomerPaymentsPage() {
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800 border-r border-slate-100">
                       {formatCurrency(row.amount, currency)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600 truncate hidden lg:table-cell border-r border-slate-100" title={row.appliedTo ?? ''}>{row.appliedTo}</td>
+                    <td className="px-4 py-3 text-slate-600 hidden lg:table-cell border-r border-slate-100">
+                      <p className="truncate" title={row.appliedTo ?? ''}>{row.appliedTo}</p>
+                      <p className="truncate text-xs text-slate-500" title={`${formatCurrency(row.totalAllocated, currency)} allocated, ${formatCurrency(Math.max(0, row.unappliedAmount), currency)} unapplied`}>
+                        {formatCurrency(row.totalAllocated, currency)} allocated, {formatCurrency(Math.max(0, row.unappliedAmount), currency)} unapplied
+                      </p>
+                    </td>
                     <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => handleVoid(row.id)}
@@ -618,9 +781,42 @@ export default function CustomerPaymentsPage() {
                         <p className="font-bold text-xl text-emerald-800">{formatCurrency(drawerPayment.amount, currency)}</p>
                       </div>
                       <div>
-                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Applied To</p>
-                        <p className="font-semibold text-slate-800">{drawerPayment.appliedTo}</p>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Total Allocated</p>
+                        <p className="font-semibold text-slate-800">{formatCurrency(drawerPayment.totalAllocated, currency)}</p>
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p className="text-xs text-slate-500">Invoices Allocated</p>
+                        <p className="text-lg font-semibold text-slate-900">{drawerPayment.allocationCount}</p>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p className="text-xs text-slate-500">Unapplied Amount</p>
+                        <p className="text-lg font-semibold text-slate-900">{formatCurrency(Math.max(0, drawerPayment.unappliedAmount), currency)}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Allocations</p>
+                        <p className="text-xs text-slate-400">{drawerPayment.appliedTo}</p>
+                      </div>
+                      {drawerPayment.allocations.length === 0 ? (
+                        <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">No invoice allocations. Payment is fully unapplied.</p>
+                      ) : (
+                        <div className="overflow-hidden rounded-lg border border-slate-200">
+                          {drawerPayment.allocations.map((allocation) => (
+                            <div key={allocation.invoiceId} className="flex items-center justify-between border-t border-slate-100 px-3 py-2 first:border-t-0">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-800">{allocation.invoiceNumber}</p>
+                                <p className="text-xs text-slate-500">Remaining balance: {formatCurrency(allocation.remainingBalance, currency)}</p>
+                              </div>
+                              <p className="text-sm font-semibold text-emerald-700">{formatCurrency(allocation.amount, currency)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2 border-t border-slate-200 px-5 py-4">
@@ -674,37 +870,128 @@ export default function CustomerPaymentsPage() {
                 placeholder="Select customer..."
                 createLabel="+ Create New Customer"
                 onOpen={loadCustomers}
-                onChange={(id) => setForm((f) => ({ ...f, customerId: id, invoiceId: '', amount: '' }))}
+                onChange={(id) => {
+                  setForm((f) => ({ ...f, customerId: id }))
+                  setAllocationSearch('')
+                  setDraftAllocations([])
+                  setSaveError('')
+                }}
                 onCreateNew={() => setShowQuickAddCustomer(true)}
               />
 
-              {/* Invoice dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Invoice <span className="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <select
-                  value={form.invoiceId}
-                  onChange={(e) => setForm((f) => ({ ...f, invoiceId: e.target.value }))}
-                  disabled={!form.customerId || invoicesLoading}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-50 disabled:text-slate-400"
-                >
-                  <option value="">
-                    {!form.customerId
-                      ? 'Select a customer first'
-                      : invoicesLoading
-                      ? 'Loading…'
-                      : invoices.length === 0
-                      ? 'No open invoices'
-                      : 'Select invoice…'}
-                  </option>
-                  {invoices.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.invoiceNumber} — {formatCurrency(i.amountDue, currency)} due
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {form.customerId ? (
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-slate-700">Open Invoices</label>
+                    <button
+                      type="button"
+                      onClick={clearAllAllocations}
+                      disabled={draftAllocations.length === 0}
+                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-40"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+
+                  <input
+                    value={allocationSearch}
+                    onChange={(e) => setAllocationSearch(e.target.value)}
+                    disabled={invoicesLoading}
+                    placeholder={invoicesLoading ? 'Loading open invoices…' : 'Search open invoices by number, date, or balance'}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+
+                  <div className="max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+                    {!form.customerId ? null : invoicesLoading ? (
+                      <p className="px-3 py-4 text-sm text-slate-500">Loading invoices…</p>
+                    ) : filteredOpenInvoices.length === 0 ? (
+                      <p className="px-3 py-4 text-sm text-slate-500">No open invoices match your search.</p>
+                    ) : (
+                      filteredOpenInvoices.map((invoice) => {
+                        const isSelected = selectedAllocationIds.has(invoice.id)
+                        return (
+                          <div key={invoice.id} className="flex items-center justify-between border-t border-slate-100 px-3 py-2 first:border-t-0">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">{invoice.invoiceNumber}</p>
+                              <p className="text-xs text-slate-500">{fmtDate(invoice.date)} • {formatCurrency(invoice.remainingBalance, currency)} remaining</p>
+                            </div>
+                            {isSelected ? (
+                              <button
+                                type="button"
+                                onClick={() => removeAllocation(invoice.id)}
+                                className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                              >
+                                Remove
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => addAllocation(invoice)}
+                                className="rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                              >
+                                Add
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  {draftAllocations.length > 0 && (
+                    <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Selected allocations</p>
+                      {draftAllocations.map((allocation) => {
+                        const lineError = allocationLineErrors[allocation.invoiceId]
+                        return (
+                          <div key={allocation.invoiceId} className="rounded-lg border border-slate-200 p-2.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-800">{allocation.invoiceNumber}</p>
+                                <p className="text-xs text-slate-500">{fmtDate(allocation.date)} • Remaining {formatCurrency(allocation.remainingBalance, currency)}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeAllocation(allocation.invoiceId)}
+                                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                title="Remove allocation"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            <div className="mt-2 flex items-end gap-2">
+                              <div className="flex-1">
+                                <label className="mb-1 block text-xs font-medium text-slate-600">Allocated Amount</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={allocation.amount === 0 ? '' : allocation.amount}
+                                  onChange={(e) => updateAllocationAmount(allocation.invoiceId, e.target.value)}
+                                  className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => allocateFull(allocation.invoiceId)}
+                                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                              >
+                                Allocate full
+                              </button>
+                            </div>
+                            {lineError && <p className="mt-1 text-xs font-medium text-rose-600">{lineError}</p>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                  Select a customer to search and allocate open invoices.
+                </p>
+              )}
 
               {/* Amount + Date */}
               <div className="grid grid-cols-2 gap-3">
@@ -728,10 +1015,34 @@ export default function CustomerPaymentsPage() {
                     type="date"
                     value={form.date}
                     onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                    aria-label="Payment date"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-xs text-slate-500">Payment Amount</p>
+                  <p className="font-semibold text-slate-900">{formatCurrency(parsedPaymentAmount, currency)}</p>
+                </div>
+                <div className={`rounded-lg border px-3 py-2 ${isOverAllocated ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs text-slate-500">Total Allocated</p>
+                  <p className={`font-semibold ${isOverAllocated ? 'text-rose-700' : 'text-slate-900'}`}>{formatCurrency(totalAllocatedDraft, currency)}</p>
+                </div>
+                <div className={`rounded-lg border px-3 py-2 ${unappliedDraft < -0.01 ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs text-slate-500">Unapplied</p>
+                  <p className={`font-semibold ${unappliedDraft < -0.01 ? 'text-rose-700' : 'text-slate-900'}`}>
+                    {formatCurrency(Math.max(0, unappliedDraft), currency)}
+                  </p>
+                </div>
+              </div>
+
+              {isOverAllocated && (
+                <p className="text-sm font-medium text-rose-600">
+                  Total allocated cannot exceed payment amount.
+                </p>
+              )}
 
               {/* Method + Reference */}
               <div className="grid grid-cols-2 gap-3">
@@ -740,6 +1051,7 @@ export default function CustomerPaymentsPage() {
                   <select
                     value={form.method}
                     onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}
+                    aria-label="Payment method"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   >
                     {METHOD_OPTIONS.map((m) => (
@@ -800,7 +1112,9 @@ export default function CustomerPaymentsPage() {
           onCreated={(customer) => {
             const next = { id: customer.contactId, name: customer.name, email: customer.email }
             setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
-            setForm((prev) => ({ ...prev, customerId: next.id, invoiceId: '', amount: '' }))
+            setForm((prev) => ({ ...prev, customerId: next.id }))
+            setAllocationSearch('')
+            setDraftAllocations([])
             setShowQuickAddCustomer(false)
           }}
         />
