@@ -221,6 +221,32 @@ function getWidthMapMinTotalWidth(order: string[], minWidth: MinWidthConfig, fal
   return contentMinWidth + fixedWidth
 }
 
+function normalizeResizableCell(cell: HTMLTableCellElement) {
+  cell.classList.add('overflow-hidden', 'truncate')
+
+  if (cell.style.overflow !== 'hidden') cell.style.overflow = 'hidden'
+  if (cell.style.textOverflow !== 'ellipsis') cell.style.textOverflow = 'ellipsis'
+  if (cell.style.whiteSpace !== 'nowrap') cell.style.whiteSpace = 'nowrap'
+
+  const text = cell.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+  if (text && !cell.getAttribute('title')) {
+    cell.setAttribute('title', text)
+  }
+}
+
+function applyResizableTableContract(containerEl: HTMLDivElement | null) {
+  if (!containerEl) return
+
+  const tables = Array.from(containerEl.querySelectorAll('table'))
+  for (const table of tables) {
+    if (table.style.tableLayout !== 'fixed') table.style.tableLayout = 'fixed'
+    if (table.style.width !== '100%') table.style.width = '100%'
+
+    const bodyCells = table.querySelectorAll<HTMLTableCellElement>('tbody td')
+    bodyCells.forEach(normalizeResizableCell)
+  }
+}
+
 type ArrayHookOptions<T extends WidthColumn> = {
   columns: T[]
   columnsRef: MutableRefObject<T[]>
@@ -259,6 +285,7 @@ export function useFixedWidthResizableColumns<T extends WidthColumn>({
     if (!containerEl) return
     const next = fitVisibleColumnsToWidth(columnsRef.current, Math.max(containerEl.clientWidth - fixedWidth, 0), minWidth)
     if (next !== columnsRef.current) saveColumnsRef.current(next)
+    applyResizableTableContract(containerEl)
     updateOverflow()
   }, [columnsRef, containerEl, fixedWidth, minWidth, updateOverflow])
 
@@ -273,6 +300,36 @@ export function useFixedWidthResizableColumns<T extends WidthColumn>({
     observer.observe(containerEl)
     return () => observer.disconnect()
   }, [containerEl, syncToContainer])
+
+  useEffect(() => {
+    if (!containerEl) return undefined
+
+    let frameId: number | null = null
+
+    const scheduleApply = () => {
+      if (frameId != null) return
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null
+        applyResizableTableContract(containerEl)
+      })
+    }
+
+    scheduleApply()
+
+    if (typeof MutationObserver === 'undefined') {
+      return () => {
+        if (frameId != null) window.cancelAnimationFrame(frameId)
+      }
+    }
+
+    const observer = new MutationObserver(() => scheduleApply())
+    observer.observe(containerEl, { childList: true, subtree: true, characterData: true })
+
+    return () => {
+      if (frameId != null) window.cancelAnimationFrame(frameId)
+      observer.disconnect()
+    }
+  }, [containerEl])
 
   const startResize = useCallback((event: ReactMouseEvent, key: string) => {
     event.preventDefault()
@@ -344,6 +401,7 @@ export function useFixedWidthResizableMap({
     if (!containerEl) return
     const next = fitWidthMapToWidth(widthsRef.current, order, Math.max(containerEl.clientWidth - fixedWidth, 0), minWidth, fallbackMinWidth)
     if (next !== widthsRef.current) saveWidthsRef.current(next)
+    applyResizableTableContract(containerEl)
     updateOverflow()
   }, [containerEl, fallbackMinWidth, fixedWidth, minWidth, order, updateOverflow, widthsRef])
 
@@ -358,6 +416,36 @@ export function useFixedWidthResizableMap({
     observer.observe(containerEl)
     return () => observer.disconnect()
   }, [containerEl, syncToContainer])
+
+  useEffect(() => {
+    if (!containerEl) return undefined
+
+    let frameId: number | null = null
+
+    const scheduleApply = () => {
+      if (frameId != null) return
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null
+        applyResizableTableContract(containerEl)
+      })
+    }
+
+    scheduleApply()
+
+    if (typeof MutationObserver === 'undefined') {
+      return () => {
+        if (frameId != null) window.cancelAnimationFrame(frameId)
+      }
+    }
+
+    const observer = new MutationObserver(() => scheduleApply())
+    observer.observe(containerEl, { childList: true, subtree: true, characterData: true })
+
+    return () => {
+      if (frameId != null) window.cancelAnimationFrame(frameId)
+      observer.disconnect()
+    }
+  }, [containerEl])
 
   const startResize = useCallback((event: ReactMouseEvent, key: string) => {
     event.preventDefault()
