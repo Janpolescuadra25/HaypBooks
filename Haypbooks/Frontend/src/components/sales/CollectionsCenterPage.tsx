@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Download, Plus, RefreshCw, X, ArrowUpDown } from 'lucide-react'
+import { Clock, Download, Plus, RefreshCw, X, ArrowUpDown } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -40,6 +40,15 @@ interface CaseRow {
   promisedDate: string | null
   notes: string | null
   createdAt: string
+}
+
+interface ActivityLog {
+  id: string
+  action: string
+  recordId: string
+  createdAt: string
+  changes?: Record<string, any> | null
+  user?: { id?: string; name?: string | null; email?: string | null } | null
 }
 
 interface ColDef {
@@ -132,6 +141,8 @@ export default function CollectionsCenterPage() {
 
   // Detail drawer
   const [drawerCase, setDrawerCase] = useState<CaseRow | null>(null)
+  const [activity, setActivity] = useState<ActivityLog[]>([])
+  const [activityLoading, setActivityLoading] = useState(true)
 
   // Create/Edit modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -163,6 +174,21 @@ export default function CollectionsCenterPage() {
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
+  const loadActivity = useCallback(async () => {
+    if (!companyId) return
+    setActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/integrations/audit-logs`, {
+        params: { tableName: 'CollectionsCase', limit: 8 },
+      })
+      setActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setActivity([])
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [companyId])
+
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchData = useCallback(async () => {
@@ -183,6 +209,7 @@ export default function CollectionsCenterPage() {
   }, [companyId, statusTab, priorityFilter])
 
   useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { loadActivity() }, [loadActivity])
 
   // ─── KPI summary ─────────────────────────────────────────────────────────
 
@@ -219,6 +246,7 @@ export default function CollectionsCenterPage() {
       await apiClient.post(`/companies/${companyId}/ar/collections/batch/delete`, { ids: Array.from(selectedIds) })
       setSelectedIds(new Set())
       fetchData()
+      loadActivity()
       showToast(`Deleted ${selectedIds.size} case(s)`)
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Batch delete failed')
@@ -234,6 +262,7 @@ export default function CollectionsCenterPage() {
       await apiClient.patch(`/companies/${companyId}/ar/collections/batch/status`, { ids: Array.from(selectedIds), status })
       setSelectedIds(new Set())
       fetchData()
+      loadActivity()
       showToast(`Updated ${selectedIds.size} case(s) to ${STATUS_LABELS[status]}`)
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Batch update failed')
@@ -274,6 +303,7 @@ export default function CollectionsCenterPage() {
       await apiClient.delete(`/companies/${companyId}/ar/collections/${id}`)
       setDrawerCase(null)
       fetchData()
+      loadActivity()
       showToast('Case deleted')
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Delete failed')
@@ -332,6 +362,7 @@ export default function CollectionsCenterPage() {
       }
       setModalOpen(false)
       fetchData()
+      loadActivity()
     } catch (err: any) {
       setSaveError(err?.response?.data?.message || 'Failed to save case')
     } finally {
@@ -367,6 +398,16 @@ export default function CollectionsCenterPage() {
   )
 
   const visibleCols = cols.filter(c => c.visible)
+
+  const describeActivity = (entry: ActivityLog) => {
+    const subject = entry.changes?.subject ?? entry.changes?.caseNumber ?? entry.recordId
+    switch (entry.action) {
+      case 'CREATE': return `Created ${subject}`
+      case 'UPDATE': return entry.changes?.status ? `Updated ${subject} to ${STATUS_LABELS[entry.changes.status] ?? entry.changes.status}` : `Updated ${subject}`
+      case 'DELETE': return `Deleted ${subject}`
+      default: return `${entry.action} ${subject}`
+    }
+  }
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -564,6 +605,32 @@ export default function CollectionsCenterPage() {
         {!loading && !error && (
           <p className="mt-3 text-sm text-slate-500">{filtered.length} case(s) shown · {items.length} total</p>
         )}
+
+        <section className="mt-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Clock size={14} className="text-emerald-600" />Recent Activity</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest collection-case changes across this workspace</p>
+            </div>
+          </div>
+          {activityLoading ? (
+            <div className="px-4 py-8 text-sm text-slate-500">Loading activity…</div>
+          ) : activity.length === 0 ? (
+            <div className="px-4 py-8 text-sm text-slate-500">No collection activity recorded yet.</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {activity.map((entry) => (
+                <div key={entry.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{describeActivity(entry)}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{entry.user?.name ?? entry.user?.email ?? 'System'}</p>
+                  </div>
+                  <p className="text-xs text-slate-400 shrink-0">{new Date(entry.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Detail Drawer */}

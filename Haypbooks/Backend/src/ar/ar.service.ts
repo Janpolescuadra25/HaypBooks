@@ -1069,29 +1069,86 @@ export class ArService {
         if (!data.subject) throw new BadRequestException('subject is required')
         const wid = await this.getWorkspaceId(companyId)
         const c = await this.repo.createCollectionsCase(companyId, wid, data)
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'CREATE',
+                tableName: 'CollectionsCase',
+                recordId: c.id,
+                changes: { caseNumber: c.caseNumber, subject: c.subject, status: c.status, priority: c.priority },
+            },
+        }).catch(() => {})
         return this.normalizeCollection(c)
     }
 
     async updateCollection(userId: string, companyId: string, id: string, data: any) {
         await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
         const existing = await this.repo.findCollectionById(companyId, id)
         if (!existing) throw new NotFoundException('Collection case not found')
         const c = await this.repo.updateCollectionsCase(id, data)
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'CollectionsCase',
+                recordId: id,
+                changes: {
+                    caseNumber: existing.caseNumber,
+                    subject: data.subject ?? existing.subject,
+                    status: data.status ?? existing.status,
+                    priority: data.priority ?? existing.priority,
+                    assignedTo: data.assignedTo ?? existing.assignedTo,
+                },
+            },
+        }).catch(() => {})
         return this.normalizeCollection(c)
     }
 
     async deleteCollection(userId: string, companyId: string, id: string) {
         await this.assertAccess(userId, companyId)
+        const wid = await this.getWorkspaceId(companyId)
         const existing = await this.repo.findCollectionById(companyId, id)
         if (!existing) throw new NotFoundException('Collection case not found')
         await this.repo.deleteCollectionsCase(id)
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'DELETE',
+                tableName: 'CollectionsCase',
+                recordId: id,
+                changes: { caseNumber: existing.caseNumber, subject: existing.subject },
+            },
+        }).catch(() => {})
         return { success: true, id }
     }
 
     async batchDeleteCollections(userId: string, companyId: string, ids: string[]) {
         await this.assertAccess(userId, companyId)
         if (!Array.isArray(ids) || ids.length === 0) throw new BadRequestException('ids array is required')
+        const wid = await this.getWorkspaceId(companyId)
+        const existing = await this.prisma.collectionsCase.findMany({
+            where: { companyId, id: { in: ids } },
+            select: { id: true, caseNumber: true, subject: true },
+        })
         await this.repo.batchDeleteCollections(companyId, ids)
+        await Promise.all(existing.map((row) => this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'DELETE',
+                tableName: 'CollectionsCase',
+                recordId: row.id,
+                changes: { caseNumber: row.caseNumber, subject: row.subject },
+            },
+        }).catch(() => {})))
         return { success: true, count: ids.length }
     }
 
@@ -1099,7 +1156,23 @@ export class ArService {
         await this.assertAccess(userId, companyId)
         if (!Array.isArray(ids) || ids.length === 0) throw new BadRequestException('ids array is required')
         if (!status) throw new BadRequestException('status is required')
+        const wid = await this.getWorkspaceId(companyId)
+        const existing = await this.prisma.collectionsCase.findMany({
+            where: { companyId, id: { in: ids } },
+            select: { id: true, caseNumber: true, subject: true },
+        })
         await this.repo.batchUpdateCollectionStatus(companyId, ids, status)
+        await Promise.all(existing.map((row) => this.prisma.auditLog.create({
+            data: {
+                workspaceId: wid,
+                companyId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'CollectionsCase',
+                recordId: row.id,
+                changes: { caseNumber: row.caseNumber, subject: row.subject, status },
+            },
+        }).catch(() => {})))
         return { success: true, count: ids.length }
     }
 
