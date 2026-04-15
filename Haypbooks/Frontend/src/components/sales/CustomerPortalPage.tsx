@@ -57,6 +57,9 @@ const DEFAULT_COLS: ColDef[] = [
   { key: 'lastLogin', label: 'Last Login', visible: true, width: 160, align: 'left' },
 ]
 
+const SELECTION_COL_WIDTH = 40
+const ACTIONS_COL_WIDTH = 140
+
 function loadCols(): ColDef[] {
   try {
     const s = localStorage.getItem('customer-portal-cols-v1')
@@ -183,7 +186,7 @@ export default function CustomerPortalPage() {
     columns: cols,
     columnsRef: colsRef,
     saveColumns: saveCols,
-    fixedWidth: 120,
+    fixedWidth: SELECTION_COL_WIDTH + ACTIONS_COL_WIDTH,
   })
 
   // ── Send Invites modal ────────────────────────────────────────────────────
@@ -578,9 +581,19 @@ export default function CustomerPortalPage() {
           {/* Table */}
           <div ref={containerRef} className={`${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
             <table className="w-full text-sm" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                <col style={{ width: SELECTION_COL_WIDTH, minWidth: SELECTION_COL_WIDTH, maxWidth: SELECTION_COL_WIDTH }} />
+                {visibleCols.map(col => (
+                  <col key={col.key} style={{ width: col.width, minWidth: col.width, maxWidth: col.width }} />
+                ))}
+                <col style={{ width: ACTIONS_COL_WIDTH, minWidth: ACTIONS_COL_WIDTH, maxWidth: ACTIONS_COL_WIDTH }} />
+              </colgroup>
               <thead>
                 <tr className="bg-slate-100 text-slate-700">
-                  <th className="px-3 py-3 w-10 border-r border-slate-200">
+                  <th
+                    className="px-3 py-3 border-r border-slate-200"
+                    style={{ width: SELECTION_COL_WIDTH, minWidth: SELECTION_COL_WIDTH, maxWidth: SELECTION_COL_WIDTH }}
+                  >
                     <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleAll} className="accent-emerald-600" />
                   </th>
                   {visibleCols.map((col, ci) => (
@@ -603,7 +616,13 @@ export default function CustomerPortalPage() {
                       )}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide w-36 min-w-[120px] whitespace-nowrap">Actions</th>
+                  <th
+                    className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide relative overflow-hidden"
+                    style={{ width: ACTIONS_COL_WIDTH, minWidth: ACTIONS_COL_WIDTH, maxWidth: ACTIONS_COL_WIDTH }}
+                    title="Actions"
+                  >
+                    <span className="block truncate">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -621,7 +640,10 @@ export default function CustomerPortalPage() {
                   <tr><td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center text-slate-500">No customers found.</td></tr>
                 ) : filtered.map(row => (
                   <tr key={row.id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selectedIds.has(row.id) ? 'bg-emerald-50' : ''}`}>
-                    <td className="px-3 py-3 border-r border-slate-100">
+                    <td
+                      className="px-3 py-3 border-r border-slate-100 align-middle"
+                      style={{ width: SELECTION_COL_WIDTH, minWidth: SELECTION_COL_WIDTH, maxWidth: SELECTION_COL_WIDTH }}
+                    >
                       <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-emerald-600" />
                     </td>
                     {visibleCols.map(col => (
@@ -636,13 +658,16 @@ export default function CustomerPortalPage() {
                         {col.key === 'lastLogin' && <span className="text-slate-600">{fmtDate(row.lastLogin)}</span>}
                       </td>
                     ))}
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => handleResendInvite(row)} className="text-xs font-semibold text-sky-700 hover:underline flex items-center gap-0.5">
+                    <td
+                      className="px-4 py-3 align-middle whitespace-nowrap"
+                      style={{ width: ACTIONS_COL_WIDTH, minWidth: ACTIONS_COL_WIDTH, maxWidth: ACTIONS_COL_WIDTH }}
+                    >
+                      <div className="flex min-h-[24px] items-center gap-2">
+                        <button onClick={() => handleResendInvite(row)} className="inline-flex self-center items-center gap-0.5 text-xs font-semibold text-sky-700 hover:underline">
                           <RotateCcw size={11} /> Resend
                         </button>
                         <span className="text-slate-300">·</span>
-                        <button onClick={() => handleRevoke(row)} className="text-xs font-semibold text-rose-600 hover:underline flex items-center gap-0.5">
+                        <button onClick={() => handleRevoke(row)} className="inline-flex self-center items-center gap-0.5 text-xs font-semibold text-rose-600 hover:underline">
                           <Ban size={11} /> Revoke
                         </button>
                       </div>
