@@ -6,7 +6,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
-import { ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Clock, X } from 'lucide-react'
 
 type RecognitionRow = {
   id: string
@@ -103,6 +103,10 @@ export default function RevenueRecognitionPage() {
   const [saving, setSaving] = useState(false)
   const [recognizing, setRecognizing] = useState(false)
   const [recognizingId, setRecognizingId] = useState<string | null>(null)
+  const [drawerContract, setDrawerContract] = useState<RecognitionRow | null>(null)
+  const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
+  const [recognitionActivity, setRecognitionActivity] = useState<any[]>([])
+  const [recognitionActivityLoading, setRecognitionActivityLoading] = useState(false)
   const [form, setForm] = useState<NewRecognitionForm>({
     contractId: '',
     description: '',
@@ -227,6 +231,25 @@ export default function RevenueRecognitionPage() {
     saveColumns: saveRevRecCols,
     fixedWidth: 190,
   })
+
+  const openDrawer = (row: RecognitionRow) => {
+    setDrawerContract(row)
+    setDrawerTab('details')
+    setRecognitionActivity([])
+  }
+
+  const loadRecognitionActivity = useCallback(async (contractId: string) => {
+    if (!companyId) return
+    setRecognitionActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/revenue-recognition/${contractId}/activity`)
+      setRecognitionActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setRecognitionActivity([])
+    } finally {
+      setRecognitionActivityLoading(false)
+    }
+  }, [companyId])
 
   const totalRecognized = useMemo(() => filtered.reduce((s, r) => s + (r.recognizedToDate ?? 0), 0), [filtered])
   const totalRemaining = useMemo(() => filtered.reduce((s, r) => s + (r.remaining ?? 0), 0), [filtered])
@@ -355,7 +378,7 @@ export default function RevenueRecognitionPage() {
                       ? Math.round((row.recognizedToDate / row.totalContractValue) * 100)
                       : 0
                     return (
-                      <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                      <tr key={row.id} onClick={() => openDrawer(row)} className="cursor-pointer transition-colors hover:bg-slate-50">
                         <td className="px-4 py-3 font-medium text-slate-800 border-r border-slate-100">{row.contractId}</td>
                         <td className="px-4 py-3 text-slate-700 border-r border-slate-100">{row.customer}</td>
                         <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate border-r border-slate-100">{row.description}</td>
@@ -374,7 +397,7 @@ export default function RevenueRecognitionPage() {
                             {row.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => recognizeOne(row.id)}
                             disabled={row.status !== 'Active' || row.remaining <= 0 || recognizingId === row.id}
@@ -391,6 +414,106 @@ export default function RevenueRecognitionPage() {
             </div>
           )}
         </div>
+
+        {drawerContract && (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-black/30" onClick={() => setDrawerContract(null)} />
+            <div className="flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">{drawerContract.contractId || 'Recognition Contract'}</h2>
+                  <p className="mt-0.5 text-sm text-slate-500">{drawerContract.customer}</p>
+                </div>
+                <button onClick={() => setDrawerContract(null)} title="Close details" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+              </div>
+              <div className="flex border-b border-slate-200 bg-slate-50 px-5">
+                {(['details', 'activity'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => {
+                      setDrawerTab(tab)
+                      if (tab === 'activity' && recognitionActivity.length === 0) {
+                        loadRecognitionActivity(drawerContract.id)
+                      }
+                    }}
+                    className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                  </button>
+                ))}
+              </div>
+              {drawerTab === 'activity' ? (
+                <div className="space-y-3 px-5 py-4">
+                  {recognitionActivityLoading ? (
+                    <div className="flex justify-center py-8"><Clock size={18} className="animate-pulse text-slate-400" /></div>
+                  ) : recognitionActivity.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
+                  ) : recognitionActivity.map((log: any) => (
+                    <div key={log.id} className="flex items-start gap-3 text-sm">
+                      <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="font-semibold text-slate-700">{log.action}</span>
+                        {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                        <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 space-y-4 px-5 py-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Description</p>
+                        <p className="font-semibold text-slate-800">{drawerContract.description}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Method</p>
+                        <p className="font-semibold text-slate-800">{drawerContract.method}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Total Value</p>
+                        <p className="font-semibold text-slate-800">{formatCurrency(drawerContract.totalContractValue, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Recognized</p>
+                        <p className="font-semibold text-emerald-700">{formatCurrency(drawerContract.recognizedToDate, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Remaining</p>
+                        <p className="font-bold text-xl text-amber-700">{formatCurrency(drawerContract.remaining, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Period</p>
+                        <p className="font-semibold text-slate-800">{drawerContract.startDate} – {drawerContract.endDate}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Status</p>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[drawerContract.status] ?? ''}`}>{drawerContract.status}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 border-t border-slate-200 px-5 py-4">
+                    <button
+                      onClick={() => recognizeOne(drawerContract.id)}
+                      disabled={drawerContract.status !== 'Active' || drawerContract.remaining <= 0 || recognizingId === drawerContract.id}
+                      className="flex-1 rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                    >
+                      Recognize Now
+                    </button>
+                    <button
+                      onClick={() => setDrawerContract(null)}
+                      className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {showCreate && (
