@@ -342,7 +342,7 @@ export default function CustomerPortalPage() {
     <div className="flex flex-col min-h-screen bg-slate-50">
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+      <div className="bg-white border-b border-slate-200">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Customer Portal</h1>
@@ -658,7 +658,7 @@ export default function CustomerPortalPage() {
         </div>
 
         {/* ── Portal Activity Log ────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="w-full bg-white rounded-xl border border-slate-200 p-6">
           <div className="flex items-center gap-2 mb-5">
             <Activity size={18} className="text-emerald-600" />
             <h2 className="text-base font-semibold text-slate-900">Recent Portal Activity</h2>
