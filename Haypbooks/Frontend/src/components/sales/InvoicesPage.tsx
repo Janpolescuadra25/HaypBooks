@@ -484,8 +484,8 @@ export default function InvoicesPage() {
               )}
               <div className="border-t border-gray-100 mt-1 pt-1">
                 <MenuBtn icon={<Printer size={13} />} label="Print Invoice" onClick={() => { window.print(); setActionMenuId(null); setMenuPos(null) }} />
-                <MenuBtn icon={<Download size={13} />} label="Download PDF" onClick={() => { showToast('PDF export coming soon'); setActionMenuId(null); setMenuPos(null) }} />
-                <MenuBtn icon={<FileText size={13} />} label="Print Packing Slip" onClick={() => { showToast('Packing slip coming soon'); setActionMenuId(null); setMenuPos(null) }} />
+                <MenuBtn icon={<Download size={13} />} label="Download PDF" disabled tooltip="Coming soon" />
+                <MenuBtn icon={<FileText size={13} />} label="Print Packing Slip" disabled tooltip="Coming soon" />
               </div>
               <div className="border-t border-gray-100 mt-1 pt-1">
                 <MenuBtn icon={<Share2 size={13} />} label="Share Link" onClick={() => {
@@ -493,8 +493,8 @@ export default function InvoicesPage() {
                   showToast('Link copied!')
                   setActionMenuId(null); setMenuPos(null)
                 }} />
-                <MenuBtn icon={<Copy size={13} />} label="Duplicate" onClick={() => { showToast('Duplicate coming soon'); setActionMenuId(null); setMenuPos(null) }} />
-                <MenuBtn icon={<FileText size={13} />} label="Credit Note" onClick={() => { showToast('Credit note coming soon'); setActionMenuId(null); setMenuPos(null) }} />
+                <MenuBtn icon={<Copy size={13} />} label="Duplicate" disabled tooltip="Coming soon" />
+                <MenuBtn icon={<FileText size={13} />} label="Credit Note" disabled tooltip="Coming soon" />
               </div>
               <div className="border-t border-gray-100 mt-1 pt-1">
                 {(inv.status === 'DRAFT' || inv.status === 'SENT') && (
@@ -524,12 +524,17 @@ function StatCard({ icon, label, value, sub, color }: {
   )
 }
 
-function MenuBtn({ icon, label, onClick, danger = false }: {
-  icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean
+function MenuBtn({ icon, label, onClick, danger = false, disabled = false, tooltip }: {
+  icon: React.ReactNode; label: string; onClick?: () => void; danger?: boolean; disabled?: boolean; tooltip?: string
 }) {
   return (
-    <button onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`}>
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      tabIndex={disabled ? -1 : 0}
+      title={disabled ? tooltip : undefined}
+      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${disabled ? 'cursor-not-allowed text-gray-300' : danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`}
+    >
       {icon} {label}
     </button>
   )
