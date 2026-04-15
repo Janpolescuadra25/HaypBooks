@@ -6,7 +6,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
-import { ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Clock } from 'lucide-react'
 
 type PaymentLinkRow = {
   id: string
@@ -26,6 +26,15 @@ type NewPaymentLinkForm = {
   amount: string
   invoiceId: string
   expiryDate: string
+}
+
+type ActivityLog = {
+  id: string
+  action: string
+  recordId: string
+  createdAt: string
+  changes?: Record<string, any> | null
+  user?: { id?: string; name?: string | null; email?: string | null } | null
 }
 
 type PaymentLinkSortKey = 'linkId' | 'description' | 'amount' | 'createdDate' | 'expiryDate' | 'views' | 'status'
@@ -73,6 +82,8 @@ export default function PaymentLinksPage() {
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [activity, setActivity] = useState<ActivityLog[]>([])
+  const [activityLoading, setActivityLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
@@ -89,6 +100,23 @@ export default function PaymentLinksPage() {
   }, [companyId])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const loadActivity = useCallback(async () => {
+    if (!companyId) return
+    setActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/integrations/audit-logs`, {
+        params: { tableName: 'PaymentLink', limit: 8 },
+      })
+      setActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setActivity([])
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [companyId])
+
+  useEffect(() => { loadActivity() }, [loadActivity])
   const [search, setSearch] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
   const [sortKey, setSortKey] = useState<PaymentLinkSortKey>('createdDate')
@@ -124,6 +152,7 @@ export default function PaymentLinksPage() {
       setShowCreate(false)
       setForm({ description: '', amount: '', invoiceId: '', expiryDate: '' })
       await fetchData()
+      await loadActivity()
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to create payment link')
     } finally {
@@ -159,12 +188,22 @@ export default function PaymentLinksPage() {
   const plinkColsRef = useRef(plinkCols)
   useEffect(() => { plinkColsRef.current = plinkCols }, [plinkCols])
   const savePlinkCols = (next: PlinkColDef[]) => { setPlinkCols(next); try { localStorage.setItem('payment-links-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const { containerRef, startResize: startPlinkResize } = useFixedWidthResizableColumns({
+  const { containerRef, startResize: startPlinkResize, isOverflowing: paymentLinksIsOverflowing } = useFixedWidthResizableColumns({
     columns: plinkCols,
     columnsRef: plinkColsRef,
     saveColumns: savePlinkCols,
     fixedWidth: 80,
   })
+
+  const describeActivity = (entry: ActivityLog) => {
+    const linkId = entry.changes?.linkId ?? entry.recordId
+    switch (entry.action) {
+      case 'CREATE': return `Created payment link ${linkId}`
+      case 'UPDATE': return `Updated payment link ${linkId}`
+      case 'DELETE': return `Deleted payment link ${linkId}`
+      default: return `${entry.action} payment link ${linkId}`
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -264,6 +303,37 @@ export default function PaymentLinksPage() {
             </tbody>
           </table>
         </div>
+
+        <section className="mt-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Clock size={14} className="text-emerald-600" />Recent Activity</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest payment-link creation events</p>
+            </div>
+          </div>
+          {activityLoading ? (
+            <div className="px-4 py-8 text-sm text-slate-500">Loading activity…</div>
+          ) : activity.length === 0 ? (
+            <div className="px-4 py-8 text-sm text-slate-500">No payment link activity recorded yet.</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {activity.map((entry) => (
+                <div key={entry.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{describeActivity(entry)}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {entry.changes?.description || 'No description'}
+                      {entry.changes?.amount != null ? ` · ${formatCurrency(Number(entry.changes.amount), currency)}` : ''}
+                      {' · '}
+                      {entry.user?.name ?? entry.user?.email ?? 'System'}
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-400 shrink-0">{new Date(entry.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {showCreate && (

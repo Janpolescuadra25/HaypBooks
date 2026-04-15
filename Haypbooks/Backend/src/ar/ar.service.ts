@@ -1022,6 +1022,24 @@ export class ArService {
             createdById: userId,
         })
 
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'CREATE',
+                tableName: 'PaymentLink',
+                recordId: created.id,
+                changes: {
+                    linkId: created.linkId,
+                    description: created.description,
+                    amount: created.amount,
+                    invoiceId: created.invoiceId,
+                    status: created.status,
+                },
+            },
+        }).catch(() => {})
+
         return this.normalizePaymentLinkRow(created)
     }
 
