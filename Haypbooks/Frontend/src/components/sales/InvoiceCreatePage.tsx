@@ -19,7 +19,6 @@ import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
 import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
-import InvoiceSettingsModal, { DEFAULT_INVOICE_SETTINGS, InvoiceSettings } from '@/components/sales/InvoiceSettingsModal'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import { useToast } from '@/components/ToastProvider'
 
@@ -247,9 +246,7 @@ export default function InvoiceCreatePage() {
   const [discountType, setDiscountType] = useState<'pct' | 'flat'>('pct')
   const [discountValue, setDiscountValue] = useState(0)
 
-  // Options (invoice settings modal)
-  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>(DEFAULT_INVOICE_SETTINGS)
-  const [showInvoiceSettings, setShowInvoiceSettings] = useState(false)
+  const invoiceSettingsMessage = 'Coming soon'
 
   // Address & contact auto-fill
   const [customerEmail, setCustomerEmail] = useState('')
@@ -410,13 +407,6 @@ export default function InvoiceCreatePage() {
     if (!customerId) { setError('Please select a customer.'); return }
     const validItems = items.filter(it => it.description.trim())
     if (validItems.length === 0) { setError('Add at least one line item.'); return }
-    // TODO: invoiceSettings (recurring schedule, late fees, auto-reminders, custom numbering) are
-    // collected by InvoiceSettingsModal but the backend createInvoice endpoint does NOT yet support
-    // these fields. When backend support is added, pass them through from `invoiceSettings` here.
-    // Supported fields today: customerId, dueDate, paymentTermId, currency, lines.
-    if (invoiceSettings.makeRecurring || invoiceSettings.applyLateFee || invoiceSettings.autoReminders) {
-      console.warn('[InvoiceCreate] Invoice settings (recurring/late fees/reminders) ignored — backend does not yet support these fields.')
-    }
     setSaving(true); setSaveAction(action); setError('')
     try {
       const { data: inv } = await apiClient.post(`/companies/${companyId}/ar/invoices`, {
@@ -948,11 +938,7 @@ export default function InvoiceCreatePage() {
                 <Paperclip size={13} /> Add Attachment
               </button>
               <p className="text-xs text-gray-400 text-center">
-                Invoice settings (recurring, fees, etc.) are in the{' '}
-                <button onClick={() => setShowInvoiceSettings(true)}
-                  className="text-emerald-600 hover:underline font-medium inline-flex items-center gap-0.5">
-                  <Settings size={11} /> Invoice Settings
-                </button>{' '}below.
+                Invoice settings for recurring billing, late fees, and scheduled sends are coming soon.
               </p>
             </div>
           </div>
@@ -1344,8 +1330,8 @@ export default function InvoiceCreatePage() {
                     className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-56 z-50">
                     <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
                       className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send Now (email immediately)</button>
-                    <button onClick={() => { setInvoiceSettings(p => ({ ...p, scheduleSend: true })); setShowInvoiceSettings(true); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Schedule Send</button>
+                    <button type="button" title={invoiceSettingsMessage} tabIndex={-1}
+                      className="w-full cursor-not-allowed text-left px-3 py-2 text-xs text-gray-300">Schedule Send</button>
                     <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
                       className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Payment Link</button>
                     <button onClick={() => setShowSendMenu(false)}
@@ -1358,22 +1344,12 @@ export default function InvoiceCreatePage() {
             </div>
             {/* ⚙️ Invoice Settings button → opens large modal */}
             <button
-              onClick={() => setShowInvoiceSettings(true)}
-              title="Invoice Settings"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
-                [invoiceSettings.makeRecurring, invoiceSettings.scheduleSend, invoiceSettings.applyLateFee,
-                 invoiceSettings.enablePartialPayments, invoiceSettings.requirePO, invoiceSettings.enableDeposit,
-                 invoiceSettings.autoReminders].some(Boolean)
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                  : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-              }`}>
+              type="button"
+              title={invoiceSettingsMessage}
+              className="flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-400">
               <Settings size={15} />
               Invoice Settings
-              {[invoiceSettings.makeRecurring, invoiceSettings.scheduleSend, invoiceSettings.applyLateFee,
-                invoiceSettings.enablePartialPayments, invoiceSettings.requirePO, invoiceSettings.enableDeposit,
-                invoiceSettings.autoReminders].some(Boolean) && (
-                <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              )}
+              <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Soon</span>
             </button>
           </div>
         </div>
@@ -1388,22 +1364,6 @@ export default function InvoiceCreatePage() {
           />
         )}
       </AnimatePresence>
-
-      {/* Invoice Settings Modal */}
-      <AnimatePresence>
-        {showInvoiceSettings && (
-          <InvoiceSettingsModal
-            initial={invoiceSettings}
-            onClose={() => setShowInvoiceSettings(false)}
-            onApply={s => {
-              setInvoiceSettings(s)
-              setShowInvoiceSettings(false)
-              toast.success('Invoice settings applied')
-            }}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Quick Add Customer Modal */}
       {showQuickAddModal && (
         <QuickAddCustomerModal
