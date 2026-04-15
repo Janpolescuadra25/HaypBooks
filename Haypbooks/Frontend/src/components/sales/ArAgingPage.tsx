@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import { Loader2, AlertCircle, X, Download, Search, ArrowUpDown } from 'lucide-react'
+import { Loader2, AlertCircle, X, Download, Search, ArrowUpDown, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -66,6 +66,10 @@ export default function ArAgingPage() {
   const [error, setError] = useState('')
   const [asOf, setAsOf] = useState(new Date().toISOString().split('T')[0])
   const [search, setSearch] = useState('')
+  const [drawerCustomer, setDrawerCustomer] = useState<AgingCustomer | null>(null)
+  const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
+  const [agingActivity, setAgingActivity] = useState<any[]>([])
+  const [agingActivityLoading, setAgingActivityLoading] = useState(false)
   const [agingSortKey, setAgingSortKey] = useState<AgingSortKey>('total')
   const [agingSortDir, setAgingSortDir] = useState<AgingSortDir>('desc')
   const toggleAgingSort = (key: AgingSortKey) => {
@@ -103,11 +107,30 @@ export default function ArAgingPage() {
   const agingColsRef = useRef(agingCols)
   useEffect(() => { agingColsRef.current = agingCols }, [agingCols])
   const saveAgingCols = (next: AgingColDef[]) => { setAgingCols(next); try { localStorage.setItem('ar-aging-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const { containerRef, startResize: startAgingResize } = useFixedWidthResizableColumns({
+  const { containerRef, startResize: startAgingResize, isOverflowing: arAgingIsOverflowing } = useFixedWidthResizableColumns({
     columns: agingCols,
     columnsRef: agingColsRef,
     saveColumns: saveAgingCols,
   })
+
+  const openDrawer = (customer: AgingCustomer) => {
+    setDrawerCustomer(customer)
+    setDrawerTab('details')
+    setAgingActivity([])
+  }
+
+  const loadCustomerActivity = useCallback(async (customerId: string) => {
+    if (!companyId) return
+    setAgingActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers/${customerId}/activity`)
+      setAgingActivity(Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [])
+    } catch {
+      setAgingActivity([])
+    } finally {
+      setAgingActivityLoading(false)
+    }
+  }, [companyId])
 
   function exportCsv() {
     const headers = ['Customer', 'Current', '1-30', '31-60', '61-90', '90+', 'Total']
@@ -218,7 +241,7 @@ export default function ArAgingPage() {
                   {customers.length === 0 ? (
                     <tr><td colSpan={7} className="px-4 py-8 text-center text-emerald-400">No customers found.</td></tr>
                   ) : customers.map(c => (
-                    <tr key={c.customerId} className="border-t border-emerald-50 hover:bg-emerald-50/30">
+                    <tr key={c.customerId} onClick={() => openDrawer(c)} className="cursor-pointer border-t border-emerald-50 hover:bg-emerald-50/30">
                       <td className="px-4 py-2.5 font-medium text-emerald-900 truncate border-r border-emerald-50" title={c.customerName}>{c.customerName}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.current ? fmt(c.current) : '—'}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums border-r border-emerald-50">{c.days30 ? fmt(c.days30) : '—'}</td>
@@ -230,6 +253,85 @@ export default function ArAgingPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
+            </div>
+          )}
+
+          {drawerCustomer && (
+            <div className="fixed inset-0 z-50 flex">
+              <div className="flex-1 bg-black/30" onClick={() => setDrawerCustomer(null)} />
+              <div className="flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">{drawerCustomer.customerName}</h2>
+                    <p className="mt-0.5 text-sm text-slate-500">A/R aging snapshot as of {asOf}</p>
+                  </div>
+                  <button onClick={() => setDrawerCustomer(null)} title="Close details" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+                </div>
+                <div className="flex border-b border-slate-200 bg-slate-50 px-5">
+                  {(['details', 'activity'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setDrawerTab(tab)
+                        if (tab === 'activity' && agingActivity.length === 0) {
+                          loadCustomerActivity(drawerCustomer.customerId)
+                        }
+                      }}
+                      className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                      {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                    </button>
+                  ))}
+                </div>
+                {drawerTab === 'activity' ? (
+                  <div className="space-y-3 px-5 py-4">
+                    {agingActivityLoading ? (
+                      <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+                    ) : agingActivity.length === 0 ? (
+                      <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
+                    ) : agingActivity.map((log: any) => (
+                      <div key={log.id} className="flex items-start gap-3 text-sm">
+                        <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                        <div>
+                          <span className="font-semibold text-slate-700">{log.action}</span>
+                          {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                          <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex-1 space-y-4 px-5 py-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Current</p>
+                        <p className="font-semibold text-slate-800">{fmt(drawerCustomer.current)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">1-30 Days</p>
+                        <p className="font-semibold text-slate-800">{fmt(drawerCustomer.days30)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">31-60 Days</p>
+                        <p className="font-semibold text-slate-800">{fmt(drawerCustomer.days60)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">61-90 Days</p>
+                        <p className="font-semibold text-slate-800">{fmt(drawerCustomer.days90)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">90+ Days</p>
+                        <p className="font-semibold text-red-600">{fmt(drawerCustomer.over90)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Total Outstanding</p>
+                        <p className="font-bold text-xl text-emerald-800">{fmt(drawerCustomer.total)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
