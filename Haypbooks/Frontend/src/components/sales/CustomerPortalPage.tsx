@@ -4,7 +4,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import {
   Plus, Search, RefreshCw, ArrowUpDown, X, Globe, Bell, Shield,
   Eye, FileText, CreditCard, Download, BookOpen, Clock, CheckSquare,
-  Mail, LogIn, AlertCircle, Loader2, Send, Ban, RotateCcw, Activity,
+  Mail, LogIn, AlertCircle, Loader2, Send, Ban, Activity,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -58,7 +58,7 @@ const DEFAULT_COLS: ColDef[] = [
 ]
 
 const SELECTION_COL_WIDTH = 40
-const ACTIONS_COL_WIDTH = 140
+const ACTIONS_COL_WIDTH = 56
 
 function loadCols(): ColDef[] {
   try {
@@ -342,7 +342,7 @@ export default function CustomerPortalPage() {
   if (cidError) return <div className="p-6 text-red-600">{cidError}</div>
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50">
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-slate-200">
@@ -617,11 +617,11 @@ export default function CustomerPortalPage() {
                     </th>
                   ))}
                   <th
-                    className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide relative overflow-hidden"
+                    className="px-3 py-2 text-right"
                     style={{ width: ACTIONS_COL_WIDTH, minWidth: ACTIONS_COL_WIDTH, maxWidth: ACTIONS_COL_WIDTH }}
                     title="Actions"
                   >
-                    <span className="block truncate">Actions</span>
+                    <span className="sr-only">Actions</span>
                   </th>
                 </tr>
               </thead>
@@ -659,18 +659,30 @@ export default function CustomerPortalPage() {
                       </td>
                     ))}
                     <td
-                      className="px-4 py-3 align-middle whitespace-nowrap"
+                      className="px-3 py-2 text-right"
                       style={{ width: ACTIONS_COL_WIDTH, minWidth: ACTIONS_COL_WIDTH, maxWidth: ACTIONS_COL_WIDTH }}
                     >
-                      <div className="flex min-h-[24px] items-center gap-2">
-                        <button onClick={() => handleResendInvite(row)} className="inline-flex self-center items-center gap-0.5 text-xs font-semibold text-sky-700 hover:underline">
-                          <RotateCcw size={11} /> Resend
+                      {row.portalStatus === 'Active' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRevoke(row)}
+                          title="Revoke portal access"
+                          aria-label={`Revoke portal access for ${row.customerName}`}
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-rose-600 transition-colors hover:bg-rose-50"
+                        >
+                          <Ban size={14} />
                         </button>
-                        <span className="text-slate-300">·</span>
-                        <button onClick={() => handleRevoke(row)} className="inline-flex self-center items-center gap-0.5 text-xs font-semibold text-rose-600 hover:underline">
-                          <Ban size={11} /> Revoke
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleResendInvite(row)}
+                          title="Resend invite"
+                          aria-label={`Resend invite to ${row.customerName}`}
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-sky-600 transition-colors hover:bg-sky-50"
+                        >
+                          <Mail size={14} />
                         </button>
-                      </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -681,9 +693,11 @@ export default function CustomerPortalPage() {
             {filtered.length} customer{filtered.length !== 1 ? 's' : ''} {statusFilter ? `with status "${statusFilter}"` : 'total'}
           </div>
         </div>
+      </div>
 
+      <div className="px-6 pb-5">
         {/* ── Portal Activity Log ────────────────────────────────────────────── */}
-        <div className="w-full bg-white rounded-xl border border-slate-200 p-6">
+        <div className="w-full rounded-xl border border-slate-200 bg-white p-6">
           <div className="flex items-center gap-2 mb-5">
             <Activity size={18} className="text-emerald-600" />
             <h2 className="text-base font-semibold text-slate-900">Recent Portal Activity</h2>
