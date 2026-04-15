@@ -750,53 +750,5 @@ export default function CustomerPortalPage() {
     </div>
   )
 }
-
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={20} className="px-4 py-10 text-center">
-                    <p className="text-rose-500 font-medium">{error}</p>
-                    <button onClick={fetchData} className="mt-2 text-sm text-emerald-600 hover:underline">Try again</button>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-slate-500">No features found.</td>
-                </tr>
-              ) : (
-                filtered.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{row.feature}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.description}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.visibility}</td>
-                    <td className={`px-4 py-3 text-sm font-semibold ${row.status === 'Enabled' ? 'text-emerald-700' : 'text-rose-700'}`}>{row.status}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Customer Portal Documentation</h2>
-              <button onClick={() => setHelpOpen(false)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">✕</button>
-            </div>
-            <div className="p-4 text-sm text-slate-700 space-y-3">
-              <p>Configure which features are available to portal users and segment by access level.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Enable public or restricted features for different tiers.</li>
-                <li>Manage portal access and monitor availability.</li>
-                <li>Use this to improve customer self-service experience.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
   )
 }
