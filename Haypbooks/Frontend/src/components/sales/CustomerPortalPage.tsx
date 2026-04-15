@@ -164,7 +164,7 @@ export default function CustomerPortalPage() {
   const [loadingInvites, setLoadingInvites] = useState(true)
   const [inviteError, setInviteError] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<''>  | PortalInvitation['portalStatus']>('')
+  const [statusFilter, setStatusFilter] = useState<'' | PortalInvitation['portalStatus']>('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey] = useState<SortKey>('customerName')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
