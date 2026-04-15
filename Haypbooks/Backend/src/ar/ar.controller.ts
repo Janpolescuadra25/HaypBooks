@@ -440,9 +440,9 @@ export class ArController {
         @Req() req: any,
         @Param('companyId') companyId: string,
         @Param('paymentId') paymentId: string,
-        @Body() body: { allocations: Array<{ invoiceId: string; amount: number }> },
+        @Body() body: { allocations?: Array<{ invoiceId: string; amount: number }>; applications?: Array<{ invoiceId: string; amount: number }> },
     ) {
-        return this.svc.applyPaymentToInvoices(req.user.userId, companyId, paymentId, body.allocations)
+        return this.svc.applyPaymentToInvoices(req.user.userId, companyId, paymentId, body)
     }
 
     @Post('payments/:paymentId/void')

@@ -777,7 +777,7 @@ export class ArRepository {
             },
             include: {
                 customer: { include: { contact: { select: { displayName: true } } } },
-                InvoicePaymentApplication: { include: { invoice: { select: { id: true, invoiceNumber: true, totalAmount: true } } } },
+                InvoicePaymentApplication: { include: { invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, balance: true } } } },
             },
             orderBy: { paymentDate: 'desc' },
             take: opts.limit ?? 50,
@@ -800,7 +800,7 @@ export class ArRepository {
         workspaceId: string, companyId: string, customerId: string,
         amount: number, paymentDate: Date, referenceNumber?: string,
         paymentMethodId?: string, bankAccountId?: string, createdById: string,
-        applications: Array<{ invoiceId: string, amount: number }>
+        allocations: Array<{ invoiceId: string, amount: number }>
     }) {
         return this.prisma.$transaction(async (tx) => {
             const payment = await tx.paymentReceived.create({
@@ -818,22 +818,22 @@ export class ArRepository {
             })
 
             // Apply payment to invoices
-            for (const app of data.applications ?? []) {
+            for (const allocation of data.allocations ?? []) {
                 await tx.invoicePaymentApplication.create({
                     data: {
                         workspaceId: data.workspaceId,
-                        invoiceId: app.invoiceId,
+                        invoiceId: allocation.invoiceId,
                         paymentId: payment.id,
-                        amount: app.amount,
+                        amount: allocation.amount,
                     },
                 })
                 // Update invoice balance
-                const invoice = await tx.invoice.findUnique({ where: { id: app.invoiceId } })
+                const invoice = await tx.invoice.findUnique({ where: { id: allocation.invoiceId } })
                 if (invoice) {
-                    const newBalance = Math.max(0, Number(invoice.balance) - Number(app.amount))
-                    const newStatus = newBalance <= 0 ? 'PAID' : (Number(app.amount) > 0 ? 'PARTIAL' : invoice.status)
+                    const newBalance = Math.max(0, Number(invoice.balance) - Number(allocation.amount))
+                    const newStatus = newBalance <= 0 ? 'PAID' : (Number(allocation.amount) > 0 ? 'PARTIAL' : invoice.status)
                     await tx.invoice.update({
-                        where: { id: app.invoiceId },
+                        where: { id: allocation.invoiceId },
                         data: { balance: newBalance, status: newStatus as any, paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any },
                     })
                 }
@@ -862,13 +862,22 @@ export class ArRepository {
         if (!payment) throw new Error('Payment not found')
 
         return this.prisma.$transaction(async (tx) => {
-            let remaining = Number(payment.amount)
+            const existingAllocated = await tx.invoicePaymentApplication.aggregate({
+                where: { paymentId },
+                _sum: { amount: true },
+            })
+            let remaining = Math.max(0, Number(payment.amount) - Number(existingAllocated._sum.amount ?? 0))
+
             for (const alloc of allocations || []) {
                 if (alloc.amount <= 0) continue
                 if (alloc.amount > remaining) throw new Error('Allocation exceeds payment amount')
 
                 const invoice = await tx.invoice.findFirst({ where: { id: alloc.invoiceId, companyId, deletedAt: null } })
                 if (!invoice) throw new Error('Invoice not found')
+                if (alloc.amount > Number(invoice.balance) + 0.01) throw new Error('Allocation exceeds invoice remaining balance')
+
+                const existingAllocation = await tx.invoicePaymentApplication.findFirst({ where: { paymentId, invoiceId: alloc.invoiceId } })
+                if (existingAllocation) throw new Error('Payment is already allocated to this invoice')
 
                 await tx.invoicePaymentApplication.create({
                     data: {

@@ -67,14 +67,141 @@ export class ArService {
         }
     }
 
+    private roundPaymentAmount(value: number) {
+        return Number((Number.isFinite(value) ? value : 0).toFixed(2))
+    }
+
+    private normalizeRequestedAllocations(data: any): Array<{ invoiceId: string; amount: number }> {
+        const rawAllocations = Array.isArray(data?.allocations)
+            ? data.allocations
+            : (Array.isArray(data?.applications) ? data.applications : [])
+
+        if (rawAllocations.length > 0) {
+            return rawAllocations.map((allocation: any) => ({
+                invoiceId: String(allocation?.invoiceId ?? '').trim(),
+                amount: Number(allocation?.amount ?? 0),
+            }))
+        }
+
+        if (data?.invoiceId) {
+            return [{ invoiceId: String(data.invoiceId).trim(), amount: Number(data.amount ?? 0) }]
+        }
+
+        return []
+    }
+
+    private normalizePaymentAllocation(allocation: any) {
+        return {
+            invoiceId: allocation.invoiceId ?? allocation.invoice?.id ?? '',
+            amount: this.roundPaymentAmount(Number(allocation.amount ?? 0)),
+            remainingBalance: this.roundPaymentAmount(Math.max(0, Number(allocation.invoice?.balance ?? allocation.remainingBalance ?? 0))),
+        }
+    }
+
     private normalizePayment(p: any) {
+        const allocations = Array.isArray(p.InvoicePaymentApplication)
+            ? p.InvoicePaymentApplication.map((allocation: any) => this.normalizePaymentAllocation(allocation))
+            : (Array.isArray(p.allocations) ? p.allocations.map((allocation: any) => this.normalizePaymentAllocation(allocation)) : [])
+        const totalAmount = this.roundPaymentAmount(Number(p.amount ?? p.totalAmount ?? 0))
+        const totalAllocated = this.roundPaymentAmount(allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount ?? 0), 0))
+        const unappliedAmount = this.roundPaymentAmount(Math.max(0, totalAmount - totalAllocated))
+
         return {
             ...p,
+            amount: totalAmount,
+            totalAmount,
+            totalAllocated,
+            unappliedAmount,
+            allocations,
             paymentNumber: p.referenceNumber ?? p.paymentNumber ?? '',
             date: p.paymentDate ?? p.date,
             customerName: p.customer?.contact?.displayName ?? p.customerName ?? '',
             method: p.paymentMethodId ?? p.method ?? '',
         }
+    }
+
+    private async validatePaymentAllocations(
+        companyId: string,
+        allocations: Array<{ invoiceId: string; amount: number }>,
+        opts: {
+            paymentAmount: number
+            customerId?: string | null
+            existingAllocatedAmount?: number
+            alreadyAllocatedInvoiceIds?: Set<string>
+        },
+    ) {
+        if (!allocations.length) {
+            return { allocations, customerId: opts.customerId ?? null }
+        }
+
+        const seenInvoiceIds = new Set<string>()
+        for (const allocation of allocations) {
+            if (!allocation.invoiceId) {
+                throw new BadRequestException('Each allocation requires an invoiceId')
+            }
+            if (!Number.isFinite(allocation.amount) || allocation.amount <= 0) {
+                throw new BadRequestException(`Allocation amount for invoice ${allocation.invoiceId} must be greater than 0`)
+            }
+            if (seenInvoiceIds.has(allocation.invoiceId)) {
+                throw new BadRequestException(`Duplicate allocation for invoice ${allocation.invoiceId}`)
+            }
+            if (opts.alreadyAllocatedInvoiceIds?.has(allocation.invoiceId)) {
+                throw new BadRequestException(`Payment is already allocated to invoice ${allocation.invoiceId}`)
+            }
+            seenInvoiceIds.add(allocation.invoiceId)
+        }
+
+        const invoices = await this.prisma.invoice.findMany({
+            where: {
+                companyId,
+                deletedAt: null,
+                id: { in: [...seenInvoiceIds] },
+            },
+            select: {
+                id: true,
+                customerId: true,
+                balance: true,
+                invoiceNumber: true,
+            },
+        })
+
+        if (invoices.length !== seenInvoiceIds.size) {
+            const missingInvoiceId = [...seenInvoiceIds].find((invoiceId) => !invoices.some((invoice) => invoice.id === invoiceId))
+            throw new BadRequestException(`Invoice not found: ${missingInvoiceId}`)
+        }
+
+        const customerIds = new Set(invoices.map((invoice) => invoice.customerId))
+        if (customerIds.size > 1) {
+            throw new BadRequestException('All allocations must belong to the same customer')
+        }
+
+        const allocationCustomerId = invoices[0]?.customerId ?? null
+        if (opts.customerId && allocationCustomerId && allocationCustomerId !== opts.customerId) {
+            throw new BadRequestException('All allocations must belong to the payment customer')
+        }
+
+        const totalAllocated = allocations.reduce((sum, allocation) => sum + Number(allocation.amount ?? 0), 0)
+        const totalAllocatedAfterRequest = totalAllocated + Number(opts.existingAllocatedAmount ?? 0)
+        if (totalAllocatedAfterRequest > Number(opts.paymentAmount) + 0.01) {
+            throw new BadRequestException(`Total allocated (${this.roundPaymentAmount(totalAllocatedAfterRequest)}) exceeds payment amount (${this.roundPaymentAmount(Number(opts.paymentAmount))})`)
+        }
+
+        const invoicesById = new Map(invoices.map((invoice) => [invoice.id, invoice]))
+        for (const allocation of allocations) {
+            const invoice = invoicesById.get(allocation.invoiceId)
+            if (!invoice) continue
+            if (Number(allocation.amount) > Number(invoice.balance) + 0.01) {
+                throw new BadRequestException(`Allocation for invoice ${invoice.invoiceNumber ?? invoice.id} exceeds remaining balance`)
+            }
+        }
+
+        return { allocations, customerId: allocationCustomerId }
+    }
+
+    private async getNormalizedPaymentById(companyId: string, paymentId: string) {
+        const payment = await this.repo.findPaymentById(companyId, paymentId)
+        if (!payment) throw new NotFoundException('Payment not found')
+        return this.normalizePayment(payment)
     }
 
     private normalizeQuote(q: any) {
@@ -760,52 +887,41 @@ export class ArService {
 
     async getPayment(userId: string, companyId: string, paymentId: string) {
         await this.assertAccess(userId, companyId)
-        const p = await this.repo.findPaymentById(companyId, paymentId)
-        if (!p) throw new NotFoundException('Payment not found')
-        return this.normalizePayment(p)
+        return this.getNormalizedPaymentById(companyId, paymentId)
     }
 
     async recordPayment(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
 
-        // Build applications: accept either applications[] array or flat invoiceId
-        let applications = data.applications ?? []
-        if (!applications.length && data.invoiceId) {
-            applications = [{ invoiceId: data.invoiceId, amount: data.amount }]
-        }
+        const paymentAmount = Number(data.amount)
+        const allocations = this.normalizeRequestedAllocations(data)
+        const validated = await this.validatePaymentAllocations(companyId, allocations, {
+            paymentAmount,
+            customerId: data.customerId ?? null,
+        })
 
-        // Resolve customerId from invoice if not provided
-        let customerId = data.customerId
-        if (!customerId && applications.length > 0) {
-            const invoice = await this.prisma.invoice.findUnique({ where: { id: applications[0].invoiceId }, select: { customerId: true } })
-            if (invoice) customerId = invoice.customerId
-        }
+        let customerId = data.customerId ?? validated.customerId
         if (!customerId) throw new BadRequestException('customerId is required')
-        if (!data.amount || Number(data.amount) <= 0) throw new BadRequestException('amount must be greater than 0')
+        if (!paymentAmount || paymentAmount <= 0) throw new BadRequestException('amount must be greater than 0')
         const paymentDate = data.paymentDate ?? data.date
         if (!paymentDate) throw new BadRequestException('paymentDate is required')
-
-        const totalApplied = applications.reduce((s: number, a: any) => s + Number(a.amount ?? 0), 0)
-        if (totalApplied > Number(data.amount) + 0.01) {
-            throw new BadRequestException(`Total applied (${totalApplied}) exceeds payment amount (${data.amount})`)
-        }
 
         const result = await this.repo.recordPayment({
             workspaceId,
             companyId,
             customerId,
-            amount: data.amount,
+            amount: paymentAmount,
             paymentDate: new Date(paymentDate),
             referenceNumber: data.referenceNumber ?? data.reference,
             paymentMethodId: data.paymentMethodId ?? data.method,
             bankAccountId: data.bankAccountId,
             createdById: userId,
-            applications,
+            allocations: validated.allocations,
         })
         // Post payment receipt to the General Ledger (DR: Cash/Bank, CR: Accounts Receivable)
         await this.subLedger.postPaymentReceivedToGL(result.id, userId)
-        return this.normalizePayment(result)
+        return this.getNormalizedPaymentById(companyId, result.id)
     }
 
     async voidPayment(userId: string, companyId: string, paymentId: string) {
@@ -817,14 +933,27 @@ export class ArService {
         return result
     }
 
-    async applyPaymentToInvoices(userId: string, companyId: string, paymentId: string, allocations: Array<{ invoiceId: string; amount: number }>) {
+    async applyPaymentToInvoices(userId: string, companyId: string, paymentId: string, data: any) {
         await this.assertAccess(userId, companyId)
         const payment = await this.repo.findPaymentById(companyId, paymentId)
         if (!payment) throw new NotFoundException('Payment not found')
-        const totalAlloc = allocations.reduce((s, a) => s + Number(a.amount), 0)
-        if (totalAlloc > Number(payment.amount) + 0.01) throw new BadRequestException('Total allocations exceed payment amount')
-        const result = await this.repo.applyPaymentToInvoices(companyId, paymentId, allocations)
-        return result
+
+        const allocations = this.normalizeRequestedAllocations(data)
+        if (!allocations.length) throw new BadRequestException('allocations must contain at least one invoice')
+
+        const existingAllocatedAmount = Array.isArray(payment.InvoicePaymentApplication)
+            ? payment.InvoicePaymentApplication.reduce((sum: number, allocation: any) => sum + Number(allocation.amount ?? 0), 0)
+            : 0
+
+        await this.validatePaymentAllocations(companyId, allocations, {
+            paymentAmount: Number(payment.amount),
+            customerId: payment.customerId,
+            existingAllocatedAmount,
+            alreadyAllocatedInvoiceIds: new Set((payment.InvoicePaymentApplication ?? []).map((allocation: any) => allocation.invoiceId)),
+        })
+
+        await this.repo.applyPaymentToInvoices(companyId, paymentId, allocations)
+        return this.getNormalizedPaymentById(companyId, paymentId)
     }
 
     async getAging(userId: string, companyId: string) {
@@ -1049,7 +1178,7 @@ export class ArService {
                 changes: {
                     linkId: created.linkId,
                     description: created.description,
-                    amount: created.amount,
+                    amount: Number(created.amount ?? 0),
                     invoiceId: created.invoiceId,
                     status: created.status,
                 },
