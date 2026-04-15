@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, Bell, BellRing, FileX, ChevronDown, ArrowUpDown,
+  Download, Eye, Bell, BellRing, FileX, ChevronDown, ArrowUpDown, Clock,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -107,6 +107,10 @@ export default function DunningManagementPage() {
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(25)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [drawerInvoice, setDrawerInvoice] = useState<OverdueInvoice | null>(null)
+  const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
+  const [dunningActivity, setDunningActivity] = useState<any[]>([])
+  const [dunningActivityLoading, setDunningActivityLoading] = useState(false)
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
   const [showColMenu, setShowColMenu] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
@@ -197,6 +201,25 @@ export default function DunningManagementPage() {
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'dunning-overdue.csv'; a.click(); URL.revokeObjectURL(url)
   }
+
+  const openDrawer = (row: OverdueInvoice) => {
+    setDrawerInvoice(row)
+    setDrawerTab('details')
+    setDunningActivity([])
+  }
+
+  const loadDrawerActivity = useCallback(async (invoiceId: string) => {
+    if (!companyId) return
+    setDunningActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/dunning/${invoiceId}/activity`)
+      setDunningActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setDunningActivity([])
+    } finally {
+      setDunningActivityLoading(false)
+    }
+  }, [companyId])
 
   const visibleCols = cols.filter(c => c.visible)
 
@@ -355,12 +378,12 @@ export default function DunningManagementPage() {
                 const level = getLevel(row)
                 const meta = LEVEL_META[level] ?? LEVEL_META[0]
                 return (
-                  <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="px-3 py-3 border-r border-gray-100"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
+                  <tr key={row.id} onClick={() => openDrawer(row)} className="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50">
+                    <td className="px-3 py-3 border-r border-gray-100" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleOne(row.id)} className="accent-blue-600" /></td>
                     {visibleCols.map(c => (
                       <td key={c.key} className="px-3 py-3 truncate border-r border-gray-100" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(c, row)}</td>
                     ))}
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {/* Level dropdown */}
                         <select
@@ -392,6 +415,99 @@ export default function DunningManagementPage() {
           <div className="flex gap-1">
             <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">← Prev</button>
             <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next →</button>
+          </div>
+        </div>
+      )}
+
+      {drawerInvoice && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/30" onClick={() => setDrawerInvoice(null)} />
+          <div className="flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">{drawerInvoice.invoiceNumber}</h2>
+                <p className="mt-0.5 text-sm text-slate-500">{getCustomer(drawerInvoice)}</p>
+              </div>
+              <button onClick={() => setDrawerInvoice(null)} title="Close details" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+            </div>
+            <div className="flex border-b border-slate-200 bg-slate-50 px-5">
+              {(['details', 'activity'] as const).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => {
+                    setDrawerTab(tab)
+                    if (tab === 'activity' && dunningActivity.length === 0) {
+                      loadDrawerActivity(drawerInvoice.id)
+                    }
+                  }}
+                  className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                  {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                </button>
+              ))}
+            </div>
+            {drawerTab === 'activity' ? (
+              <div className="space-y-3 px-5 py-4">
+                {dunningActivityLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+                ) : dunningActivity.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
+                ) : dunningActivity.map((log: any) => (
+                  <div key={log.id} className="flex items-start gap-3 text-sm">
+                    <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                    <div>
+                      <span className="font-semibold text-slate-700">{log.action}</span>
+                      {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                      <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 space-y-4 px-5 py-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Due Date</p>
+                      <p className="font-semibold text-slate-800">{new Date(drawerInvoice.dueDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Days Overdue</p>
+                      <p className="font-bold text-xl text-red-600">{calcDaysOverdue(drawerInvoice.dueDate)}d</p>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Amount Due</p>
+                      <p className="font-semibold text-slate-800">{formatCurrency(getAmount(drawerInvoice), currency)}</p>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Status</p>
+                      <p className="font-semibold text-slate-800">{drawerInvoice.status ?? 'OVERDUE'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Dunning Level</p>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${LEVEL_META[getLevel(drawerInvoice)]?.cls ?? LEVEL_META[0].cls}`}>
+                        {LEVEL_META[getLevel(drawerInvoice)]?.label ?? LEVEL_META[0].label}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 border-t border-slate-200 px-5 py-4">
+                  <button
+                    onClick={() => handleSendReminder(drawerInvoice.id, Math.max(1, getLevel(drawerInvoice)))}
+                    className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                  >
+                    Send Reminder
+                  </button>
+                  <button
+                    onClick={() => setDrawerInvoice(null)}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
