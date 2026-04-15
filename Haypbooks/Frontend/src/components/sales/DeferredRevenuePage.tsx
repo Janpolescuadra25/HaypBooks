@@ -6,7 +6,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
-import { ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Clock, X } from 'lucide-react'
 
 type DeferredRevenueRow = {
   id: string
@@ -102,6 +102,10 @@ export default function DeferredRevenuePage() {
   const [saving, setSaving] = useState(false)
   const [recognizing, setRecognizing] = useState(false)
   const [recognizingId, setRecognizingId] = useState<string | null>(null)
+  const [drawerSchedule, setDrawerSchedule] = useState<DeferredRevenueRow | null>(null)
+  const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
+  const [scheduleActivity, setScheduleActivity] = useState<any[]>([])
+  const [scheduleActivityLoading, setScheduleActivityLoading] = useState(false)
   const [form, setForm] = useState<NewDeferredForm>({
     contractId: '',
     description: '',
@@ -220,12 +224,31 @@ export default function DeferredRevenuePage() {
   const deferredColsRef = useRef(deferredCols)
   useEffect(() => { deferredColsRef.current = deferredCols }, [deferredCols])
   const saveDeferredCols = (next: DeferredColDef[]) => { setDeferredCols(next); try { localStorage.setItem('deferred-cols-v1', JSON.stringify(next)) } catch { /* ignore */ } }
-  const { containerRef, startResize: startDeferredResize } = useFixedWidthResizableColumns({
+  const { containerRef, startResize: startDeferredResize, isOverflowing: deferredRevenueIsOverflowing } = useFixedWidthResizableColumns({
     columns: deferredCols,
     columnsRef: deferredColsRef,
     saveColumns: saveDeferredCols,
     fixedWidth: 80,
   })
+
+  const openDrawer = (row: DeferredRevenueRow) => {
+    setDrawerSchedule(row)
+    setDrawerTab('details')
+    setScheduleActivity([])
+  }
+
+  const loadScheduleActivity = useCallback(async (scheduleId: string) => {
+    if (!companyId) return
+    setScheduleActivityLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/deferred-revenue/${scheduleId}/activity`)
+      setScheduleActivity(Array.isArray(data) ? data : data?.data ?? data?.items ?? [])
+    } catch {
+      setScheduleActivity([])
+    } finally {
+      setScheduleActivityLoading(false)
+    }
+  }, [companyId])
 
   const totalDeferred = useMemo(() => items.filter((r) => r.status === 'Active').reduce((s, r) => s + (r.remainingDeferred ?? 0), 0), [items])
   const totalRecognized = useMemo(() => items.reduce((s, r) => s + (r.recognizedAmount ?? 0), 0), [items])
@@ -352,7 +375,7 @@ export default function DeferredRevenuePage() {
                       ? Math.round((row.recognizedAmount / row.totalDeferredAmount) * 100)
                       : 0
                     return (
-                      <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                      <tr key={row.id} onClick={() => openDrawer(row)} className="cursor-pointer transition-colors hover:bg-slate-50">
                         <td className="px-4 py-3 font-medium text-slate-800 border-r border-slate-100">{row.contractId}</td>
                         <td className="px-4 py-3 text-slate-700 border-r border-slate-100">{row.customer}</td>
                         <td className="px-4 py-3 text-slate-600 max-w-[180px] truncate border-r border-slate-100">{row.description}</td>
@@ -371,7 +394,7 @@ export default function DeferredRevenuePage() {
                             {row.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => recognizeOne(row.id)}
                             disabled={row.status !== 'Active' || row.remainingDeferred <= 0 || recognizingId === row.id}
@@ -388,6 +411,114 @@ export default function DeferredRevenuePage() {
             </div>
           )}
         </div>
+
+        {drawerSchedule && (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-black/30" onClick={() => setDrawerSchedule(null)} />
+            <div className="flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">{drawerSchedule.contractId || 'Deferred Schedule'}</h2>
+                  <p className="mt-0.5 text-sm text-slate-500">{drawerSchedule.customer}</p>
+                </div>
+                <button onClick={() => setDrawerSchedule(null)} title="Close details" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+              </div>
+              <div className="flex border-b border-slate-200 bg-slate-50 px-5">
+                {(['details', 'activity'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => {
+                      setDrawerTab(tab)
+                      if (tab === 'activity' && scheduleActivity.length === 0) {
+                        loadScheduleActivity(drawerSchedule.id)
+                      }
+                    }}
+                    className={`border-b-2 px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {tab === 'activity' ? <span className="flex items-center gap-1"><Clock size={13} />Activity</span> : 'Details'}
+                  </button>
+                ))}
+              </div>
+              {drawerTab === 'activity' ? (
+                <div className="space-y-3 px-5 py-4">
+                  {scheduleActivityLoading ? (
+                    <div className="flex justify-center py-8"><Clock size={18} className="animate-pulse text-slate-400" /></div>
+                  ) : scheduleActivity.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-slate-400">No activity recorded yet.</p>
+                  ) : scheduleActivity.map((log: any) => (
+                    <div key={log.id} className="flex items-start gap-3 text-sm">
+                      <Clock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="font-semibold text-slate-700">{log.action}</span>
+                        {log.user && <span className="text-slate-500"> by {log.user.name ?? log.user.email}</span>}
+                        <span className="ml-2 text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 space-y-4 px-5 py-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Description</p>
+                        <p className="font-semibold text-slate-800">{drawerSchedule.description}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Frequency</p>
+                        <p className="font-semibold text-slate-800">{drawerSchedule.frequency}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Total Deferred</p>
+                        <p className="font-semibold text-slate-800">{formatCurrency(drawerSchedule.totalDeferredAmount, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Recognized</p>
+                        <p className="font-semibold text-emerald-700">{formatCurrency(drawerSchedule.recognizedAmount, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Remaining</p>
+                        <p className="font-bold text-xl text-amber-700">{formatCurrency(drawerSchedule.remainingDeferred, currency)}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Next Recognition</p>
+                        <p className="font-semibold text-slate-800">{drawerSchedule.nextRecognitionDate}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Start Date</p>
+                        <p className="font-semibold text-slate-800">{drawerSchedule.startDate}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">End Date</p>
+                        <p className="font-semibold text-slate-800">{drawerSchedule.endDate}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Status</p>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[drawerSchedule.status] ?? ''}`}>{drawerSchedule.status}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 border-t border-slate-200 px-5 py-4">
+                    <button
+                      onClick={() => recognizeOne(drawerSchedule.id)}
+                      disabled={drawerSchedule.status !== 'Active' || drawerSchedule.remainingDeferred <= 0 || recognizingId === drawerSchedule.id}
+                      className="flex-1 rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                    >
+                      Recognize Now
+                    </button>
+                    <button
+                      onClick={() => setDrawerSchedule(null)}
+                      className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {showCreate && (
