@@ -119,22 +119,13 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
   )
 }
 
-// ─── Mock activity data ───────────────────────────────────────────────────────
-
-const MOCK_ACTIVITY: ActivityEntry[] = [
-  { id: 'a1', customerId: 'c1', customerName: 'Acme Corp', action: 'Viewed invoice INV-0042', timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
-  { id: 'a2', customerId: 'c2', customerName: 'Blue Sky Ltd', action: 'Made online payment of ₱12,500', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-  { id: 'a3', customerId: 'c3', customerName: 'Green Fields Co', action: 'Downloaded statement (PDF)', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
-  { id: 'a4', customerId: 'c1', customerName: 'Acme Corp', action: 'Logged in to portal', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-  { id: 'a5', customerId: 'c4', customerName: 'Harbor Tech', action: 'Accepted quote QT-0018 online', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString() },
-  { id: 'a6', customerId: 'c5', customerName: 'Summit Retail', action: 'Viewed account statement', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
-]
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CustomerPortalPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const toast = useToast()
+  const portalActionsMessage = 'Feature not yet available'
+  const activityEntries: ActivityEntry[] = []
 
   // ── Portal Settings ──────────────────────────────────────────────────────
   const [portalEnabled, setPortalEnabled] = useState(true)
@@ -173,7 +164,6 @@ export default function CustomerPortalPage() {
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
   const [showColMenu, setShowColMenu] = useState(false)
-  const [batchLoading, setBatchLoading] = useState(false)
   const colsRef = useRef(cols)
   useEffect(() => { colsRef.current = cols }, [cols])
 
@@ -194,7 +184,6 @@ export default function CustomerPortalPage() {
   const [allCustomers, setAllCustomers] = useState<Customer[]>([])
   const [customerSearch, setCustomerSearch] = useState('')
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set())
-  const [sendingInvites, setSendingInvites] = useState(false)
   const [customersLoading, setCustomersLoading] = useState(false)
 
   // ── Fetch invitations (customers with mock portal status) ─────────────────
@@ -246,15 +235,7 @@ export default function CustomerPortalPage() {
 
   const handleSendInvites = async () => {
     if (selectedCustomerIds.size === 0) { toast.error('Select at least one customer'); return }
-    setSendingInvites(true)
-    try {
-      // UI-only: simulate sending invitations
-      await new Promise(r => setTimeout(r, 800))
-      toast.success(`Portal invitations sent to ${selectedCustomerIds.size} customer(s)`)
-      setShowInviteModal(false)
-      fetchInvitations()
-    } catch { toast.error('Failed to send invitations') }
-    finally { setSendingInvites(false) }
+    toast.info(`Portal invitations are not available yet for ${selectedCustomerIds.size} customer(s)`)
   }
 
   // ── Sort / filter invitations ─────────────────────────────────────────────
@@ -282,47 +263,26 @@ export default function CustomerPortalPage() {
   }
 
   // ── Batch actions ─────────────────────────────────────────────────────────
-  const handleBatchSendInvites = async () => {
+  const handleBatchSendInvites = () => {
     if (!selectedIds.size) return
-    setBatchLoading(true)
-    try {
-      await new Promise(r => setTimeout(r, 600))
-      toast.success(`Invitations sent to ${selectedIds.size} customer(s)`)
-      setSelectedIds(new Set())
-    } catch { toast.error('Failed to send invitations') }
-    finally { setBatchLoading(false) }
+    toast.info(`Portal invitations are not available yet for ${selectedIds.size} customer(s)`)
   }
 
-  const handleBatchRevoke = async () => {
-    if (!selectedIds.size || !window.confirm(`Revoke portal access for ${selectedIds.size} customer(s)?`)) return
-    setBatchLoading(true)
-    try {
-      await new Promise(r => setTimeout(r, 600))
-      toast.success(`Access revoked for ${selectedIds.size} customer(s)`)
-      setSelectedIds(new Set())
-      fetchInvitations()
-    } catch { toast.error('Failed to revoke access') }
-    finally { setBatchLoading(false) }
+  const handleBatchRevoke = () => {
+    if (!selectedIds.size) return
+    toast.info(`Portal access management is not available yet for ${selectedIds.size} customer(s)`)
   }
 
-  const handleResendInvite = async (inv: PortalInvitation) => {
-    try {
-      await new Promise(r => setTimeout(r, 400))
-      toast.success(`Invitation resent to ${inv.customerName}`)
-    } catch { toast.error('Failed to resend invitation') }
+  const handleResendInvite = (inv: PortalInvitation) => {
+    toast.info(`Resend invite is not available yet for ${inv.customerName}`)
   }
 
-  const handleRevoke = async (inv: PortalInvitation) => {
-    if (!window.confirm(`Revoke portal access for ${inv.customerName}?`)) return
-    try {
-      await new Promise(r => setTimeout(r, 400))
-      toast.success(`Access revoked for ${inv.customerName}`)
-      fetchInvitations()
-    } catch { toast.error('Failed to revoke') }
+  const handleRevoke = (inv: PortalInvitation) => {
+    toast.info(`Revoke portal access is not available yet for ${inv.customerName}`)
   }
 
   const handleSaveSettings = () => {
-    toast.success('Portal settings saved')
+    toast.info('Portal settings are not available yet')
   }
 
   const visibleCols = cols.filter(c => c.visible)
@@ -355,7 +315,7 @@ export default function CustomerPortalPage() {
             <button onClick={fetchInvitations} className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Refresh invitations">
               <RefreshCw size={16} />
             </button>
-            <button onClick={handleSaveSettings} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">
+            <button onClick={handleSaveSettings} title={portalActionsMessage} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm">
               Save Settings
             </button>
           </div>
@@ -558,7 +518,7 @@ export default function CustomerPortalPage() {
                 )}
               </div>
               {/* Send Invites */}
-              <button onClick={openInviteModal} disabled={!portalEnabled} className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 rounded-lg shadow-sm">
+              <button onClick={openInviteModal} disabled={!portalEnabled} title={portalActionsMessage} className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 rounded-lg shadow-sm">
                 <Plus size={15} /> Send Invites
               </button>
             </div>
@@ -568,10 +528,10 @@ export default function CustomerPortalPage() {
           {selectedIds.size > 0 && (
             <div className="bg-emerald-700 text-white px-6 py-2.5 flex items-center gap-3 text-sm font-medium">
               <span>{selectedIds.size} selected</span>
-              <button onClick={handleBatchSendInvites} disabled={batchLoading} className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold disabled:opacity-50">
+              <button onClick={handleBatchSendInvites} title={portalActionsMessage} className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold">
                 <Send size={12} /> Resend Invites
               </button>
-              <button onClick={handleBatchRevoke} disabled={batchLoading} className="flex items-center gap-1 px-3 py-1 bg-rose-500 hover:bg-rose-600 rounded text-xs font-semibold disabled:opacity-50">
+              <button onClick={handleBatchRevoke} title={portalActionsMessage} className="flex items-center gap-1 px-3 py-1 bg-rose-500 hover:bg-rose-600 rounded text-xs font-semibold">
                 <Ban size={12} /> Revoke Access
               </button>
               <button onClick={() => setSelectedIds(new Set())} className="ml-auto p-1 hover:bg-white/20 rounded"><X size={14} /></button>
@@ -666,7 +626,7 @@ export default function CustomerPortalPage() {
                         <button
                           type="button"
                           onClick={() => handleRevoke(row)}
-                          title="Revoke portal access"
+                          title="Revoke portal access (feature not yet available)"
                           aria-label={`Revoke portal access for ${row.customerName}`}
                           className="inline-flex items-center justify-center rounded-md p-1.5 text-rose-600 transition-colors hover:bg-rose-50"
                         >
@@ -676,7 +636,7 @@ export default function CustomerPortalPage() {
                         <button
                           type="button"
                           onClick={() => handleResendInvite(row)}
-                          title="Resend invite"
+                          title="Resend invite (feature not yet available)"
                           aria-label={`Resend invite to ${row.customerName}`}
                           className="inline-flex items-center justify-center rounded-md p-1.5 text-sky-600 transition-colors hover:bg-sky-50"
                         >
@@ -701,11 +661,19 @@ export default function CustomerPortalPage() {
           <div className="flex items-center gap-2 mb-5">
             <Activity size={18} className="text-emerald-600" />
             <h2 className="text-base font-semibold text-slate-900">Recent Portal Activity</h2>
-            <span className="ml-auto text-xs text-slate-400">Last 48 hours</span>
+            <span className="ml-auto text-xs text-slate-400">Live feed</span>
           </div>
           <div className="space-y-0">
-            {MOCK_ACTIVITY.map((entry, i) => (
-              <div key={entry.id} className={`flex items-start gap-3 py-3 ${i < MOCK_ACTIVITY.length - 1 ? 'border-b border-slate-100' : ''}`}>
+            {activityEntries.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+                  <Activity size={18} />
+                </div>
+                <p className="text-sm font-medium text-slate-700">No live portal activity yet</p>
+                <p className="mt-1 text-xs text-slate-500">Activity will appear here once customer portal event tracking is available.</p>
+              </div>
+            ) : activityEntries.map((entry, i) => (
+              <div key={entry.id} className={`flex items-start gap-3 py-3 ${i < activityEntries.length - 1 ? 'border-b border-slate-100' : ''}`}>
                 <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
                   {entry.action.startsWith('Logged') ? <LogIn size={13} className="text-slate-500" /> :
                    entry.action.includes('payment') ? <CreditCard size={13} className="text-emerald-600" /> :
@@ -777,10 +745,11 @@ export default function CustomerPortalPage() {
               <button onClick={() => setShowInviteModal(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
               <button
                 onClick={handleSendInvites}
-                disabled={sendingInvites || selectedCustomerIds.size === 0}
+                disabled={selectedCustomerIds.size === 0}
+                title={portalActionsMessage}
                 className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm disabled:opacity-40"
               >
-                {sendingInvites ? <><Loader2 size={14} className="animate-spin" /> Sending…</> : <><Send size={14} /> Send {selectedCustomerIds.size > 0 ? `${selectedCustomerIds.size} ` : ''}Invitation{selectedCustomerIds.size !== 1 ? 's' : ''}</>}
+                <><Send size={14} /> Send {selectedCustomerIds.size > 0 ? `${selectedCustomerIds.size} ` : ''}Invitation{selectedCustomerIds.size !== 1 ? 's' : ''}</>
               </button>
             </div>
           </div>
