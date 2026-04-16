@@ -145,6 +145,15 @@ describe('AR invoice status state machine smoke e2e', () => {
     return res.body
   }
 
+  async function duplicateInvoice(invoiceId: string) {
+    const res = await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/ar/invoices/${invoiceId}/duplicate`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201)
+
+    return res.body
+  }
+
   async function getInvoice(invoiceId: string) {
     const res = await request(app.getHttpServer())
       .get(`/api/companies/${companyId}/ar/invoices/${invoiceId}`)
@@ -237,5 +246,32 @@ describe('AR invoice status state machine smoke e2e', () => {
     const overdueAfterVoid = await getInvoice(draft.id)
     expect(overdueAfterVoid.status).toBe('OVERDUE')
     expect(Number(overdueAfterVoid.amountDue)).toBeCloseTo(80, 2)
+  })
+
+  it('duplicates an invoice into a new DRAFT with copied customer, lines, and totals', async () => {
+    const dueDate = new Date(Date.now() + (5 * 24 * 60 * 60 * 1000)).toISOString().slice(0, 10)
+    const original = await createDraftInvoice(210, dueDate)
+
+    const sent = await sendInvoice(original.id)
+    expect(sent.status).toBe('SENT')
+    expect(sent.invoiceNumber).toBeTruthy()
+
+    const duplicate = await duplicateInvoice(original.id)
+    expect(duplicate.id).toBeTruthy()
+    expect(duplicate.id).not.toBe(original.id)
+    expect(duplicate.status).toBe('DRAFT')
+    expect(duplicate.invoiceNumber).toBeTruthy()
+    expect(duplicate.invoiceNumber).not.toBe(sent.invoiceNumber)
+    expect(Number(duplicate.total)).toBeCloseTo(210, 2)
+    expect(Number(duplicate.amountDue)).toBeCloseTo(210, 2)
+    expect(Array.isArray(duplicate.items)).toBe(true)
+    expect(duplicate.items).toHaveLength(1)
+    expect(duplicate.items[0].description).toBe('Status test line')
+    expect(Number(duplicate.items[0].amount)).toBeCloseTo(210, 2)
+
+    const fetchedDuplicate = await getInvoice(duplicate.id)
+    expect(fetchedDuplicate.status).toBe('DRAFT')
+    expect(fetchedDuplicate.customerId).toBe(customerId)
+    expect(Number(fetchedDuplicate.amountDue)).toBeCloseTo(210, 2)
   })
 })

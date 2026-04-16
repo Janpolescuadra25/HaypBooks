@@ -179,6 +179,35 @@ export default function InvoicesPage() {
     setActionMenuId(null)
   }
 
+  const duplicateInvoice = async (sourceInvoice: Invoice) => {
+    if (!companyId) throw new Error('No company selected')
+    const { data } = await apiClient.post(`/companies/${companyId}/ar/invoices/${sourceInvoice.id}/duplicate`)
+    await fetchInvoices()
+
+    const sourceRef = sourceInvoice.invoiceNumber ?? `INV-${sourceInvoice.id.slice(-6).toUpperCase()}`
+    const duplicatedRef = data?.invoiceNumber ?? `INV-${String(data?.id ?? '').slice(-6).toUpperCase()}`
+    showToast(`Invoice #${sourceRef} duplicated as #${duplicatedRef}`)
+    setViewInvoice(data)
+  }
+
+  const handleDuplicateFromList = async (sourceInvoice: Invoice) => {
+    try {
+      await duplicateInvoice(sourceInvoice)
+      setActionMenuId(null)
+      setMenuPos(null)
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to duplicate invoice')
+    }
+  }
+
+  const handleDuplicateFromDetail = async (sourceInvoice: Invoice) => {
+    try {
+      await duplicateInvoice(sourceInvoice)
+    } catch (e: any) {
+      throw new Error(e?.response?.data?.message ?? 'Failed to duplicate invoice')
+    }
+  }
+
   const handleVoid = async (id: string) => {
     if (!companyId || !confirm('Void this invoice?')) return
     try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`); fetchInvoices() }
@@ -457,6 +486,7 @@ export default function InvoicesPage() {
             companyId={companyId}
             onClose={() => setViewInvoice(null)}
             onRefresh={fetchInvoices}
+            onDuplicate={handleDuplicateFromDetail}
           />
         )}
       </AnimatePresence>
@@ -498,7 +528,7 @@ export default function InvoicesPage() {
                   showToast('Link copied!')
                   setActionMenuId(null); setMenuPos(null)
                 }} />
-                <MenuBtn icon={<Copy size={13} />} label="Duplicate" disabled tooltip="Coming soon" />
+                <MenuBtn icon={<Copy size={13} />} label="Duplicate" onClick={() => { handleDuplicateFromList(inv) }} />
                 <MenuBtn icon={<FileText size={13} />} label="Credit Note" disabled tooltip="Coming soon" />
               </div>
               <div className="border-t border-gray-100 mt-1 pt-1">

@@ -27,6 +27,15 @@ export class ArRepository {
         return 'DRAFT'
     }
 
+    private buildDuplicateInvoiceNumber(sourceInvoiceNumber: string | null | undefined) {
+        const source = String(sourceInvoiceNumber ?? '').trim()
+        const sanitized = source.replace(/[^A-Za-z0-9-]/g, '').slice(0, 32)
+        const base = sanitized || 'INV'
+        const timestampToken = Date.now().toString(36).toUpperCase()
+        const entropyToken = randomUUID().slice(0, 4).toUpperCase()
+        return `${base}-COPY-${timestampToken}-${entropyToken}`
+    }
+
     async transitionOverdueInvoices(companyId: string) {
         return this.prisma.invoice.updateMany({
             where: {
@@ -769,6 +778,67 @@ export class ArRepository {
                 } as any,
                 include: { lines: true },
             })
+        })
+    }
+
+    async duplicateInvoice(companyId: string, invoiceId: string, createdById: string) {
+        const source = await this.prisma.invoice.findFirst({
+            where: { id: invoiceId, companyId, deletedAt: null },
+            include: { lines: true },
+        })
+        if (!source) return null
+
+        const invoiceNumber = this.buildDuplicateInvoiceNumber(source.invoiceNumber)
+
+        return this.prisma.invoice.create({
+            data: {
+                workspaceId: source.workspaceId,
+                companyId: source.companyId,
+                customerId: source.customerId,
+                invoiceNumber,
+                status: 'DRAFT' as any,
+                paymentStatus: 'DRAFT' as any,
+                postingStatus: 'DRAFT' as any,
+                totalAmount: source.totalAmount,
+                balance: source.totalAmount,
+                currency: source.currency,
+                exchangeRate: source.exchangeRate,
+                baseTotal: source.baseTotal,
+                transactionType: source.transactionType,
+                discountAmount: source.discountAmount,
+                shippingAmount: source.shippingAmount,
+                otherCharges: source.otherCharges,
+                withholdingTaxAmount: source.withholdingTaxAmount,
+                finalTaxAmount: source.finalTaxAmount,
+                date: new Date(),
+                dueDate: source.dueDate,
+                paymentTermId: source.paymentTermId,
+                templateId: source.templateId,
+                invoiceTemplateId: source.invoiceTemplateId,
+                createdById,
+                updatedById: createdById,
+                lines: {
+                    create: source.lines.map((line: any) => ({
+                        companyId: source.companyId,
+                        workspaceId: source.workspaceId,
+                        description: line.description,
+                        quantity: line.quantity,
+                        unitPrice: line.unitPrice,
+                        totalPrice: line.totalPrice,
+                        itemId: line.itemId ?? undefined,
+                        discountPercent: line.discountPercent ?? null,
+                        discountAmount: line.discountAmount ?? null,
+                        classId: line.classId ?? undefined,
+                        locationId: line.locationId ?? undefined,
+                        projectId: line.projectId ?? undefined,
+                    })),
+                },
+            },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                lines: { select: { id: true, description: true, quantity: true, unitPrice: true, totalPrice: true, itemId: true } },
+                createdBy: { select: { id: true, name: true } },
+            },
         })
     }
 

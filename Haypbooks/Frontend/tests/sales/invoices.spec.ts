@@ -97,6 +97,32 @@ test.describe('Invoices', () => {
     await search.fill('')
   })
 
+  test('duplicate action creates a new draft and opens it in edit mode', async ({ page }) => {
+    const firstRow = page.locator('table tbody tr').first()
+    if (!(await firstRow.isVisible({ timeout: 5000 }).catch(() => false))) {
+      test.skip()
+      return
+    }
+
+    const actionButton = firstRow.locator('button').last()
+    if (!(await actionButton.isVisible({ timeout: 3000 }).catch(() => false))) {
+      test.skip()
+      return
+    }
+
+    await actionButton.click()
+    const duplicateBtn = page.getByRole('button', { name: /^duplicate$/i }).first()
+    if (!(await duplicateBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+      test.skip()
+      return
+    }
+
+    await duplicateBtn.click()
+    await expect(page.getByText(/duplicated as/i)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /send invoice/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/cannot be edited because it has already been sent/i)).toHaveCount(0)
+  })
+
   test('column visibility menu toggles columns', async ({ page }) => {
     const colsBtn = page.locator(selectors.columnsButton).first()
     if (!(await colsBtn.isVisible({ timeout: 4000 }).catch(() => false))) {

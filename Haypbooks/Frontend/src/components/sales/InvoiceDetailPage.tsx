@@ -7,7 +7,7 @@ import {
   FileText, User, Calendar, CreditCard, Loader2, AlertCircle,
   MoreVertical, Printer, Download, ChevronRight,
   Mail, Eye, Globe, ChevronDown, BookOpen, Settings2,
-  Plus, Save,
+  Plus, Save, Copy,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -30,6 +30,7 @@ interface Props {
   companyId: string
   onClose: () => void
   onRefresh: () => void
+  onDuplicate?: (invoice: Invoice) => Promise<void>
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; Icon: React.ElementType }> = {
@@ -42,7 +43,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; Icon: Re
   VOID:            { label: 'Voided',          className: 'bg-gray-100 text-gray-500 line-through', Icon: Ban },
 }
 
-export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, onClose, onRefresh }: Props) {
+export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, onClose, onRefresh, onDuplicate }: Props) {
   const { currency } = useCompanyCurrency()
   const toast = useToast()
   const [invoice, setInvoice] = useState(initialInvoice)
@@ -50,6 +51,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const [loadingPayments, setLoadingPayments] = useState(false)
   const [sending, setSending] = useState(false)
   const [voiding, setVoiding] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
   const [error, setError] = useState('')
   const [confirmVoid, setConfirmVoid] = useState(false)
   const [showEmailPreview, setShowEmailPreview] = useState(false)
@@ -84,6 +86,18 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   interface ActivityEntry { id: string; action: string; recordId: string; changes: any; createdAt: string; user: { id: string; name: string; email: string } }
   const [activityLog, setActivityLog] = useState<ActivityEntry[]>([])
   const [activityLoading, setActivityLoading] = useState(false)
+
+  useEffect(() => {
+    setInvoice(initialInvoice)
+    setEditDueDate(initialInvoice.dueDate ?? '')
+    setEditLines((initialInvoice.items ?? []).map((it: any) => ({
+      description: it.description ?? '',
+      quantity: Number(it.quantity ?? 1),
+      unitPrice: Number(it.unitPrice ?? it.rate ?? 0),
+    })))
+    setActiveTab('edit')
+    setError('')
+  }, [initialInvoice.id])
 
   const fmt = useCallback((n: number) => formatCurrency(n ?? 0, currency), [currency])
 
@@ -204,6 +218,19 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       setError(e?.response?.data?.message ?? 'Failed to send invoice')
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleDuplicate = async () => {
+    if (!onDuplicate) return
+    setDuplicating(true)
+    setError('')
+    try {
+      await onDuplicate(invoice)
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to duplicate invoice')
+    } finally {
+      setDuplicating(false)
     }
   }
 
@@ -809,8 +836,17 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
             <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium">
               Close
             </button>
-            {activeTab === 'edit' && (invoice.status as string) !== 'VOID' && invoice.status !== 'PAID' && (
+            {activeTab === 'edit' && (
               <div className="flex items-center gap-2">
+                {invoice.status !== 'VOID' && onDuplicate && (
+                  <button onClick={handleDuplicate} disabled={duplicating}
+                    className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50">
+                    {duplicating ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
+                    Duplicate
+                  </button>
+                )}
+                {(invoice.status as string) !== 'VOID' && invoice.status !== 'PAID' && (
+                  <>
                 {(invoice.status as string) !== 'VOID' && (
                   <button onClick={() => setConfirmVoid(true)}
                     className="flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors">
@@ -829,6 +865,8 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
                     Send Invoice
                   </button>
+                )}
+                  </>
                 )}
               </div>
             )}

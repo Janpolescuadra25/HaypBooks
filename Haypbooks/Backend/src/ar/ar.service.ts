@@ -964,6 +964,29 @@ export class ArService {
         return result
     }
 
+    async duplicateInvoice(userId: string, companyId: string, invoiceId: string) {
+        await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+        const result = await this.repo.duplicateInvoice(companyId, invoiceId, userId)
+        if (!result) throw new NotFoundException('Invoice not found')
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'DUPLICATE',
+                tableName: 'Invoice',
+                recordId: result.id,
+                changes: {
+                    sourceInvoiceId: invoiceId,
+                    invoiceNumber: (result as any).invoiceNumber,
+                    status: 'DRAFT',
+                },
+            },
+        }).catch(() => {})
+        return this.normalizeInvoice(result)
+    }
+
     async sendInvoice(userId: string, companyId: string, invoiceId: string, opts?: { subject?: string; body?: string; scheduledAt?: string }) {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)

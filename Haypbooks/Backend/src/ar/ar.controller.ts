@@ -374,6 +374,15 @@ export class ArController {
         return this.svc.updateInvoice(req.user.userId, companyId, invoiceId, body)
     }
 
+    @Post('invoices/:invoiceId/duplicate')
+    duplicateInvoice(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('invoiceId') invoiceId: string,
+    ) {
+        return this.svc.duplicateInvoice(req.user.userId, companyId, invoiceId)
+    }
+
     @Post('invoices/:invoiceId/send')
     @HttpCode(HttpStatus.OK)
     sendInvoice(
