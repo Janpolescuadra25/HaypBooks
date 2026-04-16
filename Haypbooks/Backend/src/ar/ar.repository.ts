@@ -804,6 +804,9 @@ export class ArRepository {
         paymentMethodId?: string, bankAccountId?: string, createdById: string,
         allocations: Array<{ invoiceId: string, amount: number }>
     }) {
+        const totalAllocated = (data.allocations ?? []).reduce((sum, allocation) => sum + Number(allocation.amount ?? 0), 0)
+        const unappliedAmount = Math.max(0, Number(data.amount) - totalAllocated)
+
         return this.prisma.$transaction(async (tx) => {
             const payment = await tx.paymentReceived.create({
                 data: {
@@ -811,6 +814,7 @@ export class ArRepository {
                     companyId: data.companyId,
                     customerId: data.customerId,
                     amount: data.amount,
+                    unappliedAmount,
                     paymentDate: data.paymentDate,
                     referenceNumber: data.referenceNumber ?? null,
                     paymentMethodId: data.paymentMethodId ?? null,
@@ -905,7 +909,85 @@ export class ArRepository {
                 remaining -= alloc.amount
             }
 
-            return { paymentId, allocations, remaining }
+            const normalizedRemaining = Math.max(0, Number(remaining.toFixed(4)))
+            await tx.paymentReceived.update({
+                where: { id: paymentId },
+                data: { unappliedAmount: normalizedRemaining },
+            })
+
+            return { paymentId, allocations, remaining: normalizedRemaining }
+        })
+    }
+
+    async replacePaymentAllocations(companyId: string, paymentId: string, allocations: Array<{ invoiceId: string; amount: number }>) {
+        const payment = await this.prisma.paymentReceived.findFirst({ where: { id: paymentId, companyId, deletedAt: null } })
+        if (!payment) throw new Error('Payment not found')
+
+        return this.prisma.$transaction(async (tx) => {
+            const existingApplications = await tx.invoicePaymentApplication.findMany({ where: { paymentId } })
+
+            // Restore balances before replacing allocations.
+            for (const application of existingApplications) {
+                const invoice = await tx.invoice.findUnique({ where: { id: application.invoiceId } })
+                if (!invoice || invoice.status === 'VOID') continue
+
+                const restoredBalance = Number(invoice.balance) + Number(application.amount)
+                const restoredStatus = restoredBalance >= Number(invoice.totalAmount) ? 'SENT' : 'PARTIAL'
+
+                await tx.invoice.update({
+                    where: { id: application.invoiceId },
+                    data: {
+                        balance: restoredBalance,
+                        status: restoredStatus as any,
+                        paymentStatus: restoredBalance <= 0 ? 'PAID' : 'PARTIAL' as any,
+                    },
+                })
+            }
+
+            await tx.invoicePaymentApplication.deleteMany({ where: { paymentId } })
+
+            for (const allocation of allocations || []) {
+                if (allocation.amount <= 0) continue
+
+                const invoice = await tx.invoice.findFirst({ where: { id: allocation.invoiceId, companyId, deletedAt: null } })
+                if (!invoice) throw new Error('Invoice not found')
+                if (allocation.amount > Number(invoice.balance) + 0.01) throw new Error('Allocation exceeds invoice remaining balance')
+
+                await tx.invoicePaymentApplication.create({
+                    data: {
+                        workspaceId: payment.workspaceId,
+                        invoiceId: allocation.invoiceId,
+                        paymentId,
+                        amount: allocation.amount,
+                    },
+                })
+
+                const newBalance = Math.max(0, Number(invoice.balance) - Number(allocation.amount))
+                const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIAL'
+
+                await tx.invoice.update({
+                    where: { id: allocation.invoiceId },
+                    data: {
+                        balance: newBalance,
+                        status: newStatus as any,
+                        paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any,
+                    },
+                })
+            }
+
+            const totalAllocated = (allocations ?? []).reduce((sum, allocation) => sum + Number(allocation.amount ?? 0), 0)
+            const unappliedAmount = Math.max(0, Number(payment.amount) - totalAllocated)
+
+            return tx.paymentReceived.update({
+                where: { id: paymentId },
+                data: { unappliedAmount },
+                include: {
+                    customer: { include: { contact: true } },
+                    paymentMethod: { select: { id: true, name: true, type: true } },
+                    InvoicePaymentApplication: { include: { invoice: true } },
+                    journalEntry: { select: { id: true, entryNumber: true } },
+                },
+            })
         })
     }
 

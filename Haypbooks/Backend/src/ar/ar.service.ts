@@ -176,7 +176,8 @@ export class ArService {
             : (Array.isArray(p.allocations) ? p.allocations.map((allocation: any) => this.normalizePaymentAllocation(allocation)) : [])
         const totalAmount = this.roundPaymentAmount(Number(p.amount ?? p.totalAmount ?? 0))
         const totalAllocated = this.roundPaymentAmount(allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount ?? 0), 0))
-        const unappliedAmount = this.roundPaymentAmount(Math.max(0, totalAmount - totalAllocated))
+        const explicitUnapplied = Number(p.unappliedAmount)
+        const unappliedAmount = this.roundPaymentAmount(Number.isFinite(explicitUnapplied) ? explicitUnapplied : Math.max(0, totalAmount - totalAllocated))
         const method = this.toUiPaymentMethod(p.paymentMethod?.type) || p.paymentMethodId || p.method || ''
 
         return {
@@ -201,6 +202,7 @@ export class ArService {
             customerId?: string | null
             existingAllocatedAmount?: number
             alreadyAllocatedInvoiceIds?: Set<string>
+            allocationBalanceCredits?: Map<string, number>
         },
     ) {
         if (!allocations.length) {
@@ -263,7 +265,8 @@ export class ArService {
         for (const allocation of allocations) {
             const invoice = invoicesById.get(allocation.invoiceId)
             if (!invoice) continue
-            if (Number(allocation.amount) > Number(invoice.balance) + 0.01) {
+            const availableBalance = Number(invoice.balance) + Number(opts.allocationBalanceCredits?.get(invoice.id) ?? 0)
+            if (Number(allocation.amount) > availableBalance + 0.01) {
                 throw new BadRequestException(`Allocation for invoice ${invoice.invoiceNumber ?? invoice.id} exceeds remaining balance`)
             }
         }
@@ -275,6 +278,18 @@ export class ArService {
         const payment = await this.repo.findPaymentById(companyId, paymentId)
         if (!payment) throw new NotFoundException('Payment not found')
         return this.normalizePayment(payment)
+    }
+
+    private toPaymentAllocationAuditSnapshot(payment: any) {
+        const normalized = this.normalizePayment(payment)
+        return {
+            totalAllocated: normalized.totalAllocated,
+            unappliedAmount: normalized.unappliedAmount,
+            allocations: (normalized.allocations ?? []).map((allocation: any) => ({
+                invoiceId: allocation.invoiceId,
+                amount: this.roundPaymentAmount(Number(allocation.amount ?? 0)),
+            })),
+        }
     }
 
     private normalizeQuote(q: any) {
@@ -996,6 +1011,51 @@ export class ArService {
         // Post payment receipt to the General Ledger (DR: Cash/Bank, CR: Accounts Receivable)
         await this.subLedger.postPaymentReceivedToGL(result.id, userId)
         return this.getNormalizedPaymentById(companyId, result.id)
+    }
+
+    async updatePayment(userId: string, companyId: string, paymentId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+
+        const payment = await this.repo.findPaymentById(companyId, paymentId)
+        if (!payment) throw new NotFoundException('Payment not found')
+
+        const hasAllocationPayload = Array.isArray(data?.allocations) || Array.isArray(data?.applications) || !!data?.invoiceId
+        if (!hasAllocationPayload) {
+            throw new BadRequestException('allocations payload is required')
+        }
+
+        const allocations = this.normalizeRequestedAllocations(data)
+        const existingAllocationCredits = new Map(
+            (payment.InvoicePaymentApplication ?? []).map((allocation: any) => [allocation.invoiceId, Number(allocation.amount ?? 0)]),
+        )
+
+        const validated = await this.validatePaymentAllocations(companyId, allocations, {
+            paymentAmount: Number(payment.amount),
+            customerId: payment.customerId,
+            allocationBalanceCredits: existingAllocationCredits,
+        })
+
+        const beforeSnapshot = this.toPaymentAllocationAuditSnapshot(payment)
+        await this.repo.replacePaymentAllocations(companyId, paymentId, validated.allocations)
+        const updatedPayment = await this.getNormalizedPaymentById(companyId, paymentId)
+
+        this.prisma.auditLog.create({
+            data: {
+                workspaceId,
+                companyId,
+                userId,
+                action: 'REALLOCATE',
+                tableName: 'CustomerPayment',
+                recordId: paymentId,
+                changes: {
+                    before: beforeSnapshot,
+                    after: this.toPaymentAllocationAuditSnapshot(updatedPayment),
+                },
+            },
+        }).catch(() => {})
+
+        return updatedPayment
     }
 
     async voidPayment(userId: string, companyId: string, paymentId: string) {

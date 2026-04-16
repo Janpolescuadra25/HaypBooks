@@ -14,6 +14,7 @@ interface CustomerPickerFieldProps {
   value: string
   customers: CustomerPickerOption[]
   loading?: boolean
+  disabled?: boolean
   placeholder?: string
   createLabel?: string
   onChange: (id: string) => void
@@ -26,6 +27,7 @@ export default function CustomerPickerField({
   value,
   customers,
   loading = false,
+  disabled = false,
   placeholder = 'Select customer...',
   createLabel = '+ Create New',
   onChange,
@@ -54,6 +56,10 @@ export default function CustomerPickerField({
     if (!open) setQuery('')
   }, [open])
 
+  useEffect(() => {
+    if (disabled && open) setOpen(false)
+  }, [disabled, open])
+
   const selected = useMemo(
     () => customers.find((c) => c.id === value) ?? null,
     [customers, value]
@@ -74,21 +80,24 @@ export default function CustomerPickerField({
         type="text"
         value={open ? query : selected?.name ?? query}
         onFocus={() => {
+          if (disabled) return
           if (!open && selected && query === '') {
             setQuery(selected.name)
           }
           setOpen(true)
         }}
         onChange={(e) => {
+          if (disabled) return
           setQuery(e.target.value)
           if (!open) setOpen(true)
         }}
         placeholder={placeholder}
         autoComplete="off"
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+        disabled={disabled}
+        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white disabled:bg-gray-50 disabled:text-gray-500"
       />
 
-      {open && (
+      {open && !disabled && (
         <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
           <div className="max-h-56 overflow-y-auto">
             {loading ? (

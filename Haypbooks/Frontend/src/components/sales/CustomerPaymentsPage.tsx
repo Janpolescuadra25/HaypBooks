@@ -14,6 +14,8 @@ const PAGE_SIZE = 20
 
 interface PaymentRow {
   id: string
+  customerId: string
+  referenceNumber: string
   paymentNumber: string
   customer: string
   date: string
@@ -132,6 +134,8 @@ function normalizeRow(r: any): PaymentRow {
 
   return {
     id: r.id,
+    customerId: r.customerId || r.customer?.contactId || r.customer?.id || '',
+    referenceNumber: r.referenceNumber || '',
     paymentNumber: r.paymentNumber || r.referenceNumber || r.id?.slice(0, 8) || '—',
     customer: r.customerName || r.customer?.contact?.displayName || '—',
     date: r.date || r.paymentDate || '',
@@ -154,12 +158,14 @@ function fmtDate(d: string) {
 }
 
 type SortDirection = 'asc' | 'desc'
-type SortKey = 'paymentNumber' | 'customer' | 'date' | 'method' | 'amount' | 'appliedTo'
+type SortKey = 'paymentNumber' | 'customer' | 'date' | 'method' | 'amount' | 'unappliedAmount' | 'appliedTo'
 
 function comparePayments(a: PaymentRow, b: PaymentRow, key: SortKey, dir: SortDirection): number {
   const asc = dir === 'asc' ? 1 : -1
-  if (key === 'amount') {
-    return a.amount === b.amount ? 0 : a.amount > b.amount ? asc : -asc
+  if (key === 'amount' || key === 'unappliedAmount') {
+    const av = key === 'amount' ? a.amount : a.unappliedAmount
+    const bv = key === 'amount' ? b.amount : b.unappliedAmount
+    return av === bv ? 0 : av > bv ? asc : -asc
   }
   if (key === 'date') {
     const ad = a.date ? new Date(a.date).getTime() : 0
@@ -179,6 +185,7 @@ const DEFAULT_CP_COLS: ColDef[] = [
   { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
   { key: 'method', label: 'Method', visible: true, width: 120, align: 'left' },
   { key: 'amount', label: 'Amount', visible: true, width: 110, align: 'right' },
+  { key: 'unappliedAmount', label: 'Unapplied', visible: true, width: 130, align: 'right' },
   { key: 'appliedTo', label: 'Applied To', visible: true, width: 240, align: 'left' },
 ]
 function loadCPCols(): ColDef[] {
@@ -223,6 +230,7 @@ export default function CustomerPaymentsPage() {
   const [invoicesLoading, setInvoicesLoading] = useState(false)
   const [allocationSearch, setAllocationSearch] = useState('')
   const [draftAllocations, setDraftAllocations] = useState<DraftAllocation[]>([])
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [form, setForm] = useState({
     customerId: '',
     amount: '',
@@ -236,6 +244,7 @@ export default function CustomerPaymentsPage() {
   const [amountAutoFromAllocations, setAmountAutoFromAllocations] = useState(true)
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
+  const isReallocationMode = Boolean(editingPaymentId)
 
   const [cols, setCols] = useState<ColDef[]>(() => loadCPCols())
   const colsRef = useRef(cols)
@@ -294,15 +303,16 @@ export default function CustomerPaymentsPage() {
 
   // ─── Load open invoices when customer selected ────────────────────────────────
 
-  useEffect(() => {
-    if (!companyId || !form.customerId) {
+  const loadInvoicesForCustomer = useCallback((customerId: string) => {
+    if (!companyId || !customerId) {
       setInvoices([])
-      return
+      return Promise.resolve()
     }
+
     setInvoicesLoading(true)
-    apiClient
+    return apiClient
       .get(`/companies/${companyId}/ar/invoices`, {
-        params: { customerId: form.customerId, limit: 100 },
+        params: { customerId, limit: 100 },
       })
       .then(({ data }) => {
         const raw: any[] = Array.isArray(data) ? data : data?.items || []
@@ -322,7 +332,15 @@ export default function CustomerPaymentsPage() {
       })
       .catch(() => setInvoices([]))
       .finally(() => setInvoicesLoading(false))
-  }, [companyId, form.customerId])
+  }, [companyId])
+
+  useEffect(() => {
+    if (!form.customerId) {
+      setInvoices([])
+      return
+    }
+    loadInvoicesForCustomer(form.customerId)
+  }, [form.customerId, loadInvoicesForCustomer])
 
   const selectedAllocationIds = useMemo(() => new Set(draftAllocations.map((a) => a.invoiceId)), [draftAllocations])
 
@@ -415,6 +433,7 @@ export default function CustomerPaymentsPage() {
   // ─── Modal open / close ───────────────────────────────────────────────────────
 
   function openModal() {
+    setEditingPaymentId(null)
     setForm({
       customerId: '',
       amount: '',
@@ -434,6 +453,7 @@ export default function CustomerPaymentsPage() {
 
   function closeModal() {
     setNewPaymentOpen(false)
+    setEditingPaymentId(null)
     setSaveError('')
   }
 
@@ -488,20 +508,30 @@ export default function CustomerPaymentsPage() {
     setSaving(true)
     setSaveError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/payments`, {
-        customerId: form.customerId || undefined,
-        amount: parsedAmount,
-        paymentDate: form.date,
-        method: form.method,
-        referenceNumber: form.reference || undefined,
-        memo: form.memo || undefined,
-        allocations: payloadAllocations,
-      })
+      if (editingPaymentId) {
+        await apiClient.put(`/companies/${companyId}/ar/payments/${editingPaymentId}`, {
+          allocations: payloadAllocations,
+        })
+      } else {
+        await apiClient.post(`/companies/${companyId}/ar/payments`, {
+          customerId: form.customerId || undefined,
+          amount: parsedAmount,
+          paymentDate: form.date,
+          method: form.method,
+          referenceNumber: form.reference || undefined,
+          memo: form.memo || undefined,
+          allocations: payloadAllocations,
+        })
+      }
       closeModal()
-      setPage(0)
-      fetchPayments(0)
+      if (!editingPaymentId) {
+        setPage(0)
+        fetchPayments(0)
+      } else {
+        fetchPayments(page)
+      }
     } catch (err: any) {
-      setSaveError(extractApiErrorMessage(err, 'Failed to record payment'))
+      setSaveError(extractApiErrorMessage(err, editingPaymentId ? 'Failed to reallocate payment' : 'Failed to record payment'))
     } finally {
       setSaving(false)
     }
@@ -527,6 +557,44 @@ export default function CustomerPaymentsPage() {
     setDrawerPayment(row)
     setDrawerTab('details')
     setPaymentActivity([])
+  }
+
+  const openReallocateEditor = (row: PaymentRow) => {
+    if (!row.customerId) {
+      setError('Unable to reallocate payment because customer details are missing.')
+      return
+    }
+
+    const parsedDate = row.date ? String(row.date).split('T')[0] : new Date().toISOString().split('T')[0]
+    const draftFromExisting: DraftAllocation[] = row.allocations
+      .filter((allocation) => Number(allocation.amount) > 0)
+      .map((allocation) => ({
+        invoiceId: allocation.invoiceId,
+        invoiceNumber: allocation.invoiceNumber,
+        date: '',
+        // Existing allocations need their currently-applied amount added back to be editable.
+        remainingBalance: Number((Number(allocation.remainingBalance ?? 0) + Number(allocation.amount ?? 0)).toFixed(2)),
+        amount: Number(Number(allocation.amount ?? 0).toFixed(2)),
+      }))
+
+    setEditingPaymentId(row.id)
+    setForm({
+      customerId: row.customerId,
+      amount: Number(row.amount || 0).toFixed(2),
+      method: row.method || 'CASH',
+      reference: row.referenceNumber || row.paymentNumber,
+      date: parsedDate,
+      memo: '',
+    })
+    setInvoices([])
+    setAllocationSearch('')
+    setDraftAllocations(draftFromExisting)
+    setSaveError('')
+    setAmountAutoFromAllocations(false)
+    setDrawerPayment(null)
+    setNewPaymentOpen(true)
+    loadCustomers()
+    loadInvoicesForCustomer(row.customerId)
   }
 
   const loadPaymentActivity = useCallback(async (paymentId: string) => {
@@ -576,7 +644,7 @@ export default function CustomerPaymentsPage() {
       return
     }
     setSortKey(key)
-    setSortDir(key === 'amount' || key === 'date' ? 'desc' : 'asc')
+    setSortDir(key === 'amount' || key === 'date' || key === 'unappliedAmount' ? 'desc' : 'asc')
   }
 
   const totalAmount = items.reduce((s, r) => s + r.amount, 0)
@@ -685,14 +753,14 @@ export default function CustomerPaymentsPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={cols.length + 1} className="px-4 py-10 text-center text-slate-400">
                     <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
                     Loading…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center">
+                  <td colSpan={cols.length + 1} className="px-4 py-10 text-center">
                     <p className="text-rose-500 font-medium">{error}</p>
                     <button onClick={() => fetchPayments(page)} className="mt-2 text-sm text-emerald-600 hover:underline">
                       Try again
@@ -701,7 +769,7 @@ export default function CustomerPaymentsPage() {
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={cols.length + 1} className="px-4 py-10 text-center text-slate-500">
                     No payments found.
                   </td>
                 </tr>
@@ -714,6 +782,9 @@ export default function CustomerPaymentsPage() {
                     <td className="px-4 py-3 text-slate-600 truncate hidden sm:table-cell border-r border-slate-100" title={row.method ?? ''}>{row.method}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800 border-r border-slate-100">
                       {formatCurrency(row.amount, currency)}
+                    </td>
+                    <td className={`px-4 py-3 text-right font-semibold tabular-nums border-r border-slate-100 ${row.unappliedAmount > 0.009 ? 'text-amber-700' : 'text-slate-700'}`}>
+                      {formatCurrency(Math.max(0, row.unappliedAmount), currency)}
                     </td>
                     <td className="px-4 py-3 text-slate-600 hidden lg:table-cell border-r border-slate-100">
                       <p className="truncate" title={row.appliedTo ?? ''}>{row.appliedTo}</p>
@@ -843,9 +914,11 @@ export default function CustomerPaymentsPage() {
                         <p className="text-xs text-slate-500">Invoices Allocated</p>
                         <p className="text-lg font-semibold text-slate-900">{drawerPayment.allocationCount}</p>
                       </div>
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className={`rounded-lg border px-3 py-2 ${drawerPayment.unappliedAmount > 0.009 ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50'}`}>
                         <p className="text-xs text-slate-500">Unapplied Amount</p>
-                        <p className="text-lg font-semibold text-slate-900">{formatCurrency(Math.max(0, drawerPayment.unappliedAmount), currency)}</p>
+                        <p className={`text-lg font-semibold ${drawerPayment.unappliedAmount > 0.009 ? 'text-amber-800' : 'text-slate-900'}`}>
+                          {formatCurrency(Math.max(0, drawerPayment.unappliedAmount), currency)}
+                        </p>
                       </div>
                     </div>
 
@@ -872,6 +945,12 @@ export default function CustomerPaymentsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2 border-t border-slate-200 px-5 py-4">
+                    <button
+                      onClick={() => openReallocateEditor(drawerPayment)}
+                      className="rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                    >
+                      Reallocate
+                    </button>
                     <button
                       onClick={() => handleVoid(drawerPayment.id)}
                       disabled={voidingId === drawerPayment.id}
@@ -900,8 +979,12 @@ export default function CustomerPaymentsPage() {
             <div className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-sm">
               <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Record Payment</h2>
-                  <p className="text-xs text-slate-500">Check invoices to auto-fill allocations. Adjust only when you need partial payments.</p>
+                  <h2 className="text-lg font-bold text-slate-900">{isReallocationMode ? 'Reallocate Payment' : 'Record Payment'}</h2>
+                  <p className="text-xs text-slate-500">
+                    {isReallocationMode
+                      ? 'Update invoice allocations for this payment. Payment amount and customer stay locked.'
+                      : 'Check invoices to auto-fill allocations. Adjust only when you need partial payments.'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -917,7 +1000,7 @@ export default function CustomerPaymentsPage() {
                     disabled={saving}
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                   >
-                    {saving ? 'Saving…' : 'Record Payment'}
+                    {saving ? 'Saving…' : (isReallocationMode ? 'Save Reallocation' : 'Record Payment')}
                   </button>
                 </div>
               </div>
@@ -937,6 +1020,7 @@ export default function CustomerPaymentsPage() {
                         value={form.customerId}
                         customers={customers}
                         loading={customersLoading}
+                        disabled={isReallocationMode}
                         placeholder="Select customer..."
                         createLabel="+ Create New Customer"
                         onOpen={loadCustomers}
@@ -947,9 +1031,9 @@ export default function CustomerPaymentsPage() {
                           setSaveError('')
                           setAmountAutoFromAllocations(true)
                         }}
-                        onCreateNew={() => setShowQuickAddCustomer(true)}
+                        onCreateNew={isReallocationMode ? undefined : () => setShowQuickAddCustomer(true)}
                       />
-                      {form.customerId && (
+                      {form.customerId && !isReallocationMode && (
                         <div className="flex justify-end">
                           <button
                             type="button"
@@ -1078,7 +1162,8 @@ export default function CustomerPaymentsPage() {
                           <button
                             type="button"
                             onClick={() => setAmountAutoFromAllocations(true)}
-                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                            disabled={isReallocationMode}
+                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-40"
                           >
                             Auto from allocations
                           </button>
@@ -1089,15 +1174,18 @@ export default function CustomerPaymentsPage() {
                           min="0.01"
                           step="0.01"
                           value={form.amount}
+                          disabled={isReallocationMode}
                           onChange={(e) => {
                             setAmountAutoFromAllocations(false)
                             setForm((f) => ({ ...f, amount: e.target.value }))
                           }}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-100 disabled:text-slate-500"
                           placeholder="0.00"
                         />
                         <p className="mt-1 text-xs text-slate-500">
-                          {amountAutoFromAllocations ? 'Auto-calculated from checked invoices. Edit to keep unapplied cash.' : 'Manual override active.'}
+                          {isReallocationMode
+                            ? 'Amount is locked during reallocation.'
+                            : (amountAutoFromAllocations ? 'Auto-calculated from checked invoices. Edit to keep unapplied cash.' : 'Manual override active.')}
                         </p>
                       </div>
                       <div>
@@ -1106,9 +1194,10 @@ export default function CustomerPaymentsPage() {
                           required
                           type="date"
                           value={form.date}
+                          disabled={isReallocationMode}
                           onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
                           aria-label="Payment date"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-100 disabled:text-slate-500"
                         />
                       </div>
                     </div>
@@ -1141,9 +1230,10 @@ export default function CustomerPaymentsPage() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
                         <select
                           value={form.method}
+                          disabled={isReallocationMode}
                           onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}
                           aria-label="Payment method"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-100 disabled:text-slate-500"
                         >
                           {METHOD_OPTIONS.map((m) => (
                             <option key={m.value} value={m.value}>{m.label}</option>
@@ -1154,8 +1244,9 @@ export default function CustomerPaymentsPage() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">Reference #</label>
                         <input
                           value={form.reference}
+                          disabled={isReallocationMode}
                           onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-100 disabled:text-slate-500"
                           placeholder="Check # or ref"
                         />
                       </div>

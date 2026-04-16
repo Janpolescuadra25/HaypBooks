@@ -29,6 +29,10 @@ export class SalesService {
     return this.arService.recordPayment(userId, companyId, data)
   }
 
+  async updatePayment(userId: string, companyId: string, paymentId: string, data: any) {
+    return this.arService.updatePayment(userId, companyId, paymentId, data)
+  }
+
   async voidPayment(userId: string, companyId: string, paymentId: string) {
     return this.arService.voidPayment(userId, companyId, paymentId)
   }

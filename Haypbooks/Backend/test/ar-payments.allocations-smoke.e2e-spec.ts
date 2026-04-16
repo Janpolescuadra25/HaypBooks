@@ -14,6 +14,7 @@ describe('AR Payments allocations smoke e2e', () => {
   let app: INestApplication
   let prisma: PrismaClient
   let companyId: string
+  let workspaceId: string
   let token: string
   let customerId: string
   let invoiceId: string
@@ -79,6 +80,7 @@ describe('AR Payments allocations smoke e2e', () => {
         baseCurrency: 'USD',
       },
     })
+    workspaceId = workspace.id
 
     const role = await prisma.role.create({
       data: {
@@ -203,5 +205,84 @@ describe('AR Payments allocations smoke e2e', () => {
 
     expect(message.toLowerCase()).toContain('total allocated')
     expect(message.toLowerCase()).toContain('exceeds payment amount')
+  })
+
+  it('PUT /api/companies/:companyId/ar/payments/:paymentId replaces allocations and clears unapplied balance', async () => {
+    const paymentDate = new Date().toISOString().slice(0, 10)
+    const seed = Date.now()
+
+    const invoiceA = await prisma.invoice.create({
+      data: {
+        workspaceId,
+        companyId,
+        customerId,
+        invoiceNumber: `INV-REALLOC-A-${seed}`,
+        date: new Date(),
+        dueDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
+        totalAmount: 150,
+        balance: 150,
+        status: 'SENT',
+        postingStatus: 'DRAFT',
+        currency: 'USD',
+      },
+    })
+
+    const invoiceB = await prisma.invoice.create({
+      data: {
+        workspaceId,
+        companyId,
+        customerId,
+        invoiceNumber: `INV-REALLOC-B-${seed}`,
+        date: new Date(),
+        dueDate: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
+        totalAmount: 120,
+        balance: 120,
+        status: 'SENT',
+        postingStatus: 'DRAFT',
+        currency: 'USD',
+      },
+    })
+
+    const created = await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/ar/payments`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        customerId,
+        amount: 120,
+        paymentDate,
+        method: 'CASH',
+        referenceNumber: `SMOKE-REALLOC-${Date.now()}`,
+        allocations: [{ invoiceId: invoiceA.id, amount: 70 }],
+      })
+      .expect(201)
+
+    expect(created.body.unappliedAmount).toBeCloseTo(50, 2)
+
+    const paymentId = created.body.id as string
+    expect(paymentId).toBeTruthy()
+
+    const reallocated = await request(app.getHttpServer())
+      .put(`/api/companies/${companyId}/ar/payments/${paymentId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        allocations: [
+          { invoiceId: invoiceA.id, amount: 70 },
+          { invoiceId: invoiceB.id, amount: 50 },
+        ],
+      })
+      .expect(200)
+
+    expect(reallocated.body.totalAllocated).toBeCloseTo(120, 2)
+    expect(reallocated.body.unappliedAmount).toBeCloseTo(0, 2)
+    expect(Array.isArray(reallocated.body.allocations)).toBe(true)
+    expect(reallocated.body.allocations).toHaveLength(2)
+    expect(reallocated.body.allocations.some((a: any) => a.invoiceId === invoiceA.id && Number(a.amount) === 70)).toBe(true)
+    expect(reallocated.body.allocations.some((a: any) => a.invoiceId === invoiceB.id && Number(a.amount) === 50)).toBe(true)
+
+    const refreshedOne = await prisma.invoice.findUnique({ where: { id: invoiceA.id } })
+    const refreshedTwo = await prisma.invoice.findUnique({ where: { id: invoiceB.id } })
+
+    expect(Number(refreshedOne?.balance ?? -1)).toBeCloseTo(80, 2)
+    expect(Number(refreshedTwo?.balance ?? -1)).toBeCloseTo(70, 2)
   })
 })

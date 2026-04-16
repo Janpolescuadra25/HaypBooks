@@ -415,6 +415,16 @@ export class ArController {
         return this.svc.recordPayment(req.user.userId, companyId, body)
     }
 
+    @Put('payments/:paymentId')
+    updatePayment(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('paymentId') paymentId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.updatePayment(req.user.userId, companyId, paymentId, body)
+    }
+
     @Get('payments/:paymentId/activity')
     getCustomerPaymentActivity(
         @Req() req: any,

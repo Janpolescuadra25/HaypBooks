@@ -282,6 +282,16 @@ export class SalesController {
     return this.salesService.recordPayment(req.user.userId, companyId, body)
   }
 
+  @Put('payments/:paymentId')
+  async updatePayment(
+    @Req() req: any,
+    @Param('companyId') companyId: string,
+    @Param('paymentId') paymentId: string,
+    @Body() body: any,
+  ) {
+    return this.salesService.updatePayment(req.user.userId, companyId, paymentId, body)
+  }
+
   @Get('payments/:paymentId')
   async getPayment(@Req() req: any, @Param('companyId') companyId: string, @Param('paymentId') paymentId: string) {
     return this.salesService.getPayment(req.user.userId, companyId, paymentId)

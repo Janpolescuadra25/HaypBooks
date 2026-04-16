@@ -8301,6 +8301,7 @@ model PaymentReceived {
   companyId          String
   customerId         String
   amount             Decimal  @db.Decimal(19, 4)
+  unappliedAmount    Decimal  @default(0) @db.Decimal(19, 4)
   paymentDate        DateTime
   paymentMethodId    String?
   bankAccountId      String?
