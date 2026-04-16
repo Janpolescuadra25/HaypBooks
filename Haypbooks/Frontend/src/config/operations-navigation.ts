@@ -53,6 +53,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         label: 'Transactions',
         tabs: [
           { id: 'bank-transactions',    label: 'Bank Transactions',    path: '/banking-cash/transactions/bank-transactions' },
+          { id: 'undeposited-funds',    label: 'Undeposited Funds',    path: '/banking-cash/transactions/undeposited-funds' },
           { id: 'deposits',             label: 'Deposits',             path: '/banking-cash/transactions/deposits' },
         ],
       },
@@ -68,7 +69,6 @@ export const OPERATIONS_NAV: OperationsSection[] = [
       },
       {
         id: 'management',
-        label: 'Management',
         label: 'Management',
         tabs: [
           { id: 'transaction-rules',    label: 'Transaction Rules',    path: '/banking-cash/transactions/rules' },

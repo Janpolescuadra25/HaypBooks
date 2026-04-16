@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Loader2, AlertCircle, Plus, Search, RefreshCw,
   Banknote, CheckCircle2, Clock, Ban, ExternalLink, X,
@@ -49,9 +50,66 @@ const STATUS_META: Record<DepositStatus, { label: string; cls: string; icon: Rea
   VOID:   { label: 'Void',   cls: 'bg-slate-100 text-slate-400 border-slate-200',    icon: <Ban size={11} /> },
 }
 
+function normalizeDepositStatus(value: any): DepositStatus {
+  const normalized = String(value ?? '').toUpperCase()
+  if (normalized === 'POSTED') return 'POSTED'
+  if (normalized === 'VOID') return 'VOID'
+  return 'DRAFT'
+}
+
+function normalizeUndepositedPayment(payment: any): UndepositedPayment {
+  const applications = Array.isArray(payment?.InvoicePaymentApplication) ? payment.InvoicePaymentApplication : []
+  const invoiceNumberFromApplications = applications.length === 1
+    ? applications[0]?.invoice?.invoiceNumber
+    : (applications.length > 1 ? `${applications.length} invoices` : undefined)
+
+  return {
+    id: String(payment?.id ?? ''),
+    date: String(payment?.date ?? payment?.paymentDate ?? ''),
+    customerName: payment?.customerName ?? payment?.customer?.contact?.displayName ?? '—',
+    invoiceNumber: payment?.invoiceNumber ?? invoiceNumberFromApplications,
+    amount: Number(payment?.amount ?? payment?.totalAmount ?? 0),
+    paymentMethod: payment?.paymentMethod ?? payment?.paymentMethod?.type ?? payment?.paymentMethod?.name,
+  }
+}
+
+function normalizeDeposit(deposit: any): BankDeposit {
+  const lines = Array.isArray(deposit?.lines) ? deposit.lines : []
+
+  return {
+    id: String(deposit?.id ?? ''),
+    depositNumber: deposit?.depositNumber ?? deposit?.referenceNumber ?? undefined,
+    date: String(deposit?.date ?? deposit?.depositDate ?? ''),
+    bankAccountId: String(deposit?.bankAccountId ?? deposit?.bankAccount?.id ?? ''),
+    bankAccountName: deposit?.bankAccountName ?? deposit?.bankAccount?.name ?? undefined,
+    amount: Number(deposit?.amount ?? deposit?.totalAmount ?? 0),
+    status: normalizeDepositStatus(deposit?.status),
+    reference: deposit?.reference ?? deposit?.referenceNumber ?? undefined,
+    memo: deposit?.memo ?? undefined,
+    items: lines
+      .map((line: any) => {
+        const payment = line?.paymentReceived
+        if (!payment) return null
+        return {
+          id: String(payment.id ?? line?.paymentReceivedId ?? ''),
+          date: String(payment.paymentDate ?? payment.date ?? deposit?.depositDate ?? ''),
+          customerName: payment.customer?.contact?.displayName ?? payment.customerName ?? '—',
+          invoiceNumber: Array.isArray(payment?.InvoicePaymentApplication) && payment.InvoicePaymentApplication.length === 1
+            ? payment.InvoicePaymentApplication[0]?.invoice?.invoiceNumber
+            : undefined,
+          amount: Number(line?.amount ?? payment.amount ?? 0),
+          paymentMethod: payment.paymentMethod?.type ?? payment.paymentMethod?.name,
+        }
+      })
+      .filter(Boolean) as UndepositedPayment[],
+    journalEntryId: deposit?.journalEntryId ?? deposit?.journalEntry?.id,
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BankDepositsPage() {
+  const searchParams = useSearchParams()
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
@@ -67,6 +125,7 @@ export default function BankDepositsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [actionLoading, setActionLoading] = useState('')
   const [toast, setToast] = useState('')
+  const [didApplyQuerySelection, setDidApplyQuerySelection] = useState(false)
 
   // Create form state
   const [form, setForm] = useState({
@@ -77,6 +136,14 @@ export default function BankDepositsPage() {
   })
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
+
+  const preselectedPaymentIds = useMemo(() => {
+    const raw = String(searchParams?.get('paymentIds') ?? '')
+    return raw
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean)
+  }, [searchParams])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
@@ -93,7 +160,8 @@ export default function BankDepositsPage() {
       ])
       if (depsRes.status === 'fulfilled') {
         const d = depsRes.value.data
-        setDeposits(Array.isArray(d) ? d : d.items ?? d.deposits ?? [])
+        const rawDeposits = Array.isArray(d) ? d : d.items ?? d.deposits ?? []
+        setDeposits(rawDeposits.map((deposit: any) => normalizeDeposit(deposit)))
       }
       if (accsRes.status === 'fulfilled') {
         const a = accsRes.value.data
@@ -101,7 +169,8 @@ export default function BankDepositsPage() {
       }
       if (fundsRes.status === 'fulfilled') {
         const f = fundsRes.value.data
-        setUndepositedFunds(Array.isArray(f) ? f : f.items ?? f.payments ?? [])
+        const rawPayments = Array.isArray(f) ? f : f.items ?? f.payments ?? []
+        setUndepositedFunds(rawPayments.map((payment: any) => normalizeUndepositedPayment(payment)))
       }
       setError('')
     } catch (e: any) {
@@ -112,6 +181,14 @@ export default function BankDepositsPage() {
   }, [companyId])
 
   useEffect(() => { fetchAll() }, [fetchAll])
+
+  useEffect(() => {
+    if (didApplyQuerySelection) return
+    if (preselectedPaymentIds.length === 0) return
+    setSelectedPayments(new Set(preselectedPaymentIds))
+    setShowCreateModal(true)
+    setDidApplyQuerySelection(true)
+  }, [didApplyQuerySelection, preselectedPaymentIds])
 
   // ── Filtering ─────────────────────────────────────────────────────────────
 
@@ -140,7 +217,7 @@ export default function BankDepositsPage() {
   const openDetail = async (dep: BankDeposit) => {
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/banking/deposits/${dep.id}`)
-      setSelectedDeposit(data)
+      setSelectedDeposit(normalizeDeposit(data))
     } catch {
       setSelectedDeposit(dep)
     }
@@ -181,9 +258,8 @@ export default function BankDepositsPage() {
     try {
       await apiClient.post(`/companies/${companyId}/banking/deposits`, {
         bankAccountId: form.bankAccountId,
-        date: form.date,
-        reference: form.reference || undefined,
-        memo: form.memo || undefined,
+        depositDate: form.date,
+        referenceNumber: form.reference || undefined,
         paymentIds: Array.from(selectedPayments),
       })
       showToast('Deposit created successfully')

@@ -15,6 +15,8 @@ const PAGE_SIZE = 20
 interface PaymentRow {
   id: string
   customerId: string
+  bankAccountId?: string
+  bankAccountName?: string
   referenceNumber: string
   paymentNumber: string
   customer: string
@@ -26,6 +28,11 @@ interface PaymentRow {
   allocationCount: number
   allocations: PaymentAllocationLine[]
   appliedTo: string
+  isDeposited: boolean
+  depositStatus: 'UNDEPOSITED' | 'DEPOSITED'
+  depositDate?: string
+  depositNumber?: string
+  depositId?: string
 }
 
 interface PaymentAllocationLine {
@@ -39,6 +46,12 @@ interface CustomerOption {
   id: string
   name: string
   email: string
+}
+
+interface BankAccountOption {
+  id: string
+  name: string
+  accountNumber?: string
 }
 
 interface InvoiceOption {
@@ -56,6 +69,8 @@ interface DraftAllocation {
   remainingBalance: number
   amount: number
 }
+
+type DepositDestination = 'UNDEPOSITED_FUNDS' | 'BANK_ACCOUNT'
 
 const METHOD_OPTIONS = [
   { value: 'CASH', label: 'Cash' },
@@ -123,6 +138,15 @@ function normalizeRow(r: any): PaymentRow {
   const amount = toMoney(r.amount ?? r.totalAmount ?? 0)
   const totalAllocated = toMoney(r.totalAllocated ?? allocations.reduce((sum, a) => sum + toMoney(a.amount), 0))
   const unappliedAmount = toMoney(r.unappliedAmount ?? Math.max(0, amount - totalAllocated))
+  const isDeposited = Boolean(r.isDeposited ?? (String(r.depositStatus ?? '').toUpperCase() === 'DEPOSITED'))
+  const depositStatus: 'UNDEPOSITED' | 'DEPOSITED' = String(r.depositStatus ?? '').toUpperCase() === 'DEPOSITED' || isDeposited
+    ? 'DEPOSITED'
+    : 'UNDEPOSITED'
+  const depositNumber = String(r.depositNumber ?? '').trim()
+  const rawDepositDate = r.depositDate ?? ''
+  const depositDate = rawDepositDate ? String(rawDepositDate) : ''
+  const bankAccountId = String(r.bankAccountId ?? r.bankAccount?.id ?? '').trim()
+  const bankAccountName = String(r.bankAccountName ?? r.bankAccount?.name ?? '').trim()
   const allocationCount = allocations.filter((a) => a.amount > 0).length
 
   let appliedTo = 'Unapplied'
@@ -146,6 +170,13 @@ function normalizeRow(r: any): PaymentRow {
     allocationCount,
     allocations,
     appliedTo,
+    isDeposited,
+    depositStatus,
+    depositDate,
+    depositNumber,
+    depositId: String(r.depositId ?? '').trim(),
+    bankAccountId,
+    bankAccountName,
   }
 }
 
@@ -158,7 +189,7 @@ function fmtDate(d: string) {
 }
 
 type SortDirection = 'asc' | 'desc'
-type SortKey = 'paymentNumber' | 'customer' | 'date' | 'method' | 'amount' | 'unappliedAmount' | 'appliedTo'
+type SortKey = 'paymentNumber' | 'customer' | 'date' | 'method' | 'depositStatus' | 'amount' | 'unappliedAmount' | 'appliedTo'
 
 function comparePayments(a: PaymentRow, b: PaymentRow, key: SortKey, dir: SortDirection): number {
   const asc = dir === 'asc' ? 1 : -1
@@ -184,9 +215,10 @@ const DEFAULT_CP_COLS: ColDef[] = [
   { key: 'customer', label: 'Customer', visible: true, width: 180, align: 'left' },
   { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
   { key: 'method', label: 'Method', visible: true, width: 120, align: 'left' },
+  { key: 'depositStatus', label: 'Deposit Status', visible: true, width: 170, align: 'left' },
   { key: 'amount', label: 'Amount', visible: true, width: 110, align: 'right' },
   { key: 'unappliedAmount', label: 'Unapplied', visible: true, width: 130, align: 'right' },
-  { key: 'appliedTo', label: 'Applied To', visible: true, width: 240, align: 'left' },
+  { key: 'appliedTo', label: 'Applied To', visible: true, width: 220, align: 'left' },
 ]
 function loadCPCols(): ColDef[] {
   try {
@@ -226,6 +258,8 @@ export default function CustomerPaymentsPage() {
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [customersLoading, setCustomersLoading] = useState(false)
+  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
+  const [bankAccountsLoading, setBankAccountsLoading] = useState(false)
   const [invoices, setInvoices] = useState<InvoiceOption[]>([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
   const [allocationSearch, setAllocationSearch] = useState('')
@@ -238,6 +272,8 @@ export default function CustomerPaymentsPage() {
     reference: '',
     date: new Date().toISOString().split('T')[0],
     memo: '',
+    depositDestination: 'UNDEPOSITED_FUNDS' as DepositDestination,
+    bankAccountId: '',
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -298,6 +334,26 @@ export default function CustomerPaymentsPage() {
       // non-blocking
     } finally {
       setCustomersLoading(false)
+    }
+  }, [companyId])
+
+  const loadBankAccounts = useCallback(async () => {
+    if (!companyId) return
+    setBankAccountsLoading(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/banking/accounts`)
+      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.accounts ?? []
+      setBankAccounts(
+        raw.map((account: any) => ({
+          id: account.id,
+          name: account.name ?? account.accountName ?? 'Unnamed account',
+          accountNumber: account.accountNumber ?? '',
+        })),
+      )
+    } catch {
+      setBankAccounts([])
+    } finally {
+      setBankAccountsLoading(false)
     }
   }, [companyId])
 
@@ -441,6 +497,8 @@ export default function CustomerPaymentsPage() {
       reference: '',
       date: new Date().toISOString().split('T')[0],
       memo: '',
+      depositDestination: 'UNDEPOSITED_FUNDS',
+      bankAccountId: '',
     })
     setInvoices([])
     setAllocationSearch('')
@@ -449,6 +507,7 @@ export default function CustomerPaymentsPage() {
     setAmountAutoFromAllocations(true)
     setNewPaymentOpen(true)
     loadCustomers()
+    loadBankAccounts()
   }
 
   function closeModal() {
@@ -497,6 +556,10 @@ export default function CustomerPaymentsPage() {
       setSaveError(firstLineError)
       return
     }
+    if (!isReallocationMode && form.depositDestination === 'BANK_ACCOUNT' && !form.bankAccountId) {
+      setSaveError('Select a destination bank account or switch destination to Undeposited Funds.')
+      return
+    }
 
     const payloadAllocations = draftAllocations
       .filter((allocation) => allocation.amount > 0)
@@ -520,6 +583,8 @@ export default function CustomerPaymentsPage() {
           method: form.method,
           referenceNumber: form.reference || undefined,
           memo: form.memo || undefined,
+          depositDestination: form.depositDestination,
+          bankAccountId: form.depositDestination === 'BANK_ACCOUNT' ? form.bankAccountId : undefined,
           allocations: payloadAllocations,
         })
       }
@@ -585,6 +650,8 @@ export default function CustomerPaymentsPage() {
       reference: row.referenceNumber || row.paymentNumber,
       date: parsedDate,
       memo: '',
+      depositDestination: row.isDeposited && row.bankAccountId ? 'BANK_ACCOUNT' : 'UNDEPOSITED_FUNDS',
+      bankAccountId: row.bankAccountId ?? '',
     })
     setInvoices([])
     setAllocationSearch('')
@@ -594,6 +661,7 @@ export default function CustomerPaymentsPage() {
     setDrawerPayment(null)
     setNewPaymentOpen(true)
     loadCustomers()
+    loadBankAccounts()
     loadInvoicesForCustomer(row.customerId)
   }
 
@@ -624,6 +692,9 @@ export default function CustomerPaymentsPage() {
         r.paymentNumber.toLowerCase().includes(q) ||
         r.customer.toLowerCase().includes(q) ||
         r.method.toLowerCase().includes(q) ||
+        r.depositStatus.toLowerCase().includes(q) ||
+        (r.depositNumber ?? '').toLowerCase().includes(q) ||
+        (r.bankAccountName ?? '').toLowerCase().includes(q) ||
         r.appliedTo.toLowerCase().includes(q) ||
         String(r.amount).includes(q) ||
         String(r.totalAllocated).includes(q) ||
@@ -780,6 +851,16 @@ export default function CustomerPaymentsPage() {
                     <td className="px-4 py-3 font-medium text-slate-900 truncate border-r border-slate-100" title={row.customer ?? ''}>{row.customer}</td>
                     <td className="px-4 py-3 text-slate-600 truncate hidden md:table-cell border-r border-slate-100" title={fmtDate(row.date)}>{fmtDate(row.date)}</td>
                     <td className="px-4 py-3 text-slate-600 truncate hidden sm:table-cell border-r border-slate-100" title={row.method ?? ''}>{row.method}</td>
+                    <td className="px-4 py-3 border-r border-slate-100">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${row.depositStatus === 'DEPOSITED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {row.depositStatus === 'DEPOSITED' ? 'Deposited' : 'Undeposited'}
+                      </span>
+                      {(row.depositNumber || row.depositDate) && (
+                        <p className="mt-1 truncate text-xs text-slate-500" title={row.depositNumber || fmtDate(row.depositDate || '')}>
+                          {row.depositNumber || fmtDate(row.depositDate || '')}
+                        </p>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-800 border-r border-slate-100">
                       {formatCurrency(row.amount, currency)}
                     </td>
@@ -909,7 +990,7 @@ export default function CustomerPaymentsPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                         <p className="text-xs text-slate-500">Invoices Allocated</p>
                         <p className="text-lg font-semibold text-slate-900">{drawerPayment.allocationCount}</p>
@@ -919,6 +1000,19 @@ export default function CustomerPaymentsPage() {
                         <p className={`text-lg font-semibold ${drawerPayment.unappliedAmount > 0.009 ? 'text-amber-800' : 'text-slate-900'}`}>
                           {formatCurrency(Math.max(0, drawerPayment.unappliedAmount), currency)}
                         </p>
+                      </div>
+                      <div className={`rounded-lg border px-3 py-2 ${drawerPayment.depositStatus === 'DEPOSITED' ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'}`}>
+                        <p className="text-xs text-slate-500">Deposit Status</p>
+                        <p className={`text-lg font-semibold ${drawerPayment.depositStatus === 'DEPOSITED' ? 'text-emerald-800' : 'text-amber-800'}`}>
+                          {drawerPayment.depositStatus === 'DEPOSITED' ? 'Deposited' : 'Undeposited'}
+                        </p>
+                        {(drawerPayment.depositNumber || drawerPayment.depositDate || drawerPayment.bankAccountName) && (
+                          <p className="mt-1 text-xs text-slate-600">
+                            {drawerPayment.depositNumber ? `#${drawerPayment.depositNumber}` : ''}
+                            {drawerPayment.depositDate ? `${drawerPayment.depositNumber ? ' • ' : ''}${fmtDate(drawerPayment.depositDate)}` : ''}
+                            {drawerPayment.bankAccountName ? `${(drawerPayment.depositNumber || drawerPayment.depositDate) ? ' • ' : ''}${drawerPayment.bankAccountName}` : ''}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -1250,6 +1344,65 @@ export default function CustomerPaymentsPage() {
                           placeholder="Check # or ref"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Deposit Destination</label>
+                      <div className="grid gap-2">
+                        <label className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${form.depositDestination === 'UNDEPOSITED_FUNDS' ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+                          <input
+                            type="radio"
+                            name="deposit-destination"
+                            value="UNDEPOSITED_FUNDS"
+                            checked={form.depositDestination === 'UNDEPOSITED_FUNDS'}
+                            disabled={isReallocationMode}
+                            onChange={() => setForm((f) => ({ ...f, depositDestination: 'UNDEPOSITED_FUNDS', bankAccountId: '' }))}
+                            className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="font-medium text-slate-700">Undeposited Funds</span>
+                        </label>
+
+                        <label className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${form.depositDestination === 'BANK_ACCOUNT' ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+                          <input
+                            type="radio"
+                            name="deposit-destination"
+                            value="BANK_ACCOUNT"
+                            checked={form.depositDestination === 'BANK_ACCOUNT'}
+                            disabled={isReallocationMode}
+                            onChange={() => {
+                              setForm((f) => ({ ...f, depositDestination: 'BANK_ACCOUNT' }))
+                              if (bankAccounts.length === 0) loadBankAccounts()
+                            }}
+                            className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="font-medium text-slate-700">Direct to Bank Account</span>
+                        </label>
+                      </div>
+
+                      {form.depositDestination === 'BANK_ACCOUNT' && (
+                        <div className="mt-2">
+                          <select
+                            value={form.bankAccountId}
+                            disabled={isReallocationMode || bankAccountsLoading}
+                            onChange={(e) => setForm((f) => ({ ...f, bankAccountId: e.target.value }))}
+                            aria-label="Destination bank account"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          >
+                            <option value="">{bankAccountsLoading ? 'Loading bank accounts…' : 'Select bank account…'}</option>
+                            {bankAccounts.map((account) => (
+                              <option key={account.id} value={account.id}>
+                                {account.name}{account.accountNumber ? ` • ${account.accountNumber}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        {form.depositDestination === 'BANK_ACCOUNT'
+                          ? 'Payment is marked as deposited immediately into the selected bank account.'
+                          : 'Payment stays in Undeposited Funds until included in a bank deposit.'}
+                      </p>
                     </div>
 
                     <div>

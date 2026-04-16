@@ -174,11 +174,21 @@ export class ArService {
         const allocations = Array.isArray(p.InvoicePaymentApplication)
             ? p.InvoicePaymentApplication.map((allocation: any) => this.normalizePaymentAllocation(allocation))
             : (Array.isArray(p.allocations) ? p.allocations.map((allocation: any) => this.normalizePaymentAllocation(allocation)) : [])
+        const activeDeposit = (Array.isArray(p.bankDepositLines) ? p.bankDepositLines : [])
+            .map((line: any) => line?.deposit)
+            .filter((deposit: any) => !!deposit && String(deposit.status ?? '').toUpperCase() !== 'VOID')
+            .sort((a: any, b: any) => new Date(b.depositDate ?? 0).getTime() - new Date(a.depositDate ?? 0).getTime())[0] ?? null
         const totalAmount = this.roundPaymentAmount(Number(p.amount ?? p.totalAmount ?? 0))
         const totalAllocated = this.roundPaymentAmount(allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount ?? 0), 0))
         const explicitUnapplied = Number(p.unappliedAmount)
         const unappliedAmount = this.roundPaymentAmount(Number.isFinite(explicitUnapplied) ? explicitUnapplied : Math.max(0, totalAmount - totalAllocated))
         const method = this.toUiPaymentMethod(p.paymentMethod?.type) || p.paymentMethodId || p.method || ''
+        const isDeposited = Boolean(p.isDeposited)
+        const depositStatus = isDeposited ? 'DEPOSITED' : 'UNDEPOSITED'
+        const depositDate = activeDeposit?.depositDate ?? (isDeposited ? (p.paymentDate ?? p.date ?? null) : null)
+        const bankAccountId = activeDeposit?.bankAccountId ?? p.bankAccountId ?? null
+        const bankAccountName = activeDeposit?.bankAccount?.name ?? p.bankAccount?.name ?? ''
+        const bankAccountNumber = activeDeposit?.bankAccount?.accountNumber ?? p.bankAccount?.accountNumber ?? null
 
         return {
             ...p,
@@ -191,6 +201,15 @@ export class ArService {
             date: p.paymentDate ?? p.date,
             customerName: p.customer?.contact?.displayName ?? p.customerName ?? '',
             method,
+            isDeposited,
+            depositStatus,
+            depositId: activeDeposit?.id ?? null,
+            depositNumber: activeDeposit?.referenceNumber ?? null,
+            depositDate,
+            depositSource: activeDeposit ? 'BANK_DEPOSIT' : (isDeposited ? 'DIRECT_TO_BANK' : 'UNDEPOSITED_FUNDS'),
+            bankAccountId,
+            bankAccountName,
+            bankAccountNumber,
         }
     }
 
@@ -995,6 +1014,28 @@ export class ArService {
         const paymentDate = data.paymentDate ?? data.date
         if (!paymentDate) throw new BadRequestException('paymentDate is required')
         const paymentMethodId = await this.resolvePaymentMethodId(workspaceId, data)
+        const depositDestination = String(data.depositDestination ?? data.depositTo ?? '').trim().toUpperCase()
+        if (depositDestination && !['UNDEPOSITED_FUNDS', 'BANK_ACCOUNT'].includes(depositDestination)) {
+            throw new BadRequestException('depositDestination must be UNDEPOSITED_FUNDS or BANK_ACCOUNT')
+        }
+
+        const requestedBankAccountId = String(data.bankAccountId ?? '').trim()
+        const shouldDepositDirectlyToBank = depositDestination === 'BANK_ACCOUNT'
+            || (!!requestedBankAccountId && depositDestination !== 'UNDEPOSITED_FUNDS')
+
+        if (shouldDepositDirectlyToBank && !requestedBankAccountId) {
+            throw new BadRequestException('bankAccountId is required when deposit destination is BANK_ACCOUNT')
+        }
+
+        let resolvedBankAccountId: string | undefined
+        if (shouldDepositDirectlyToBank) {
+            const bankAccount = await this.prisma.bankAccount.findFirst({
+                where: { id: requestedBankAccountId, workspaceId, deletedAt: null },
+                select: { id: true },
+            })
+            if (!bankAccount) throw new BadRequestException('bankAccountId is invalid for this workspace')
+            resolvedBankAccountId = bankAccount.id
+        }
 
         const result = await this.repo.recordPayment({
             workspaceId,
@@ -1004,7 +1045,8 @@ export class ArService {
             paymentDate: new Date(paymentDate),
             referenceNumber: data.referenceNumber ?? data.reference,
             paymentMethodId: paymentMethodId ?? undefined,
-            bankAccountId: data.bankAccountId,
+            bankAccountId: resolvedBankAccountId,
+            isDeposited: shouldDepositDirectlyToBank,
             createdById: userId,
             allocations: validated.allocations,
         })

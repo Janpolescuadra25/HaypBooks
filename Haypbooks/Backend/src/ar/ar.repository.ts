@@ -778,7 +778,22 @@ export class ArRepository {
             include: {
                 customer: { include: { contact: { select: { displayName: true } } } },
                 paymentMethod: { select: { id: true, name: true, type: true } },
+                bankAccount: { select: { id: true, name: true, accountNumber: true } },
                 InvoicePaymentApplication: { include: { invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, balance: true } } } },
+                bankDepositLines: {
+                    include: {
+                        deposit: {
+                            select: {
+                                id: true,
+                                depositDate: true,
+                                referenceNumber: true,
+                                status: true,
+                                bankAccountId: true,
+                                bankAccount: { select: { id: true, name: true, accountNumber: true } },
+                            },
+                        },
+                    },
+                },
             },
             orderBy: { paymentDate: 'desc' },
             take: opts.limit ?? 50,
@@ -792,7 +807,17 @@ export class ArRepository {
             include: {
                 customer: { include: { contact: true } },
                 paymentMethod: { select: { id: true, name: true, type: true } },
+                bankAccount: { select: { id: true, name: true, accountNumber: true } },
                 InvoicePaymentApplication: { include: { invoice: true } },
+                bankDepositLines: {
+                    include: {
+                        deposit: {
+                            include: {
+                                bankAccount: { select: { id: true, name: true, accountNumber: true } },
+                            },
+                        },
+                    },
+                },
                 journalEntry: { select: { id: true, entryNumber: true } },
             },
         })
@@ -801,7 +826,7 @@ export class ArRepository {
     async recordPayment(data: {
         workspaceId: string, companyId: string, customerId: string,
         amount: number, paymentDate: Date, referenceNumber?: string,
-        paymentMethodId?: string, bankAccountId?: string, createdById: string,
+        paymentMethodId?: string, bankAccountId?: string, isDeposited?: boolean, createdById: string,
         allocations: Array<{ invoiceId: string, amount: number }>
     }) {
         const totalAllocated = (data.allocations ?? []).reduce((sum, allocation) => sum + Number(allocation.amount ?? 0), 0)
@@ -819,6 +844,7 @@ export class ArRepository {
                     referenceNumber: data.referenceNumber ?? null,
                     paymentMethodId: data.paymentMethodId ?? null,
                     bankAccountId: data.bankAccountId ?? null,
+                    isDeposited: data.isDeposited ?? false,
                     createdById: data.createdById,
                 },
             })

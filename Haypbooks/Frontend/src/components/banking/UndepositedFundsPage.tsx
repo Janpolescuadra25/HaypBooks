@@ -46,12 +46,32 @@ export default function UndepositedFundsPage() {
     setLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/banking/undeposited-funds`)
-      const items: UndepositedPayment[] = Array.isArray(data) ? data : data.items ?? data.payments ?? []
+      const items: any[] = Array.isArray(data) ? data : data.items ?? data.payments ?? []
       const now = Date.now()
-      setPayments(items.map(p => ({
-        ...p,
-        daysPending: p.daysPending ?? Math.floor((now - new Date(p.date).getTime()) / 86400000),
-      })))
+      setPayments(items.map((payment) => {
+        const applications = Array.isArray(payment?.InvoicePaymentApplication) ? payment.InvoicePaymentApplication : []
+        const rawDate = payment?.date ?? payment?.paymentDate ?? ''
+        const parsedDate = new Date(String(rawDate))
+        const computedDaysPending = Number.isFinite(parsedDate.getTime())
+          ? Math.max(0, Math.floor((now - parsedDate.getTime()) / 86400000))
+          : 0
+        const paymentMethod = payment?.paymentMethod ?? payment?.paymentMethod?.type ?? payment?.paymentMethod?.name
+        const invoiceNumberFromApplications = applications.length === 1
+          ? applications[0]?.invoice?.invoiceNumber
+          : (applications.length > 1 ? `${applications.length} invoices` : undefined)
+
+        return {
+          id: String(payment?.id ?? ''),
+          date: String(rawDate),
+          customerName: payment?.customerName ?? payment?.customer?.contact?.displayName ?? '—',
+          invoiceNumber: payment?.invoiceNumber ?? invoiceNumberFromApplications,
+          invoiceId: payment?.invoiceId ?? applications[0]?.invoiceId ?? applications[0]?.invoice?.id,
+          amount: Number(payment?.amount ?? payment?.totalAmount ?? 0),
+          paymentMethod,
+          reference: payment?.reference ?? payment?.referenceNumber,
+          daysPending: payment?.daysPending ?? computedDaysPending,
+        }
+      }))
       setError('')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to load undeposited funds')

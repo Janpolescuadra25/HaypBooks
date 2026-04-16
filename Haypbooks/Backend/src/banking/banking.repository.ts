@@ -292,7 +292,7 @@ export class BankingRepository {
     }) {
         // Get payments to calculate total
         const payments = await this.prisma.paymentReceived.findMany({
-            where: { id: { in: data.paymentIds }, companyId: data.companyId },
+            where: { id: { in: data.paymentIds }, companyId: data.companyId, isDeposited: false, deletedAt: null },
             select: { id: true, amount: true },
         })
         const totalAmount = payments.reduce((s, p) => s + Number(p.amount), 0)
@@ -311,7 +311,10 @@ export class BankingRepository {
                 include: { lines: true },
             })
             // Mark payments as deposited
-            await tx.paymentReceived.updateMany({ where: { id: { in: data.paymentIds } }, data: { isDeposited: true } })
+            await tx.paymentReceived.updateMany({
+                where: { id: { in: data.paymentIds } },
+                data: { isDeposited: true, bankAccountId: data.bankAccountId },
+            })
             return deposit
         })
     }
@@ -327,7 +330,7 @@ export class BankingRepository {
         if (!deposit) return null
         return this.prisma.$transaction(async (tx) => {
             const paymentIds = deposit.lines.map((l) => l.paymentReceivedId)
-            await tx.paymentReceived.updateMany({ where: { id: { in: paymentIds } }, data: { isDeposited: false } })
+            await tx.paymentReceived.updateMany({ where: { id: { in: paymentIds } }, data: { isDeposited: false, bankAccountId: null } })
             return tx.bankDeposit.update({ where: { id: depositId }, data: { status: 'VOID' } })
         })
     }
@@ -337,7 +340,20 @@ export class BankingRepository {
     async findUndepositedPayments(companyId: string) {
         return this.prisma.paymentReceived.findMany({
             where: { companyId, isDeposited: false, deletedAt: null },
-            include: { customer: { include: { contact: { select: { displayName: true } } } } },
+            include: {
+                customer: { include: { contact: { select: { displayName: true } } } },
+                paymentMethod: { select: { id: true, name: true, type: true } },
+                InvoicePaymentApplication: {
+                    include: {
+                        invoice: {
+                            select: {
+                                id: true,
+                                invoiceNumber: true,
+                            },
+                        },
+                    },
+                },
+            },
             orderBy: { paymentDate: 'asc' },
         })
     }

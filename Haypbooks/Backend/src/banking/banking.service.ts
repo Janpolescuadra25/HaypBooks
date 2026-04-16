@@ -573,14 +573,45 @@ export class BankingService {
         await this.assertAccess(userId, companyId)
         if (!data.bankAccountId) throw new BadRequestException('bankAccountId is required')
         if (!data.paymentIds?.length) throw new BadRequestException('At least one payment is required')
+
+        const paymentIds: string[] = Array.from(
+            new Set<string>(
+                (Array.isArray(data.paymentIds) ? data.paymentIds : [])
+                    .map((id: any) => String(id ?? '').trim())
+                    .filter((id: string) => Boolean(id)),
+            ),
+        )
+        if (!paymentIds.length) throw new BadRequestException('At least one payment is required')
+
+        const selectedPayments = await this.prisma.paymentReceived.findMany({
+            where: {
+                companyId,
+                deletedAt: null,
+                id: { in: paymentIds },
+            },
+            select: {
+                id: true,
+                isDeposited: true,
+            },
+        })
+
+        if (selectedPayments.length !== paymentIds.length) {
+            throw new BadRequestException('One or more selected payments were not found')
+        }
+
+        const alreadyDeposited = selectedPayments.filter((payment) => payment.isDeposited).map((payment) => payment.id)
+        if (alreadyDeposited.length) {
+            throw new BadRequestException('One or more selected payments are already deposited')
+        }
+
         const result = await this.repo.createDeposit({
             workspaceId: wid, companyId, bankAccountId: data.bankAccountId,
             depositDate: data.depositDate ? new Date(data.depositDate) : new Date(),
             currency: data.currency, referenceNumber: data.referenceNumber,
-            paymentIds: data.paymentIds,
+            paymentIds,
         })
         this.prisma.auditLog.create({
-            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'BankDeposit', recordId: result.id, changes: { bankAccountId: data.bankAccountId, paymentCount: data.paymentIds.length } },
+            data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'BankDeposit', recordId: result.id, changes: { bankAccountId: data.bankAccountId, paymentCount: paymentIds.length } },
         }).catch(() => {})
         return result
     }
@@ -611,7 +642,28 @@ export class BankingService {
 
     async listUndepositedFunds(userId: string, companyId: string) {
         await this.assertAccess(userId, companyId)
-        return this.repo.findUndepositedPayments(companyId)
+        const payments = await this.repo.findUndepositedPayments(companyId)
+        return payments.map((payment: any) => {
+            const applications = Array.isArray(payment.InvoicePaymentApplication) ? payment.InvoicePaymentApplication : []
+            const invoiceNumbers = applications
+                .map((application: any) => String(application?.invoice?.invoiceNumber ?? '').trim())
+                .filter(Boolean)
+
+            let invoiceNumber: string | undefined
+            if (invoiceNumbers.length === 1) invoiceNumber = invoiceNumbers[0]
+            else if (invoiceNumbers.length > 1) invoiceNumber = `${invoiceNumbers.length} invoices`
+
+            return {
+                ...payment,
+                amount: Number(payment.amount ?? 0),
+                date: payment.paymentDate,
+                customerName: payment.customer?.contact?.displayName ?? '',
+                paymentMethod: payment.paymentMethod?.type ?? payment.paymentMethod?.name ?? null,
+                reference: payment.referenceNumber ?? null,
+                invoiceNumber,
+                invoiceId: applications[0]?.invoice?.id ?? null,
+            }
+        })
     }
 
     // ─── Cash Position ────────────────────────────────────────────────────────

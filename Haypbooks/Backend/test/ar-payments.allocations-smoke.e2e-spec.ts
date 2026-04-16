@@ -18,6 +18,7 @@ describe('AR Payments allocations smoke e2e', () => {
   let token: string
   let customerId: string
   let invoiceId: string
+  let bankAccountId: string
 
   beforeAll(async () => {
     process.env.DATABASE_URL = 'postgresql://postgres:Ninetails45@localhost:5432/haypbooks_test'
@@ -108,6 +109,18 @@ describe('AR Payments allocations smoke e2e', () => {
       },
     })
     companyId = company.id
+
+    const bankAccount = await prisma.bankAccount.create({
+      data: {
+        workspaceId: workspace.id,
+        name: 'Smoke Bank Account',
+        institution: 'Smoke Bank',
+        accountNumber: `****${String(Date.now()).slice(-4)}`,
+        isDefault: true,
+      },
+      select: { id: true },
+    })
+    bankAccountId = bankAccount.id
 
     const contact = await prisma.contact.create({
       data: {
@@ -284,5 +297,122 @@ describe('AR Payments allocations smoke e2e', () => {
 
     expect(Number(refreshedOne?.balance ?? -1)).toBeCloseTo(80, 2)
     expect(Number(refreshedTwo?.balance ?? -1)).toBeCloseTo(70, 2)
+  })
+
+  it('moves undeposited payments into a bank deposit and updates payment status to deposited', async () => {
+    const paymentDate = new Date().toISOString().slice(0, 10)
+    const seed = Date.now()
+
+    const invoiceC = await prisma.invoice.create({
+      data: {
+        workspaceId,
+        companyId,
+        customerId,
+        invoiceNumber: `INV-DEPOSIT-C-${seed}`,
+        date: new Date(),
+        dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        totalAmount: 90,
+        balance: 90,
+        status: 'SENT',
+        postingStatus: 'DRAFT',
+        currency: 'USD',
+      },
+    })
+
+    const invoiceD = await prisma.invoice.create({
+      data: {
+        workspaceId,
+        companyId,
+        customerId,
+        invoiceNumber: `INV-DEPOSIT-D-${seed}`,
+        date: new Date(),
+        dueDate: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000),
+        totalAmount: 75,
+        balance: 75,
+        status: 'SENT',
+        postingStatus: 'DRAFT',
+        currency: 'USD',
+      },
+    })
+
+    const paymentOne = await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/ar/payments`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        customerId,
+        amount: 60,
+        paymentDate,
+        method: 'CASH',
+        referenceNumber: `SMOKE-DEP-1-${seed}`,
+        allocations: [{ invoiceId: invoiceC.id, amount: 60 }],
+      })
+      .expect(201)
+
+    const paymentTwo = await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/ar/payments`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        customerId,
+        amount: 40,
+        paymentDate,
+        method: 'CHECK',
+        referenceNumber: `SMOKE-DEP-2-${seed}`,
+        allocations: [{ invoiceId: invoiceD.id, amount: 40 }],
+      })
+      .expect(201)
+
+    expect(paymentOne.body.isDeposited).toBe(false)
+    expect(paymentTwo.body.isDeposited).toBe(false)
+    expect(paymentOne.body.depositStatus).toBe('UNDEPOSITED')
+    expect(paymentTwo.body.depositStatus).toBe('UNDEPOSITED')
+
+    const undepositedBefore = await request(app.getHttpServer())
+      .get(`/api/companies/${companyId}/banking/undeposited-funds`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    const undepositedIds = new Set((undepositedBefore.body ?? []).map((row: any) => row.id))
+    expect(undepositedIds.has(paymentOne.body.id)).toBe(true)
+    expect(undepositedIds.has(paymentTwo.body.id)).toBe(true)
+
+    const deposit = await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/banking/deposits`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        bankAccountId,
+        depositDate: paymentDate,
+        referenceNumber: `SMOKE-DEPOSIT-${seed}`,
+        paymentIds: [paymentOne.body.id, paymentTwo.body.id],
+      })
+      .expect(201)
+
+    expect(deposit.body).toHaveProperty('id')
+    expect(deposit.body.status).toBe('DRAFT')
+
+    const refreshedOne = await request(app.getHttpServer())
+      .get(`/api/companies/${companyId}/ar/payments/${paymentOne.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    const refreshedTwo = await request(app.getHttpServer())
+      .get(`/api/companies/${companyId}/ar/payments/${paymentTwo.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    expect(refreshedOne.body.isDeposited).toBe(true)
+    expect(refreshedTwo.body.isDeposited).toBe(true)
+    expect(refreshedOne.body.depositStatus).toBe('DEPOSITED')
+    expect(refreshedTwo.body.depositStatus).toBe('DEPOSITED')
+    expect(refreshedOne.body.depositDate).toBeTruthy()
+    expect(refreshedTwo.body.depositDate).toBeTruthy()
+
+    const undepositedAfter = await request(app.getHttpServer())
+      .get(`/api/companies/${companyId}/banking/undeposited-funds`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    const undepositedAfterIds = new Set((undepositedAfter.body ?? []).map((row: any) => row.id))
+    expect(undepositedAfterIds.has(paymentOne.body.id)).toBe(false)
+    expect(undepositedAfterIds.has(paymentTwo.body.id)).toBe(false)
   })
 })
