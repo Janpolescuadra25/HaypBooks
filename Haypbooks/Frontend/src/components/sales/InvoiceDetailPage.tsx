@@ -12,6 +12,7 @@ import {
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useToast } from '@/components/ToastProvider'
 import type { Invoice } from './InvoicesPage'
 import EmailPreviewModal from './EmailPreviewModal'
 import TemplateManagerModal, { type EmailTemplate } from './TemplateManagerModal'
@@ -43,6 +44,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; Icon: Re
 
 export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, onClose, onRefresh }: Props) {
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [invoice, setInvoice] = useState(initialInvoice)
   const [payments, setPayments] = useState<Payment[]>([])
   const [loadingPayments, setLoadingPayments] = useState(false)
@@ -87,6 +89,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
 
   const status = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.DRAFT
   const StatusIcon = status.Icon
+  const invoiceDisplayNumber = invoice.invoiceNumber ?? `INV-${invoice.id?.slice(-6).toUpperCase()}`
 
   const amountPaid = payments.reduce((s, p) => s + (p.amount ?? 0), 0)
   const taxAmount = (invoice as any).taxAmount ?? 0
@@ -179,6 +182,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
         ...(scheduledAt ? { scheduledAt } : {}),
       })
       setInvoice(p => ({ ...p, status: 'SENT' }))
+      toast.success(`Invoice #${invoiceDisplayNumber} marked as Sent`)
       onRefresh()
       setActiveTab('edit')
     } catch (e: any) {
@@ -194,6 +198,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     try {
       await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/send`)
       setInvoice(p => ({ ...p, status: 'SENT' }))
+      toast.success(`Invoice #${invoiceDisplayNumber} marked as Sent`)
       onRefresh()
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to send invoice')
@@ -818,11 +823,11 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     <CreditCard size={13} /> Receive Payment
                   </button>
                 )}
-                {(invoice.status === 'DRAFT' || invoice.status === 'SENT') && (
-                  <button onClick={() => setActiveTab('email')}
+                {invoice.status === 'DRAFT' && (
+                  <button onClick={handleSend} disabled={sending}
                     className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
-                    <Mail size={14} />
-                    {invoice.status === 'SENT' ? 'Resend' : 'Send Invoice'}
+                    {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                    Send Invoice
                   </button>
                 )}
               </div>

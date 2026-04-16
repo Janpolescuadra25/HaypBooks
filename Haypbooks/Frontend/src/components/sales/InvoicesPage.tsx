@@ -17,7 +17,6 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import InvoiceDetailPage from './InvoiceDetailPage'
 import TemplateGallery from './invoice-templates/TemplateGallery'
-import EmailPreviewModal from './EmailPreviewModal'
 
 export interface Invoice {
   id: string
@@ -111,7 +110,6 @@ export default function InvoicesPage() {
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [toast, setToast] = useState('')
-  const [emailPreviewInvoice, setEmailPreviewInvoice] = useState<Invoice | null>(null)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -161,9 +159,22 @@ export default function InvoicesPage() {
     paidPct: invoices.length > 0 ? Math.round((invoices.filter(i => i.status === 'PAID').length / invoices.length) * 100) : 0,
   }), [invoices])
 
-  const handleSend = async (id: string) => {
+  const handleSend = async (
+    id: string,
+    invoiceNumber: string | undefined,
+    kind: 'send' | 'reminder' = 'send',
+  ) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`); fetchInvoices() }
+    try {
+      await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`)
+      fetchInvoices()
+      if (kind === 'send') {
+        const invoiceRef = invoiceNumber ?? `INV-${id.slice(-6).toUpperCase()}`
+        showToast(`Invoice #${invoiceRef} marked as Sent`)
+      } else {
+        showToast('Reminder sent')
+      }
+    }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to send') }
     setActionMenuId(null)
   }
@@ -448,14 +459,6 @@ export default function InvoicesPage() {
             onRefresh={fetchInvoices}
           />
         )}
-        {emailPreviewInvoice && companyId && (
-          <EmailPreviewModal
-            invoice={emailPreviewInvoice}
-            companyId={companyId}
-            onClose={() => setEmailPreviewInvoice(null)}
-            onSent={() => { setEmailPreviewInvoice(null); fetchInvoices() }}
-          />
-        )}
       </AnimatePresence>
 
       {/* Action Menu — fixed-position portal to escape overflow-x-auto clipping */}
@@ -476,10 +479,10 @@ export default function InvoicesPage() {
               </div>
               <MenuBtn icon={<Eye size={13} />} label="View / Edit" onClick={() => { setViewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
               {(inv.status === 'SENT' || inv.status === 'OVERDUE') && (
-                <MenuBtn icon={<Send size={13} />} label="Send Reminder" onClick={() => { handleSend(inv.id); showToast('Reminder sent'); setMenuPos(null) }} />
+                <MenuBtn icon={<Send size={13} />} label="Send Reminder" onClick={() => { handleSend(inv.id, inv.invoiceNumber, 'reminder'); setMenuPos(null) }} />
               )}
               {inv.status === 'DRAFT' && (
-                <MenuBtn icon={<Send size={13} />} label="Send Invoice" onClick={() => { setEmailPreviewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />
+                <MenuBtn icon={<Send size={13} />} label="Send Invoice" onClick={() => { handleSend(inv.id, inv.invoiceNumber, 'send'); setMenuPos(null) }} />
               )}
               {(inv.status === 'SENT' || inv.status === 'PARTIALLY_PAID' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE') && (
                 <MenuBtn icon={<CreditCard size={13} />} label="Receive Payment" onClick={() => { setViewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />

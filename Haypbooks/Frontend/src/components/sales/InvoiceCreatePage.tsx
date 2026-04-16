@@ -430,13 +430,15 @@ export default function InvoiceCreatePage() {
         })),
       })
       if (action === 'send' && inv?.id) {
-        await apiClient.post(`/companies/${companyId}/ar/invoices/${inv.id}/send`, {
+        const { data: sent } = await apiClient.post(`/companies/${companyId}/ar/invoices/${inv.id}/send`, {
           subject: emailSubject,
           body: emailMessage,
           ...(emailCc ? { cc: emailCc } : {}),
           ...(emailBcc ? { bcc: emailBcc } : {}),
           sendCopy: emailSendCopyToSelf,
         })
+        const invoiceRef = sent?.invoiceNumber ?? inv?.invoiceNumber ?? `INV-${String(inv.id).slice(-6).toUpperCase()}`
+        toast.success(`Invoice #${invoiceRef} marked as Sent`)
       }
       recordTemplateUsage(template.id)
       router.push('/sales/billing/invoices')
