@@ -845,8 +845,6 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     Duplicate
                   </button>
                 )}
-                {(invoice.status as string) !== 'VOID' && invoice.status !== 'PAID' && (
-                  <>
                 {(invoice.status as string) !== 'VOID' && (
                   <button onClick={() => setConfirmVoid(true)}
                     className="flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors">
@@ -865,8 +863,6 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
                     Send Invoice
                   </button>
-                )}
-                  </>
                 )}
               </div>
             )}
@@ -905,7 +901,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                 <h3 className="text-base font-bold text-gray-900">Void Invoice?</h3>
               </div>
               <p className="text-sm text-gray-600 mb-4">
-                This will permanently void the invoice and reverse any GL entries. This cannot be undone.
+                Voiding this invoice will reverse all payment allocations. Continue?
               </p>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setConfirmVoid(false)}

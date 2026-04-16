@@ -18,6 +18,51 @@ const PAGE_PATH = '/sales/billing/invoices'
 test.describe('Invoices', () => {
   let companyId: string | null
 
+  const todayIso = () => new Date().toISOString().slice(0, 10)
+  const futureIso = (days: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    return d.toISOString().slice(0, 10)
+  }
+
+  const createFixtureCustomer = async (page: any) => {
+    if (!companyId) throw new Error('Missing company id for fixtures')
+    const name = `Invoices E2E ${Date.now()}`
+    const createRes = await page.request.post(`/api/companies/${companyId}/ar/customers`, {
+      data: { displayName: name },
+    })
+
+    if (createRes.ok()) {
+      const created = await createRes.json()
+      const customerId = created?.contactId ?? created?.id
+      if (customerId) return String(customerId)
+    }
+
+    const listRes = await page.request.get(`/api/companies/${companyId}/ar/customers`)
+    if (!listRes.ok()) throw new Error('Unable to load customers for fixtures')
+    const listPayload = await listRes.json()
+    const list = Array.isArray(listPayload) ? listPayload : listPayload?.data ?? []
+    const fallbackId = list?.[0]?.contactId ?? list?.[0]?.id
+    if (!fallbackId) throw new Error('No customer available for fixtures')
+    return String(fallbackId)
+  }
+
+  const createDraftInvoiceFixture = async (page: any, amount: number, description: string) => {
+    if (!companyId) throw new Error('Missing company id for fixtures')
+    const customerId = await createFixtureCustomer(page)
+
+    const createRes = await page.request.post(`/api/companies/${companyId}/ar/invoices`, {
+      data: {
+        customerId,
+        dueDate: futureIso(7),
+        items: [{ description, quantity: 1, unitPrice: amount, amount }],
+      },
+    })
+    expect(createRes.ok()).toBe(true)
+    const invoice = await createRes.json()
+    return { customerId, invoice }
+  }
+
   test.beforeEach(async ({ page }) => {
     const ctx = loadContext()
     companyId = ctx.companyId
@@ -98,29 +143,92 @@ test.describe('Invoices', () => {
   })
 
   test('duplicate action creates a new draft and opens it in edit mode', async ({ page }) => {
-    const firstRow = page.locator('table tbody tr').first()
-    if (!(await firstRow.isVisible({ timeout: 5000 }).catch(() => false))) {
+    if (!companyId) {
       test.skip()
       return
     }
 
-    const actionButton = firstRow.locator('button').last()
-    if (!(await actionButton.isVisible({ timeout: 3000 }).catch(() => false))) {
-      test.skip()
-      return
+    const { invoice } = await createDraftInvoiceFixture(page, 55, 'Duplicate fixture line')
+    const invoiceRef = invoice?.invoiceNumber ?? String(invoice?.id ?? '').slice(0, 8).toUpperCase()
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await waitForTableToLoad(page)
+
+    const search = page.locator(selectors.searchInput).first()
+    if (await search.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await search.fill(invoiceRef)
+      await waitForTableToLoad(page)
     }
 
-    await actionButton.click()
-    const duplicateBtn = page.getByRole('button', { name: /^duplicate$/i }).first()
-    if (!(await duplicateBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      test.skip()
-      return
-    }
+    const row = page.locator('table tbody tr', { hasText: invoiceRef }).first()
+    await expect(row).toBeVisible({ timeout: 10000 })
+    await row.locator('button').last().click()
 
-    await duplicateBtn.click()
+    const actionMenu = page.locator('div.w-52', { hasText: 'More Actions' }).first()
+    await expect(actionMenu).toBeVisible({ timeout: 5000 })
+    const duplicateBtn = actionMenu.getByRole('button', { name: /^duplicate$/i })
+    await expect(duplicateBtn).toBeVisible({ timeout: 5000 })
+
+    await duplicateBtn.evaluate((el: HTMLElement) => el.click())
     await expect(page.getByText(/duplicated as/i)).toBeVisible({ timeout: 10000 })
-    await expect(page.getByRole('button', { name: /send invoice/i })).toBeVisible({ timeout: 10000 })
+    const detailModal = page.locator('div.fixed.inset-0.z-50').first()
+    await expect(detailModal).toBeVisible({ timeout: 10000 })
+    await expect(detailModal.getByRole('button', { name: /send invoice/i }).first()).toBeVisible({ timeout: 10000 })
     await expect(page.getByText(/cannot be edited because it has already been sent/i)).toHaveCount(0)
+  })
+
+  test('void action after payment reverses allocations with exact confirmation message', async ({ page }) => {
+    if (!companyId) {
+      test.skip()
+      return
+    }
+
+    const { customerId, invoice } = await createDraftInvoiceFixture(page, 140, 'Void-after-pay fixture line')
+    const sendRes = await page.request.post(`/api/companies/${companyId}/ar/invoices/${invoice.id}/send`, { data: {} })
+    expect(sendRes.ok()).toBe(true)
+    const sentInvoice = await sendRes.json()
+
+    const paymentRes = await page.request.post(`/api/companies/${companyId}/ar/payments`, {
+      data: {
+        customerId,
+        amount: 40,
+        paymentDate: todayIso(),
+        method: 'CASH',
+        allocations: [{ invoiceId: invoice.id, amount: 40 }],
+      },
+    })
+    expect(paymentRes.ok()).toBe(true)
+
+    const invoiceRef = sentInvoice?.invoiceNumber ?? String(invoice?.id ?? '').slice(0, 8).toUpperCase()
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await waitForTableToLoad(page)
+
+    const search = page.locator(selectors.searchInput).first()
+    if (await search.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await search.fill(invoiceRef)
+      await waitForTableToLoad(page)
+    }
+
+    const row = page.locator('table tbody tr', { hasText: invoiceRef }).first()
+    await expect(row).toBeVisible({ timeout: 10000 })
+    await row.locator('button').last().click()
+
+    const actionMenu = page.locator('div.w-52', { hasText: 'More Actions' }).first()
+    await expect(actionMenu).toBeVisible({ timeout: 5000 })
+
+    let confirmMessage = ''
+    page.once('dialog', async (dialog) => {
+      confirmMessage = dialog.message()
+      await dialog.accept()
+    })
+
+    await actionMenu.getByRole('button', { name: /^void$/i }).evaluate((el: HTMLElement) => el.click())
+    await waitForTableToLoad(page)
+    expect(confirmMessage).toBe('Voiding this invoice will reverse all payment allocations. Continue?')
+
+    const updatedRow = page.locator('table tbody tr', { hasText: invoiceRef }).first()
+    await expect(updatedRow).toContainText(/VOID/i)
   })
 
   test('column visibility menu toggles columns', async ({ page }) => {

@@ -209,7 +209,7 @@ export default function InvoicesPage() {
   }
 
   const handleVoid = async (id: string) => {
-    if (!companyId || !confirm('Void this invoice?')) return
+    if (!companyId || !confirm('Voiding this invoice will reverse all payment allocations. Continue?')) return
     try { await apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`); fetchInvoices() }
     catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
     setActionMenuId(null)
@@ -496,13 +496,25 @@ export default function InvoicesPage() {
         {actionMenuId && menuPos && (() => {
           const inv = invoices.find(i => i.id === actionMenuId)
           if (!inv) return null
+          const menuWidth = 208
+          const menuHeight = 260
+          const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
+          const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 720
+          const menuLeft = Math.min(
+            Math.max(4, menuPos.x - menuWidth),
+            Math.max(4, viewportWidth - menuWidth - 4),
+          )
+          const menuTop = Math.min(
+            Math.max(4, menuPos.y + 4),
+            Math.max(4, viewportHeight - menuHeight - 4),
+          )
           return (
             <motion.div
               key={`action-menu-${actionMenuId}`}
               initial={{ opacity: 0, scale: 0.95, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -4 }}
-              style={{ position: 'fixed', top: menuPos.y + 4, left: Math.max(4, menuPos.x - 208), zIndex: 9999 }}
+              style={{ position: 'fixed', top: menuTop, left: menuLeft, zIndex: 9999 }}
               className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
               <div className="px-3 py-1.5 border-b border-gray-100">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">More Actions</p>
@@ -532,7 +544,7 @@ export default function InvoicesPage() {
                 <MenuBtn icon={<FileText size={13} />} label="Credit Note" disabled tooltip="Coming soon" />
               </div>
               <div className="border-t border-gray-100 mt-1 pt-1">
-                {(inv.status === 'DRAFT' || inv.status === 'SENT') && (
+                {inv.status !== 'VOID' && (
                   <MenuBtn icon={<Ban size={13} />} label="Void" onClick={() => { handleVoid(inv.id); setMenuPos(null) }} danger />
                 )}
                 <MenuBtn icon={<History size={13} />} label="History / Audit Log" onClick={() => { setViewInvoice(inv); setActionMenuId(null); setMenuPos(null) }} />

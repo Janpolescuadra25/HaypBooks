@@ -859,9 +859,59 @@ export class ArRepository {
         const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, companyId } })
         if (!invoice) return null
 
-        return this.prisma.invoice.update({
-            where: { id: invoiceId },
-            data: { status: 'VOID', postingStatus: 'VOIDED', deletedAt: new Date(), journalEntryId: null },
+        return this.prisma.$transaction(async (tx) => {
+            const applications = await tx.invoicePaymentApplication.findMany({
+                where: { invoiceId },
+                include: {
+                    payment: {
+                        select: {
+                            id: true,
+                            amount: true,
+                            unappliedAmount: true,
+                            deletedAt: true,
+                        },
+                    },
+                },
+            })
+
+            const unappliedAdjustments = new Map<string, number>()
+            for (const application of applications) {
+                if (!application.payment || application.payment.deletedAt) continue
+                const current = unappliedAdjustments.get(application.paymentId) ?? 0
+                unappliedAdjustments.set(application.paymentId, current + Number(application.amount ?? 0))
+            }
+
+            for (const [paymentId, adjustment] of unappliedAdjustments.entries()) {
+                const payment = await tx.paymentReceived.findUnique({
+                    where: { id: paymentId },
+                    select: { id: true, amount: true, unappliedAmount: true, deletedAt: true },
+                })
+                if (!payment || payment.deletedAt) continue
+
+                const nextUnapplied = Math.min(
+                    Number(payment.amount ?? 0),
+                    Number(payment.unappliedAmount ?? 0) + Number(adjustment ?? 0),
+                )
+
+                await tx.paymentReceived.update({
+                    where: { id: paymentId },
+                    data: { unappliedAmount: nextUnapplied },
+                })
+            }
+
+            await tx.invoicePaymentApplication.deleteMany({ where: { invoiceId } })
+
+            return tx.invoice.update({
+                where: { id: invoiceId },
+                data: {
+                    status: 'VOID',
+                    paymentStatus: 'DRAFT',
+                    postingStatus: 'VOIDED',
+                    balance: invoice.totalAmount,
+                    deletedAt: null,
+                    journalEntryId: null,
+                },
+            })
         })
     }
 

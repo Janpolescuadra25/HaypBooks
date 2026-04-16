@@ -163,6 +163,15 @@ describe('AR invoice status state machine smoke e2e', () => {
     return res.body
   }
 
+  async function getPayment(paymentId: string) {
+    const res = await request(app.getHttpServer())
+      .get(`/api/companies/${companyId}/ar/payments/${paymentId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    return res.body
+  }
+
   async function recordPayment(invoiceId: string, amount: number, reference: string) {
     const res = await request(app.getHttpServer())
       .post(`/api/companies/${companyId}/ar/payments`)
@@ -273,5 +282,34 @@ describe('AR invoice status state machine smoke e2e', () => {
     expect(fetchedDuplicate.status).toBe('DRAFT')
     expect(fetchedDuplicate.customerId).toBe(customerId)
     expect(Number(fetchedDuplicate.amountDue)).toBeCloseTo(210, 2)
+  })
+
+  it('voids invoice with payments by reversing allocations and restoring payment unapplied balance', async () => {
+    const dueDate = new Date(Date.now() + (4 * 24 * 60 * 60 * 1000)).toISOString().slice(0, 10)
+    const invoice = await createDraftInvoice(125, dueDate)
+    await sendInvoice(invoice.id)
+
+    const payment = await recordPayment(invoice.id, 40, `VOID-PAY-${Date.now()}`)
+    expect(payment.id).toBeTruthy()
+
+    const partial = await getInvoice(invoice.id)
+    expect(partial.status).toBe('PARTIALLY_PAID')
+    expect(Number(partial.amountDue)).toBeCloseTo(85, 2)
+
+    await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/ar/invoices/${invoice.id}/void`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+
+    const voidedInvoice = await getInvoice(invoice.id)
+    expect(voidedInvoice.status).toBe('VOID')
+    expect(Number(voidedInvoice.amountDue)).toBeCloseTo(125, 2)
+
+    const refreshedPayment = await getPayment(payment.id)
+    expect(Number(refreshedPayment.unappliedAmount)).toBeCloseTo(40, 2)
+    const matchingAllocations = Array.isArray(refreshedPayment.allocations)
+      ? refreshedPayment.allocations.filter((allocation: any) => allocation.invoiceId === invoice.id)
+      : []
+    expect(matchingAllocations).toHaveLength(0)
   })
 })

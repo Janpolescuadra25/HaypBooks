@@ -1006,9 +1006,6 @@ export class ArService {
         const inv = await this.repo.findInvoiceById(companyId, invoiceId)
         if (!inv) throw new NotFoundException('Invoice not found')
         if (inv.status === 'VOID') throw new BadRequestException('Invoice is already void')
-        if (Number(inv.totalAmount) - Number(inv.balance) > 0) {
-            throw new BadRequestException('Cannot void an invoice that has payments applied. Void the payments first.')
-        }
 
         // Reverse the invoice posting JE before marking the invoice as void.
         await this.subLedger.reverseInvoiceGL(invoiceId, userId)
