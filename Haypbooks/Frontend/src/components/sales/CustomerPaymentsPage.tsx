@@ -446,11 +446,6 @@ export default function CustomerPaymentsPage() {
     setAmountAutoFromAllocations(true)
   }
 
-  function handleModalBackdropMouseDown(e: React.MouseEvent<HTMLDivElement>) {
-    if (e.target !== e.currentTarget) return
-    closeModal()
-  }
-
   function handlePaymentFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
     if (e.key !== 'Enter') return
     const target = e.target as HTMLElement
@@ -898,288 +893,286 @@ export default function CustomerPaymentsPage() {
         )}
       </div>
 
-      {/* New Payment Modal */}
+      {/* New Payment Fullscreen */}
       {newPaymentOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={handleModalBackdropMouseDown}
-        >
-          <div
-            className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">Record Payment</h2>
-              <button
-                onClick={closeModal}
-                className="p-1 rounded-lg text-slate-500 hover:bg-slate-100"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 z-50 bg-slate-50">
+          <div className="flex h-full flex-col">
+            <div className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-sm">
+              <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Record Payment</h2>
+                  <p className="text-xs text-slate-500">Check invoices to auto-fill allocations. Adjust only when you need partial payments.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    form="record-payment-form"
+                    disabled={saving}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {saving ? 'Saving…' : 'Record Payment'}
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <form onSubmit={submitPayment} onKeyDown={handlePaymentFormKeyDown} className="p-4 space-y-4">
-              <div className="space-y-2">
-                <CustomerPickerField
-                  label="Customer *"
-                  value={form.customerId}
-                  customers={customers}
-                  loading={customersLoading}
-                  placeholder="Select customer..."
-                  createLabel="+ Create New Customer"
-                  onOpen={loadCustomers}
-                  onChange={(id) => {
-                    setForm((f) => ({ ...f, customerId: id, amount: '' }))
-                    setAllocationSearch('')
-                    setDraftAllocations([])
-                    setSaveError('')
-                    setAmountAutoFromAllocations(true)
-                  }}
-                  onCreateNew={() => setShowQuickAddCustomer(true)}
-                />
-                {form.customerId && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={clearSelectedCustomer}
-                      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                    >
-                      Clear customer
-                    </button>
-                  </div>
+            <form id="record-payment-form" onSubmit={submitPayment} onKeyDown={handlePaymentFormKeyDown} className="flex-1 overflow-y-auto">
+              <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 sm:px-6">
+                {saveError && (
+                  <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-600">{saveError}</p>
                 )}
-              </div>
 
-              {form.customerId ? (
-                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-slate-700">Open Invoices</label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={fillRemainingAcrossChecked}
-                        disabled={draftAllocations.length === 0}
-                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-40"
-                      >
-                        Allocate full
-                      </button>
-                      <button
-                        type="button"
-                        onClick={clearAllAllocations}
-                        disabled={draftAllocations.length === 0}
-                        className="text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-40"
-                      >
-                        Clear all
-                      </button>
+                <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                  <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="space-y-2">
+                      <CustomerPickerField
+                        label="Customer *"
+                        value={form.customerId}
+                        customers={customers}
+                        loading={customersLoading}
+                        placeholder="Select customer..."
+                        createLabel="+ Create New Customer"
+                        onOpen={loadCustomers}
+                        onChange={(id) => {
+                          setForm((f) => ({ ...f, customerId: id, amount: '' }))
+                          setAllocationSearch('')
+                          setDraftAllocations([])
+                          setSaveError('')
+                          setAmountAutoFromAllocations(true)
+                        }}
+                        onCreateNew={() => setShowQuickAddCustomer(true)}
+                      />
+                      {form.customerId && (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={clearSelectedCustomer}
+                            className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                          >
+                            Clear customer
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  <input
-                    value={allocationSearch}
-                    onChange={(e) => setAllocationSearch(e.target.value)}
-                    disabled={invoicesLoading}
-                    placeholder={invoicesLoading ? 'Loading open invoices…' : 'Search open invoices by number, date, or balance'}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
-                  />
-
-                  <div className="max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-white">
-                    {!form.customerId ? null : invoicesLoading ? (
-                      <p className="px-3 py-4 text-sm text-slate-500">Loading invoices…</p>
-                    ) : filteredOpenInvoices.length === 0 ? (
-                      <p className="px-3 py-4 text-sm text-slate-500">No open invoices match your search.</p>
-                    ) : (
-                      filteredOpenInvoices.map((invoice) => {
-                        const isSelected = selectedAllocationIds.has(invoice.id)
-                        return (
-                          <label key={invoice.id} className="flex cursor-pointer items-start gap-3 border-t border-slate-100 px-3 py-2 first:border-t-0 hover:bg-slate-50">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => toggleAllocation(invoice, e.target.checked)}
-                              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-slate-800">{invoice.invoiceNumber}</p>
-                              <p className="text-xs text-slate-500">{fmtDate(invoice.date)} • {formatCurrency(invoice.remainingBalance, currency)} remaining</p>
-                            </div>
-                            <p className={`text-xs font-semibold ${isSelected ? 'text-emerald-700' : 'text-slate-400'}`}>
-                              {isSelected ? 'Checked' : 'Open'}
-                            </p>
-                          </label>
-                        )
-                      })
-                    )}
-                  </div>
-
-                  {draftAllocations.length > 0 && (
-                    <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Selected allocations</p>
-                      {draftAllocations.map((allocation) => {
-                        const lineError = allocationLineErrors[allocation.invoiceId]
-                        return (
-                          <div key={allocation.invoiceId} className="rounded-lg border border-slate-200 p-2.5">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-semibold text-slate-800">{allocation.invoiceNumber}</p>
-                                <p className="text-xs text-slate-500">{fmtDate(allocation.date)} • Remaining {formatCurrency(allocation.remainingBalance, currency)}</p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => removeAllocation(allocation.invoiceId)}
-                                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                                title="Remove allocation"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                            <div className="mt-2 flex items-end gap-2">
-                              <div className="flex-1">
-                                <label className="mb-1 block text-xs font-medium text-slate-600">Allocated Amount</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={allocation.amount === 0 ? '' : allocation.amount}
-                                  onChange={(e) => updateAllocationAmount(allocation.invoiceId, e.target.value)}
-                                  className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                  placeholder="0.00"
-                                />
-                              </div>
-                            </div>
-                            {lineError && <p className="mt-1 text-xs font-medium text-rose-600">{lineError}</p>}
+                    {form.customerId ? (
+                      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium text-slate-700">Open Invoices</label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={fillRemainingAcrossChecked}
+                              disabled={draftAllocations.length === 0}
+                              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-40"
+                            >
+                              Allocate full
+                            </button>
+                            <button
+                              type="button"
+                              onClick={clearAllAllocations}
+                              disabled={draftAllocations.length === 0}
+                              className="text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-40"
+                            >
+                              Clear all
+                            </button>
                           </div>
-                        )
-                      })}
+                        </div>
+
+                        <input
+                          value={allocationSearch}
+                          onChange={(e) => setAllocationSearch(e.target.value)}
+                          disabled={invoicesLoading}
+                          placeholder={invoicesLoading ? 'Loading open invoices…' : 'Search open invoices by number, date, or balance'}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
+                        />
+
+                        <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+                          {!form.customerId ? null : invoicesLoading ? (
+                            <p className="px-3 py-4 text-sm text-slate-500">Loading invoices…</p>
+                          ) : filteredOpenInvoices.length === 0 ? (
+                            <p className="px-3 py-4 text-sm text-slate-500">No open invoices match your search.</p>
+                          ) : (
+                            filteredOpenInvoices.map((invoice) => {
+                              const isSelected = selectedAllocationIds.has(invoice.id)
+                              return (
+                                <label key={invoice.id} className="flex cursor-pointer items-start gap-3 border-t border-slate-100 px-3 py-2 first:border-t-0 hover:bg-slate-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => toggleAllocation(invoice, e.target.checked)}
+                                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                  />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-slate-800">{invoice.invoiceNumber}</p>
+                                    <p className="text-xs text-slate-500">{fmtDate(invoice.date)} • {formatCurrency(invoice.remainingBalance, currency)} remaining</p>
+                                  </div>
+                                  <p className={`text-xs font-semibold ${isSelected ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                    {isSelected ? 'Checked' : 'Open'}
+                                  </p>
+                                </label>
+                              )
+                            })
+                          )}
+                        </div>
+
+                        {draftAllocations.length > 0 && (
+                          <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Selected allocations</p>
+                            {draftAllocations.map((allocation) => {
+                              const lineError = allocationLineErrors[allocation.invoiceId]
+                              return (
+                                <div key={allocation.invoiceId} className="rounded-lg border border-slate-200 p-2.5">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-800">{allocation.invoiceNumber}</p>
+                                      <p className="text-xs text-slate-500">{fmtDate(allocation.date)} • Remaining {formatCurrency(allocation.remainingBalance, currency)}</p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeAllocation(allocation.invoiceId)}
+                                      className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                      title="Remove allocation"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  </div>
+                                  <div className="mt-2">
+                                    <label className="mb-1 block text-xs font-medium text-slate-600">Allocated Amount</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={allocation.amount === 0 ? '' : allocation.amount}
+                                      onChange={(e) => updateAllocationAmount(allocation.invoiceId, e.target.value)}
+                                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                  {lineError && <p className="mt-1 text-xs font-medium text-rose-600">{lineError}</p>}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                        Select a customer to search and allocate open invoices.
+                      </p>
+                    )}
+                  </section>
+
+                  <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <label className="block text-sm font-medium text-slate-700">Amount *</label>
+                          <button
+                            type="button"
+                            onClick={() => setAmountAutoFromAllocations(true)}
+                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                          >
+                            Auto from allocations
+                          </button>
+                        </div>
+                        <input
+                          required
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={form.amount}
+                          onChange={(e) => {
+                            setAmountAutoFromAllocations(false)
+                            setForm((f) => ({ ...f, amount: e.target.value }))
+                          }}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          placeholder="0.00"
+                        />
+                        <p className="mt-1 text-xs text-slate-500">
+                          {amountAutoFromAllocations ? 'Auto-calculated from checked invoices. Edit to keep unapplied cash.' : 'Manual override active.'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+                        <input
+                          required
+                          type="date"
+                          value={form.date}
+                          onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                          aria-label="Payment date"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                  Select a customer to search and allocate open invoices.
-                </p>
-              )}
 
-              {/* Amount + Date */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="mb-1 flex items-center justify-between">
-                    <label className="block text-sm font-medium text-slate-700">Amount *</label>
-                    <button
-                      type="button"
-                      onClick={() => setAmountAutoFromAllocations(true)}
-                      className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
-                    >
-                      Auto from allocations
-                    </button>
-                  </div>
-                  <input
-                    required
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={form.amount}
-                    onChange={(e) => {
-                      setAmountAutoFromAllocations(false)
-                      setForm((f) => ({ ...f, amount: e.target.value }))
-                    }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="0.00"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    {amountAutoFromAllocations ? 'Auto-calculated from checked invoices. Edit to keep unapplied cash.' : 'Manual override active.'}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
-                  <input
-                    required
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                    aria-label="Payment date"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  />
-                </div>
-              </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p className="text-xs text-slate-500">Payment Amount</p>
+                        <p className="font-semibold text-slate-900">{formatCurrency(parsedPaymentAmount, currency)}</p>
+                      </div>
+                      <div className={`rounded-lg border px-3 py-2 ${isOverAllocated ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+                        <p className="text-xs text-slate-500">Total Allocated</p>
+                        <p className={`font-semibold ${isOverAllocated ? 'text-rose-700' : 'text-slate-900'}`}>{formatCurrency(totalAllocatedDraft, currency)}</p>
+                      </div>
+                      <div className={`rounded-lg border px-3 py-2 ${unappliedDraft < -0.01 ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+                        <p className="text-xs text-slate-500">Unapplied</p>
+                        <p className={`font-semibold ${unappliedDraft < -0.01 ? 'text-rose-700' : 'text-slate-900'}`}>
+                          {formatCurrency(Math.max(0, unappliedDraft), currency)}
+                        </p>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">Payment Amount</p>
-                  <p className="font-semibold text-slate-900">{formatCurrency(parsedPaymentAmount, currency)}</p>
-                </div>
-                <div className={`rounded-lg border px-3 py-2 ${isOverAllocated ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
-                  <p className="text-xs text-slate-500">Total Allocated</p>
-                  <p className={`font-semibold ${isOverAllocated ? 'text-rose-700' : 'text-slate-900'}`}>{formatCurrency(totalAllocatedDraft, currency)}</p>
-                </div>
-                <div className={`rounded-lg border px-3 py-2 ${unappliedDraft < -0.01 ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
-                  <p className="text-xs text-slate-500">Unapplied</p>
-                  <p className={`font-semibold ${unappliedDraft < -0.01 ? 'text-rose-700' : 'text-slate-900'}`}>
-                    {formatCurrency(Math.max(0, unappliedDraft), currency)}
-                  </p>
-                </div>
-              </div>
+                    {isOverAllocated && (
+                      <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-600">
+                        Total allocated cannot exceed payment amount.
+                      </p>
+                    )}
 
-              {isOverAllocated && (
-                <p className="text-sm font-medium text-rose-600">
-                  Total allocated cannot exceed payment amount.
-                </p>
-              )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
+                        <select
+                          value={form.method}
+                          onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}
+                          aria-label="Payment method"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        >
+                          {METHOD_OPTIONS.map((m) => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Reference #</label>
+                        <input
+                          value={form.reference}
+                          onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          placeholder="Check # or ref"
+                        />
+                      </div>
+                    </div>
 
-              {/* Method + Reference */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
-                  <select
-                    value={form.method}
-                    onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}
-                    aria-label="Payment method"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  >
-                    {METHOD_OPTIONS.map((m) => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
-                    ))}
-                  </select>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Memo</label>
+                      <textarea
+                        rows={4}
+                        value={form.memo}
+                        onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-y"
+                        placeholder="Optional memo…"
+                      />
+                    </div>
+                  </section>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Reference #</label>
-                  <input
-                    value={form.reference}
-                    onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="Check # or ref"
-                  />
-                </div>
-              </div>
-
-              {/* Memo */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Memo</label>
-                <textarea
-                  rows={2}
-                  value={form.memo}
-                  onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
-                  placeholder="Optional memo…"
-                />
-              </div>
-
-              {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60"
-                >
-                  {saving ? 'Saving…' : 'Record Payment'}
-                </button>
               </div>
             </form>
           </div>
