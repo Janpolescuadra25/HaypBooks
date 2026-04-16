@@ -233,6 +233,7 @@ export default function CustomerPaymentsPage() {
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [amountAutoFromAllocations, setAmountAutoFromAllocations] = useState(true)
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
@@ -350,6 +351,12 @@ export default function CustomerPaymentsPage() {
   const unappliedDraft = useMemo(() => Number((parsedPaymentAmount - totalAllocatedDraft).toFixed(2)), [parsedPaymentAmount, totalAllocatedDraft])
   const isOverAllocated = totalAllocatedDraft > parsedPaymentAmount + 0.01
 
+  useEffect(() => {
+    if (!newPaymentOpen || !amountAutoFromAllocations) return
+    const nextAmount = totalAllocatedDraft > 0 ? totalAllocatedDraft.toFixed(2) : ''
+    setForm((current) => (current.amount === nextAmount ? current : { ...current, amount: nextAmount }))
+  }, [amountAutoFromAllocations, newPaymentOpen, totalAllocatedDraft])
+
   const allocationLineErrors = useMemo(() => {
     const errors: Record<string, string> = {}
     for (const allocation of draftAllocations) {
@@ -362,8 +369,11 @@ export default function CustomerPaymentsPage() {
     return errors
   }, [currency, draftAllocations])
 
-  const addAllocation = useCallback((invoice: InvoiceOption) => {
+  const toggleAllocation = useCallback((invoice: InvoiceOption, checked: boolean) => {
     setDraftAllocations((prev) => {
+      if (!checked) {
+        return prev.filter((allocation) => allocation.invoiceId !== invoice.id)
+      }
       if (prev.some((item) => item.invoiceId === invoice.id)) return prev
       return [
         ...prev,
@@ -372,7 +382,7 @@ export default function CustomerPaymentsPage() {
           invoiceNumber: invoice.invoiceNumber,
           date: invoice.date,
           remainingBalance: Number(invoice.remainingBalance.toFixed(2)),
-          amount: 0,
+          amount: Number(invoice.remainingBalance.toFixed(2)),
         },
       ]
     })
@@ -390,12 +400,10 @@ export default function CustomerPaymentsPage() {
     )
   }, [])
 
-  const allocateFull = useCallback((invoiceId: string) => {
+  const fillRemainingAcrossChecked = useCallback(() => {
     setDraftAllocations((prev) =>
       prev.map((allocation) =>
-        allocation.invoiceId === invoiceId
-          ? { ...allocation, amount: Number(allocation.remainingBalance.toFixed(2)) }
-          : allocation,
+        ({ ...allocation, amount: Number(allocation.remainingBalance.toFixed(2)) }),
       ),
     )
   }, [])
@@ -419,6 +427,7 @@ export default function CustomerPaymentsPage() {
     setAllocationSearch('')
     setDraftAllocations([])
     setSaveError('')
+    setAmountAutoFromAllocations(true)
     setNewPaymentOpen(true)
     loadCustomers()
   }
@@ -426,6 +435,28 @@ export default function CustomerPaymentsPage() {
   function closeModal() {
     setNewPaymentOpen(false)
     setSaveError('')
+  }
+
+  function clearSelectedCustomer() {
+    setForm((current) => ({ ...current, customerId: '', amount: '' }))
+    setInvoices([])
+    setAllocationSearch('')
+    setDraftAllocations([])
+    setSaveError('')
+    setAmountAutoFromAllocations(true)
+  }
+
+  function handleModalBackdropMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    if (e.target !== e.currentTarget) return
+    closeModal()
+  }
+
+  function handlePaymentFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if (e.key !== 'Enter') return
+    const target = e.target as HTMLElement
+    const tagName = target.tagName.toLowerCase()
+    if (tagName === 'textarea' || tagName === 'button') return
+    e.preventDefault()
   }
 
   // ─── Submit new payment ───────────────────────────────────────────────────────
@@ -871,7 +902,7 @@ export default function CustomerPaymentsPage() {
       {newPaymentOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={closeModal}
+          onMouseDown={handleModalBackdropMouseDown}
         >
           <div
             className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]"
@@ -887,36 +918,60 @@ export default function CustomerPaymentsPage() {
               </button>
             </div>
 
-            <form onSubmit={submitPayment} className="p-4 space-y-4">
-              <CustomerPickerField
-                label="Customer *"
-                value={form.customerId}
-                customers={customers}
-                loading={customersLoading}
-                placeholder="Select customer..."
-                createLabel="+ Create New Customer"
-                onOpen={loadCustomers}
-                onChange={(id) => {
-                  setForm((f) => ({ ...f, customerId: id }))
-                  setAllocationSearch('')
-                  setDraftAllocations([])
-                  setSaveError('')
-                }}
-                onCreateNew={() => setShowQuickAddCustomer(true)}
-              />
+            <form onSubmit={submitPayment} onKeyDown={handlePaymentFormKeyDown} className="p-4 space-y-4">
+              <div className="space-y-2">
+                <CustomerPickerField
+                  label="Customer *"
+                  value={form.customerId}
+                  customers={customers}
+                  loading={customersLoading}
+                  placeholder="Select customer..."
+                  createLabel="+ Create New Customer"
+                  onOpen={loadCustomers}
+                  onChange={(id) => {
+                    setForm((f) => ({ ...f, customerId: id, amount: '' }))
+                    setAllocationSearch('')
+                    setDraftAllocations([])
+                    setSaveError('')
+                    setAmountAutoFromAllocations(true)
+                  }}
+                  onCreateNew={() => setShowQuickAddCustomer(true)}
+                />
+                {form.customerId && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={clearSelectedCustomer}
+                      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                    >
+                      Clear customer
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {form.customerId ? (
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-slate-700">Open Invoices</label>
-                    <button
-                      type="button"
-                      onClick={clearAllAllocations}
-                      disabled={draftAllocations.length === 0}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-40"
-                    >
-                      Clear all
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={fillRemainingAcrossChecked}
+                        disabled={draftAllocations.length === 0}
+                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-40"
+                      >
+                        Allocate full
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearAllAllocations}
+                        disabled={draftAllocations.length === 0}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-40"
+                      >
+                        Clear all
+                      </button>
+                    </div>
                   </div>
 
                   <input
@@ -936,29 +991,21 @@ export default function CustomerPaymentsPage() {
                       filteredOpenInvoices.map((invoice) => {
                         const isSelected = selectedAllocationIds.has(invoice.id)
                         return (
-                          <div key={invoice.id} className="flex items-center justify-between border-t border-slate-100 px-3 py-2 first:border-t-0">
-                            <div>
+                          <label key={invoice.id} className="flex cursor-pointer items-start gap-3 border-t border-slate-100 px-3 py-2 first:border-t-0 hover:bg-slate-50">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => toggleAllocation(invoice, e.target.checked)}
+                              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <div className="flex-1">
                               <p className="text-sm font-semibold text-slate-800">{invoice.invoiceNumber}</p>
                               <p className="text-xs text-slate-500">{fmtDate(invoice.date)} • {formatCurrency(invoice.remainingBalance, currency)} remaining</p>
                             </div>
-                            {isSelected ? (
-                              <button
-                                type="button"
-                                onClick={() => removeAllocation(invoice.id)}
-                                className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                              >
-                                Remove
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => addAllocation(invoice)}
-                                className="rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                              >
-                                Add
-                              </button>
-                            )}
-                          </div>
+                            <p className={`text-xs font-semibold ${isSelected ? 'text-emerald-700' : 'text-slate-400'}`}>
+                              {isSelected ? 'Checked' : 'Open'}
+                            </p>
+                          </label>
                         )
                       })
                     )}
@@ -998,13 +1045,6 @@ export default function CustomerPaymentsPage() {
                                   placeholder="0.00"
                                 />
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => allocateFull(allocation.invoiceId)}
-                                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                              >
-                                Allocate full
-                              </button>
                             </div>
                             {lineError && <p className="mt-1 text-xs font-medium text-rose-600">{lineError}</p>}
                           </div>
@@ -1022,17 +1062,32 @@ export default function CustomerPaymentsPage() {
               {/* Amount + Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="block text-sm font-medium text-slate-700">Amount *</label>
+                    <button
+                      type="button"
+                      onClick={() => setAmountAutoFromAllocations(true)}
+                      className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                    >
+                      Auto from allocations
+                    </button>
+                  </div>
                   <input
                     required
                     type="number"
                     min="0.01"
                     step="0.01"
                     value={form.amount}
-                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                    onChange={(e) => {
+                      setAmountAutoFromAllocations(false)
+                      setForm((f) => ({ ...f, amount: e.target.value }))
+                    }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                     placeholder="0.00"
                   />
+                  <p className="mt-1 text-xs text-slate-500">
+                    {amountAutoFromAllocations ? 'Auto-calculated from checked invoices. Edit to keep unapplied cash.' : 'Manual override active.'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
@@ -1138,9 +1193,11 @@ export default function CustomerPaymentsPage() {
           onCreated={(customer) => {
             const next = { id: customer.contactId, name: customer.name, email: customer.email }
             setCustomers((prev) => [next, ...prev.filter((p) => p.id !== next.id)])
-            setForm((prev) => ({ ...prev, customerId: next.id }))
+            setForm((prev) => ({ ...prev, customerId: next.id, amount: '' }))
             setAllocationSearch('')
             setDraftAllocations([])
+            setSaveError('')
+            setAmountAutoFromAllocations(true)
             setShowQuickAddCustomer(false)
           }}
         />
