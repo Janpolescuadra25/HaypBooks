@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   X, Send, Ban, Clock, CheckCircle2, AlertTriangle,
@@ -44,6 +45,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; Icon: Re
 }
 
 export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, onClose, onRefresh, onDuplicate }: Props) {
+  const router = useRouter()
   const { currency } = useCompanyCurrency()
   const toast = useToast()
   const [invoice, setInvoice] = useState(initialInvoice)
@@ -52,6 +54,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   const [sending, setSending] = useState(false)
   const [voiding, setVoiding] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  const [creatingCreditNote, setCreatingCreditNote] = useState(false)
   const [error, setError] = useState('')
   const [confirmVoid, setConfirmVoid] = useState(false)
   const [showEmailPreview, setShowEmailPreview] = useState(false)
@@ -231,6 +234,43 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       setError(e?.message ?? 'Failed to duplicate invoice')
     } finally {
       setDuplicating(false)
+    }
+  }
+
+  const handleCreateCreditNote = async () => {
+    if (!invoice.customerId) {
+      setError('Cannot create credit note: customer is missing')
+      return
+    }
+
+    const amountDue = Number(invoice.amountDue ?? 0)
+    const invoiceTotal = Number(invoice.total ?? 0)
+    const suggestedAmount = amountDue > 0 ? amountDue : invoiceTotal
+    if (!Number.isFinite(suggestedAmount) || suggestedAmount <= 0) {
+      setError('Cannot create credit note: invoice amount is invalid')
+      return
+    }
+
+    setCreatingCreditNote(true)
+    setError('')
+    try {
+      const reason = `Credit for invoice #${invoiceDisplayNumber} (negative line-item equivalent)`
+      const { data: created } = await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
+        customerId: invoice.customerId,
+        invoiceId: invoice.id,
+        totalAmount: Number(suggestedAmount.toFixed(2)),
+        reason,
+      })
+
+      const creditNoteRef = created?.creditNoteNumber ?? created?.id
+      toast.success(creditNoteRef ? `Credit note ${creditNoteRef} created` : 'Credit note created')
+      onRefresh()
+      onClose()
+      router.push('/sales/revenue/credit-notes')
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to create credit note')
+    } finally {
+      setCreatingCreditNote(false)
     }
   }
 
@@ -843,6 +883,13 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50">
                     {duplicating ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
                     Duplicate
+                  </button>
+                )}
+                {invoice.status !== 'VOID' && (
+                  <button onClick={handleCreateCreditNote} disabled={creatingCreditNote}
+                    className="flex items-center gap-1.5 px-3 py-2 border border-sky-200 text-sky-700 rounded-lg text-sm font-semibold hover:bg-sky-50 transition-colors disabled:opacity-50">
+                    {creatingCreditNote ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                    Credit Note
                   </button>
                 )}
                 {(invoice.status as string) !== 'VOID' && (

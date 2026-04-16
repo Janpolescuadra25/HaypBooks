@@ -34,6 +34,8 @@ describe('AR invoice status state machine smoke e2e', () => {
         reverseInvoiceGL: async () => undefined,
         postPaymentReceivedToGL: async () => undefined,
         reversePaymentReceivedGL: async () => undefined,
+        postCreditNoteToGL: async () => undefined,
+        reverseCreditNoteGL: async () => undefined,
       })
       .compile()
 
@@ -168,6 +170,16 @@ describe('AR invoice status state machine smoke e2e', () => {
       .get(`/api/companies/${companyId}/ar/payments/${paymentId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200)
+
+    return res.body
+  }
+
+  async function createCreditNote(payload: { customerId: string; invoiceId: string; totalAmount: number; reason: string }) {
+    const res = await request(app.getHttpServer())
+      .post(`/api/companies/${companyId}/ar/credit-notes`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload)
+      .expect(201)
 
     return res.body
   }
@@ -311,5 +323,30 @@ describe('AR invoice status state machine smoke e2e', () => {
       ? refreshedPayment.allocations.filter((allocation: any) => allocation.invoiceId === invoice.id)
       : []
     expect(matchingAllocations).toHaveLength(0)
+  })
+
+  it('creates a separate credit note document linked to an invoice with prefilled invoice reference semantics', async () => {
+    const dueDate = new Date(Date.now() + (6 * 24 * 60 * 60 * 1000)).toISOString().slice(0, 10)
+    const invoice = await createDraftInvoice(95, dueDate)
+    const sent = await sendInvoice(invoice.id)
+
+    const reason = `Credit for invoice #${sent.invoiceNumber} (negative line-item equivalent)`
+    const creditNote = await createCreditNote({
+      customerId,
+      invoiceId: invoice.id,
+      totalAmount: 25,
+      reason,
+    })
+
+    expect(creditNote.id).toBeTruthy()
+    expect(creditNote.invoiceId).toBe(invoice.id)
+    expect(creditNote.customerId).toBe(customerId)
+    expect(Number(creditNote.amount)).toBeCloseTo(25, 2)
+    expect(creditNote.memo).toContain(`invoice #${sent.invoiceNumber}`)
+    expect(creditNote.memo).toContain('negative line-item equivalent')
+
+    const originalInvoice = await getInvoice(invoice.id)
+    expect(originalInvoice.id).toBe(invoice.id)
+    expect(originalInvoice.status).toBe('SENT')
   })
 })

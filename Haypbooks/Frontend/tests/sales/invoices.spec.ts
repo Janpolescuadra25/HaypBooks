@@ -231,6 +231,54 @@ test.describe('Invoices', () => {
     await expect(updatedRow).toContainText(/VOID/i)
   })
 
+  test('credit note action creates a linked credit note from invoice detail', async ({ page }) => {
+    if (!companyId) {
+      test.skip()
+      return
+    }
+
+    const { invoice } = await createDraftInvoiceFixture(page, 130, 'Credit-note fixture line')
+    const sendRes = await page.request.post(`/api/companies/${companyId}/ar/invoices/${invoice.id}/send`, { data: {} })
+    expect(sendRes.ok()).toBe(true)
+    const sentInvoice = await sendRes.json()
+    const invoiceRef = sentInvoice?.invoiceNumber ?? String(invoice?.id ?? '').slice(0, 8).toUpperCase()
+
+    const beforeRes = await page.request.get(`/api/companies/${companyId}/ar/credit-notes`)
+    expect(beforeRes.ok()).toBe(true)
+    const beforePayload = await beforeRes.json()
+    const beforeItems = Array.isArray(beforePayload) ? beforePayload : beforePayload?.items ?? []
+    const beforeCount = beforeItems.filter((cn: any) => cn.invoiceId === invoice.id).length
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await waitForTableToLoad(page)
+
+    const search = page.locator(selectors.searchInput).first()
+    if (await search.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await search.fill(invoiceRef)
+      await waitForTableToLoad(page)
+    }
+
+    const row = page.locator('table tbody tr', { hasText: invoiceRef }).first()
+    await expect(row).toBeVisible({ timeout: 10000 })
+    await row.getByRole('button', { name: invoiceRef }).first().click()
+
+    const detailModal = page.locator('div.fixed.inset-0.z-50').first()
+    await expect(detailModal).toBeVisible({ timeout: 10000 })
+    await detailModal.getByRole('button', { name: /^credit note$/i }).first().click()
+    await page.waitForURL(/\/sales\/revenue\/credit-notes/, { timeout: 10000 })
+
+    const afterRes = await page.request.get(`/api/companies/${companyId}/ar/credit-notes`)
+    expect(afterRes.ok()).toBe(true)
+    const afterPayload = await afterRes.json()
+    const afterItems = Array.isArray(afterPayload) ? afterPayload : afterPayload?.items ?? []
+    const linkedItems = afterItems.filter((cn: any) => cn.invoiceId === invoice.id)
+    expect(linkedItems.length).toBeGreaterThan(beforeCount)
+
+    const latestLinked = linkedItems[0] ?? null
+    expect((latestLinked?.memo ?? '').toLowerCase()).toContain('negative line-item equivalent')
+    expect(latestLinked?.invoiceId).toBe(invoice.id)
+  })
+
   test('column visibility menu toggles columns', async ({ page }) => {
     const colsBtn = page.locator(selectors.columnsButton).first()
     if (!(await colsBtn.isVisible({ timeout: 4000 }).catch(() => false))) {
