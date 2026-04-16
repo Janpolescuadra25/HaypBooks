@@ -125,7 +125,16 @@ export async function createAndPostJE(
                 })),
             },
         },
-        include: { lines: true },
+        select: {
+            id: true,
+            lines: {
+                select: {
+                    accountId: true,
+                    debit: true,
+                    credit: true,
+                },
+            },
+        },
     })
 
     // Post: update account balances
@@ -153,6 +162,7 @@ export async function createAndPostJE(
             entryNumber: `JE-${Date.now()}`,
             approvedAt: new Date(),
         },
+        select: { id: true },
     })
 
     return je.id
@@ -170,7 +180,19 @@ export async function createReversingJE(
 ): Promise<string | null> {
     const origJe = await tx.journalEntry.findFirst({
         where: { id: originalJeId, companyId },
-        include: { lines: true },
+        select: {
+            id: true,
+            workspaceId: true,
+            createdById: true,
+            lines: {
+                select: {
+                    accountId: true,
+                    debit: true,
+                    credit: true,
+                    description: true,
+                },
+            },
+        },
     })
     if (!origJe) return null
 
@@ -194,6 +216,7 @@ export async function createReversingJE(
     await tx.journalEntry.update({
         where: { id: originalJeId },
         data: { postingStatus: 'VOIDED' },
+        select: { id: true },
     })
 
     return jeId

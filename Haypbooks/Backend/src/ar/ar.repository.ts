@@ -777,6 +777,7 @@ export class ArRepository {
             },
             include: {
                 customer: { include: { contact: { select: { displayName: true } } } },
+                paymentMethod: { select: { id: true, name: true, type: true } },
                 InvoicePaymentApplication: { include: { invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, balance: true } } } },
             },
             orderBy: { paymentDate: 'desc' },
@@ -790,6 +791,7 @@ export class ArRepository {
             where: { id: paymentId, companyId, deletedAt: null },
             include: {
                 customer: { include: { contact: true } },
+                paymentMethod: { select: { id: true, name: true, type: true } },
                 InvoicePaymentApplication: { include: { invoice: true } },
                 journalEntry: { select: { id: true, entryNumber: true } },
             },

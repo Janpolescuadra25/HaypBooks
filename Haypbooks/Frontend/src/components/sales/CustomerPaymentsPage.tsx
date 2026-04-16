@@ -63,6 +63,32 @@ const METHOD_OPTIONS = [
   { value: 'OTHER', label: 'Other' },
 ]
 
+function extractApiErrorMessage(err: any, fallback: string) {
+  const unwrap = (value: any): string => {
+    if (!value) return ''
+    if (typeof value === 'string') return value
+    if (Array.isArray(value)) return value.map((entry) => unwrap(entry)).filter(Boolean).join('; ')
+    if (typeof value === 'object') {
+      if (typeof value.message === 'string') return value.message
+      if (Array.isArray(value.message)) return unwrap(value.message)
+      if (typeof value.error === 'string') return value.error
+    }
+    return ''
+  }
+
+  const responseData = err?.response?.data
+  if (typeof responseData === 'string') {
+    try {
+      const parsed = JSON.parse(responseData)
+      return unwrap(parsed?.message ?? parsed?.error) || fallback
+    } catch {
+      return responseData || fallback
+    }
+  }
+
+  return unwrap(responseData?.message ?? responseData?.error ?? err?.message) || fallback
+}
+
 function normalizeRow(r: any): PaymentRow {
   const toMoney = (value: any) => Number(Number(value ?? 0).toFixed(2))
   const legacyAllocations: PaymentAllocationLine[] = Array.isArray(r.InvoicePaymentApplication)
@@ -449,7 +475,7 @@ export default function CustomerPaymentsPage() {
       setPage(0)
       fetchPayments(0)
     } catch (err: any) {
-      setSaveError(err?.response?.data?.message || 'Failed to record payment')
+      setSaveError(extractApiErrorMessage(err, 'Failed to record payment'))
     } finally {
       setSaving(false)
     }

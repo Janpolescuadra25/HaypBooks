@@ -514,6 +514,51 @@ async function main() {
   const liabilityType = await prisma.accountType.upsert({ where: { id: 4 }, update: {}, create: { id: 4, name: 'LIABILITY' } })
   const equityType = await prisma.accountType.upsert({ where: { id: 5 }, update: {}, create: { id: 5, name: 'EQUITY' } })
 
+  // Ensure default payment methods exist per workspace for AR/AP method resolution.
+  try {
+    const paymentMethodTableExists = await hasColumn('PaymentMethod', 'id')
+    if (paymentMethodTableExists) {
+      const defaultPaymentMethods = [
+        { type: 'CASH', name: 'Cash' },
+        { type: 'CHECK', name: 'Check' },
+        { type: 'CARD', name: 'Card' },
+        { type: 'BANK', name: 'Bank Transfer' },
+        { type: 'OTHER', name: 'Other' },
+      ] as const
+
+      for (const method of defaultPaymentMethods) {
+        const existing = await prisma.paymentMethod.findFirst({
+          where: { workspaceId: tenant.id, type: method.type as any },
+          select: { id: true, isActive: true, name: true },
+        })
+
+        if (!existing) {
+          await prisma.paymentMethod.create({
+            data: {
+              workspaceId: tenant.id,
+              type: method.type as any,
+              name: method.name,
+              isActive: true,
+            },
+          })
+          continue
+        }
+
+        if (!existing.isActive || !existing.name) {
+          await prisma.paymentMethod.update({
+            where: { id: existing.id },
+            data: {
+              isActive: true,
+              name: existing.name || method.name,
+            },
+          })
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Skipping PaymentMethod seed; table may not exist yet', errorMessage(e))
+  }
+
   if (!demoCompany) {
     console.warn('Skipping company-scoped demo seeds because demo company could not be created')
   } else {

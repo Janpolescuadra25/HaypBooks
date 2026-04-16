@@ -5,6 +5,8 @@ import { SubLedgerService } from '../shared/sub-ledger.service'
 
 @Injectable()
 export class ArService {
+    private readonly uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
     constructor(
         private readonly repo: ArRepository,
         private readonly prisma: PrismaService,
@@ -71,6 +73,76 @@ export class ArService {
         return Number((Number.isFinite(value) ? value : 0).toFixed(2))
     }
 
+    private toUiPaymentMethod(type: string | null | undefined) {
+        const normalizedType = String(type ?? '').toUpperCase()
+        if (normalizedType === 'CASH') return 'CASH'
+        if (normalizedType === 'CHECK') return 'CHECK'
+        if (normalizedType === 'CARD') return 'CREDIT_CARD'
+        if (normalizedType === 'BANK') return 'BANK_TRANSFER'
+        if (normalizedType === 'OTHER') return 'OTHER'
+        return ''
+    }
+
+    private mapIncomingPaymentMethod(rawMethod: string): { type: 'CASH' | 'CHECK' | 'CARD' | 'BANK' | 'OTHER'; name: string } {
+        const trimmed = String(rawMethod ?? '').trim()
+        const normalized = trimmed.toUpperCase().replace(/[\s-]+/g, '_')
+
+        if (normalized === 'CASH') return { type: 'CASH', name: 'Cash' }
+        if (normalized === 'CHECK' || normalized === 'CHEQUE') return { type: 'CHECK', name: 'Check' }
+        if (normalized === 'CARD' || normalized === 'CREDIT_CARD' || normalized === 'DEBIT_CARD') return { type: 'CARD', name: 'Card' }
+        if (normalized === 'BANK' || normalized === 'BANK_TRANSFER' || normalized === 'WIRE' || normalized === 'ACH' || normalized === 'TRANSFER') {
+            return { type: 'BANK', name: 'Bank Transfer' }
+        }
+
+        return { type: 'OTHER', name: trimmed.slice(0, 64) || 'Other' }
+    }
+
+    private async assertPaymentMethodInWorkspace(workspaceId: string, paymentMethodId: string, sourceField: string) {
+        const method = await this.prisma.paymentMethod.findFirst({
+            where: { id: paymentMethodId, workspaceId },
+            select: { id: true },
+        })
+        if (!method) throw new BadRequestException(`${sourceField} is invalid for this workspace`)
+        return method.id
+    }
+
+    private async resolvePaymentMethodId(workspaceId: string, data: any): Promise<string | null> {
+        const explicitPaymentMethodId = String(data?.paymentMethodId ?? '').trim()
+        if (explicitPaymentMethodId) {
+            return this.assertPaymentMethodInWorkspace(workspaceId, explicitPaymentMethodId, 'paymentMethodId')
+        }
+
+        const methodInput = String(data?.method ?? '').trim()
+        if (!methodInput) return null
+
+        if (this.uuidPattern.test(methodInput)) {
+            return this.assertPaymentMethodInWorkspace(workspaceId, methodInput, 'method')
+        }
+
+        const mapped = this.mapIncomingPaymentMethod(methodInput)
+        const existing = await this.prisma.paymentMethod.findFirst({
+            where: {
+                workspaceId,
+                isActive: true,
+                type: mapped.type as any,
+                ...(mapped.type === 'OTHER' ? { name: mapped.name } : {}),
+            },
+            select: { id: true },
+        })
+        if (existing?.id) return existing.id
+
+        const created = await this.prisma.paymentMethod.create({
+            data: {
+                workspaceId,
+                name: mapped.name,
+                type: mapped.type as any,
+                isActive: true,
+            },
+            select: { id: true },
+        })
+        return created.id
+    }
+
     private normalizeRequestedAllocations(data: any): Array<{ invoiceId: string; amount: number }> {
         const rawAllocations = Array.isArray(data?.allocations)
             ? data.allocations
@@ -105,6 +177,7 @@ export class ArService {
         const totalAmount = this.roundPaymentAmount(Number(p.amount ?? p.totalAmount ?? 0))
         const totalAllocated = this.roundPaymentAmount(allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount ?? 0), 0))
         const unappliedAmount = this.roundPaymentAmount(Math.max(0, totalAmount - totalAllocated))
+        const method = this.toUiPaymentMethod(p.paymentMethod?.type) || p.paymentMethodId || p.method || ''
 
         return {
             ...p,
@@ -116,7 +189,7 @@ export class ArService {
             paymentNumber: p.referenceNumber ?? p.paymentNumber ?? '',
             date: p.paymentDate ?? p.date,
             customerName: p.customer?.contact?.displayName ?? p.customerName ?? '',
-            method: p.paymentMethodId ?? p.method ?? '',
+            method,
         }
     }
 
@@ -906,6 +979,7 @@ export class ArService {
         if (!paymentAmount || paymentAmount <= 0) throw new BadRequestException('amount must be greater than 0')
         const paymentDate = data.paymentDate ?? data.date
         if (!paymentDate) throw new BadRequestException('paymentDate is required')
+        const paymentMethodId = await this.resolvePaymentMethodId(workspaceId, data)
 
         const result = await this.repo.recordPayment({
             workspaceId,
@@ -914,7 +988,7 @@ export class ArService {
             amount: paymentAmount,
             paymentDate: new Date(paymentDate),
             referenceNumber: data.referenceNumber ?? data.reference,
-            paymentMethodId: data.paymentMethodId ?? data.method,
+            paymentMethodId: paymentMethodId ?? undefined,
             bankAccountId: data.bankAccountId,
             createdById: userId,
             allocations: validated.allocations,
