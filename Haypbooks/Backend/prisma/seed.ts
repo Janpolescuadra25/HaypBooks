@@ -562,11 +562,121 @@ async function main() {
   if (!demoCompany) {
     console.warn('Skipping company-scoped demo seeds because demo company could not be created')
   } else {
-    // Create some default Accounts for the tenant
-    const cash = await prisma.account.upsert({ where: { companyId_code: { companyId: demoCompany.id, code: "1000" } }, update: {}, create: { companyId: demoCompany.id, code: "1000", name: 'Cash', typeId: assetType.id } })
-  const ar = await prisma.account.upsert({ where: { companyId_code: { companyId: demoCompany.id, code: "1100" } }, update: {}, create: { companyId: demoCompany.id, code: "1100", name: 'Accounts Receivable', typeId: assetType.id } })
-  const rev = await prisma.account.upsert({ where: { companyId_code: { companyId: demoCompany.id, code: "4000" } }, update: {}, create: { companyId: demoCompany.id, code: "4000", name: 'Service Revenue', typeId: incomeType.id } })
-  const invSuspense = await prisma.account.upsert({ where: { companyId_code: { companyId: demoCompany.id, code: "INV-SUSPENSE" } }, update: {}, create: { companyId: demoCompany.id, code: "INV-SUSPENSE", name: 'Inventory Suspense', typeId: expenseType.id } })
+    const normalizeCurrency = (value: any): string | null => {
+      const code = String(value ?? '').trim().toUpperCase()
+      return /^[A-Z]{3}$/.test(code) ? code : null
+    }
+
+    const baseCurrency =
+      normalizeCurrency((demoCompany as any)?.currency) ??
+      normalizeCurrency((demoCompany as any)?.baseCurrency) ??
+      normalizeCurrency((tenant as any)?.baseCurrency) ??
+      'USD'
+
+    // Create some default Accounts for the tenant.
+    const cash = await prisma.account.upsert({
+      where: { companyId_code: { companyId: demoCompany.id, code: '1000' } },
+      update: { name: 'Cash', typeId: assetType.id, currency: baseCurrency },
+      create: { companyId: demoCompany.id, code: '1000', name: 'Cash', typeId: assetType.id, currency: baseCurrency },
+    })
+
+    const bankAccountSubType = await prisma.accountSubType.findFirst({
+      where: { companyId: demoCompany.id, typeId: assetType.id, name: 'BANK' },
+      select: { id: true },
+    }).catch(() => null)
+
+    const ensuredBankAccountSubType = bankAccountSubType ?? await prisma.accountSubType.create({
+      data: { companyId: demoCompany.id, name: 'BANK', typeId: assetType.id },
+      select: { id: true },
+    }).catch(() => null)
+
+    const businessCheckingGl = await prisma.account.upsert({
+      where: { companyId_code: { companyId: demoCompany.id, code: '1010' } },
+      update: {
+        name: 'Business Checking',
+        typeId: assetType.id,
+        currency: baseCurrency,
+        ...(ensuredBankAccountSubType ? { accountSubTypeId: ensuredBankAccountSubType.id } : {}),
+      },
+      create: {
+        companyId: demoCompany.id,
+        code: '1010',
+        name: 'Business Checking',
+        typeId: assetType.id,
+        currency: baseCurrency,
+        ...(ensuredBankAccountSubType ? { accountSubTypeId: ensuredBankAccountSubType.id } : {}),
+      },
+      select: { id: true },
+    })
+
+    const undepositedFunds = await prisma.account.upsert({
+      where: { companyId_code: { companyId: demoCompany.id, code: '1050' } },
+      update: { name: 'Undeposited Funds', typeId: assetType.id, currency: baseCurrency },
+      create: { companyId: demoCompany.id, code: '1050', name: 'Undeposited Funds', typeId: assetType.id, currency: baseCurrency },
+    })
+
+    const ar = await prisma.account.upsert({
+      where: { companyId_code: { companyId: demoCompany.id, code: '1100' } },
+      update: { name: 'Accounts Receivable', typeId: assetType.id, currency: baseCurrency },
+      create: { companyId: demoCompany.id, code: '1100', name: 'Accounts Receivable', typeId: assetType.id, currency: baseCurrency },
+    })
+
+    const rev = await prisma.account.upsert({
+      where: { companyId_code: { companyId: demoCompany.id, code: '4000' } },
+      update: { name: 'Service Revenue', typeId: incomeType.id, currency: baseCurrency },
+      create: { companyId: demoCompany.id, code: '4000', name: 'Service Revenue', typeId: incomeType.id, currency: baseCurrency },
+    })
+
+    const invSuspense = await prisma.account.upsert({
+      where: { companyId_code: { companyId: demoCompany.id, code: 'INV-SUSPENSE' } },
+      update: { name: 'Inventory Suspense', typeId: expenseType.id, currency: baseCurrency },
+      create: { companyId: demoCompany.id, code: 'INV-SUSPENSE', name: 'Inventory Suspense', typeId: expenseType.id, currency: baseCurrency },
+    })
+
+    // Seed a default destination bank account so Banking > Deposits always has a valid option.
+    try {
+      const bankAccountHasGlAccountId = await hasColumn('BankAccount', 'glAccountId')
+      const existingBusinessChecking = await prisma.bankAccount.findFirst({
+        where: { workspaceId: tenant.id, name: 'Business Checking' },
+        select: { id: true },
+      })
+
+      if (!existingBusinessChecking) {
+        await prisma.bankAccount.updateMany({
+          where: { workspaceId: tenant.id, isDefault: true },
+          data: { isDefault: false },
+        })
+
+        await prisma.bankAccount.create({
+          data: {
+            workspaceId: tenant.id,
+            name: 'Business Checking',
+            institution: 'HaypBooks Seed Bank',
+            accountNumber: '****0001',
+            isDefault: true,
+            ...(bankAccountHasGlAccountId ? { glAccountId: businessCheckingGl.id } : {}),
+          },
+          select: { id: true },
+        })
+      } else {
+        await prisma.bankAccount.updateMany({
+          where: { workspaceId: tenant.id, isDefault: true, id: { not: existingBusinessChecking.id } },
+          data: { isDefault: false },
+        })
+
+        await prisma.bankAccount.update({
+          where: { id: existingBusinessChecking.id },
+          data: {
+            deletedAt: null,
+            isDefault: true,
+            ...(bankAccountHasGlAccountId ? { glAccountId: businessCheckingGl.id } : {}),
+          },
+          select: { id: true },
+        })
+      }
+    } catch (e) {
+      console.warn('Skipping default BankAccount seed; table or columns may not exist yet', errorMessage(e))
+    }
 
   // Create a contact and customer (tenant-scoped) — be tolerant of intermediate tenant->workspace column names
   let contact = await prisma.contact.findFirst({ where: { workspaceId: tenant.id, displayName: 'Acme Corp' } })
