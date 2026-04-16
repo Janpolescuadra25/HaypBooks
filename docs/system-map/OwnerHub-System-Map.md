@@ -1,6 +1,6 @@
 # Haypbooks Owner Hub System Map
 
-Generated: 2026-04-16T17:11:32.539Z
+Generated: 2026-04-16T17:24:29.620Z
 
 ## Executive Snapshot
 
@@ -2117,9 +2117,64 @@ Generated: 2026-04-16T17:11:32.539Z
 - AP Bills/Payments -> Expense module -> Accounting/GL posting dependencies.
 - Onboarding -> Workspace/Company creation -> COA seed -> optional bank account provisioning.
 
-## 6) Seed Data Gaps (inferred)
+## 6) Seed Data Dependency Scan (enhanced)
 
-- No direct endpoint-to-model seed gaps were detected by heuristic mapping.
+- Total inferred seed gaps: 5
+| Category | Source | EndpointOrField | ExpectedModel | Seeded |
+| --- | --- | --- | --- | --- |
+| dropdown-endpoint | Haypbooks/Frontend/src/components/sales/ProductFormModal.tsx | /companies/:param/inventory/items/:param | item | false |
+| gl-account-constant | Haypbooks/Backend/src/tax/tax.service.ts | code:1200 | account | false |
+| gl-account-constant | Haypbooks/Backend/src/tax/tax.service.ts | code:2050 | account | false |
+| gl-account-constant | Haypbooks/Backend/src/accounting/accounting.service.ts | name:Accounts Payable | account | false |
+| gl-account-constant | Haypbooks/Backend/src/accounting/accounting.service.ts | name:Sales Revenue | account | false |
+
+### 6.1 Dropdown/List Endpoint Dependencies
+
+- Count: 5
+| Component | Endpoint | ExpectedModel | Seeded |
+| --- | --- | --- | --- |
+| Haypbooks/Frontend/src/components/accounting/ChartOfAccountsPage.tsx | /companies/:param/accounting/accounts/:param | account | true |
+| Haypbooks/Frontend/src/components/sales/CustomerDetailPage.tsx | /companies/:param/ar/customers/:param | customer | true |
+| Haypbooks/Frontend/src/components/sales/CustomersPage.tsx | /companies/:param/ar/customers/:param | customer | true |
+| Haypbooks/Frontend/src/components/sales/InvoiceDetailPage.tsx | /companies/:param/ar/invoices/:param | invoice | true |
+| Haypbooks/Frontend/src/components/sales/ProductFormModal.tsx | /companies/:param/inventory/items/:param | item | false |
+
+### 6.2 FK Field Dependencies in Forms
+
+- Count: 16
+| Component | FKField | ExpectedModel | Seeded |
+| --- | --- | --- | --- |
+| Haypbooks/Frontend/src/components/accounting/GeneralLedgerPage.tsx | accountId | account | true |
+| Haypbooks/Frontend/src/components/accounting/JournalEntriesPage.tsx | accountId | account | true |
+| Haypbooks/Frontend/src/components/accounting/TrialBalancePage.tsx | accountId | account | true |
+| Haypbooks/Frontend/src/components/banking/BankDepositsPage.tsx | bankAccountId | bankAccount | true |
+| Haypbooks/Frontend/src/components/banking/BankReconciliationPage.tsx | bankAccountId | bankAccount | true |
+| Haypbooks/Frontend/src/components/banking/BankReconciliationPage.tsx | accountId | account | true |
+| Haypbooks/Frontend/src/components/banking/BankTransactionsPage.tsx | accountId | account | true |
+| Haypbooks/Frontend/src/components/expenses/VendorsPage.tsx | taxId | taxRate | true |
+| Haypbooks/Frontend/src/components/owner/AccountAuditLog.tsx | accountId | account | true |
+| Haypbooks/Frontend/src/components/owner/CustomersCrudPage.tsx | taxId | taxRate | true |
+| Haypbooks/Frontend/src/components/owner/DepositsCrudPage.tsx | bankAccountId | bankAccount | true |
+| Haypbooks/Frontend/src/components/owner/VendorsCrudPage.tsx | taxId | taxRate | true |
+| Haypbooks/Frontend/src/components/PracticeOnboarding/TaxCompliance.tsx | taxId | taxRate | true |
+| Haypbooks/Frontend/src/components/sales/CustomerPaymentsPage.tsx | bankAccountId | bankAccount | true |
+| Haypbooks/Frontend/src/components/sales/CustomerPaymentsPage.tsx | paymentMethodId | paymentMethod | true |
+| Haypbooks/Frontend/src/components/sales/InvoicesPage.tsx | accountId | account | true |
+
+### 6.3 Expected GL Account Constants (Name/Code)
+
+- Count: 9
+| SourceFile | IndicatorType | Indicator | Seeded |
+| --- | --- | --- | --- |
+| Haypbooks/Backend/src/general-ledger/dto/gl-query.dto.ts | code | 1010 | true |
+| Haypbooks/Backend/src/tax/tax.service.ts | code | 1200 | false |
+| Haypbooks/Backend/src/tax/tax.service.ts | code | 2050 | false |
+| Haypbooks/Backend/src/accounting/accounting.service.ts | name | Accounts Payable | false |
+| Haypbooks/Backend/src/accounting/accounting.service.ts | name | Accounts Receivable | true |
+| Haypbooks/Backend/src/accounting/accounting.service.ts | name | Cash | true |
+| Haypbooks/Backend/src/accounting/accounting.service.ts | name | Sales Revenue | false |
+| Haypbooks/Backend/src/accounting/accounting.service.ts | name | Service Revenue | true |
+| Haypbooks/Backend/src/accounting/accounting.service.ts | name | Undeposited Funds | true |
 
 ### Additional Seed Risk Notes
 
@@ -2154,235 +2209,494 @@ Generated: 2026-04-16T17:11:32.539Z
 - /api/periods
 - /api/user/profile
 
-### 7.2 Backend route patterns with no frontend usage match (inferred)
+### 7.2 Unused Backend Routes Triaged by Module
 
-- Count: 306
-- Showing first 220 patterns (see JSON artifact for full set).
+- Total unused backend route patterns: 306
+- Classified as Backend-only: 38
+- Classified as Missing UI: 268
 
-- /api/accounting/close-workflow
-- /api/accounting/close-workflow/complete
-- /api/accounting/close-workflow/run
-- /api/accounting/coa-templates
-- /api/agencies
-- /api/alphalist
-- /api/alphalist/generate
-- /api/attachments
-- /api/attachments/:id
-- /api/attachments/:id/public
-- /api/audit-trail
-- /api/auth/complete-signup
-- /api/auth/email/send-code
-- /api/auth/email/verify-code
-- /api/auth/forgot-password
-- /api/auth/login
-- /api/auth/phone/send-code
-- /api/auth/phone/verify-code
-- /api/auth/pre-signup
-- /api/auth/refresh
-- /api/auth/reset-password
-- /api/auth/security-events
-- /api/auth/send-verification
-- /api/auth/sessions
-- /api/auth/sessions/revoke
-- /api/auth/sessions/revoke-all
-- /api/auth/signup
-- /api/auth/verify-email
-- /api/auth/verify-otp
-- /api/bir-forms
-- /api/bir-forms/:formType
-- /api/calendar
-- /api/codes
-- /api/companies/:companyId/accounting/account-types
-- /api/companies/:companyId/accounting/accounts/:accountId/ledger
-- /api/companies/:companyId/accounting/coa-templates
-- /api/companies/:companyId/accounting/period-close/multi-currency-revaluation
-- /api/companies/:companyId/ap/bill-payments/:paymentId
-- /api/companies/:companyId/ap/bill-payments/:paymentId/void
-- /api/companies/:companyId/ap/bills/:billId
-- /api/companies/:companyId/ap/bills/:billId/approve
-- /api/companies/:companyId/ap/bills/:billId/void
-- /api/companies/:companyId/ap/purchase-orders
-- /api/companies/:companyId/ap/purchase-orders/:poId
-- /api/companies/:companyId/ap/purchase-orders/:poId/convert
-- /api/companies/:companyId/ap/purchase-orders/:poId/status
-- /api/companies/:companyId/ap/vendors
-- /api/companies/:companyId/ap/vendors/:contactId
-- /api/companies/:companyId/ar/aging
-- /api/companies/:companyId/ar/customers/batch/group
-- /api/companies/:companyId/ar/deferred-revenue
-- /api/companies/:companyId/ar/deferred-revenue/:id/recognize
-- /api/companies/:companyId/ar/payment-links
-- /api/companies/:companyId/ar/payments/:paymentId/apply
-- /api/companies/:companyId/ar/refunds/:id
-- /api/companies/:companyId/ar/revenue-recognition
-- /api/companies/:companyId/ar/revenue-recognition/:id/recognize
-- /api/companies/:companyId/bank-accounts
-- /api/companies/:companyId/banking/accounts/:bankAccountId
-- /api/companies/:companyId/banking/accounts/:bankAccountId/reconciliations
-- /api/companies/:companyId/banking/accounts/:bankAccountId/transactions/:transactionId/split
-- /api/companies/:companyId/banking/cash-position
-- /api/companies/:companyId/banking/checks/:checkId
-- /api/companies/:companyId/banking/credit-cards/:cardId/statements
-- /api/companies/:companyId/banking/feed-connections
-- /api/companies/:companyId/banking/feed-connections/:id
-- /api/companies/:companyId/banking/feed-connections/:id/sync
-- /api/companies/:companyId/banking/feed-status
-- /api/companies/:companyId/banking/reconciliations/:reconId
-- /api/companies/:companyId/banking/reconciliations/:reconId/adjustment
-- /api/companies/:companyId/banking/reconciliations/:reconId/auto-match
-- /api/companies/:companyId/banking/reconciliations/:reconId/complete
-- /api/companies/:companyId/banking/reconciliations/:reconId/discrepancies
-- /api/companies/:companyId/banking/reconciliations/:reconId/match
-- /api/companies/:companyId/banking/reconciliations/:reconId/match/:bankTransactionId
-- /api/companies/:companyId/banking/reconciliations/:reconId/undo
-- /api/companies/:companyId/banking/smart-rules
-- /api/companies/:companyId/banking/smart-rules/:id
-- /api/companies/:companyId/contacts/customers/:id
-- /api/companies/:companyId/contacts/vendors/:id
-- /api/companies/:companyId/customers/:contactId
-- /api/companies/:companyId/financial-services/bank-accounts
-- /api/companies/:companyId/financial-services/cash-flow
-- /api/companies/:companyId/financial-services/cash-runway
-- /api/companies/:companyId/financial-services/checking-account
-- /api/companies/:companyId/financial-services/credit-lines
-- /api/companies/:companyId/financial-services/credit-score
-- /api/companies/:companyId/financial-services/investments
-- /api/companies/:companyId/financial-services/loans
-- /api/companies/:companyId/financial-services/merchant-services
-- /api/companies/:companyId/financial-services/revenue-forecast
-- /api/companies/:companyId/financial-services/savings-accounts
-- /api/companies/:companyId/financial-services/transactions
-- /api/companies/:companyId/general-ledger/account-list
-- /api/companies/:companyId/general-ledger/summary
-- /api/companies/:companyId/integrations/ai/insights
-- /api/companies/:companyId/integrations/ai/insights/:insightId
-- /api/companies/:companyId/integrations/ai/insights/:insightId/dismiss
-- /api/companies/:companyId/integrations/ai/insights/:insightId/resolve
-- /api/companies/:companyId/integrations/ai/insights/generate
-- /api/companies/:companyId/integrations/api-keys
-- /api/companies/:companyId/integrations/api-keys/:keyId
-- /api/companies/:companyId/integrations/bank-feed/connections
-- /api/companies/:companyId/integrations/bank-feed/imports
-- /api/companies/:companyId/inventory/asset-categories
-- /api/companies/:companyId/inventory/asset-categories/:id
-- /api/companies/:companyId/inventory/assets
-- /api/companies/:companyId/inventory/assets/:assetId
-- /api/companies/:companyId/inventory/assets/:assetId/depreciate
-- /api/companies/:companyId/inventory/assets/:assetId/dispose
-- /api/companies/:companyId/inventory/assets/:assetId/schedule
-- /api/companies/:companyId/inventory/backorders
-- /api/companies/:companyId/inventory/bin-locations
-- /api/companies/:companyId/inventory/items/batch/delete
-- /api/companies/:companyId/inventory/items/batch/status
-- /api/companies/:companyId/inventory/locations
-- /api/companies/:companyId/inventory/locations/:id
-- /api/companies/:companyId/inventory/lot-serial
-- /api/companies/:companyId/inventory/physical-counts
-- /api/companies/:companyId/inventory/physical-counts/:countId
-- /api/companies/:companyId/inventory/reorder-rules
-- /api/companies/:companyId/inventory/reorder-rules/:id
-- /api/companies/:companyId/inventory/stock
-- /api/companies/:companyId/inventory/transactions
-- /api/companies/:companyId/inventory/units-of-measure
-- /api/companies/:companyId/inventory/units-of-measure/:id
-- /api/companies/:companyId/invoices/:invoiceId
-- /api/companies/:companyId/invoices/:invoiceId/send
-- /api/companies/:companyId/invoices/:invoiceId/void
-- /api/companies/:companyId/organization/consolidation
-- /api/companies/:companyId/organization/departments
-- /api/companies/:companyId/organization/departments/:id
-- /api/companies/:companyId/organization/filing-calendar
-- /api/companies/:companyId/organization/filing-calendar/:id
-- /api/companies/:companyId/organization/intercompany
-- /api/companies/:companyId/organization/legal-entities
-- /api/companies/:companyId/organization/legal-entities/:id
-- /api/companies/:companyId/organization/locations
-- /api/companies/:companyId/organization/locations/:id
-- /api/companies/:companyId/payment-terms
-- /api/companies/:companyId/payments
-- /api/companies/:companyId/payments/:paymentId
-- /api/companies/:companyId/payments/:paymentId/void
-- /api/companies/:companyId/payroll/allowances
-- /api/companies/:companyId/payroll/allowances/:id
-- /api/companies/:companyId/payroll/benefit-plans
-- /api/companies/:companyId/payroll/benefit-plans/:id
-- /api/companies/:companyId/payroll/deductions
-- /api/companies/:companyId/payroll/employees
-- /api/companies/:companyId/payroll/employees/:employeeId
-- /api/companies/:companyId/payroll/employees/:employeeId/terminate
-- /api/companies/:companyId/payroll/government-contributions
-- /api/companies/:companyId/payroll/leave-balances
-- /api/companies/:companyId/payroll/leave-requests
-- /api/companies/:companyId/payroll/leave-requests/:id/approve
-- /api/companies/:companyId/payroll/leave-requests/:id/reject
-- /api/companies/:companyId/payroll/loans
-- /api/companies/:companyId/payroll/paychecks
-- /api/companies/:companyId/payroll/paychecks/:paycheckId
-- /api/companies/:companyId/payroll/runs
-- /api/companies/:companyId/payroll/runs/:runId
-- /api/companies/:companyId/payroll/runs/:runId/post
-- /api/companies/:companyId/payroll/runs/:runId/process
-- /api/companies/:companyId/payroll/runs/:runId/void
-- /api/companies/:companyId/payroll/salary-structures
-- /api/companies/:companyId/payroll/salary-structures/:id
-- /api/companies/:companyId/payroll/shift-schedules
-- /api/companies/:companyId/payroll/summary
-- /api/companies/:companyId/projects
-- /api/companies/:companyId/projects/:projectId
-- /api/companies/:companyId/projects/:projectId/budget
-- /api/companies/:companyId/projects/:projectId/expenses
-- /api/companies/:companyId/projects/:projectId/milestones
-- /api/companies/:companyId/projects/:projectId/milestones/:milestoneId
-- /api/companies/:companyId/projects/:projectId/profitability
-- /api/companies/:companyId/projects/:projectId/tasks
-- /api/companies/:companyId/projects/:projectId/time-entries
-- /api/companies/:companyId/projects/:projectId/wip
-- /api/companies/:companyId/projects/resource-plans
-- /api/companies/:companyId/projects/resource-plans/:id
-- /api/companies/:companyId/projects/retainers
-- /api/companies/:companyId/projects/retainers/:id
-- /api/companies/:companyId/projects/wip
-- /api/companies/:companyId/quotes/:quoteId
-- /api/companies/:companyId/quotes/:quoteId/convert
-- /api/companies/:companyId/reports/budgets
-- /api/companies/:companyId/reports/budgets/:budgetId
-- /api/companies/:companyId/reports/budgets/:budgetId/vs-actual
-- /api/companies/:companyId/reports/dashboards
-- /api/companies/:companyId/reports/esg
-- /api/companies/:companyId/reports/kpis
-- /api/companies/:companyId/reports/snapshots
-- /api/companies/:companyId/subscriptions
-- /api/companies/:companyId/time
-- /api/companies/:companyId/time/:entryId
-- /api/companies/:companyId/time/:timesheetId/approve
-- /api/companies/:companyId/time/:timesheetId/reject
-- /api/companies/:companyId/time/billable
-- /api/companies/:companyId/time/entries
-- /api/companies/:companyId/time/entries/:entryId
-- /api/companies/:companyId/time/timer/sessions
-- /api/companies/:companyId/time/timer/start
-- /api/companies/:companyId/time/timer/stop
-- /api/companies/:companyId/time/timesheets
-- /api/companies/:companyId/time/timesheets/:timesheetId
-- /api/companies/:companyId/time/timesheets/:timesheetId/approve
-- /api/companies/:companyId/time/timesheets/:timesheetId/reject
-- /api/companies/:companyId/time/utilization
-- /api/companies/:id/dashboard/cash-position
-- /api/companies/:id/dashboard/payables
-- /api/companies/:id/dashboard/receivables
-- /api/companies/:id/dashboard/recent-transactions
-- /api/companies/:id/dashboard/summary
-- /api/companies/:id/dashboard/upcoming
-- /api/companies/:id/health/liquidity
-- /api/companies/:id/health/metrics
-- /api/companies/:id/health/profitability
-- /api/companies/:id/health/trends
-- /api/companies/:id/invites
-- /api/companies/:id/invites/:inviteId
+| Module | Total | BackendOnly | MissingUI |
+| --- | --- | --- | --- |
+| accounting | 8 | 2 | 6 |
+| ap | 11 | 0 | 11 |
+| ar | 9 | 0 | 9 |
+| attachments | 3 | 3 | 0 |
+| auth | 18 | 18 | 0 |
+| banking | 21 | 5 | 16 |
+| companies | 27 | 4 | 23 |
+| contacts | 2 | 0 | 2 |
+| financial-services | 12 | 0 | 12 |
+| general-ledger | 2 | 0 | 2 |
+| health | 3 | 3 | 0 |
+| integrations | 9 | 1 | 8 |
+| inventory | 22 | 0 | 22 |
+| onboarding | 2 | 1 | 1 |
+| organization | 10 | 0 | 10 |
+| owner | 1 | 0 | 1 |
+| payroll | 25 | 0 | 25 |
+| practice | 3 | 0 | 3 |
+| practice-hub | 5 | 0 | 5 |
+| projects | 14 | 0 | 14 |
+| reporting | 7 | 0 | 7 |
+| sales | 7 | 0 | 7 |
+| tasks | 3 | 0 | 3 |
+| tax | 42 | 1 | 41 |
+| tenants | 3 | 0 | 3 |
+| test | 22 | 0 | 22 |
+| time | 14 | 0 | 14 |
+| users | 1 | 0 | 1 |
+
+### 7.3 Route-Level Triage (Grouped)
+
+#### Module: accounting
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/accounting/close-workflow | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/accounting/close-workflow/complete | POST | Backend-only | Single-purpose command endpoint likely used by orchestration jobs or admin flows. |
+| /api/accounting/close-workflow/run | POST | Backend-only | Single-purpose command endpoint likely used by orchestration jobs or admin flows. |
+| /api/accounting/coa-templates | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/accounting/account-types | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/accounting/accounts/:accountId/ledger | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/accounting/coa-templates | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/accounting/period-close/multi-currency-revaluation | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: ap
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/ap/bill-payments/:paymentId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/bill-payments/:paymentId/void | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/bills/:billId | GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/bills/:billId/approve | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/bills/:billId/void | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/purchase-orders | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/purchase-orders/:poId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/purchase-orders/:poId/convert | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/purchase-orders/:poId/status | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/vendors | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ap/vendors/:contactId | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: ar
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/ar/aging | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/customers/batch/group | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/deferred-revenue | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/deferred-revenue/:id/recognize | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/payment-links | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/payments/:paymentId/apply | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/refunds/:id | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/revenue-recognition | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/ar/revenue-recognition/:id/recognize | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: attachments
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/attachments | GET, POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/attachments/:id | DELETE | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/attachments/:id/public | PATCH | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+
+#### Module: auth
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/auth/complete-signup | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/email/send-code | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/email/verify-code | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/forgot-password | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/login | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/phone/send-code | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/phone/verify-code | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/pre-signup | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/refresh | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/reset-password | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/security-events | GET | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/send-verification | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/sessions | GET | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/sessions/revoke | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/sessions/revoke-all | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/signup | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/verify-email | GET | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+| /api/auth/verify-otp | POST | Backend-only | Auth/attachment infrastructure endpoint is typically consumed outside owner pages. |
+
+#### Module: banking
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/bank-accounts | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/accounts/:bankAccountId | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/accounts/:bankAccountId/reconciliations | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/accounts/:bankAccountId/transactions/:transactionId/split | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/cash-position | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/checks/:checkId | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/credit-cards/:cardId/statements | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/feed-connections | GET, POST | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:companyId/banking/feed-connections/:id | DELETE, PUT | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:companyId/banking/feed-connections/:id/sync | POST | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:companyId/banking/feed-status | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:companyId/banking/reconciliations/:reconId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/reconciliations/:reconId/adjustment | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/reconciliations/:reconId/auto-match | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/reconciliations/:reconId/complete | POST | Backend-only | Single-purpose command endpoint likely used by orchestration jobs or admin flows. |
+| /api/companies/:companyId/banking/reconciliations/:reconId/discrepancies | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/reconciliations/:reconId/match | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/reconciliations/:reconId/match/:bankTransactionId | DELETE | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/reconciliations/:reconId/undo | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/smart-rules | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/banking/smart-rules/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: companies
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/customers/:contactId | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/invoices/:invoiceId | GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payments/:paymentId | GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/quotes/:quoteId | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/:entryId | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/dashboard/cash-position | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/dashboard/payables | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/dashboard/receivables | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/dashboard/recent-transactions | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/dashboard/summary | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/dashboard/upcoming | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/health/liquidity | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:id/health/metrics | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:id/health/profitability | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:id/health/trends | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/companies/:id/invites | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/invites/:inviteId | DELETE, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/overdue/all | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/overdue/bills | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/overdue/invoices | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/roles | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/users | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/users/:targetUserId | DELETE, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/users/:targetUserId/role | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:id/workspace-users | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/workspace/capabilities | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: contacts
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/contacts/customers/:id | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/contacts/vendors/:id | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: financial-services
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/financial-services/bank-accounts | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/cash-flow | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/cash-runway | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/checking-account | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/credit-lines | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/credit-score | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/investments | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/loans | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/merchant-services | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/revenue-forecast | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/savings-accounts | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/financial-services/transactions | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: general-ledger
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/general-ledger/account-list | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/general-ledger/summary | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: health
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/health | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/health/live | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+| /api/health/ready | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+
+#### Module: integrations
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/integrations/ai/insights | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/ai/insights/:insightId | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/ai/insights/:insightId/dismiss | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/ai/insights/:insightId/resolve | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/ai/insights/generate | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/api-keys | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/api-keys/:keyId | DELETE | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/bank-feed/connections | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/integrations/bank-feed/imports | GET | Backend-only | Route pattern suggests integration/system processing rather than owner-facing UI. |
+
+#### Module: inventory
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/inventory/asset-categories | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/asset-categories/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/assets | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/assets/:assetId | GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/assets/:assetId/depreciate | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/assets/:assetId/dispose | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/assets/:assetId/schedule | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/backorders | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/bin-locations | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/items/batch/delete | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/items/batch/status | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/locations | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/locations/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/lot-serial | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/physical-counts | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/physical-counts/:countId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/reorder-rules | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/reorder-rules/:id | PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/stock | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/transactions | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/units-of-measure | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/inventory/units-of-measure/:id | PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: onboarding
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/onboarding/complete | POST | Backend-only | Single-purpose command endpoint likely used by orchestration jobs or admin flows. |
+| /api/onboarding/save | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: organization
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/organization/consolidation | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/departments | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/departments/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/filing-calendar | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/filing-calendar/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/intercompany | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/legal-entities | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/legal-entities/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/locations | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/organization/locations/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: owner
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/owner/dashboard | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: payroll
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/payroll/allowances | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/allowances/:id | DELETE, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/benefit-plans | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/benefit-plans/:id | PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/deductions | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/employees | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/employees/:employeeId | GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/employees/:employeeId/terminate | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/government-contributions | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/leave-balances | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/leave-requests | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/leave-requests/:id/approve | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/leave-requests/:id/reject | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/loans | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/paychecks | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/paychecks/:paycheckId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/runs | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/runs/:runId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/runs/:runId/post | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/runs/:runId/process | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/runs/:runId/void | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/salary-structures | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/salary-structures/:id | PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/shift-schedules | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payroll/summary | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: practice
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/practices | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/practices/clients | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/practices/dashboard | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: practice-hub
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/practice-hub/activity | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/practice-hub/clients | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/practice-hub/dashboard | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/practice-hub/deadlines | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/practice-hub/stats | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: projects
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/projects | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/budget | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/expenses | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/milestones | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/milestones/:milestoneId | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/profitability | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/tasks | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/time-entries | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/:projectId/wip | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/resource-plans | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/resource-plans/:id | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/retainers | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/retainers/:id | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/projects/wip | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: reporting
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/reports/budgets | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/reports/budgets/:budgetId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/reports/budgets/:budgetId/vs-actual | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/reports/dashboards | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/reports/esg | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/reports/kpis | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/reports/snapshots | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: sales
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/invoices/:invoiceId/send | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/invoices/:invoiceId/void | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payment-terms | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payments | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/payments/:paymentId/void | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/quotes/:quoteId/convert | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/subscriptions | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: tasks
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/tasks | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/tasks/:id | GET, PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/tasks/:id/comments | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: tax
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/agencies | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/alphalist | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/alphalist/generate | POST | Backend-only | Single-purpose command endpoint likely used by orchestration jobs or admin flows. |
+| /api/audit-trail | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/bir-forms | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/bir-forms/:formType | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/calendar | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/codes | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/creditable-withholding | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/deferred-tax | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/e-filing | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/exemptions | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/expanded-withholding | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/filing-batch | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/filing-history | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/form-2307 | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/form-2307/:formId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/form-2307/:formId/status | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/income-tax | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/jurisdictions | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/liability | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/multi-jurisdiction | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/output-tax-ledger | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/payments | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/percentage-tax | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/percentage-tax/:id | PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/rates | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/reconciliation | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/remittances | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/summary | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/tax-returns | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/transfer-pricing | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/vat-returns | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/vat-returns/:returnId | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/vat-returns/:returnId/file | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/withholding | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/withholding-setup | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/withholding/:id | PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/year-end/adjustments | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/year-end/annual-summary | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/year-end/closing-entries | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/zero-rated-exempt | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: tenants
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/tenants | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/tenants/:tenantId/access | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/tenants/invites/:inviteId/decline | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: test
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/test/check-user-verification | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/companies | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/create-company | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/create-new-workspace | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/create-otp | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/create-otps | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/create-user | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/debug/refresh | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/delete-company | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/echo-headers | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/force-complete-onboarding | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/force-complete-signup | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/force-run-onboarding | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/force-verify-user | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/journal-entries | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/otp/latest | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/session/find-by-refresh | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/sessions | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/set-trial | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/update-user | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/user | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/test/users | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: time
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/companies/:companyId/time | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/:timesheetId/approve | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/:timesheetId/reject | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/billable | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/entries | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/entries/:entryId | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/timer/sessions | GET | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/timer/start | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/timer/stop | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/timesheets | DELETE, GET, POST, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/timesheets/:timesheetId | GET, POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/timesheets/:timesheetId/approve | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/timesheets/:timesheetId/reject | POST | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+| /api/companies/:companyId/time/utilization | DELETE, GET, PUT | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
+
+#### Module: users
+
+| Path | Methods | Classification | Reason |
+| --- | --- | --- | --- |
+| /api/users/profile | PATCH | Missing UI | Business endpoint appears owner-relevant but no owner page currently calls it. |
 
 ## Top Gaps / Gotchas Summary
 
 - Owner hub surface area is very large (200+ pages); many are wrappers/placeholders, so ticket-level work can miss prerequisite setup assumptions.
 - Banking deposit flow depends on seeded/default bank accounts; without this, dropdowns are empty and flow appears broken.
 - GL posting paths rely on specific system COA codes (e.g., 1010/1050/1100), so seed consistency is critical for end-to-end behavior.
-- Endpoint-to-UI coverage is uneven: several backend routes are not currently exercised by owner pages, while some UI pages remain mostly UI shell.
+- Endpoint-to-UI coverage is uneven: 268 unmatched backend routes look owner-relevant (Missing UI), while 38 appear intentionally backend-only.

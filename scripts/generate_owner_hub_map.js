@@ -41,6 +41,10 @@ function uniq(arr) {
   return [...new Set(arr.filter(Boolean))];
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function normalizeEndpoint(ep) {
   if (!ep) return '';
   let value = String(ep).trim();
@@ -369,6 +373,182 @@ function isLookupEndpointForSeed(ep) {
   return true;
 }
 
+function isListOrFindEndpoint(ep) {
+  const p = normalizeEndpoint(ep).toLowerCase();
+  if (!p) return false;
+  if (/(\/activity|\/void|\/post|\/approve|\/reverse|\/process|\/convert|\/send|\/status|\/export|\/batch|\/generate|\/recognize|\/reopen|\/close)$/.test(p)) {
+    return false;
+  }
+  if (/(\/find|\/search|\/lookup|\/list)(\/|$)/.test(p)) return true;
+  if (p.endsWith('/:param')) return true;
+  return !p.includes('/:param/');
+}
+
+function inferModelFromEndpoint(ep) {
+  const p = normalizeEndpoint(ep).toLowerCase();
+  if (!p) return null;
+
+  const endpointModelHints = [
+    ['/banking/accounts', 'bankAccount'],
+    ['/bank-accounts', 'bankAccount'],
+    ['/payment-method', 'paymentMethod'],
+    ['/payment-terms', 'paymentTerm'],
+    ['/accounting/accounts', 'account'],
+    ['/general-ledger/account-list', 'account'],
+    ['/companies/:param/accounts', 'account'],
+    ['/tax-rates', 'taxRate'],
+    ['/ap/vendors', 'vendor'],
+    ['/contacts/vendors', 'vendor'],
+    ['/vendors', 'vendor'],
+    ['/ar/customers', 'customer'],
+    ['/customers', 'customer'],
+    ['/ar/invoices', 'invoice'],
+    ['/invoices', 'invoice'],
+    ['/inventory/items', 'item'],
+    ['/payroll/employees', 'employee'],
+    ['/employees', 'employee'],
+    ['/projects', 'project'],
+  ];
+
+  for (const [hint, model] of endpointModelHints) {
+    if (p.includes(hint)) return model;
+  }
+
+  return null;
+}
+
+function isModelSeeded(seededModels, model) {
+  const seededSet = new Set(seededModels.map(x => String(x).toLowerCase()));
+  const candidates = [
+    String(model),
+    String(model)[0].toUpperCase() + String(model).slice(1),
+  ].map(x => x.toLowerCase());
+  return candidates.some(c => seededSet.has(c));
+}
+
+function extractFkFieldDependencies(text) {
+  const fkFieldModelHints = [
+    { field: 'bankAccountId', model: 'bankAccount' },
+    { field: 'paymentMethodId', model: 'paymentMethod' },
+    { field: 'accountId', model: 'account' },
+    { field: 'taxId', model: 'taxRate' },
+  ];
+
+  const found = [];
+  for (const hint of fkFieldModelHints) {
+    const re = new RegExp(`\\b${hint.field}\\b`);
+    if (re.test(text)) {
+      found.push({ ...hint });
+    }
+  }
+  return found;
+}
+
+function extractExpectedAccountDependencies(backendFiles) {
+  const byKey = new Map();
+  const prioritizedNames = [
+    'Undeposited Funds',
+    'Business Checking',
+    'Accounts Receivable',
+    'Accounts Payable',
+    'Service Revenue',
+    'Sales Revenue',
+    'Cash',
+    'Inventory Suspense',
+  ];
+  const accountCodePattern = /['"`]([0-9]{3,6}|[A-Z0-9]+-[A-Z0-9-]+)['"`]/g;
+
+  for (const file of backendFiles) {
+    const fileRel = rel(file);
+    const text = read(file);
+    const lines = text.split(/\r?\n/);
+
+    for (const name of prioritizedNames) {
+      if (!text.includes(name)) continue;
+      const key = `name|${name.toLowerCase()}`;
+      if (!byKey.has(key)) {
+        byKey.set(key, { indicatorType: 'name', indicator: name, sourceFile: fileRel });
+      }
+    }
+
+    const codeLookupPatterns = [
+      /findDefaultAccountByCode\([^)]*?['"`]([0-9]{3,6}|[A-Z0-9]+-[A-Z0-9-]+)['"`][^)]*\)/g,
+      /findOrCreateAccountByCode\([^)]*?['"`]([0-9]{3,6}|[A-Z0-9]+-[A-Z0-9-]+)['"`][^)]*\)/g,
+    ];
+
+    for (const re of codeLookupPatterns) {
+      for (const match of text.matchAll(re)) {
+        const code = match[1];
+        const key = `code|${code}`;
+        if (!byKey.has(key)) {
+          byKey.set(key, { indicatorType: 'code', indicator: code, sourceFile: fileRel });
+        }
+      }
+    }
+
+    for (const line of lines) {
+      if (!/\b(code|accountCode)\b/i.test(line)) continue;
+      if (!/\b(account|gl|ledger|coa|chart)\b/i.test(line)) continue;
+      for (const match of line.matchAll(accountCodePattern)) {
+        const code = match[1];
+        const key = `code|${code}`;
+        if (!byKey.has(key)) {
+          byKey.set(key, { indicatorType: 'code', indicator: code, sourceFile: fileRel });
+        }
+      }
+    }
+  }
+
+  return [...byKey.values()].sort((a, b) => {
+    if (a.indicatorType !== b.indicatorType) return a.indicatorType.localeCompare(b.indicatorType);
+    return a.indicator.localeCompare(b.indicator);
+  });
+}
+
+function classifyUnusedBackendRoute(path, moduleName, methods) {
+  const p = path.toLowerCase();
+  const m = String(moduleName || '').toLowerCase();
+
+  const backendOnlyModules = new Set(['auth', 'attachments']);
+  if (backendOnlyModules.has(m)) {
+    return {
+      classification: 'Backend-only',
+      reason: 'Auth/attachment infrastructure endpoint is typically consumed outside owner pages.',
+    };
+  }
+
+  const backendOnlyPathSignals = [
+    '/webhook',
+    '/callbacks',
+    '/internal',
+    '/health',
+    '/metrics',
+    '/feed-connections',
+    '/feed-status',
+    '/bank-feed/imports',
+    '/sync',
+    '/scim',
+  ];
+  if (backendOnlyPathSignals.some(signal => p.includes(signal))) {
+    return {
+      classification: 'Backend-only',
+      reason: 'Route pattern suggests integration/system processing rather than owner-facing UI.',
+    };
+  }
+
+  if (methods.length === 1 && methods[0] === 'POST' && /(\/run|\/generate|\/complete)$/.test(p)) {
+    return {
+      classification: 'Backend-only',
+      reason: 'Single-purpose command endpoint likely used by orchestration jobs or admin flows.',
+    };
+  }
+
+  return {
+    classification: 'Missing UI',
+    reason: 'Business endpoint appears owner-relevant but no owner page currently calls it.',
+  };
+}
+
 function moduleFromEndpoint(ep) {
   const p = ep.toLowerCase();
   const pairs = [
@@ -424,6 +604,8 @@ function main() {
     const name = path.basename(file, '.tsx');
     const purpose = headingPurpose(text, name);
     const status = classifyStatus(text, endpoints.length, importSources.join(' '));
+    const hasDropdownUi = /<select\b|combobox|dropdown|selecttrigger|listbox/i.test(text);
+    const fkFieldDependencies = extractFkFieldDependencies(text);
 
     const entry = {
       file: rel(file),
@@ -433,6 +615,8 @@ function main() {
       endpoints,
       status,
       hasSelect: /<select\b|combobox/i.test(text),
+      hasDropdownUi,
+      fkFieldDependencies,
       imports,
     };
     components.push(entry);
@@ -530,7 +714,8 @@ function main() {
   const schemaText = read(schemaPath);
   const prismaModels = parsePrismaModels(schemaText);
 
-  const backendTsText = walk(backendSrcRoot).filter(f => f.endsWith('.ts')).map(read).join('\n');
+  const backendTsFiles = walk(backendSrcRoot).filter(f => f.endsWith('.ts'));
+  const backendTsText = backendTsFiles.map(read).join('\n');
   const frontendTsText = allFrontendTsx.map(read).join('\n');
 
   const prismaModelUsage = prismaModels.map(model => {
@@ -568,6 +753,50 @@ function main() {
     if (!match) unmatchedBackend.push(be);
   }
 
+  const unmatchedBackendRouteTriage = unmatchedBackend
+    .map(routePath => {
+      const details = allBackendEndpoints.filter(ep => pathsMatch(toApiPath(ep.fullPath), routePath));
+      const moduleName = details[0]?.moduleName || moduleFromEndpoint(routePath);
+      const methods = uniq(details.map(d => d.method)).sort();
+      const triage = classifyUnusedBackendRoute(routePath, moduleName, methods);
+
+      return {
+        moduleName,
+        path: routePath,
+        methods,
+        classification: triage.classification,
+        reason: triage.reason,
+      };
+    })
+    .sort((a, b) => a.path.localeCompare(b.path));
+
+  const unmatchedBackendByModule = (() => {
+    const map = new Map();
+    for (const row of unmatchedBackendRouteTriage) {
+      if (!map.has(row.moduleName)) {
+        map.set(row.moduleName, {
+          moduleName: row.moduleName,
+          total: 0,
+          backendOnly: 0,
+          missingUi: 0,
+          routes: [],
+        });
+      }
+      const group = map.get(row.moduleName);
+      group.total += 1;
+      if (row.classification === 'Backend-only') group.backendOnly += 1;
+      else group.missingUi += 1;
+      group.routes.push(row);
+    }
+
+    return [...map.values()]
+      .map(group => ({
+        ...group,
+        routes: group.routes.sort((a, b) => a.path.localeCompare(b.path)),
+      }))
+      .sort((a, b) => a.moduleName.localeCompare(b.moduleName));
+  })();
+
   // Page -> backend module dependency
   const pageDependencies = pages.map(p => {
     const modules = uniq(p.endpoints.map(moduleFromEndpoint)).sort();
@@ -581,44 +810,88 @@ function main() {
     };
   });
 
-  // Seed data coverage heuristic
+  // Seed data dependency scan
   const seedText = read(seedPath);
   const seededModels = uniq([
     ...[...seedText.matchAll(/\bprisma\.([A-Za-z0-9_]+)\./g)].map(m => m[1]),
     ...[...seedText.matchAll(/\brawInsertWithTenantFallback\(\s*['\"]([A-Za-z0-9_]+)['\"]/g)].map(m => m[1]),
   ]).sort();
 
-  const componentDropdownNeeds = components
-    .filter(c => c.hasSelect || /combobox/i.test(read(path.join(repoRoot, c.file))))
-    .map(c => ({ file: c.file, endpoints: c.endpoints }))
-    .filter(c => c.endpoints.length > 0);
-
-  const knownEndpointModel = [
-    { key: '/banking/accounts', model: 'bankAccount' },
-    { key: '/accounting/accounts', model: 'account' },
-    { key: '/ar/customers', model: 'customer' },
-    { key: '/ar/invoices', model: 'invoice' },
-    { key: '/ar/payment-terms', model: 'paymentTerm' },
-    { key: '/ap/vendors', model: 'vendor' },
-    { key: '/contacts/vendors', model: 'vendor' },
-    { key: '/inventory/items', model: 'item' },
-    { key: '/tax-rates', model: 'taxRate' },
-    { key: '/payroll/employees', model: 'employee' },
-    { key: '/projects', model: 'project' },
-  ];
-
-  const seedGaps = [];
-  for (const dep of componentDropdownNeeds) {
-    for (const ep of dep.endpoints) {
-      if (!isLookupEndpointForSeed(ep)) continue;
-      const hit = knownEndpointModel.find(k => ep.toLowerCase().includes(k.key));
-      if (!hit) continue;
-      const modelSeeded = seededModels.includes(hit.model) || seededModels.includes(hit.model[0].toUpperCase() + hit.model.slice(1));
-      if (!modelSeeded) {
-        seedGaps.push({ component: dep.file, endpoint: ep, expectedModel: hit.model, seeded: false });
-      }
+  const dropdownDependencies = [];
+  for (const component of components) {
+    if (!component.hasDropdownUi || component.endpoints.length === 0) continue;
+    for (const ep of component.endpoints) {
+      if (!isListOrFindEndpoint(ep)) continue;
+      const expectedModel = inferModelFromEndpoint(ep);
+      if (!expectedModel) continue;
+      dropdownDependencies.push({
+        component: component.file,
+        endpoint: ep,
+        expectedModel,
+        seeded: isModelSeeded(seededModels, expectedModel),
+      });
     }
   }
+
+  const fkDependencies = [];
+  for (const component of components) {
+    for (const fk of component.fkFieldDependencies || []) {
+      fkDependencies.push({
+        component: component.file,
+        field: fk.field,
+        expectedModel: fk.model,
+        seeded: isModelSeeded(seededModels, fk.model),
+      });
+    }
+  }
+
+  const expectedAccountDependencies = extractExpectedAccountDependencies(backendTsFiles).map(dep => {
+    if (dep.indicatorType === 'code') {
+      const re = new RegExp(`['\"\`]${escapeRegExp(dep.indicator)}['\"\`]`, 'i');
+      return { ...dep, seeded: re.test(seedText) };
+    }
+    return { ...dep, seeded: seedText.toLowerCase().includes(dep.indicator.toLowerCase()) };
+  });
+
+  const seedGapEntries = [];
+  for (const dep of dropdownDependencies) {
+    if (!dep.seeded) {
+      seedGapEntries.push({
+        category: 'dropdown-endpoint',
+        component: dep.component,
+        endpoint: dep.endpoint,
+        indicator: dep.endpoint,
+        expectedModel: dep.expectedModel,
+        seeded: false,
+      });
+    }
+  }
+  for (const dep of fkDependencies) {
+    if (!dep.seeded) {
+      seedGapEntries.push({
+        category: 'fk-field',
+        component: dep.component,
+        endpoint: '',
+        indicator: dep.field,
+        expectedModel: dep.expectedModel,
+        seeded: false,
+      });
+    }
+  }
+  for (const dep of expectedAccountDependencies) {
+    if (!dep.seeded) {
+      seedGapEntries.push({
+        category: 'gl-account-constant',
+        component: dep.sourceFile,
+        endpoint: '',
+        indicator: `${dep.indicatorType}:${dep.indicator}`,
+        expectedModel: 'account',
+        seeded: false,
+      });
+    }
+  }
+
+  const seedGaps = uniq(seedGapEntries.map(x => JSON.stringify(x))).map(x => JSON.parse(x));
 
   // Missing piece summaries
   const pageStubCount = pages.filter(p => p.status === 'stub/placeholder').length;
@@ -633,6 +906,9 @@ function main() {
   )
     .sort((a, b) => b[1] - a[1])
     .map(([module, count]) => ({ module, pageCount: count }));
+
+  const backendOnlyRouteCount = unmatchedBackendRouteTriage.filter(r => r.classification === 'Backend-only').length;
+  const missingUiRouteCount = unmatchedBackendRouteTriage.filter(r => r.classification === 'Missing UI').length;
 
   // Write JSON artifacts
   const artifacts = {
@@ -653,8 +929,13 @@ function main() {
     pageDependencies,
     unmatchedFrontendEndpoints: unmatchedFrontend.sort(),
     unmatchedBackendEndpoints: unmatchedBackend.sort(),
+    unmatchedBackendRouteTriage,
+    unmatchedBackendByModule,
     seedModels: seededModels,
-    seedGaps: uniq(seedGaps.map(x => JSON.stringify(x))).map(x => JSON.parse(x)),
+    dropdownDependencies,
+    fkDependencies,
+    expectedAccountDependencies,
+    seedGaps,
     topModuleUsage,
     moduleFiles: moduleFiles.map(rel).sort(),
     controllerFiles: controllerFiles.map(rel).sort(),
@@ -783,22 +1064,95 @@ function main() {
   md.push('- Onboarding -> Workspace/Company creation -> COA seed -> optional bank account provisioning.');
   md.push('');
 
-  md.push('## 6) Seed Data Gaps (inferred)');
+  md.push('## 6) Seed Data Dependency Scan (enhanced)');
   md.push('');
   if (artifacts.seedGaps.length) {
+    md.push(`- Total inferred seed gaps: ${artifacts.seedGaps.length}`);
     md.push(toMarkdownTable(
       artifacts.seedGaps.map(g => ({
-        Component: g.component,
-        Endpoint: g.endpoint,
+        Category: g.category,
+        Source: g.component,
+        EndpointOrField: g.endpoint || g.indicator,
         ExpectedModel: g.expectedModel,
         Seeded: String(g.seeded),
       })),
-      ['Component', 'Endpoint', 'ExpectedModel', 'Seeded']
+      ['Category', 'Source', 'EndpointOrField', 'ExpectedModel', 'Seeded']
     ));
   } else {
-    md.push('- No direct endpoint-to-model seed gaps were detected by heuristic mapping.');
+    md.push('- No missing seed dependencies were detected by the enhanced scanner checks.');
   }
   md.push('');
+
+  const MAX_SEED_DETAIL_ROWS = 220;
+  md.push('### 6.1 Dropdown/List Endpoint Dependencies');
+  md.push('');
+  if (artifacts.dropdownDependencies.length) {
+    md.push(`- Count: ${artifacts.dropdownDependencies.length}`);
+    md.push(toMarkdownTable(
+      artifacts.dropdownDependencies
+        .slice(0, MAX_SEED_DETAIL_ROWS)
+        .map(d => ({
+          Component: d.component,
+          Endpoint: d.endpoint,
+          ExpectedModel: d.expectedModel,
+          Seeded: String(d.seeded),
+        })),
+      ['Component', 'Endpoint', 'ExpectedModel', 'Seeded']
+    ));
+    if (artifacts.dropdownDependencies.length > MAX_SEED_DETAIL_ROWS) {
+      md.push(`- Showing first ${MAX_SEED_DETAIL_ROWS} rows; see JSON artifact for complete detail.`);
+    }
+  } else {
+    md.push('- No dropdown/list endpoint dependencies detected.');
+  }
+  md.push('');
+
+  md.push('### 6.2 FK Field Dependencies in Forms');
+  md.push('');
+  if (artifacts.fkDependencies.length) {
+    md.push(`- Count: ${artifacts.fkDependencies.length}`);
+    md.push(toMarkdownTable(
+      artifacts.fkDependencies
+        .slice(0, MAX_SEED_DETAIL_ROWS)
+        .map(d => ({
+          Component: d.component,
+          FKField: d.field,
+          ExpectedModel: d.expectedModel,
+          Seeded: String(d.seeded),
+        })),
+      ['Component', 'FKField', 'ExpectedModel', 'Seeded']
+    ));
+    if (artifacts.fkDependencies.length > MAX_SEED_DETAIL_ROWS) {
+      md.push(`- Showing first ${MAX_SEED_DETAIL_ROWS} rows; see JSON artifact for complete detail.`);
+    }
+  } else {
+    md.push('- No FK-form dependencies detected.');
+  }
+  md.push('');
+
+  md.push('### 6.3 Expected GL Account Constants (Name/Code)');
+  md.push('');
+  if (artifacts.expectedAccountDependencies.length) {
+    md.push(`- Count: ${artifacts.expectedAccountDependencies.length}`);
+    md.push(toMarkdownTable(
+      artifacts.expectedAccountDependencies
+        .slice(0, MAX_SEED_DETAIL_ROWS)
+        .map(d => ({
+          SourceFile: d.sourceFile,
+          IndicatorType: d.indicatorType,
+          Indicator: d.indicator,
+          Seeded: String(d.seeded),
+        })),
+      ['SourceFile', 'IndicatorType', 'Indicator', 'Seeded']
+    ));
+    if (artifacts.expectedAccountDependencies.length > MAX_SEED_DETAIL_ROWS) {
+      md.push(`- Showing first ${MAX_SEED_DETAIL_ROWS} rows; see JSON artifact for complete detail.`);
+    }
+  } else {
+    md.push('- No GL account constants detected in backend code scan.');
+  }
+  md.push('');
+
   md.push('### Additional Seed Risk Notes');
   md.push('');
   md.push('- Seed script logs non-fatal legacy-schema warnings; some relational links can remain missing in partially migrated local DBs.');
@@ -821,25 +1175,55 @@ function main() {
   }
   md.push('');
 
-  md.push('### 7.2 Backend route patterns with no frontend usage match (inferred)');
+  md.push('### 7.2 Unused Backend Routes Triaged by Module');
   md.push('');
-  const MAX_UNMATCHED_BACKEND = 220;
-  if (unmatchedBackend.length) {
-    md.push(`- Count: ${unmatchedBackend.length}`);
-    md.push(`- Showing first ${Math.min(unmatchedBackend.length, MAX_UNMATCHED_BACKEND)} patterns (see JSON artifact for full set).`);
+  if (artifacts.unmatchedBackendByModule.length) {
+    md.push(`- Total unused backend route patterns: ${artifacts.unmatchedBackendEndpoints.length}`);
+    md.push(`- Classified as Backend-only: ${backendOnlyRouteCount}`);
+    md.push(`- Classified as Missing UI: ${missingUiRouteCount}`);
     md.push('');
-    md.push(unmatchedBackend.slice(0, MAX_UNMATCHED_BACKEND).map(x => `- ${x}`).join('\n'));
+    md.push(toMarkdownTable(
+      artifacts.unmatchedBackendByModule.map(group => ({
+        Module: group.moduleName,
+        Total: group.total,
+        BackendOnly: group.backendOnly,
+        MissingUI: group.missingUi,
+      })),
+      ['Module', 'Total', 'BackendOnly', 'MissingUI']
+    ));
   } else {
-    md.push('- None detected in the inferred static scan.');
+    md.push('- No unmatched backend route patterns detected.');
   }
   md.push('');
+
+  md.push('### 7.3 Route-Level Triage (Grouped)');
+  md.push('');
+  if (artifacts.unmatchedBackendByModule.length) {
+    for (const group of artifacts.unmatchedBackendByModule) {
+      md.push(`#### Module: ${group.moduleName}`);
+      md.push('');
+      md.push(toMarkdownTable(
+        group.routes.map(route => ({
+          Path: route.path,
+          Methods: route.methods.length ? route.methods.join(', ') : '(unknown)',
+          Classification: route.classification,
+          Reason: route.reason,
+        })),
+        ['Path', 'Methods', 'Classification', 'Reason']
+      ));
+      md.push('');
+    }
+  } else {
+    md.push('- No route-level triage rows available.');
+    md.push('');
+  }
 
   md.push('## Top Gaps / Gotchas Summary');
   md.push('');
   md.push('- Owner hub surface area is very large (200+ pages); many are wrappers/placeholders, so ticket-level work can miss prerequisite setup assumptions.');
   md.push('- Banking deposit flow depends on seeded/default bank accounts; without this, dropdowns are empty and flow appears broken.');
   md.push('- GL posting paths rely on specific system COA codes (e.g., 1010/1050/1100), so seed consistency is critical for end-to-end behavior.');
-  md.push('- Endpoint-to-UI coverage is uneven: several backend routes are not currently exercised by owner pages, while some UI pages remain mostly UI shell.');
+  md.push(`- Endpoint-to-UI coverage is uneven: ${missingUiRouteCount} unmatched backend routes look owner-relevant (Missing UI), while ${backendOnlyRouteCount} appear intentionally backend-only.`);
   md.push('');
 
   fs.writeFileSync(path.join(outDir, 'OwnerHub-System-Map.md'), md.join('\n'));
