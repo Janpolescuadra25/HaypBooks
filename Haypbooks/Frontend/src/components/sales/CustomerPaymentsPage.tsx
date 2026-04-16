@@ -342,7 +342,7 @@ export default function CustomerPaymentsPage() {
     setBankAccountsLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/banking/accounts`)
-      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.accounts ?? []
+      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.accounts ?? data?.data ?? []
       setBankAccounts(
         raw.map((account: any) => ({
           id: account.id,

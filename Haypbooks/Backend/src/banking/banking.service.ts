@@ -24,12 +24,49 @@ export class BankingService {
         if (!m) throw new ForbiddenException('Access denied')
     }
 
+    private async ensureDefaultBankAccount(workspaceId: string, companyId: string) {
+        const existing = await this.prisma.bankAccount.findFirst({
+            where: { workspaceId, deletedAt: null },
+            select: { id: true },
+        })
+        if (existing) return
+
+        // Prefer the canonical cash account (1010), then fall back to a cash/checking-like account.
+        const cashAccount = await this.prisma.account.findFirst({
+            where: {
+                companyId,
+                deletedAt: null,
+                OR: [
+                    { code: '1010' },
+                    { name: { contains: 'checking', mode: 'insensitive' } },
+                    { name: { contains: 'cash', mode: 'insensitive' } },
+                ],
+            },
+            orderBy: [{ code: 'asc' }, { name: 'asc' }],
+            select: { id: true, name: true },
+        })
+
+        await this.prisma.bankAccount.create({
+            data: {
+                workspaceId,
+                name: cashAccount?.name?.trim() || 'Business Checking',
+                isDefault: true,
+                ...(cashAccount?.id ? { glAccountId: cashAccount.id } : {}),
+            },
+        })
+    }
+
     // ─── Bank Accounts ────────────────────────────────────────────────────────
 
     async listBankAccounts(userId: string, companyId: string) {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
-        return this.repo.findBankAccounts(wid)
+        let accounts = await this.repo.findBankAccounts(wid)
+        if (accounts.length === 0) {
+            await this.ensureDefaultBankAccount(wid, companyId)
+            accounts = await this.repo.findBankAccounts(wid)
+        }
+        return accounts
     }
 
     async getBankAccount(userId: string, companyId: string, bankAccountId: string) {
