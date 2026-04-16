@@ -34,6 +34,7 @@ interface Props {
 const STATUS_CONFIG: Record<string, { label: string; className: string; Icon: React.ElementType }> = {
   DRAFT:           { label: 'Draft',          className: 'bg-gray-100 text-gray-600',         Icon: FileText },
   SENT:            { label: 'Sent',            className: 'bg-blue-100 text-blue-700',          Icon: Send },
+  PARTIALLY_PAID:  { label: 'Partially Paid',  className: 'bg-yellow-100 text-yellow-700',      Icon: CreditCard },
   PARTIAL:         { label: 'Partial',         className: 'bg-yellow-100 text-yellow-700',      Icon: CreditCard },
   PAID:            { label: 'Paid',            className: 'bg-emerald-100 text-emerald-700',    Icon: CheckCircle2 },
   OVERDUE:         { label: 'Overdue',         className: 'bg-red-100 text-red-700',            Icon: AlertTriangle },
@@ -811,7 +812,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     <Ban size={13} /> Void
                   </button>
                 )}
-                {(invoice.status === 'SENT' || invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE') && (
+                {(invoice.status === 'SENT' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE') && (
                   <button onClick={() => { setPaymentForm(p => ({ ...p, amount: String(invoice.amountDue ?? invoice.total ?? '') })); setShowPaymentModal(true) }}
                     className="flex items-center gap-1.5 px-4 py-2 border border-emerald-300 text-emerald-700 rounded-lg text-sm font-semibold hover:bg-emerald-50 transition-colors">
                     <CreditCard size={13} /> Receive Payment

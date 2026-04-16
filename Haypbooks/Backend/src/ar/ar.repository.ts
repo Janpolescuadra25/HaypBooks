@@ -7,6 +7,42 @@ import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } f
 export class ArRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private isPastDue(dueDate: Date | null | undefined) {
+        if (!dueDate) return false
+        return new Date(dueDate).getTime() < Date.now()
+    }
+
+    private deriveInvoiceStatusFromBalance(invoice: { status: string; dueDate: Date | null; totalAmount: any }, balance: number) {
+        if (balance <= 0) return 'PAID'
+        if (invoice.status === 'DRAFT') return 'DRAFT'
+        if (this.isPastDue(invoice.dueDate)) return 'OVERDUE'
+        if (balance < Number(invoice.totalAmount)) return 'PARTIAL'
+        return 'SENT'
+    }
+
+    private derivePaymentStatusFromBalance(invoice: { dueDate: Date | null; totalAmount: any }, balance: number) {
+        if (balance <= 0) return 'PAID'
+        if (this.isPastDue(invoice.dueDate)) return 'OVERDUE'
+        if (balance < Number(invoice.totalAmount)) return 'PARTIAL'
+        return 'DRAFT'
+    }
+
+    async transitionOverdueInvoices(companyId: string) {
+        return this.prisma.invoice.updateMany({
+            where: {
+                companyId,
+                deletedAt: null,
+                status: { in: ['SENT', 'PARTIAL'] as any },
+                balance: { gt: 0 },
+                dueDate: { not: null, lt: new Date() },
+            },
+            data: {
+                status: 'OVERDUE' as any,
+                paymentStatus: 'OVERDUE' as any,
+            },
+        })
+    }
+
     // ─── Contacts / Customers ─────────────────────────────────────────────────
 
     async findCustomers(workspaceId: string, companyId: string | undefined, opts: {
@@ -619,6 +655,7 @@ export class ArRepository {
     async findInvoices(companyId: string, opts: {
         customerId?: string, status?: string, from?: Date, to?: Date, limit?: number, offset?: number
     } = {}) {
+        await this.transitionOverdueInvoices(companyId)
         return this.prisma.invoice.findMany({
             where: {
                 companyId,
@@ -644,6 +681,7 @@ export class ArRepository {
     }
 
     async findInvoiceById(companyId: string, invoiceId: string) {
+        await this.transitionOverdueInvoices(companyId)
         return this.prisma.invoice.findFirst({
             where: { id: invoiceId, companyId, deletedAt: null },
             include: {
@@ -863,10 +901,11 @@ export class ArRepository {
                 const invoice = await tx.invoice.findUnique({ where: { id: allocation.invoiceId } })
                 if (invoice) {
                     const newBalance = Math.max(0, Number(invoice.balance) - Number(allocation.amount))
-                    const newStatus = newBalance <= 0 ? 'PAID' : (Number(allocation.amount) > 0 ? 'PARTIAL' : invoice.status)
+                    const newStatus = this.deriveInvoiceStatusFromBalance(invoice as any, newBalance)
+                    const newPaymentStatus = this.derivePaymentStatusFromBalance(invoice as any, newBalance)
                     await tx.invoice.update({
                         where: { id: allocation.invoiceId },
-                        data: { balance: newBalance, status: newStatus as any, paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any },
+                        data: { balance: newBalance, status: newStatus as any, paymentStatus: newPaymentStatus as any },
                     })
                 }
             }
@@ -921,14 +960,15 @@ export class ArRepository {
                 })
 
                 const newBalance = Math.max(0, Number(invoice.balance) - Number(alloc.amount))
-                const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIAL'
+                const newStatus = this.deriveInvoiceStatusFromBalance(invoice as any, newBalance)
+                const newPaymentStatus = this.derivePaymentStatusFromBalance(invoice as any, newBalance)
 
                 await tx.invoice.update({
                     where: { id: alloc.invoiceId },
                     data: {
                         balance: newBalance,
                         status: newStatus as any,
-                        paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any,
+                        paymentStatus: newPaymentStatus as any,
                     },
                 })
 
@@ -958,14 +998,15 @@ export class ArRepository {
                 if (!invoice || invoice.status === 'VOID') continue
 
                 const restoredBalance = Number(invoice.balance) + Number(application.amount)
-                const restoredStatus = restoredBalance >= Number(invoice.totalAmount) ? 'SENT' : 'PARTIAL'
+                const restoredStatus = this.deriveInvoiceStatusFromBalance(invoice as any, restoredBalance)
+                const restoredPaymentStatus = this.derivePaymentStatusFromBalance(invoice as any, restoredBalance)
 
                 await tx.invoice.update({
                     where: { id: application.invoiceId },
                     data: {
                         balance: restoredBalance,
                         status: restoredStatus as any,
-                        paymentStatus: restoredBalance <= 0 ? 'PAID' : 'PARTIAL' as any,
+                        paymentStatus: restoredPaymentStatus as any,
                     },
                 })
             }
@@ -989,14 +1030,15 @@ export class ArRepository {
                 })
 
                 const newBalance = Math.max(0, Number(invoice.balance) - Number(allocation.amount))
-                const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIAL'
+                const newStatus = this.deriveInvoiceStatusFromBalance(invoice as any, newBalance)
+                const newPaymentStatus = this.derivePaymentStatusFromBalance(invoice as any, newBalance)
 
                 await tx.invoice.update({
                     where: { id: allocation.invoiceId },
                     data: {
                         balance: newBalance,
                         status: newStatus as any,
-                        paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any,
+                        paymentStatus: newPaymentStatus as any,
                     },
                 })
             }
@@ -1028,12 +1070,14 @@ export class ArRepository {
                 const invoice = await tx.invoice.findUnique({ where: { id: app.invoiceId } })
                 if (invoice && invoice.status !== 'VOID') {
                     const restoredBalance = Number(invoice.balance) + Number(app.amount)
+                    const restoredStatus = this.deriveInvoiceStatusFromBalance(invoice as any, restoredBalance)
+                    const restoredPaymentStatus = this.derivePaymentStatusFromBalance(invoice as any, restoredBalance)
                     await tx.invoice.update({
                         where: { id: app.invoiceId },
                         data: {
                             balance: restoredBalance,
-                            status: restoredBalance >= Number(invoice.totalAmount) ? 'SENT' : 'PARTIAL' as any,
-                            paymentStatus: 'PARTIAL' as any,
+                            status: restoredStatus as any,
+                            paymentStatus: restoredPaymentStatus as any,
                         },
                     })
                 }
@@ -1052,6 +1096,7 @@ export class ArRepository {
     // ─── Aging Report ─────────────────────────────────────────────────────────
 
     async getArAging(companyId: string) {
+        await this.transitionOverdueInvoices(companyId)
         const invoices = await this.prisma.invoice.findMany({
             where: {
                 companyId,

@@ -52,12 +52,27 @@ export class ArService {
             groupId: c.groupId ?? null,
             groupName: c.group?.name ?? null,
             paymentTermName: c.paymentTerm?.name ?? null,
+            recentInvoices: Array.isArray(c.recentInvoices)
+                ? c.recentInvoices.map((inv: any) => ({
+                    ...inv,
+                    status: this.toApiInvoiceStatus(inv.status),
+                    total: Number(inv.total ?? inv.totalAmount ?? 0),
+                    balance: Number(inv.balance ?? 0),
+                }))
+                : c.recentInvoices,
         }
+    }
+
+    private toApiInvoiceStatus(status: string | null | undefined) {
+        const normalized = String(status ?? '').toUpperCase()
+        if (normalized === 'PARTIAL') return 'PARTIALLY_PAID'
+        return normalized || 'DRAFT'
     }
 
     private normalizeInvoice(inv: any) {
         return {
             ...inv,
+            status: this.toApiInvoiceStatus(inv.status),
             total: Number(inv.totalAmount ?? inv.total ?? 0),
             amountDue: Number(inv.balance ?? inv.amountDue ?? 0),
             customerName: inv.customer?.contact?.displayName ?? inv.customerName ?? '',
@@ -887,9 +902,13 @@ export class ArService {
 
     async listInvoices(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
+        const requestedStatus = String(opts.status ?? '').toUpperCase()
+        const statusFilter = requestedStatus === 'PARTIALLY_PAID'
+            ? 'PARTIAL'
+            : (requestedStatus || undefined)
         const invoices = await this.repo.findInvoices(companyId, {
             customerId: opts.customerId,
-            status: opts.status,
+            status: statusFilter,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,

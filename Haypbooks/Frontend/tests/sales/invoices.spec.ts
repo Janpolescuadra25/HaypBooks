@@ -32,8 +32,8 @@ test.describe('Invoices', () => {
     expect(hasTable || hasEmpty || noCompany).toBe(true)
   })
 
-  test('status tabs work (All, Draft, Sent, Paid)', async ({ page }) => {
-    const statusTabs = ['All', 'DRAFT', 'SENT', 'PAID', 'OVERDUE']
+  test('status tabs work (All, Draft, Sent, Partially Paid, Paid)', async ({ page }) => {
+    const statusTabs = ['All', 'DRAFT', 'SENT', 'PARTIALLY PAID', 'PAID', 'OVERDUE']
 
     for (const tabLabel of statusTabs) {
       const tab = page.getByRole('button', { name: new RegExp(`^${tabLabel}$`, 'i') }).first()
