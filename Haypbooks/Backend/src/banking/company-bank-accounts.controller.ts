@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Req, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Body, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { BankingService } from './banking.service'
@@ -9,8 +9,8 @@ export class CompanyBankAccountsController {
   constructor(private readonly bankingService: BankingService) {}
 
   @Get()
-  async list(@Req() req: any, @Param('companyId') companyId: string) {
-    return this.bankingService.listBankAccounts(req.user.userId, companyId)
+  async list(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
+    return this.bankingService.listBankAccounts(req.user.userId, companyId, { search: query?.search })
   }
 
   @Post()

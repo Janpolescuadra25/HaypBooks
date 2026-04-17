@@ -58,13 +58,14 @@ export class BankingService {
 
     // ─── Bank Accounts ────────────────────────────────────────────────────────
 
-    async listBankAccounts(userId: string, companyId: string) {
+    async listBankAccounts(userId: string, companyId: string, opts: { search?: string } = {}) {
         const wid = await this.getWorkspaceId(companyId)
         await this.assertAccess(userId, companyId)
-        let accounts = await this.repo.findBankAccounts(wid)
-        if (accounts.length === 0) {
+        const search = String(opts.search ?? '').trim()
+        let accounts = await this.repo.findBankAccounts(wid, { search })
+        if (accounts.length === 0 && !search) {
             await this.ensureDefaultBankAccount(wid, companyId)
-            accounts = await this.repo.findBankAccounts(wid)
+            accounts = await this.repo.findBankAccounts(wid, { search })
         }
         return accounts
     }

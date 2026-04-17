@@ -7,9 +7,22 @@ export class BankingRepository {
 
     // ─── Bank Accounts ────────────────────────────────────────────────────────
 
-    async findBankAccounts(workspaceId: string) {
+    async findBankAccounts(workspaceId: string, opts: { search?: string } = {}) {
+        const search = String(opts.search ?? '').trim()
         return this.prisma.bankAccount.findMany({
-            where: { workspaceId, deletedAt: null },
+            where: {
+                workspaceId,
+                deletedAt: null,
+                ...(search
+                    ? {
+                        OR: [
+                            { name: { contains: search, mode: 'insensitive' } },
+                            { institution: { contains: search, mode: 'insensitive' } },
+                            { accountNumber: { contains: search, mode: 'insensitive' } },
+                        ],
+                    }
+                    : {}),
+            },
             include: {
                 _count: { select: { transactions: true } },
             },
