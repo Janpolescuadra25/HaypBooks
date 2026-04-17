@@ -162,6 +162,7 @@ export default function CreditNotesPage() {
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState('')
   const [applyAmountFocused, setApplyAmountFocused] = useState(false)
+  const [newAmountFocused, setNewAmountFocused] = useState(false)
 
   // Column defs
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
@@ -362,13 +363,14 @@ export default function CreditNotesPage() {
     e.preventDefault()
     if (!companyId) return
     if (!nc.customerId) { setSaveError('Select a customer'); return }
-    if (!nc.totalAmount || parseFloat(nc.totalAmount) <= 0) { setSaveError('Enter a valid amount'); return }
+    const newAmount = parseApplyAmount(nc.totalAmount)
+    if (!Number.isFinite(newAmount) || newAmount <= 0) { setSaveError('Enter a valid amount'); return }
     setSaving(true); setSaveError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
         customerId: nc.customerId,
         invoiceId: nc.invoiceId || undefined,
-        totalAmount: parseFloat(nc.totalAmount),
+        totalAmount: newAmount,
         reason: nc.reason,
       })
       setNewOpen(false)
@@ -764,11 +766,16 @@ export default function CreditNotesPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
                 <input
                   required
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={nc.totalAmount}
-                  onChange={e => setNc(p => ({ ...p, totalAmount: e.target.value }))}
+                  type="text"
+                  inputMode="decimal"
+                  value={newAmountFocused ? nc.totalAmount : formatApplyAmount(nc.totalAmount)}
+                  onFocus={() => setNewAmountFocused(true)}
+                  onBlur={() => setNewAmountFocused(false)}
+                  onChange={e => {
+                    const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
+                    if ((normalized.match(/\./g) ?? []).length > 1) return
+                    setNc(p => ({ ...p, totalAmount: normalized }))
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   placeholder="0.00"
                 />
