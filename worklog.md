@@ -26,3 +26,28 @@ Validation notes:
 Manual QA:
 
 - Manual browser test of invoice lifecycle is in progress and awaiting user confirmation.
+
+## Ticket 5 Follow-up - Credit Note Apply Flow (Completed)
+
+Status: Completed and pushed.
+
+Issue summary:
+
+- Apply Credit Note modal invoice dropdown was empty because frontend requested status=UNPAID while backend expected concrete invoice statuses.
+- Amount to Apply field displayed unformatted values such as 10000.
+
+Deliverables:
+
+1. Backend open-invoice filtering normalization for invoice listing.
+   Commit: f60c4b21
+2. Apply Credit Note modal invoice loading switched to openOnly query path.
+   Commit: f60c4b21
+3. Amount to Apply input formatting/parsing update (grouped display, safe numeric submit).
+   Commit: f60c4b21
+4. Playwright regression test for apply-credit-note invoice visibility and amount formatting.
+   Commit: f60c4b21
+
+Validation notes:
+
+- Backend smoke test passed: test/ar-invoice-status-state-machine.smoke.e2e-spec.ts
+- Focused Playwright regression passed for credit-note apply modal flow.
