@@ -43,9 +43,9 @@ export class TaxService {
 
     // ─── Tax Codes ────────────────────────────────────────────────────────────
 
-    async listTaxCodes(userId: string, companyId: string) {
+    async listTaxCodes(userId: string, companyId: string, opts: { search?: string } = {}) {
         await this.assertAccess(userId, companyId)
-        return this.repo.findTaxCodes(companyId)
+        return this.repo.findTaxCodes(companyId, { search: opts.search })
     }
 
     async createTaxCode(userId: string, companyId: string, data: any) {

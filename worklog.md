@@ -1,5 +1,23 @@
 # Worklog
 
+### Ticket 6 - Searchable Picker Components (6A-6D) - COMPLETE
+- 6A: Shared picker foundation + ProductPickerField (debounced server search)
+- 6B: InvoicePickerField + AR invoice search backend support
+- 6C: BankAccountPickerField + bank accounts search backend support
+- 6D: TaxCodePickerField + tax codes search backend support
+- Added barrel export for sales picker components
+- Quality gate per sub-ticket: Backend smoke 5/5 passed and Frontend `npx tsc --noEmit` passed
+- Commits pushed: 8bf75ea8, 5962ca2f, d6728826, plus 6D commit
+
+### Ticket 5 — Invoice Lifecycle (5A–5E) — COMPLETE
+- 5A: Invoice send (status DRAFT→SENT)
+- 5B: Invoice duplicate (deep-copy with new number)
+- 5C: Invoice void with allocation reversal
+- 5D: Credit note creation from invoice
+- 5E: Credit note apply to open invoices (openOnly filter, comma-formatted amounts)
+- All backend smoke + Playwright E2E tests passing
+- All commits pushed to main
+
 ## Ticket 5 - Invoice Lifecycle (Completed)
 
 Status: Completed and pushed.
@@ -51,3 +69,9 @@ Validation notes:
 
 - Backend smoke test passed: test/ar-invoice-status-state-machine.smoke.e2e-spec.ts
 - Focused Playwright regression passed for credit-note apply modal flow.
+
+### Credit Note Amount Formatting Fix
+- **Commit**: e06f20a0
+- **What**: Changed credit note CREATE amount field from `type="number"` to `type="text"` with `inputMode="decimal"`, added comma formatting on blur and strip-on-input logic in `CreditNotesPage.tsx`
+- **Quality Gate**: Backend smoke 5/5 passed, Playwright apply-credit-note 2/2 passed
+- **Status**: DONE and pushed

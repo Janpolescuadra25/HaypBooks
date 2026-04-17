@@ -7,9 +7,20 @@ export class TaxRepository {
 
     // ─── Tax Codes ────────────────────────────────────────────────────────────
 
-    async findTaxCodes(companyId: string) {
+    async findTaxCodes(companyId: string, opts: { search?: string } = {}) {
+        const search = String(opts.search ?? '').trim()
         return this.prisma.taxCode.findMany({
-            where: { companyId },
+            where: {
+                companyId,
+                ...(search
+                    ? {
+                        OR: [
+                            { code: { contains: search, mode: 'insensitive' } },
+                            { name: { contains: search, mode: 'insensitive' } },
+                        ],
+                    }
+                    : {}),
+            },
             include: {
                 rates: { include: { taxRate: { select: { id: true, name: true, rate: true, taxType: true } } } },
             },

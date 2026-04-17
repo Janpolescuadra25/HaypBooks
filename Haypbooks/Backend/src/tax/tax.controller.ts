@@ -24,8 +24,8 @@ export class TaxController {
     // ─── Tax Codes ────────────────────────────────────────────────────────────
 
     @Get('codes')
-    listTaxCodes(@Req() req: any, @Param('companyId') cid: string) {
-        return this.svc.listTaxCodes(req.user.userId, cid)
+    listTaxCodes(@Req() req: any, @Param('companyId') cid: string, @Query() query: any) {
+        return this.svc.listTaxCodes(req.user.userId, cid, { search: query?.search })
     }
 
     @Post('codes')
