@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
+import { BankAccountPickerField } from './pickers'
 
 const PAGE_SIZE = 20
 
@@ -46,12 +47,6 @@ interface CustomerOption {
   id: string
   name: string
   email: string
-}
-
-interface BankAccountOption {
-  id: string
-  name: string
-  accountNumber?: string
 }
 
 interface InvoiceOption {
@@ -258,8 +253,6 @@ export default function CustomerPaymentsPage() {
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [customersLoading, setCustomersLoading] = useState(false)
-  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
-  const [bankAccountsLoading, setBankAccountsLoading] = useState(false)
   const [invoices, setInvoices] = useState<InvoiceOption[]>([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
   const [allocationSearch, setAllocationSearch] = useState('')
@@ -334,26 +327,6 @@ export default function CustomerPaymentsPage() {
       // non-blocking
     } finally {
       setCustomersLoading(false)
-    }
-  }, [companyId])
-
-  const loadBankAccounts = useCallback(async () => {
-    if (!companyId) return
-    setBankAccountsLoading(true)
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/banking/accounts`)
-      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.accounts ?? data?.data ?? []
-      setBankAccounts(
-        raw.map((account: any) => ({
-          id: account.id,
-          name: account.name ?? account.accountName ?? 'Unnamed account',
-          accountNumber: account.accountNumber ?? '',
-        })),
-      )
-    } catch {
-      setBankAccounts([])
-    } finally {
-      setBankAccountsLoading(false)
     }
   }, [companyId])
 
@@ -507,7 +480,6 @@ export default function CustomerPaymentsPage() {
     setAmountAutoFromAllocations(true)
     setNewPaymentOpen(true)
     loadCustomers()
-    loadBankAccounts()
   }
 
   function closeModal() {
@@ -661,7 +633,6 @@ export default function CustomerPaymentsPage() {
     setDrawerPayment(null)
     setNewPaymentOpen(true)
     loadCustomers()
-    loadBankAccounts()
     loadInvoicesForCustomer(row.customerId)
   }
 
@@ -1361,42 +1332,24 @@ export default function CustomerPaymentsPage() {
                           />
                           <span className="font-medium text-slate-700">Undeposited Funds</span>
                         </label>
-
-                        <label className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${form.depositDestination === 'BANK_ACCOUNT' ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
-                          <input
-                            type="radio"
-                            name="deposit-destination"
-                            value="BANK_ACCOUNT"
-                            checked={form.depositDestination === 'BANK_ACCOUNT'}
+                        <div className={`rounded-lg border px-3 py-2 text-sm ${form.depositDestination === 'BANK_ACCOUNT' ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+                          <p className="mb-2 font-medium text-slate-700">Direct to Bank Account</p>
+                          <BankAccountPickerField
+                            companyId={companyId || ''}
+                            value={form.depositDestination === 'BANK_ACCOUNT' ? (form.bankAccountId || null) : null}
+                            placeholder="Search and select bank account..."
                             disabled={isReallocationMode}
-                            onChange={() => {
-                              setForm((f) => ({ ...f, depositDestination: 'BANK_ACCOUNT' }))
-                              if (bankAccounts.length === 0) loadBankAccounts()
+                            onChange={(id) => {
+                              setForm((f) => ({
+                                ...f,
+                                depositDestination: id ? 'BANK_ACCOUNT' : 'UNDEPOSITED_FUNDS',
+                                bankAccountId: id,
+                              }))
                             }}
-                            className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500"
                           />
-                          <span className="font-medium text-slate-700">Direct to Bank Account</span>
-                        </label>
-                      </div>
-
-                      {form.depositDestination === 'BANK_ACCOUNT' && (
-                        <div className="mt-2">
-                          <select
-                            value={form.bankAccountId}
-                            disabled={isReallocationMode || bankAccountsLoading}
-                            onChange={(e) => setForm((f) => ({ ...f, bankAccountId: e.target.value }))}
-                            aria-label="Destination bank account"
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm disabled:bg-slate-100 disabled:text-slate-500"
-                          >
-                            <option value="">{bankAccountsLoading ? 'Loading bank accounts…' : 'Select bank account…'}</option>
-                            {bankAccounts.map((account) => (
-                              <option key={account.id} value={account.id}>
-                                {account.name}{account.accountNumber ? ` • ${account.accountNumber}` : ''}
-                              </option>
-                            ))}
-                          </select>
+                          <p className="mt-1 text-xs text-slate-500">Selecting a bank account marks this payment as deposited immediately.</p>
                         </div>
-                      )}
+                      </div>
 
                       <p className="mt-1 text-xs text-slate-500">
                         {form.depositDestination === 'BANK_ACCOUNT'
