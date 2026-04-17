@@ -9,9 +9,11 @@ import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
+import { InvoicePickerField } from './pickers'
 
 const CREDIT_REASONS = ['Returned Goods', 'Billing Error', 'Discount Adjustment', 'Price Correction', 'Service Issue', 'Other']
 const STATUS_OPTIONS = ['', 'DRAFT', 'ISSUED', 'APPLIED', 'VOID']
+const OPEN_INVOICE_STATUSES = 'SENT,PARTIAL,PARTIALLY_PAID,OVERDUE'
 
 interface CreditNoteRow {
   id: string
@@ -100,6 +102,13 @@ function formatApplyAmount(value: string | number): string {
   return parsed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function parsePickerDueAmount(value?: string): number | null {
+  if (!value) return null
+  const normalized = value.replace(/[^\d.,-]/g, '').replace(/,/g, '')
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 type SortDirection = 'asc' | 'desc'
 type SortKey = 'creditNoteNumber' | 'customer' | 'invoiceNumber' | 'date' | 'amount' | 'memo' | 'status'
 
@@ -159,6 +168,7 @@ export default function CreditNotesPage() {
   const [applyOpen, setApplyOpen] = useState(false)
   const [applyingCN, setApplyingCN] = useState<CreditNoteRow | null>(null)
   const [applyForm, setApplyForm] = useState({ invoiceId: '', amount: '' })
+  const [applyInvoiceBalance, setApplyInvoiceBalance] = useState<number | null>(null)
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState('')
   const [applyAmountFocused, setApplyAmountFocused] = useState(false)
@@ -285,13 +295,14 @@ export default function CreditNotesPage() {
   function openApplyModal(cn: CreditNoteRow) {
     setApplyingCN(cn)
     setApplyForm({ invoiceId: cn.invoiceId ?? '', amount: String(cn.amount ?? '') })
+    setApplyInvoiceBalance(null)
     setApplyAmountFocused(false)
     setApplyError('')
     setApplyOpen(true)
-    loadInvoicesForCustomer(cn.customerId)
+    loadInvoicesForCustomer(cn.customerId, cn.invoiceId ?? '')
   }
 
-  const loadInvoicesForCustomer = async (customerId: string) => {
+  const loadInvoicesForCustomer = async (customerId: string, preferredInvoiceId = '') => {
     if (!companyId || !customerId) return
     setInvoicesLoading(true)
     try {
@@ -305,13 +316,18 @@ export default function CreditNotesPage() {
         balance: Number(inv.balance ?? inv.amountDue ?? inv.amount ?? 0),
       }))
       setInvoices(openInvoices)
+      const selectedInvoice = openInvoices.find((inv) => inv.id === preferredInvoiceId)
+      setApplyInvoiceBalance(selectedInvoice ? selectedInvoice.balance : null)
       setApplyForm((prev) => ({
         ...prev,
-        invoiceId: openInvoices.some((inv) => inv.id === prev.invoiceId) ? prev.invoiceId : '',
+        invoiceId: openInvoices.some((inv) => inv.id === (preferredInvoiceId || prev.invoiceId))
+          ? (preferredInvoiceId || prev.invoiceId)
+          : '',
       }))
     } catch {
       setInvoices([])
       setApplyForm((prev) => ({ ...prev, invoiceId: '' }))
+      setApplyInvoiceBalance(null)
     } finally {
       setInvoicesLoading(false)
     }
@@ -685,18 +701,25 @@ export default function CreditNotesPage() {
               <p className="text-sm text-slate-600">Applying <strong>{applyingCN.creditNoteNumber}</strong> ({formatCurrency(applyingCN.amount, currency)}) to an invoice.</p>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Invoice *</label>
-                <select
-                  required
-                  aria-label="Invoice to apply credit note"
-                  value={applyForm.invoiceId}
-                  onChange={e => setApplyForm(f => ({ ...f, invoiceId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                >
-                  <option value="">{invoicesLoading ? 'Loading invoices…' : invoices.length === 0 ? 'No open invoices for this customer' : 'Select invoice…'}</option>
-                  {invoices.map(inv => (
-                    <option key={inv.id} value={inv.id}>{inv.invoiceNumber} (Balance: {formatCurrency(inv.balance, currency)})</option>
-                  ))}
-                </select>
+                <InvoicePickerField
+                  companyId={companyId || ''}
+                  customerId={applyingCN.customerId}
+                  statuses={OPEN_INVOICE_STATUSES}
+                  value={applyForm.invoiceId || null}
+                  placeholder={invoicesLoading ? 'Loading invoices…' : 'Search open invoices...'}
+                  onChange={(id, option) => {
+                    const matched = invoices.find((inv) => inv.id === id)
+                    setApplyForm((f) => ({ ...f, invoiceId: id }))
+                    setApplyInvoiceBalance(
+                      id
+                        ? (matched?.balance ?? parsePickerDueAmount(option.tertiaryLabel))
+                        : null,
+                    )
+                  }}
+                />
+                {applyInvoiceBalance != null && (
+                  <p className="mt-1 text-xs text-slate-500">Balance due: {formatCurrency(applyInvoiceBalance, currency)}</p>
+                )}
                 {!invoicesLoading && invoices.length === 0 && (
                   <p className="mt-1 text-xs text-slate-500">No open invoices for this customer</p>
                 )}
