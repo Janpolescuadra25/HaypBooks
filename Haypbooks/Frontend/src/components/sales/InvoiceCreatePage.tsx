@@ -20,7 +20,7 @@ import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
 import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
-import { ProductPickerField } from '@/components/sales/pickers'
+import { ProductPickerField, TaxCodePickerField } from '@/components/sales/pickers'
 import { useToast } from '@/components/ToastProvider'
 
 // ─── Print/PDF template theme definitions ────────────────────────────────────
@@ -177,6 +177,8 @@ interface LineItem {
   quantity: number
   unitPrice: number
   taxRate: number
+  taxCodeId?: string
+  taxCodeLabel?: string
 }
 
 interface CatalogItem {
@@ -189,6 +191,13 @@ interface CatalogItem {
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9)
+
+const parseTaxRateFromLabel = (value?: string): number | null => {
+  if (!value) return null
+  const normalized = value.replace(/[^\d.-]/g, '')
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
 export default function InvoiceCreatePage() {
   const router = useRouter()
@@ -712,6 +721,7 @@ export default function InvoiceCreatePage() {
                 <tbody>
                   {items.map((it, i) => {
                     const lineTotal = it.quantity * it.unitPrice
+                    const lineTaxAmount = lineTotal * ((it.taxRate || 0) / 100)
                     const selectedCatalogItem = it.itemId ? catalogItems.find((c) => c.id === it.itemId) : undefined
                     return (
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
@@ -774,11 +784,47 @@ export default function InvoiceCreatePage() {
                             className="w-full text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100">
-                          <input
-                            type="number" min="0" max="100" step="0.5"
-                            value={it.taxRate}
-                            onChange={e => updateItem(it.id, 'taxRate', e.target.value)}
-                            className="w-full text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
+                          <div className="space-y-1.5">
+                            <TaxCodePickerField
+                              companyId={companyId || ''}
+                              value={it.taxCodeId ?? null}
+                              placeholder="Search tax code..."
+                              onChange={(selectedId, option) => {
+                                if (!selectedId) {
+                                  setItems((prev) => prev.map((row) => row.id === it.id ? {
+                                    ...row,
+                                    taxCodeId: undefined,
+                                    taxCodeLabel: undefined,
+                                  } : row))
+                                  return
+                                }
+                                const parsedRate = parseTaxRateFromLabel(option.secondaryLabel)
+                                setItems((prev) => prev.map((row) => row.id === it.id ? {
+                                  ...row,
+                                  taxCodeId: selectedId,
+                                  taxCodeLabel: option.primaryLabel,
+                                  taxRate: parsedRate ?? row.taxRate,
+                                } : row))
+                              }}
+                            />
+                            <input
+                              type="number" min="0" max="100" step="0.5"
+                              value={it.taxRate}
+                              onChange={e => {
+                                const nextRate = e.target.value
+                                setItems((prev) => prev.map((row) => row.id === it.id ? {
+                                  ...row,
+                                  taxRate: Number(nextRate),
+                                  taxCodeId: undefined,
+                                  taxCodeLabel: undefined,
+                                } : row))
+                              }}
+                              className="w-full text-sm text-right text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/30 tabular-nums"
+                            />
+                            <p className="text-[11px] text-gray-500 text-right">
+                              Tax: {fmt(lineTaxAmount)} {it.taxCodeLabel ? `• ${it.taxCodeLabel}` : ''}
+                            </p>
+                          </div>
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100 text-right">
                           <span className="text-sm font-semibold text-slate-800 tabular-nums">{fmt(lineTotal)}</span>
