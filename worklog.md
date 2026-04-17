@@ -86,3 +86,12 @@ Validation notes:
 - **What**: Changed credit note CREATE amount field from `type="number"` to `type="text"` with `inputMode="decimal"`, added comma formatting on blur and strip-on-input logic in `CreditNotesPage.tsx`
 - **Quality Gate**: Backend smoke 5/5 passed, Playwright apply-credit-note 2/2 passed
 - **Status**: DONE and pushed
+
+### Modal & Line Item Redesign
+- All modals: solid bg-white, bg-black/60 backdrop-blur-sm overlay, shadow-2xl
+- Invoice line items: Description is now its own column (QuickBooks pattern)
+- Inline product creation: ProductFormModal from line item row
+- Product picker auto-fills description, rate, tax on selection
+- Quality gates: Backend smoke passed, frontend typecheck passed
+- Status: DONE
+

@@ -19,6 +19,7 @@ import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
 import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
+import ProductFormModal from '@/components/sales/ProductFormModal'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import { ProductPickerField, TaxCodePickerField } from '@/components/sales/pickers'
 import { useToast } from '@/components/ToastProvider'
@@ -186,6 +187,7 @@ interface CatalogItem {
   name: string
   type: string
   sku: string | null
+  description?: string
   salesPrice: number | null
   taxRate?: number
 }
@@ -271,6 +273,7 @@ export default function InvoiceCreatePage() {
 
   // Quick-add customer
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+  const [productModalLineItemId, setProductModalLineItemId] = useState<string | null>(null)
 
   // Bill To editable fields
   const [billContact, setBillContact] = useState('')
@@ -314,6 +317,7 @@ export default function InvoiceCreatePage() {
         name: i.name,
         type: i.type,
         sku: i.sku ?? null,
+        description: i.description ?? '',
         salesPrice: i.salesPrice != null ? Number(i.salesPrice) : null,
         taxRate: i.taxRate != null ? Number(i.taxRate) : undefined,
       })))
@@ -423,6 +427,29 @@ export default function InvoiceCreatePage() {
   const updateItem = (id: string, f: keyof Omit<LineItem, 'id'>, v: string | number) =>
     setItems(p => p.map(it => it.id === id ? { ...it, [f]: v } : it))
 
+  const handleCreatedProduct = (saved: any) => {
+    const product: CatalogItem = {
+      id: String(saved.id),
+      name: saved.name ?? '',
+      type: saved.type ?? '',
+      sku: saved.sku ?? null,
+      description: saved.description ?? '',
+      salesPrice: saved.salesPrice != null ? Number(saved.salesPrice) : null,
+      taxRate: saved.taxRate != null ? Number(saved.taxRate) : undefined,
+    }
+    setCatalogItems(prev => [product, ...prev])
+    if (productModalLineItemId) {
+      setItems(prev => prev.map(row => row.id === productModalLineItemId ? {
+        ...row,
+        itemId: product.id,
+        description: product.name,
+        unitPrice: product.salesPrice ?? row.unitPrice,
+        taxRate: product.taxRate ?? row.taxRate,
+      } : row))
+    }
+    setProductModalLineItemId(null)
+  }
+
   const handleSave = async (action: 'draft' | 'send') => {
     if (!customerId) { setError('Please select a customer.'); return }
     const validItems = items.filter(it => it.description.trim())
@@ -525,7 +552,7 @@ export default function InvoiceCreatePage() {
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
             className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-sm text-red-700">
             <AlertCircle size={15} /> {error}
-            <button onClick={() => setError('')} className="ml-auto"><X size={13} /></button>
+            <button onClick={() => setError('')} aria-label="Dismiss error" title="Dismiss error" className="ml-auto"><X size={13} /></button>
           </motion.div>
         )}
 
@@ -692,18 +719,18 @@ export default function InvoiceCreatePage() {
           <div className="border-b border-gray-100 px-6 py-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Invoice Date</label>
-                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                <label htmlFor="invoice-date" className="block text-xs font-medium text-gray-500 mb-1">Invoice Date</label>
+                <input id="invoice-date" type="date" value={date} onChange={e => setDate(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Due Date</label>
-                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                <label htmlFor="invoice-due-date" className="block text-xs font-medium text-gray-500 mb-1">Due Date</label>
+                <input id="invoice-due-date" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Payment Terms</label>
-                <select value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)}
+                <label htmlFor="invoice-payment-terms" className="block text-xs font-medium text-gray-500 mb-1">Payment Terms</label>
+                <select id="invoice-payment-terms" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white">
                   {['Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 60', 'Net 90'].map(t => (
                     <option key={t} value={t}>{t}</option>
@@ -735,6 +762,7 @@ export default function InvoiceCreatePage() {
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 w-8 border-r border-gray-200">#</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Product / Service</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Description</th>
                     <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-20">Qty</th>
                     <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">Rate</th>
                     <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-20">Tax %</th>
@@ -751,61 +779,67 @@ export default function InvoiceCreatePage() {
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                         <td className="px-4 py-2 text-gray-400 text-xs border-r border-gray-100 text-center">{i + 1}</td>
                         <td className="px-4 py-2 border-r border-gray-100">
-                          <div className="space-y-1.5">
-                            <ProductPickerField
-                              companyId={companyId ?? ''}
-                              value={it.itemId ?? null}
-                              placeholder="Search products or services..."
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <ProductPickerField
+                                companyId={companyId ?? ''}
+                                value={it.itemId ?? null}
+                                placeholder="Search products or services..."
+                                disabled={!companyId}
+                                onChange={(selectedId, option) => {
+                                  setItems((prev) => prev.map((row) => {
+                                    if (row.id !== it.id) return row
+                                    if (!selectedId) return { ...row, itemId: undefined }
+                                    const selectedItem = catalogItems.find((c) => c.id === selectedId)
+                                    return {
+                                      ...row,
+                                      itemId: selectedId,
+                                      description: selectedItem?.description ?? selectedItem?.name ?? option.primaryLabel,
+                                      unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
+                                      taxRate: selectedItem?.taxRate ?? row.taxRate,
+                                    }
+                                  }))
+                                }}
+                              />
+                            </div>
+                            <button type="button" onClick={() => setProductModalLineItemId(it.id)}
                               disabled={!companyId}
-                              onChange={(selectedId, option) => {
-                                setItems((prev) => prev.map((row) => {
-                                  if (row.id !== it.id) return row
-                                  if (!selectedId) return { ...row, itemId: undefined }
-                                  const selectedItem = catalogItems.find((c) => c.id === selectedId)
-                                  return {
-                                    ...row,
-                                    itemId: selectedId,
-                                    description: selectedItem?.name ?? option.primaryLabel,
-                                    unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
-                                    taxRate: selectedItem?.taxRate ?? row.taxRate,
-                                  }
-                                }))
-                              }}
-                            />
-                            <input
-                              value={it.description}
-                              onChange={(e) => {
-                                const nextDescription = e.target.value
-                                setItems((prev) => prev.map((row) => row.id === it.id ? {
-                                  ...row,
-                                  description: nextDescription,
-                                  itemId: undefined,
-                                } : row))
-                              }}
-                              placeholder="Or type a custom description..."
-                              className="w-full text-sm text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/30 placeholder:text-gray-300"
-                            />
-                            {it.itemId ? (
-                              <p className="text-[11px] text-emerald-600 font-medium truncate">
-                                Selected: {selectedCatalogItem?.name ?? it.description}
-                              </p>
-                            ) : (
-                              <p className="text-[11px] text-gray-400">Custom descriptions are supported.</p>
-                            )}
+                              aria-label="Create new product"
+                              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 whitespace-nowrap disabled:text-slate-300 disabled:hover:text-slate-300 disabled:cursor-not-allowed">
+                              + New product
+                            </button>
                           </div>
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100">
                           <input
+                            type="text"
+                            aria-label="Description"
+                            value={it.description}
+                            onChange={(e) => {
+                              const nextDescription = e.target.value
+                              setItems((prev) => prev.map((row) => row.id === it.id ? {
+                                ...row,
+                                description: nextDescription,
+                              } : row))
+                            }}
+                            placeholder="Description"
+                            className="w-full text-sm text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/30"
+                          />
+                        </td>
+                        <td className="px-4 py-2 border-r border-gray-100">
+                          <input
                             type="number" min="0.01" step="0.01"
+                            aria-label="Quantity"
                             value={it.quantity}
-                            onChange={e => updateItem(it.id, 'quantity', e.target.value)}
+                            onChange={e => updateItem(it.id, 'quantity', Number(e.target.value))}
                             className="w-full text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100">
                           <input
                             type="number" min="0" step="0.01"
+                            aria-label="Rate"
                             value={it.unitPrice}
-                            onChange={e => updateItem(it.id, 'unitPrice', e.target.value)}
+                            onChange={e => updateItem(it.id, 'unitPrice', Number(e.target.value))}
                             className="w-full text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100">
@@ -835,6 +869,7 @@ export default function InvoiceCreatePage() {
                             />
                             <input
                               type="number" min="0" max="100" step="0.5"
+                              aria-label="Tax percentage"
                               value={it.taxRate}
                               onChange={e => {
                                 const nextRate = e.target.value
@@ -857,7 +892,7 @@ export default function InvoiceCreatePage() {
                         </td>
                         <td className="px-2 py-2">
                           {items.length > 1 && (
-                            <button onClick={() => removeItem(it.id)}
+                            <button onClick={() => removeItem(it.id)} aria-label="Remove line item" title="Remove line item"
                               className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
                               <Trash2 size={13} />
                             </button>
@@ -881,13 +916,14 @@ export default function InvoiceCreatePage() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500 flex-shrink-0">Discount</span>
                   <div className="flex items-center gap-1 ml-auto">
-                    <select value={discountType} onChange={e => setDiscountType(e.target.value as any)}
+                    <select aria-label="Discount type" value={discountType} onChange={e => setDiscountType(e.target.value as any)}
                       className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 focus:outline-none text-gray-600">
                       <option value="pct">%</option>
                       <option value="flat">{currency}</option>
                     </select>
                     <input
                       type="number" min="0" step="0.01"
+                      aria-label="Discount amount"
                       value={discountValue}
                       onChange={e => setDiscountValue(Number(e.target.value))}
                       className="w-20 text-right text-sm tabular-nums border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-400/30" />
@@ -1038,9 +1074,9 @@ export default function InvoiceCreatePage() {
                   </label>
                   {emailScheduleSend && (
                     <div className="ml-5 flex gap-2">
-                      <input type="date" value={emailScheduleDate} onChange={e => setEmailScheduleDate(e.target.value)}
+                      <input type="date" aria-label="Schedule send date" value={emailScheduleDate} onChange={e => setEmailScheduleDate(e.target.value)}
                         className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none" />
-                      <input type="time" value={emailScheduleTime} onChange={e => setEmailScheduleTime(e.target.value)}
+                      <input type="time" aria-label="Schedule send time" value={emailScheduleTime} onChange={e => setEmailScheduleTime(e.target.value)}
                         className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none" />
                     </div>
                   )}
@@ -1294,7 +1330,7 @@ export default function InvoiceCreatePage() {
                 {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Save Draft
               </button>
-              <button onClick={() => setShowSaveDraftMenu(p => !p)}
+              <button onClick={() => setShowSaveDraftMenu(p => !p)} aria-label="Toggle save draft options" title="Toggle save draft options"
                 className="px-2 py-2 border border-emerald-200 text-emerald-700 rounded-r-xl hover:bg-emerald-50 transition-colors">
                 <ChevronDown size={12} />
               </button>
@@ -1322,7 +1358,7 @@ export default function InvoiceCreatePage() {
                 {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 Send Invoice
               </button>
-              <button onClick={() => setShowSendMenu(p => !p)}
+              <button onClick={() => setShowSendMenu(p => !p)} aria-label="Toggle send options" title="Toggle send options"
                 className="px-2 py-2 bg-emerald-700 text-white rounded-r-xl hover:bg-emerald-800 transition-colors shadow-sm">
                 <ChevronDown size={12} />
               </button>
@@ -1383,6 +1419,13 @@ export default function InvoiceCreatePage() {
             })
             setShowQuickAddModal(false)
           }}
+        />
+      )}
+      {productModalLineItemId && (
+        <ProductFormModal
+          item={null}
+          onSaved={handleCreatedProduct}
+          onClose={() => setProductModalLineItemId(null)}
         />
       )}
 
