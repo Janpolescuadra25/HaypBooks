@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import {
   ArrowLeft, Plus, Trash2, Loader2, AlertCircle, ChevronDown,
   Save, Send, LayoutTemplate, Search, Check, X, ChevronRight,
-  FileText, Paperclip, Clock, RefreshCw, Printer, Download,
+  FileText, Paperclip, RefreshCw, Printer, Download,
   MoreHorizontal, Info, MapPin, Copy, Ban, History,
   Mail, Phone, Settings, Eye,
 } from 'lucide-react'
@@ -20,6 +20,7 @@ import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
 import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
+import { ProductPickerField } from '@/components/sales/pickers'
 import { useToast } from '@/components/ToastProvider'
 
 // ─── Print/PDF template theme definitions ────────────────────────────────────
@@ -258,8 +259,6 @@ export default function InvoiceCreatePage() {
 
   // Catalog (products & services for line item picker)
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
-  const [activeCatalogRow, setActiveCatalogRow] = useState<string | null>(null)
-  const [recentlyUsedItems, setRecentlyUsedItems] = useState<string[]>([])
 
   // Quick-add customer
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
@@ -390,18 +389,6 @@ export default function InvoiceCreatePage() {
   const removeItem = (id: string) => setItems(p => p.filter(it => it.id !== id))
   const updateItem = (id: string, f: keyof Omit<LineItem, 'id'>, v: string | number) =>
     setItems(p => p.map(it => it.id === id ? { ...it, [f]: v } : it))
-
-  const pickCatalogItem = (rowId: string, cat: CatalogItem) => {
-    setItems(p => p.map(it => it.id === rowId ? {
-      ...it,
-      itemId: cat.id,
-      description: cat.name,
-      unitPrice: cat.salesPrice ?? it.unitPrice,
-      taxRate: cat.taxRate ?? it.taxRate,
-    } : it))
-    setRecentlyUsedItems(p => [cat.id, ...p.filter(id => id !== cat.id)].slice(0, 5))
-    setActiveCatalogRow(null)
-  }
 
   const handleSave = async (action: 'draft' | 'send') => {
     if (!customerId) { setError('Please select a customer.'); return }
@@ -725,111 +712,52 @@ export default function InvoiceCreatePage() {
                 <tbody>
                   {items.map((it, i) => {
                     const lineTotal = it.quantity * it.unitPrice
+                    const selectedCatalogItem = it.itemId ? catalogItems.find((c) => c.id === it.itemId) : undefined
                     return (
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                         <td className="px-4 py-2 text-gray-400 text-xs border-r border-gray-100 text-center">{i + 1}</td>
-                        <td className="px-4 py-2 border-r border-gray-100 relative">
-                          <div className="flex items-center gap-1">
+                        <td className="px-4 py-2 border-r border-gray-100">
+                          <div className="space-y-1.5">
+                            <ProductPickerField
+                              companyId={companyId || ''}
+                              value={it.itemId ?? null}
+                              placeholder="Search products or services..."
+                              onChange={(selectedId, option) => {
+                                setItems((prev) => prev.map((row) => {
+                                  if (row.id !== it.id) return row
+                                  if (!selectedId) return { ...row, itemId: undefined }
+                                  const selectedItem = catalogItems.find((c) => c.id === selectedId)
+                                  return {
+                                    ...row,
+                                    itemId: selectedId,
+                                    description: selectedItem?.name ?? option.primaryLabel,
+                                    unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
+                                    taxRate: selectedItem?.taxRate ?? row.taxRate,
+                                  }
+                                }))
+                              }}
+                            />
                             <input
                               value={it.description}
-                              onChange={e => { updateItem(it.id, 'description', e.target.value); setActiveCatalogRow(it.id) }}
-                              onFocus={() => setActiveCatalogRow(it.id)}
-                              onBlur={() => setTimeout(() => setActiveCatalogRow(null), 150)}
-                              placeholder="Type or select a product / service…"
-                              className="flex-1 min-w-0 text-sm text-slate-800 bg-transparent border-0 outline-none focus:ring-0 placeholder:text-gray-300" />
-                            <button
-                              type="button"
-                              onMouseDown={e => { e.preventDefault(); setActiveCatalogRow(activeCatalogRow === it.id ? null : it.id) }}
-                              className="shrink-0 p-0.5 rounded hover:bg-gray-100 text-gray-300 hover:text-emerald-500 transition-colors">
-                              <ChevronDown size={12} />
-                            </button>
+                              onChange={(e) => {
+                                const nextDescription = e.target.value
+                                setItems((prev) => prev.map((row) => row.id === it.id ? {
+                                  ...row,
+                                  description: nextDescription,
+                                  itemId: undefined,
+                                } : row))
+                              }}
+                              placeholder="Or type a custom description..."
+                              className="w-full text-sm text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/30 placeholder:text-gray-300"
+                            />
+                            {it.itemId ? (
+                              <p className="text-[11px] text-emerald-600 font-medium truncate">
+                                Selected: {selectedCatalogItem?.name ?? it.description}
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-gray-400">Custom descriptions are supported.</p>
+                            )}
                           </div>
-                          {activeCatalogRow === it.id && (() => {
-                            const q = it.description.toLowerCase()
-                            const allMatches = catalogItems.filter(c =>
-                              !q || c.name.toLowerCase().includes(q) || (c.sku ?? '').toLowerCase().includes(q)
-                            )
-                            const recentItems = !q
-                              ? recentlyUsedItems.map(id => catalogItems.find(c => c.id === id)).filter(Boolean) as CatalogItem[]
-                              : []
-                            const products = allMatches.filter(c => c.type !== 'SERVICE').slice(0, 100)
-                            const services = allMatches.filter(c => c.type === 'SERVICE').slice(0, 100)
-                            const hasNoItems = catalogItems.length === 0
-
-                            const CatalogRow = ({ cat, keyPfx }: { cat: CatalogItem; keyPfx?: string }) => (
-                              <button
-                                key={`${keyPfx ?? ''}${cat.id}`}
-                                type="button"
-                                onMouseDown={() => pickCatalogItem(it.id, cat)}
-                                className="flex items-center justify-between w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 transition-colors border-b border-slate-50 last:border-0">
-                                <div>
-                                  <span className="font-medium text-slate-800">{cat.name}</span>
-                                  {cat.sku && <span className="ml-1.5 text-xs text-slate-400 font-mono">{cat.sku}</span>}
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
-                                    cat.type === 'SERVICE' ? 'bg-purple-50 text-purple-600' :
-                                    cat.type === 'INVENTORY' ? 'bg-emerald-50 text-emerald-600' :
-                                    'bg-blue-50 text-blue-600'
-                                  }`}>{cat.type === 'SERVICE' ? 'Service' : cat.type === 'INVENTORY' ? 'Inventory' : 'Product'}</span>
-                                  {cat.salesPrice != null && (
-                                    <span className="text-xs text-slate-500 tabular-nums">{fmt(cat.salesPrice)}</span>
-                                  )}
-                                </div>
-                              </button>
-                            )
-
-                            return (
-                              <div className="absolute left-0 top-full mt-1 z-40 w-80 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-72 overflow-y-auto">
-                                {hasNoItems && (
-                                  <div className="px-4 py-6 text-center">
-                                    <p className="text-xs font-semibold text-gray-500 mb-1">No catalog items yet</p>
-                                    <p className="text-xs text-gray-400">Add products &amp; services in Inventory, or type a custom description</p>
-                                  </div>
-                                )}
-                                {!hasNoItems && allMatches.length === 0 && q && (
-                                  <div className="px-4 py-4 text-center">
-                                    <p className="text-xs text-gray-400">No matches — will save as custom description</p>
-                                  </div>
-                                )}
-                                {recentItems.length > 0 && (
-                                  <>
-                                    <div className="px-3 pt-2.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-                                      <Clock size={10} /> Recently Used
-                                    </div>
-                                    {recentItems.map(cat => <CatalogRow key={`r-${cat.id}`} cat={cat} keyPfx="r-" />)}
-                                    {(products.length > 0 || services.length > 0) && <div className="border-t border-gray-100" />}
-                                  </>
-                                )}
-                                {products.length > 0 && (
-                                  <>
-                                    <div className="px-3 pt-2.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide">📦 Products</div>
-                                    {products.map(cat => <CatalogRow key={cat.id} cat={cat} />)}
-                                    {services.length > 0 && <div className="border-t border-gray-100" />}
-                                  </>
-                                )}
-                                {services.length > 0 && (
-                                  <>
-                                    <div className="px-3 pt-2.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide">💼 Services</div>
-                                    {services.map(cat => <CatalogRow key={cat.id} cat={cat} />)}
-                                  </>
-                                )}
-                                <div className="border-t border-gray-100 p-2 sticky bottom-0 bg-white">
-                                  <button
-                                    type="button"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault()
-                                      setActiveCatalogRow(null)
-                                      router.push('/sales/sales/products-services')
-                                    }}
-                                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                  >
-                                    <Plus size={12} /> + Create New Product / Service
-                                  </button>
-                                </div>
-                              </div>
-                            )
-                          })()}
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100">
                           <input
