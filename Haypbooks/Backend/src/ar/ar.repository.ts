@@ -662,7 +662,7 @@ export class ArRepository {
     // ─── Invoices ─────────────────────────────────────────────────────────────
 
     async findInvoices(companyId: string, opts: {
-        customerId?: string, status?: string, openOnly?: boolean, from?: Date, to?: Date, limit?: number, offset?: number
+        customerId?: string, status?: string, openOnly?: boolean, search?: string, from?: Date, to?: Date, limit?: number, offset?: number
     } = {}) {
         await this.transitionOverdueInvoices(companyId)
         const where: any = {
@@ -682,6 +682,14 @@ export class ArRepository {
             where.status = { in: ['SENT', 'PARTIAL', 'OVERDUE'] as any }
         } else if (opts.status) {
             where.status = opts.status as any
+        }
+
+        const search = String(opts.search ?? '').trim()
+        if (search) {
+            where.OR = [
+                { invoiceNumber: { contains: search, mode: 'insensitive' } },
+                { customer: { contact: { displayName: { contains: search, mode: 'insensitive' } } } },
+            ]
         }
 
         return this.prisma.invoice.findMany({

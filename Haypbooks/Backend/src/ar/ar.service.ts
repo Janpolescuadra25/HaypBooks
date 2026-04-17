@@ -915,6 +915,7 @@ export class ArService {
             customerId: opts.customerId,
             status: statusFilter,
             openOnly,
+            search: opts.search,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
