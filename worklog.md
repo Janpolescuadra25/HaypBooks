@@ -1,5 +1,13 @@
 # Worklog
 
+### Ticket 7 - Wire Searchable Pickers Into Existing Forms (7A-7D) - COMPLETE
+- 7A: Wired ProductPickerField into invoice line items and auto-filled description, unit price, and tax rate while preserving free-text edits.
+- 7B: Wired InvoicePickerField into Credit Note apply modal with open-invoice filtering and parsed balance preview.
+- 7C: Wired BankAccountPickerField into Customer Payments deposit destination flow while keeping Undeposited Funds behavior unchanged.
+- 7D: Wired TaxCodePickerField into invoice line-item tax controls with tax-rate auto-fill and line tax feedback.
+- Quality gate per sub-ticket: Backend smoke `test/ar-invoice-status-state-machine.smoke.e2e-spec.ts` passed and Frontend `npx tsc --noEmit` passed.
+- Commits pushed: af3fe558, 18064c84, 74782890, e6b01b37.
+
 ### Ticket 6 - Searchable Picker Components (6A-6D) - COMPLETE
 - 6A: Shared picker foundation + ProductPickerField (debounced server search)
 - 6B: InvoicePickerField + AR invoice search backend support
