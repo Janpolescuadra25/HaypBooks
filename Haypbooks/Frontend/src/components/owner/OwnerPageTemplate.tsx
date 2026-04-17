@@ -363,6 +363,7 @@ export default function OwnerPageTemplate<T extends Record<string, any>>({
   showImport = false,
   onImport,
   onRefresh,
+  onSearch,
   onHelp,
   emptyTitle,
   emptyDescription,

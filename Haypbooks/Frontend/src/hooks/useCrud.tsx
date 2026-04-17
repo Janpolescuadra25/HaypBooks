@@ -219,6 +219,7 @@ export function useCrud<T extends Record<string, any> = any>(
     setSaving(true)
     setError(null)
     try {
+      if (!companyId) throw new Error('Company context is required')
       if (modalMode === 'edit' && editingRow?.id) {
         await apiClient.put(`${endpoint(companyId)}/${editingRow.id}`, formData)
       } else {
@@ -238,6 +239,7 @@ export function useCrud<T extends Record<string, any> = any>(
     setSaving(true)
     setError(null)
     try {
+      if (!companyId) throw new Error('Company context is required')
       await apiClient.delete(`${endpoint(companyId)}/${id}`)
       await fetchData()
     } catch (err: any) {

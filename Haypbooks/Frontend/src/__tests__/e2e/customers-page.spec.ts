@@ -376,7 +376,7 @@ test.describe('Customers Page E2E', () => {
       const signinBtn = page.locator('button:has-text("Sign in"), button:has-text("Sign In")').first();
       await signinBtn.click();
       // Wait for page to navigate away from /login (the destination may be /verification, /workspace, etc.)
-      await page.waitForURL((url) => !url.includes('/login'), { timeout: 15000 }).catch(() => {});
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 }).catch(() => {});
       await waitMs(500);
       // Set onboarding cookies so Next.js middleware allows access to protected app routes.
       // Without these cookies the middleware redirects to /onboarding even when a JWT is present.

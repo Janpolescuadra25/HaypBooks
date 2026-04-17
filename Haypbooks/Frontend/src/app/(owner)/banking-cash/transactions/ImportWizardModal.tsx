@@ -690,7 +690,7 @@ export default function ImportWizardModal({ open, onClose, onImportComplete }: I
                                   className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                 />
                               </td>
-                              <td className="px-3 py-3 text-slate-600">{row.date ?? row.dateRaw || '—'}</td>
+                              <td className="px-3 py-3 text-slate-600">{(row.date ?? row.dateRaw) || '—'}</td>
                               <td className="px-3 py-3">
                                 <div className="font-medium text-slate-800">{row.description || '—'}</div>
                                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
@@ -790,7 +790,7 @@ export default function ImportWizardModal({ open, onClose, onImportComplete }: I
             {step < 4 ? (
               <div className="flex items-center justify-between gap-3">
                 <button
-                  onClick={step === 0 ? handleModalClose : () => setStep(current => Math.max(0, (current - 1) as WizardStep))}
+                  onClick={step === 0 ? handleModalClose : () => setStep(current => (Math.max(0, current - 1) as WizardStep))}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
                   {step === 0 ? 'Cancel' : <><ChevronLeft className="h-4 w-4" /> Back</>}
@@ -807,7 +807,7 @@ export default function ImportWizardModal({ open, onClose, onImportComplete }: I
                   </button>
                 ) : (
                   <button
-                    onClick={() => setStep(current => Math.min(3, (current + 1) as WizardStep))}
+                    onClick={() => setStep(current => (Math.min(3, current + 1) as WizardStep))}
                     disabled={!canAdvance}
                     className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >

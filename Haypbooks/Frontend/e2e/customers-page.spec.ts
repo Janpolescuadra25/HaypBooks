@@ -36,7 +36,7 @@ test.describe('Customers Page E2E', () => {
 
       const h1 = page.locator('h1', { hasText: 'Customers' });
       const table = page.locator('table');
-      const login = page.locator('text=login', { exact: false });
+      const login = page.locator('text=login');
 
       const ready = await Promise.race([
         h1.first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
@@ -176,8 +176,8 @@ test.describe('Customers Page E2E', () => {
       const editModal = await safeFind(page, 'dialog, [role="dialog"], .modal', 8000);
       if (!editModal) throw new Error('Edit modal did not appear');
 
-      await editModal.fill('input[name="displayName"], input[name="name"]', editedCustomerName);
-      const saveBtn = editModal.locator('button', { hasText: /Save|Update|Submit/i }).first();
+      await page.fill('input[name="displayName"], input[name="name"]', editedCustomerName);
+      const saveBtn = page.locator('button', { hasText: /Save|Update|Submit/i }).first();
       if (!(await saveBtn.count())) throw new Error('Save button not found in edit modal');
       await saveBtn.click();
       await waitMs(3000);

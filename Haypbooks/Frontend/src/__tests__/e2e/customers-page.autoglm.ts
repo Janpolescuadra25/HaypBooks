@@ -1,3 +1,4 @@
+// @ts-nocheck
 // AutoGLM E2E script for Customers page
 // This script is intended for the AutoGLM browser extension environment.
 

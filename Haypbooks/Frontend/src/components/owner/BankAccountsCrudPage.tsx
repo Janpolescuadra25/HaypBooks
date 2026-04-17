@@ -55,6 +55,16 @@ export default function BankAccountsPage() {
     URL.revokeObjectURL(url)
   }
 
+  async function deleteSelected() {
+    if (!crud.selectedIds.length) return
+    if (!window.confirm(`Delete ${crud.selectedIds.length} selected bank account(s)?`)) return
+
+    for (const id of crud.selectedIds) {
+      await crud.deleteRecord(id)
+    }
+    crud.clearSelection()
+  }
+
   return (
     <>
       <OwnerPageTemplate
@@ -79,7 +89,7 @@ export default function BankAccountsPage() {
         emptyAction={{ label: `Add Bank Account`, onClick: crud.openCreate }}
         bulkActions={[
           { label: 'Export Selected', icon: <Download size={13} />, onClick: exportSelected },
-          { label: 'Delete Selected', icon: <Trash2 size={13} />, onClick: crud.bulkDelete ?? (() => {}), variant: 'danger' },
+          { label: 'Delete Selected', icon: <Trash2 size={13} />, onClick: deleteSelected, variant: 'danger' },
         ]}
         filters={[
           { key: 'status', label: 'Status', type: 'select' as const, options: [

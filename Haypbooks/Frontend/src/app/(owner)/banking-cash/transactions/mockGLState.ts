@@ -954,7 +954,7 @@ export function undoCategorize(tx: MockBankTransaction): MockBankTransaction {
     newValue: 'PENDING',
   });
 
-  const reverted = {
+  const reverted: MockBankTransaction = {
     ...tx,
     status: 'PENDING',
     transactionType: undefined,
