@@ -662,28 +662,36 @@ export class ArRepository {
     // ─── Invoices ─────────────────────────────────────────────────────────────
 
     async findInvoices(companyId: string, opts: {
-        customerId?: string, status?: string, from?: Date, to?: Date, limit?: number, offset?: number
+        customerId?: string, status?: string, openOnly?: boolean, from?: Date, to?: Date, limit?: number, offset?: number
     } = {}) {
         await this.transitionOverdueInvoices(companyId)
+        const where: any = {
+            companyId,
+            deletedAt: null,
+            ...(opts.customerId ? { customerId: opts.customerId } : {}),
+            ...(opts.from || opts.to ? {
+                date: {
+                    ...(opts.from ? { gte: opts.from } : {}),
+                    ...(opts.to ? { lte: opts.to } : {}),
+                },
+            } : {}),
+        }
+
+        if (opts.openOnly) {
+            where.balance = { gt: 0 }
+            where.status = { in: ['SENT', 'PARTIAL', 'OVERDUE'] as any }
+        } else if (opts.status) {
+            where.status = opts.status as any
+        }
+
         return this.prisma.invoice.findMany({
-            where: {
-                companyId,
-                deletedAt: null,
-                ...(opts.customerId ? { customerId: opts.customerId } : {}),
-                ...(opts.status ? { status: opts.status as any } : {}),
-                ...(opts.from || opts.to ? {
-                    date: {
-                        ...(opts.from ? { gte: opts.from } : {}),
-                        ...(opts.to ? { lte: opts.to } : {}),
-                    },
-                } : {}),
-            },
+            where,
             include: {
                 customer: { include: { contact: { select: { displayName: true } } } },
                 lines: { select: { id: true, description: true, quantity: true, unitPrice: true, totalPrice: true } },
                 createdBy: { select: { id: true, name: true } },
             },
-            orderBy: { date: 'desc' },
+            orderBy: [{ date: 'desc' }, { invoiceNumber: 'desc' }],
             take: opts.limit ?? 50,
             skip: opts.offset ?? 0,
         })

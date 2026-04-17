@@ -63,6 +63,19 @@ test.describe('Invoices', () => {
     return { customerId, invoice }
   }
 
+  const createDraftInvoiceForCustomer = async (page: any, customerId: string, amount: number, description: string) => {
+    if (!companyId) throw new Error('Missing company id for fixtures')
+    const createRes = await page.request.post(`/api/companies/${companyId}/ar/invoices`, {
+      data: {
+        customerId,
+        dueDate: futureIso(7),
+        items: [{ description, quantity: 1, unitPrice: amount, amount }],
+      },
+    })
+    expect(createRes.ok()).toBe(true)
+    return createRes.json()
+  }
+
   test.beforeEach(async ({ page }) => {
     const ctx = loadContext()
     companyId = ctx.companyId
@@ -277,6 +290,59 @@ test.describe('Invoices', () => {
     const latestLinked = linkedItems[0] ?? null
     expect((latestLinked?.memo ?? '').toLowerCase()).toContain('negative line-item equivalent')
     expect(latestLinked?.invoiceId).toBe(invoice.id)
+  })
+
+  test('apply credit note modal lists open customer invoices and shows formatted amount', async ({ page }) => {
+    if (!companyId) {
+      test.skip()
+      return
+    }
+
+    const customerId = await createFixtureCustomer(page)
+    const invoice = await createDraftInvoiceForCustomer(page, customerId, 1000, 'Apply-credit fixture invoice line')
+    const sendRes = await page.request.post(`/api/companies/${companyId}/ar/invoices/${invoice.id}/send`, { data: {} })
+    expect(sendRes.ok()).toBe(true)
+    const sentInvoice = await sendRes.json()
+    const invoiceRef = sentInvoice?.invoiceNumber ?? String(invoice?.id ?? '').slice(0, 8).toUpperCase()
+
+    const cnRes = await page.request.post(`/api/companies/${companyId}/ar/credit-notes`, {
+      data: {
+        customerId,
+        reason: 'Apply flow regression fixture',
+        totalAmount: 1000,
+      },
+    })
+    expect(cnRes.ok()).toBe(true)
+    const creditNote = await cnRes.json()
+    const creditNoteRef = creditNote?.creditNoteNumber ?? `CN-${String(creditNote?.id ?? '').slice(0, 8)}`
+
+    await gotoSalesPage(page, '/sales/revenue/credit-notes', companyId)
+    await waitForTableToLoad(page)
+
+    const search = page.locator(selectors.searchInput).first()
+    if (await search.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await search.fill(creditNoteRef)
+      await waitForTableToLoad(page)
+    }
+
+    const row = page.locator('table tbody tr', { hasText: creditNoteRef }).first()
+    await expect(row).toBeVisible({ timeout: 10000 })
+    await row.getByRole('button', { name: /^apply$/i }).click()
+
+    const modal = page.locator('div[role="dialog"], div.fixed.inset-0').filter({ hasText: 'Apply Credit Note' }).first()
+    await expect(modal).toBeVisible({ timeout: 10000 })
+
+    const invoiceSelect = modal.locator('select').first()
+    await expect(invoiceSelect).toBeVisible({ timeout: 10000 })
+    await expect(invoiceSelect.locator('option', { hasText: invoiceRef })).toHaveCount(1, { timeout: 10000 })
+    await invoiceSelect.selectOption(String(invoice.id))
+
+    const amountInput = modal.locator('input').first()
+    await expect(amountInput).toHaveValue(/1,000\.00/)
+
+    await modal.getByRole('button', { name: /^apply$/i }).click()
+    await expect(page.getByText(/credit note applied to invoice/i)).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('table tbody tr', { hasText: creditNoteRef }).first()).toContainText(/APPLIED/i, { timeout: 10000 })
   })
 
   test('column visibility menu toggles columns', async ({ page }) => {

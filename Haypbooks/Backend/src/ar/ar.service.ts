@@ -903,12 +903,18 @@ export class ArService {
     async listInvoices(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
         const requestedStatus = String(opts.status ?? '').toUpperCase()
-        const statusFilter = requestedStatus === 'PARTIALLY_PAID'
+        const openOnly = ['true', '1', 'yes'].includes(String(opts.openOnly ?? '').toLowerCase())
+            || requestedStatus === 'UNPAID'
+            || requestedStatus === 'OPEN'
+        const statusFilter = openOnly
+            ? undefined
+            : requestedStatus === 'PARTIALLY_PAID'
             ? 'PARTIAL'
             : (requestedStatus || undefined)
         const invoices = await this.repo.findInvoices(companyId, {
             customerId: opts.customerId,
             status: statusFilter,
+            openOnly,
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,

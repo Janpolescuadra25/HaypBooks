@@ -87,6 +87,19 @@ function statusBadge(status: string) {
   }
 }
 
+function parseApplyAmount(value: string): number {
+  const normalized = String(value ?? '').replace(/,/g, '').trim()
+  if (!normalized) return Number.NaN
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
+function formatApplyAmount(value: string | number): string {
+  const parsed = typeof value === 'number' ? value : parseApplyAmount(value)
+  if (!Number.isFinite(parsed)) return ''
+  return parsed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 type SortDirection = 'asc' | 'desc'
 type SortKey = 'creditNoteNumber' | 'customer' | 'invoiceNumber' | 'date' | 'amount' | 'memo' | 'status'
 
@@ -148,6 +161,7 @@ export default function CreditNotesPage() {
   const [applyForm, setApplyForm] = useState({ invoiceId: '', amount: '' })
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState('')
+  const [applyAmountFocused, setApplyAmountFocused] = useState(false)
 
   // Column defs
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
@@ -269,7 +283,8 @@ export default function CreditNotesPage() {
 
   function openApplyModal(cn: CreditNoteRow) {
     setApplyingCN(cn)
-    setApplyForm({ invoiceId: cn.invoiceId ?? '', amount: cn.amount.toString() })
+    setApplyForm({ invoiceId: cn.invoiceId ?? '', amount: String(cn.amount ?? '') })
+    setApplyAmountFocused(false)
     setApplyError('')
     setApplyOpen(true)
     loadInvoicesForCustomer(cn.customerId)
@@ -279,11 +294,23 @@ export default function CreditNotesPage() {
     if (!companyId || !customerId) return
     setInvoicesLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices`, { params: { customerId, status: 'UNPAID', limit: 50 } })
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices`, {
+        params: { customerId, openOnly: true, limit: 50 },
+      })
       const raw: any[] = Array.isArray(data) ? data : data?.items || []
-      setInvoices(raw.map((inv: any) => ({ id: inv.id, invoiceNumber: inv.invoiceNumber ?? inv.id?.slice(0, 8), balance: Number(inv.balance ?? inv.amount ?? 0) })))
+      const openInvoices = raw.map((inv: any) => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber ?? inv.id?.slice(0, 8),
+        balance: Number(inv.balance ?? inv.amountDue ?? inv.amount ?? 0),
+      }))
+      setInvoices(openInvoices)
+      setApplyForm((prev) => ({
+        ...prev,
+        invoiceId: openInvoices.some((inv) => inv.id === prev.invoiceId) ? prev.invoiceId : '',
+      }))
     } catch {
       setInvoices([])
+      setApplyForm((prev) => ({ ...prev, invoiceId: '' }))
     } finally {
       setInvoicesLoading(false)
     }
@@ -293,12 +320,13 @@ export default function CreditNotesPage() {
     e.preventDefault()
     if (!companyId || !applyingCN) return
     if (!applyForm.invoiceId) { setApplyError('Select an invoice'); return }
-    if (!applyForm.amount || parseFloat(applyForm.amount) <= 0) { setApplyError('Enter a valid amount'); return }
+    const applyAmount = parseApplyAmount(applyForm.amount)
+    if (!Number.isFinite(applyAmount) || applyAmount <= 0) { setApplyError('Enter a valid amount'); return }
     setApplying(true); setApplyError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/credit-notes/${applyingCN.id}/apply`, {
         invoiceId: applyForm.invoiceId,
-        amount: parseFloat(applyForm.amount),
+        amount: applyAmount,
       })
       setApplyOpen(false)
       fetchData()
@@ -657,26 +685,35 @@ export default function CreditNotesPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Invoice *</label>
                 <select
                   required
+                  aria-label="Invoice to apply credit note"
                   value={applyForm.invoiceId}
                   onChange={e => setApplyForm(f => ({ ...f, invoiceId: e.target.value }))}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                 >
-                  <option value="">{invoicesLoading ? 'Loading invoices…' : 'Select invoice…'}</option>
+                  <option value="">{invoicesLoading ? 'Loading invoices…' : invoices.length === 0 ? 'No open invoices for this customer' : 'Select invoice…'}</option>
                   {invoices.map(inv => (
                     <option key={inv.id} value={inv.id}>{inv.invoiceNumber} (Balance: {formatCurrency(inv.balance, currency)})</option>
                   ))}
                 </select>
+                {!invoicesLoading && invoices.length === 0 && (
+                  <p className="mt-1 text-xs text-slate-500">No open invoices for this customer</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Amount to Apply *</label>
                 <input
                   required
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  max={applyingCN.amount}
-                  value={applyForm.amount}
-                  onChange={e => setApplyForm(f => ({ ...f, amount: e.target.value }))}
+                  type="text"
+                  inputMode="decimal"
+                  aria-label="Amount to apply"
+                  value={applyAmountFocused ? applyForm.amount : formatApplyAmount(applyForm.amount)}
+                  onFocus={() => setApplyAmountFocused(true)}
+                  onBlur={() => setApplyAmountFocused(false)}
+                  onChange={e => {
+                    const normalized = e.target.value.replace(/,/g, '').replace(/[^\d.]/g, '')
+                    if ((normalized.match(/\./g) ?? []).length > 1) return
+                    setApplyForm(f => ({ ...f, amount: normalized }))
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                 />
               </div>
