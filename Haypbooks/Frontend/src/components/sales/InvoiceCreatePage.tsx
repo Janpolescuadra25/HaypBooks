@@ -729,9 +729,10 @@ export default function InvoiceCreatePage() {
                         <td className="px-4 py-2 border-r border-gray-100">
                           <div className="space-y-1.5">
                             <ProductPickerField
-                              companyId={companyId || ''}
+                              companyId={companyId ?? ''}
                               value={it.itemId ?? null}
                               placeholder="Search products or services..."
+                              disabled={!companyId}
                               onChange={(selectedId, option) => {
                                 setItems((prev) => prev.map((row) => {
                                   if (row.id !== it.id) return row
@@ -786,9 +787,10 @@ export default function InvoiceCreatePage() {
                         <td className="px-4 py-2 border-r border-gray-100">
                           <div className="space-y-1.5">
                             <TaxCodePickerField
-                              companyId={companyId || ''}
+                              companyId={companyId ?? ''}
                               value={it.taxCodeId ?? null}
                               placeholder="Search tax code..."
+                              disabled={!companyId}
                               onChange={(selectedId, option) => {
                                 if (!selectedId) {
                                   setItems((prev) => prev.map((row) => row.id === it.id ? {

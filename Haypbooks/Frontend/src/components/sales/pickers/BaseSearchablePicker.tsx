@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { ChevronDown, Loader2, Search, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
@@ -31,10 +32,13 @@ export default function BaseSearchablePicker({
   emptyMessage = 'No matching results',
 }: BaseSearchablePickerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestIdRef = useRef(0)
+  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 })
 
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -79,16 +83,45 @@ export default function BaseSearchablePicker({
     [companyId, disabled, filters, mapResponseToOptions, searchEndpoint, value]
   )
 
+  const updateDropdownPosition = useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+    const rect = trigger.getBoundingClientRect()
+    const width = Math.min(rect.width, window.innerWidth - 16)
+    const left = Math.max(8, Math.min(rect.left + window.scrollX, window.innerWidth - width - 8))
+    setDropdownStyle({
+      top: rect.bottom + window.scrollY,
+      left,
+      width,
+    })
+  }, [])
+
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
-      if (!rootRef.current) return
-      if (rootRef.current.contains(event.target as Node)) return
+      if (rootRef.current?.contains(event.target as Node)) return
+      if (dropdownRef.current?.contains(event.target as Node)) return
       setOpen(false)
     }
 
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [])
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('')
+      setHighlightedIndex(-1)
+      return
+    }
+
+    updateDropdownPosition()
+    window.addEventListener('resize', updateDropdownPosition)
+    window.addEventListener('scroll', updateDropdownPosition, true)
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition)
+      window.removeEventListener('scroll', updateDropdownPosition, true)
+    }
+  }, [open, updateDropdownPosition])
 
   useEffect(() => {
     if (!open) {
@@ -141,6 +174,31 @@ export default function BaseSearchablePicker({
     })
   }, [highlightedIndex, open])
 
+  const triggerLabel = useMemo(() => {
+    if (!hasValue || !selectedOption) return placeholder
+    return selectedOption.primaryLabel
+  }, [hasValue, placeholder, selectedOption])
+
+  const shouldDisable = disabled || !companyId
+  const triggerText = !companyId ? 'Loading company...' : triggerLabel
+
+  const onTriggerKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (shouldDisable) return
+
+      if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+        event.preventDefault()
+        setOpen(true)
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setOpen(false)
+      }
+    },
+    [shouldDisable]
+  )
+
   const selectOption = useCallback(
     (option: PickerOption) => {
       setSelectedOption(option)
@@ -161,28 +219,6 @@ export default function BaseSearchablePicker({
       onChange('', { id: '', primaryLabel: '' })
     },
     [onChange]
-  )
-
-  const triggerLabel = useMemo(() => {
-    if (!hasValue || !selectedOption) return placeholder
-    return selectedOption.primaryLabel
-  }, [hasValue, placeholder, selectedOption])
-
-  const onTriggerKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (disabled) return
-
-      if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
-        event.preventDefault()
-        setOpen(true)
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setOpen(false)
-      }
-    },
-    [disabled]
   )
 
   const onSearchKeyDown = useCallback(
@@ -231,15 +267,19 @@ export default function BaseSearchablePicker({
 
       <div className="relative">
         <button
+          ref={triggerRef}
           type="button"
-          disabled={disabled}
-          onClick={() => setOpen((prev) => !prev)}
+          disabled={shouldDisable}
+          onClick={() => {
+            if (shouldDisable) return
+            setOpen((prev) => !prev)
+          }}
           onKeyDown={onTriggerKeyDown}
           className="flex w-full items-center rounded-lg border border-emerald-100 bg-white px-3 py-2 pr-16 text-left text-sm outline-none transition-colors hover:bg-emerald-50/40 focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-          aria-expanded={open}
+          aria-expanded={open ? 'true' : 'false'}
           aria-haspopup="listbox"
         >
-          <span className={hasValue ? 'text-slate-900' : 'text-slate-400'}>{triggerLabel}</span>
+          <span className={hasValue ? 'text-slate-900' : 'text-slate-400'}>{triggerText}</span>
         </button>
 
         {hasValue && !disabled ? (
@@ -259,8 +299,18 @@ export default function BaseSearchablePicker({
         />
       </div>
 
-      {open && !disabled ? (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-xl">
+      {shouldDisable ? null : open ? createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'absolute',
+            top: dropdownStyle.top,
+            left: dropdownStyle.left,
+            width: dropdownStyle.width,
+            zIndex: 9999,
+          }}
+          className="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-xl"
+        >
           <div className="border-b border-emerald-100 p-2">
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -278,7 +328,11 @@ export default function BaseSearchablePicker({
             </div>
           </div>
 
-          <div className="max-h-64 overflow-y-auto">
+          <div
+            role="listbox"
+            aria-activedescendant={highlightedIndex >= 0 ? `option-${options[highlightedIndex]?.id}` : undefined}
+            className="max-h-64 overflow-y-auto"
+          >
             {loading && options.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-slate-500">Searching...</p>
             ) : fetchError ? (
@@ -289,12 +343,13 @@ export default function BaseSearchablePicker({
               options.map((option, index) => (
                 <button
                   key={option.id}
+                  id={`option-${option.id}`}
                   ref={(element) => {
                     optionRefs.current[index] = element
                   }}
                   type="button"
                   role="option"
-                  aria-selected={highlightedIndex === index}
+                  aria-selected={highlightedIndex === index ? 'true' : 'false'}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   onClick={() => selectOption(option)}
                   className={`flex w-full items-start justify-between gap-3 border-b border-slate-100 px-3 py-2 text-left last:border-b-0 ${
@@ -314,7 +369,7 @@ export default function BaseSearchablePicker({
               ))
             )}
           </div>
-        </div>
+        </div>, document.body
       ) : null}
 
       {error ? <p className="mt-1 text-xs text-rose-500">{error}</p> : null}
