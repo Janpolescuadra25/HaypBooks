@@ -7,6 +7,9 @@
 - 7D: Wired TaxCodePickerField into invoice line-item tax controls with tax-rate auto-fill and line tax feedback.
 - Quality gate per sub-ticket: Backend smoke `test/ar-invoice-status-state-machine.smoke.e2e-spec.ts` passed and Frontend `npx tsc --noEmit` passed.
 - Commits pushed: af3fe558, 18064c84, 74782890, e6b01b37.
+- Follow-up Fix 2: Consolidated invoice create API loading for catalog items and customers into a single concurrent load.
+- Follow-up Fix 3: Verified no sales-area TODO/FIXME markers remain for the invoice create flow.
+- Follow-up Fix 5: Validated invoice create page against sales Playwright audit tests under `playwright.sales.config.ts`.
 
 ### Ticket 6 - Searchable Picker Components (6A-6D) - COMPLETE
 - 6A: Shared picker foundation + ProductPickerField (debounced server search)

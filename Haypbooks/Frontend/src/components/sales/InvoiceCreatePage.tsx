@@ -298,11 +298,17 @@ export default function InvoiceCreatePage() {
   const [showSaveDraftMenu, setShowSaveDraftMenu] = useState(false)
   const [showSendMenu, setShowSendMenu] = useState(false)
 
-  const loadCatalogItems = useCallback(async () => {
+  const loadInvoiceDependencies = useCallback(async () => {
     if (!companyId) return
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/inventory/items?limit=500`)
-      const list: any[] = Array.isArray(data) ? data : data.items ?? []
+
+    const [catalogResult, customersResult] = await Promise.allSettled([
+      apiClient.get(`/companies/${companyId}/inventory/items?limit=500`),
+      apiClient.get(`/companies/${companyId}/ar/customers`),
+    ])
+
+    if (catalogResult.status === 'fulfilled') {
+      const catalogData = catalogResult.value.data
+      const list: any[] = Array.isArray(catalogData) ? catalogData : catalogData.items ?? []
       setCatalogItems(list.map(i => ({
         id: i.id,
         name: i.name,
@@ -311,8 +317,28 @@ export default function InvoiceCreatePage() {
         salesPrice: i.salesPrice != null ? Number(i.salesPrice) : null,
         taxRate: i.taxRate != null ? Number(i.taxRate) : undefined,
       })))
-    } catch {
+    } else {
       setCatalogItems([])
+    }
+
+    if (customersResult.status === 'fulfilled') {
+      const customersData = customersResult.value.data
+      const list: any[] = Array.isArray(customersData)
+        ? customersData
+        : customersData?.data ?? customersData.items ?? customersData.customers ?? []
+      setCustomers(list.map(c => ({
+        contactId: c.contactId ?? c.id,
+        name: c.name ?? c.displayName ?? '',
+        email: c.email ?? c.contact?.email ?? '',
+        phone: c.phone ?? c.phoneNumber ?? '',
+        balance: Number(c.balance ?? 0),
+        billingAddress: c.billingAddress ?? c.address,
+        shippingAddress: c.shippingAddress,
+        paymentTerms: c.paymentTerms ?? c.terms,
+        taxRate: c.taxRate != null ? Number(c.taxRate) : undefined,
+      })))
+    } else {
+      setCustomers([])
     }
   }, [companyId])
 
@@ -320,7 +346,9 @@ export default function InvoiceCreatePage() {
     if (!companyId) return
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
-      const list: any[] = Array.isArray(data) ? data : data?.data ?? data.items ?? data.customers ?? []
+      const list: any[] = Array.isArray(data)
+        ? data
+        : data?.data ?? data.items ?? data.customers ?? []
       setCustomers(list.map(c => ({
         contactId: c.contactId ?? c.id,
         name: c.name ?? c.displayName ?? '',
@@ -338,12 +366,8 @@ export default function InvoiceCreatePage() {
   }, [companyId])
 
   useEffect(() => {
-    loadCatalogItems()
-  }, [loadCatalogItems])
-
-  useEffect(() => {
-    loadCustomers()
-  }, [loadCustomers])
+    void loadInvoiceDependencies()
+  }, [loadInvoiceDependencies])
 
   useEffect(() => {
     setMemo(template.defaultMessage)
