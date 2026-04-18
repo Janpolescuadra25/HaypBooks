@@ -327,19 +327,20 @@ export default function VendorCreditsPage() {
                         </td>
                         <td className="px-4 py-3 font-medium text-slate-800 truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title={row.creditNumber}>{row.creditNumber}</td>
                         <td className="px-4 py-3 text-slate-700 truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title={row.vendor}>{row.vendor}</td>
-                      <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber }} title={row.billNumber ?? ''}>{row.billNumber}</td>
-                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }}>{row.date}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-800" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>{formatCurrency(row.amount, currency)}</td>
-                      <td className="px-4 py-3 text-emerald-700" style={{ width: colWidths.appliedAmount, minWidth: colWidths.appliedAmount, maxWidth: colWidths.appliedAmount }}>{formatCurrency(row.appliedAmount, currency)}</td>
-                      <td className="px-4 py-3 font-semibold text-indigo-700" style={{ width: colWidths.remainingCredit, minWidth: colWidths.remainingCredit, maxWidth: colWidths.remainingCredit }}>{formatCurrency(row.remainingCredit, currency)}</td>
-                      <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.reason, minWidth: colWidths.reason, maxWidth: colWidths.reason }} title={row.reason}>{row.reason}</td>
-                      <td className="px-4 py-3" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }}>
-                        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber }} title={row.billNumber ?? ''}>{row.billNumber}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }}>{row.date}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-800" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>{formatCurrency(row.amount, currency)}</td>
+                        <td className="px-4 py-3 text-emerald-700" style={{ width: colWidths.appliedAmount, minWidth: colWidths.appliedAmount, maxWidth: colWidths.appliedAmount }}>{formatCurrency(row.appliedAmount, currency)}</td>
+                        <td className="px-4 py-3 font-semibold text-indigo-700" style={{ width: colWidths.remainingCredit, minWidth: colWidths.remainingCredit, maxWidth: colWidths.remainingCredit }}>{formatCurrency(row.remainingCredit, currency)}</td>
+                        <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.reason, minWidth: colWidths.reason, maxWidth: colWidths.reason }} title={row.reason}>{row.reason}</td>
+                        <td className="px-4 py-3" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }}>
+                          <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

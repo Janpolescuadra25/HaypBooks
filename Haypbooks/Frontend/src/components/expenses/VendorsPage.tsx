@@ -142,13 +142,14 @@ export default function VendorsPage() {
                     <td className="px-4 py-2.5 text-emerald-600/70 hidden lg:table-cell">{v.phone ?? '—'}</td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(v.balance ?? 0)}</td>
                     <td className="px-4 py-2.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => { setEditing(v); setShowForm(true) }} className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(v.id)} className="p-1 rounded hover:bg-red-100 text-red-400"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => { setEditing(v); setShowForm(true) }} className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(v.id)} className="p-1 rounded hover:bg-red-100 text-red-400"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
