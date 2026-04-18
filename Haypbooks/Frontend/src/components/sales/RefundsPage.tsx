@@ -115,6 +115,7 @@ export default function RefundsPage() {
   const [detailTab, setDetailTab] = useState<'details' | 'activity'>('details')
   const [refundActivity, setRefundActivity] = useState<any[]>([])
   const [refundActivityLoading, setRefundActivityLoading] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<RefundFormData>({ customerId: '', amount: '', method: 'BANK_TRANSFER', refundDate: new Date().toISOString().split('T')[0], reason: '' })
   const [formSaving, setFormSaving] = useState(false)
   const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
@@ -239,11 +240,24 @@ export default function RefundsPage() {
     if (!companyId || !formData.customerId || !formData.amount) { toast.error('Customer and amount are required'); return }
     setFormSaving(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/refunds`, formData)
-      toast.success('Refund created')
+      if (editingId) {
+        await apiClient.put(`/companies/${companyId}/ar/refunds/${editingId}`, formData)
+        toast.success('Refund updated')
+        setEditingId(null)
+      } else {
+        await apiClient.post(`/companies/${companyId}/ar/refunds`, formData)
+        toast.success('Refund created')
+      }
       setShowForm(false); fetchItems()
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Save failed') }
     finally { setFormSaving(false) }
+  }
+
+  function openEditRefund(row: RefundRow) {
+    setEditingId(row.id)
+    setFormData({ customerId: row.customerId ?? '', amount: String(row.amount ?? ''), method: row.method ?? 'BANK_TRANSFER', refundDate: row.date ?? new Date().toISOString().split('T')[0], reason: row.reason ?? '' })
+    setShowForm(true)
+    loadCustomers()
   }
 
   const openDetail = (row: RefundRow) => {
@@ -415,6 +429,8 @@ export default function RefundsPage() {
                   ))}
                   <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
+                      <button onClick={(e) => { e.stopPropagation(); openEditRefund(row) }} title="Edit Refund"
+                        className="p-1.5 rounded hover:bg-gray-100 text-slate-600 transition-colors"><X size={14} /></button>
                       {(row.status === 'PENDING' || row.approvalStatus === 'PENDING') && (
                         <button onClick={() => handleProcess(row.id)} title="Process Refund"
                           className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 transition-colors"><CheckCircle size={14} /></button>

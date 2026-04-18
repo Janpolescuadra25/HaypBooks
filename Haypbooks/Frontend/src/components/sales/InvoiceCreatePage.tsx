@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   ArrowLeft, Plus, Trash2, Loader2, AlertCircle,
-  Save, Send, Check, X, ChevronRight,
+  Save, Send, Check, X, ChevronRight, ChevronDown,
   FileText, Paperclip, Printer,
   MapPin,
   Mail, Phone, Settings, Eye,
@@ -20,6 +20,7 @@ import { getPrintTheme } from '@/lib/invoice-templates/printThemes'
 import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/invoice-templates/templateStorage'
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
+import InvoiceSettingsModal, { DEFAULT_INVOICE_SETTINGS, type InvoiceSettings } from '@/components/sales/InvoiceSettingsModal'
 import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
 import ProductFormModal from '@/components/sales/ProductFormModal'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
@@ -196,6 +197,10 @@ export default function InvoiceCreatePage() {
   const [saving, setSaving] = useState(false)
   const [saveAction, setSaveAction] = useState<'draft' | 'send'>('draft')
   const [error, setError] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>(DEFAULT_INVOICE_SETTINGS)
+  const [showSaveMenu, setShowSaveMenu] = useState(false)
+  const [showSendMenu, setShowSendMenu] = useState(false)
 
   const loadCustomers = useCallback(async () => {
     if (!companyId) return
@@ -301,7 +306,8 @@ export default function InvoiceCreatePage() {
     setProductModalLineItemId(null)
   }
 
-  const handleSave = async (action: 'draft' | 'send') => {
+  const handleSave = async (action: 'draft' | 'send', options?: { navigate?: boolean }) => {
+    const navigate = options?.navigate ?? false
     if (!customerId) { setError('Please select a customer.'); return }
     const validItems = items.filter(it => it.description.trim())
     if (validItems.length === 0) { setError('Add at least one line item.'); return }
@@ -327,23 +333,30 @@ export default function InvoiceCreatePage() {
           taxRate: Number(it.taxRate),
         })),
       })
+
       if (action === 'send' && inv?.id) {
-        const { data: sent } = await apiClient.post(`/companies/${companyId}/ar/invoices/${inv.id}/send`, {
+        await apiClient.post(`/companies/${companyId}/ar/invoices/${inv.id}/send`, {
           subject: emailSubject,
           body: emailMessage,
           ...(emailCc ? { cc: emailCc } : {}),
           ...(emailBcc ? { bcc: emailBcc } : {}),
           sendCopy: emailSendCopyToSelf,
         })
-        const invoiceRef = sent?.invoiceNumber ?? inv?.invoiceNumber ?? `INV-${String(inv.id).slice(-6).toUpperCase()}`
-        toast.success(`Invoice #${invoiceRef} marked as Sent`)
+        toast.success('Invoice sent successfully')
       }
+
+      if (action === 'draft') {
+        toast.success('Invoice saved as draft')
+      }
+
       recordTemplateUsage(template.id)
-      router.push('/sales/billing/invoices')
+      if (navigate) router.push('/sales/billing/invoices')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to save invoice')
     } finally {
       setSaving(false)
+      setShowSaveMenu(false)
+      setShowSendMenu(false)
     }
   }
 
@@ -1183,30 +1196,65 @@ export default function InvoiceCreatePage() {
             Cancel
           </button>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleSave('draft')}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
-            >
-              {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Save as Draft
+            <div className="relative inline-flex items-center">
+              <button
+                onClick={() => handleSave('draft')}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-l-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
+              >
+                {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Save as Draft
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSaveMenu(v => !v) }}
+                className="px-2 py-2 border-y border-r border-emerald-200 rounded-r-xl text-emerald-700 hover:bg-emerald-50"
+                aria-label="More save options"
+              >
+                <ChevronDown size={14} />
+              </button>
+              {showSaveMenu && (
+                <div className="absolute right-0 bottom-full mb-2 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                  <button onClick={() => handleSave('draft', { navigate: true })} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Save &amp; Close</button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative inline-flex items-center">
+              <button
+                onClick={() => handleSave('send', { navigate: true })}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-l-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                Send Invoice
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSendMenu(v => !v) }}
+                className="px-2 py-2 border-y border-r bg-emerald-50 border-emerald-200 rounded-r-xl text-emerald-700 hover:bg-emerald-100"
+                aria-label="More send options"
+              >
+                <ChevronDown size={14} />
+              </button>
+              {showSendMenu && (
+                <div className="absolute right-0 bottom-full mb-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                  <button onClick={() => { handleSave('send', { navigate: true }); setShowSendMenu(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Send &amp; Close</button>
+                  <button onClick={() => { handleSave('send', { navigate: false }); setShowSendMenu(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Send &amp; Stay</button>
+                  <button onClick={() => { setShowSettings(true); setShowSendMenu(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Schedule Send…</button>
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => setActiveCreateTab('print')} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">
+              <Printer size={14} /> Print
             </button>
-            <button
-              onClick={() => handleSave('send')}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
-            >
-              {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              Send Invoice
-            </button>
-            {/* ⚙️ Invoice Settings button → opens large modal */}
+
             <button
               type="button"
-              title="Coming soon"
-              className="flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-400">
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
               <Settings size={15} />
               Invoice Settings
-              <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Soon</span>
             </button>
           </div>
         </div>
@@ -1221,6 +1269,13 @@ export default function InvoiceCreatePage() {
           />
         )}
       </AnimatePresence>
+      {showSettings && (
+        <InvoiceSettingsModal
+          initial={invoiceSettings}
+          onApply={(s) => { setInvoiceSettings(s); setShowSettings(false); toast.success('Invoice settings saved') }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
       {/* Quick Add Customer Modal */}
       {showQuickAddModal && (
         <QuickAddCustomerModal

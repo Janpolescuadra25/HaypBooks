@@ -155,6 +155,7 @@ export default function CreditNotesPage() {
 
   // Create modal
   const [newOpen, setNewOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [custLoading, setCustLoading] = useState(false)
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
@@ -371,10 +372,25 @@ export default function CreditNotesPage() {
   }, [companyId])
 
   function openModal() {
+    setEditingId(null)
     setNc({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
     setSaveError('')
     setNewOpen(true)
     loadCustomers()
+  }
+
+  function openEditCN(row: CreditNoteRow) {
+    setEditingId(row.id)
+    setNc({
+      customerId: row.customerId ?? '',
+      invoiceId: row.invoiceId ?? '',
+      totalAmount: row.amount ? String(row.amount) : '',
+      reason: row.memo || CREDIT_REASONS[0],
+    })
+    setSaveError('')
+    setNewOpen(true)
+    loadCustomers()
+    if (row.customerId) loadInvoicesForCustomer(row.customerId, row.invoiceId ?? '')
   }
 
   async function submitNewCreditNote(e: React.FormEvent) {
@@ -385,15 +401,28 @@ export default function CreditNotesPage() {
     if (!Number.isFinite(newAmount) || newAmount <= 0) { setSaveError('Enter a valid amount'); return }
     setSaving(true); setSaveError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
-        customerId: nc.customerId,
-        invoiceId: nc.invoiceId || undefined,
-        totalAmount: newAmount,
-        reason: nc.reason,
-      })
-      setNewOpen(false)
-      fetchData()
-      showToast('Credit note created')
+      if (editingId) {
+        await apiClient.put(`/companies/${companyId}/ar/credit-notes/${editingId}`, {
+          customerId: nc.customerId,
+          invoiceId: nc.invoiceId || undefined,
+          totalAmount: newAmount,
+          reason: nc.reason,
+        })
+        setNewOpen(false)
+        fetchData()
+        showToast('Credit note updated')
+        setEditingId(null)
+      } else {
+        await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
+          customerId: nc.customerId,
+          invoiceId: nc.invoiceId || undefined,
+          totalAmount: newAmount,
+          reason: nc.reason,
+        })
+        setNewOpen(false)
+        fetchData()
+        showToast('Credit note created')
+      }
     } catch (err: any) {
       setSaveError(err?.response?.data?.message || 'Failed to create credit note')
     } finally {
@@ -565,6 +594,13 @@ export default function CreditNotesPage() {
                     ))}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => openEditCN(row)}
+                          className="text-xs font-semibold text-slate-500 hover:text-slate-700 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <span className="text-slate-300">·</span>
                         {row.status !== 'VOID' && row.status !== 'APPLIED' && (
                           <>
                             <button

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Search, Plus, MoreHorizontal, Package, Wrench, Tag,
-  Pencil, Trash2, Loader2, AlertCircle, RefreshCw,
+  Pencil, Trash2, Loader2, AlertCircle, RefreshCw, Clock,
   ChevronLeft, ChevronRight, ArrowUpDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
@@ -243,12 +243,15 @@ export default function ProductsServicesPage() {
             <h1 className="text-2xl font-bold text-slate-900">Products &amp; Services</h1>
             <p className="text-sm text-slate-500 mt-0.5">Manage items used in invoices and purchases</p>
           </div>
-          <button
-            onClick={() => setModalItem('new')}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors"
-          >
-            <Plus size={15} /> New Item
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => router.push('/sales/sales/products-services/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-100 rounded-lg hover:bg-slate-50 text-slate-700 transition-colors"><Clock size={14} /> Activity Log</button>
+            <button
+              onClick={() => setModalItem('new')}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors"
+            >
+              <Plus size={15} /> New Item
+            </button>
+          </div>
         </div>
 
         {/* ── Filters bar ── */}

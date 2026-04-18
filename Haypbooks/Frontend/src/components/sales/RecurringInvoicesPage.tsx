@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
-  Download, Eye, Play, Pause, FileX, Zap, ArrowUpDown, Clock,
+  Download, Eye, Play, Pause, FileX, Zap, ArrowUpDown, Clock, Pencil,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -120,6 +120,7 @@ export default function RecurringInvoicesPage() {
   const [batchLoading, setBatchLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [detailItem, setDetailItem] = useState<RecurringRow | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<RecurringFormData>({ customerId: '', frequency: 'MONTHLY', startDate: new Date().toISOString().split('T')[0], endDate: '', amount: '' })
   const [formSaving, setFormSaving] = useState(false)
   const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
@@ -245,16 +246,40 @@ export default function RecurringInvoicesPage() {
     if (!companyId || !formData.customerId || !formData.amount) { toast.error('Customer and amount are required'); return }
     setFormSaving(true)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/recurring-invoices`, {
-        customerId: formData.customerId,
-        frequency: formData.frequency,
-        startDate: formData.startDate,
-        endDate: formData.endDate || undefined,
-        templateData: { totalAmount: Number(formData.amount) },
-      })
-      toast.success('Recurring template created'); setShowForm(false); fetchItems()
+      if (editingId) {
+        await apiClient.put(`/companies/${companyId}/ar/recurring-invoices/${editingId}`, {
+          customerId: formData.customerId,
+          frequency: formData.frequency,
+          startDate: formData.startDate,
+          endDate: formData.endDate || undefined,
+          templateData: { totalAmount: Number(formData.amount) },
+        })
+        toast.success('Recurring template updated'); setShowForm(false); fetchItems(); setEditingId(null)
+      } else {
+        await apiClient.post(`/companies/${companyId}/ar/recurring-invoices`, {
+          customerId: formData.customerId,
+          frequency: formData.frequency,
+          startDate: formData.startDate,
+          endDate: formData.endDate || undefined,
+          templateData: { totalAmount: Number(formData.amount) },
+        })
+        toast.success('Recurring template created'); setShowForm(false); fetchItems()
+      }
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Save failed') }
     finally { setFormSaving(false) }
+  }
+
+  function openEditRecurring(row: RecurringRow) {
+    setEditingId(row.id)
+    setFormData({
+      customerId: row.customerId ?? '',
+      frequency: row.frequency ?? 'MONTHLY',
+      startDate: row.nextRunDate ?? row.nextRun ?? new Date().toISOString().split('T')[0],
+      endDate: '',
+      amount: String(getRowAmount(row) ?? ''),
+    })
+    setShowForm(true)
+    loadCustomers()
   }
 
   const visibleCols = cols.filter(c => c.visible)
@@ -400,6 +425,11 @@ export default function RecurringInvoicesPage() {
                   ))}
                   <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
+                      <button onClick={(e) => { e.stopPropagation(); openEditRecurring(row) }} title="Edit"
+                        className="p-1.5 rounded hover:bg-gray-100 text-slate-600 transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <span className="hidden sm:inline-block"> </span>
                       <button onClick={() => handleGenerate(row.id)} title="Generate Invoice Now"
                         className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 transition-colors"><Zap size={14} /></button>
                       <button onClick={() => handleTogglePause(row)} title={row.status === 'ACTIVE' || row.status === 'Active' ? 'Pause' : 'Resume'}

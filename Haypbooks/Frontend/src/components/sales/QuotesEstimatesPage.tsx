@@ -328,9 +328,15 @@ export default function QuotesEstimatesPage() {
     if (!window.confirm('Convert this quote to an invoice?')) return
     setActioningId(quoteId)
     try {
-      await apiClient.post(`/companies/${companyId}/ar/quotes/${quoteId}/convert`)
+      const { data } = await apiClient.post(`/companies/${companyId}/ar/quotes/${quoteId}/convert`)
       fetchQuotes(page, statusFilter)
-      showToast('Quote converted to invoice successfully')
+      showToast('Quote converted to invoice')
+      const invoiceId = data?.invoiceId ?? data?.id ?? data?.data?.id ?? null
+      if (invoiceId) {
+        router.push(`/sales/billing/invoices/${invoiceId}`)
+      } else {
+        router.push('/sales/billing/invoices')
+      }
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Failed to convert quote')
     } finally {
