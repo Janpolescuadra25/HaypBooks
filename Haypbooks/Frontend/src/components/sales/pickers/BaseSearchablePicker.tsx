@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { MouseEvent as ReactMouseEvent } from 'react'
-import { ChevronDown, Loader2, Search, Plus, X } from 'lucide-react'
+import { ChevronDown, Plus, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import type { PickerOption, PickerProps } from './types'
 
@@ -93,7 +93,7 @@ export default function BaseSearchablePicker({
 
     const rect = trigger.getBoundingClientRect()
     const viewportPadding = 8
-    const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2)
+    const width = Math.min(Math.max(rect.width, 260), window.innerWidth - viewportPadding * 2)
     const left = Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - width - viewportPadding))
     const top = rect.bottom + 4
 
@@ -322,12 +322,12 @@ export default function BaseSearchablePicker({
             width: dropdownStyle.width,
             zIndex: 9999,
           }}
-          className="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-xl"
+          className="rounded-lg border border-gray-200 bg-white shadow-xl"
         >
           <div
             role="listbox"
             aria-activedescendant={highlightedIndex >= 0 ? `option-${options[highlightedIndex]?.id}` : undefined}
-            className="max-h-64 overflow-y-auto"
+            className="max-h-60 overflow-auto"
           >
             {loading && options.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-slate-500">Searching...</p>
@@ -366,19 +366,21 @@ export default function BaseSearchablePicker({
                     aria-selected={highlightedIndex === index ? 'true' : 'false'}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => selectOption(option)}
-                    className={`flex w-full items-start justify-between gap-3 border-b border-slate-100 px-3 py-2 text-left last:border-b-0 ${
+                    className={`w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 ${
                       highlightedIndex === index ? 'bg-emerald-50' : 'hover:bg-emerald-50/70'
                     }`}
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{option.primaryLabel}</p>
-                      {option.secondaryLabel ? (
-                        <p className="truncate text-xs text-slate-500">{option.secondaryLabel}</p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="whitespace-normal break-words text-sm font-semibold text-slate-900">{option.primaryLabel}</p>
+                        {option.secondaryLabel ? (
+                          <p className="mt-0.5 whitespace-normal break-words text-xs text-slate-500">{option.secondaryLabel}</p>
+                        ) : null}
+                      </div>
+                      {option.tertiaryLabel ? (
+                        <span className="shrink-0 text-xs text-slate-500">{option.tertiaryLabel}</span>
                       ) : null}
                     </div>
-                    {option.tertiaryLabel ? (
-                      <span className="shrink-0 text-xs text-slate-500">{option.tertiaryLabel}</span>
-                    ) : null}
                   </button>
                 ))}
                 {onAddNew ? (
