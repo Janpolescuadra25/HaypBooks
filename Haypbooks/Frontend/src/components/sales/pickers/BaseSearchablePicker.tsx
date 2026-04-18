@@ -36,7 +36,7 @@ export default function BaseSearchablePicker({
   createLabel,
 }: BaseSearchablePickerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
-  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const triggerRef = useRef<HTMLDivElement | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -90,15 +90,12 @@ export default function BaseSearchablePicker({
   const updateDropdownPosition = useCallback(() => {
     const trigger = triggerRef.current
     if (!trigger) return
+
     const rect = trigger.getBoundingClientRect()
-    const width = Math.min(rect.width, window.innerWidth - 16)
-    const left = Math.max(8, Math.min(rect.left + window.scrollX, window.innerWidth - width - 8))
-    const dropdownHeight = 320
-    const availableBottom = window.innerHeight - rect.bottom - 8
-    const availableTop = rect.top - 8
-    const top = availableBottom < 220 && availableTop > availableBottom
-      ? Math.max(8, rect.top + window.scrollY - dropdownHeight)
-      : rect.bottom + window.scrollY
+    const viewportPadding = 8
+    const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2)
+    const left = Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - width - viewportPadding))
+    const top = rect.bottom + 4
 
     setDropdownStyle({
       top,
@@ -269,7 +266,7 @@ export default function BaseSearchablePicker({
         </label>
       ) : null}
 
-      <div className="relative">
+      <div ref={triggerRef} className="relative">
         <input
           ref={inputRef}
           type="text"
@@ -322,7 +319,7 @@ export default function BaseSearchablePicker({
             position: 'fixed',
             top: dropdownStyle.top,
             left: dropdownStyle.left,
-            minWidth: dropdownStyle.width,
+            width: dropdownStyle.width,
             zIndex: 9999,
           }}
           className="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-xl"
