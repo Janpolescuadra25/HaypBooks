@@ -240,7 +240,7 @@ export default function ShortcutsClient() {
         {/* ── Keyboard Shortcuts Modal ── */}
         {showKb && typeof window !== 'undefined' && createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => setShowKb(false)}
           >
             <div

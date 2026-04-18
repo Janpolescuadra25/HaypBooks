@@ -67,7 +67,7 @@ export default function PageDocumentation({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-5xl h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200">
         <div className="flex items-center justify-between p-4 border-b border-slate-200">
           <h2 className="text-lg font-bold">Documentation - {title}</h2>

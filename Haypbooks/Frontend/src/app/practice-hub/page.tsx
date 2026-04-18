@@ -756,7 +756,7 @@ function ClientListPanel() {
       </div>
 
       {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Client List Help</h2>
@@ -3430,7 +3430,7 @@ function DashboardPanel() {
       </div>
 
       {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Practice Dashboard Help</h2>

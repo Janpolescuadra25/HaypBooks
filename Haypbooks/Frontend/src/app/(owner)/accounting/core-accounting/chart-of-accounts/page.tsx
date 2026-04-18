@@ -458,7 +458,7 @@ function AccountModal({
   const headerAccounts = flatAccounts.filter(a => a.isHeader && a.id !== account?.id && !descendants.has(a.id))
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-stretch justify-end">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-stretch justify-end">
       <motion.div
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
@@ -653,7 +653,7 @@ function ImportModal({ onClose, onImported, companyId }: { onClose: () => void; 
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
         onClick={onClose}>
         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 30, stiffness: 280 }}
@@ -1043,7 +1043,7 @@ export default function ChartOfAccountsPage() {
         </div>
 
         {docOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
               <div className="flex items-center justify-between p-4 border-b border-slate-200">
                 <h2 className="text-lg font-bold">Chart of Accounts Help</h2>

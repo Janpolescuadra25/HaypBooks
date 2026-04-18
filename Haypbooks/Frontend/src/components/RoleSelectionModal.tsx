@@ -17,8 +17,8 @@ export default function RoleSelectionModal({ onClose }: { onClose: () => void })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div role="dialog" aria-modal="true" aria-labelledby="role-select-title" className="bg-white rounded-xl shadow-lg max-w-xl w-full mx-4 p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div role="dialog" aria-modal="true" aria-labelledby="role-select-title" className="bg-white rounded-xl shadow-2xl max-w-xl w-full mx-4 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 id="role-select-title" className="text-lg font-bold">How will you use HaypBooks?</h2>

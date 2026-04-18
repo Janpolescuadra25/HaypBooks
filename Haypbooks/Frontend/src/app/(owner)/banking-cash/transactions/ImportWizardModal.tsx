@@ -449,7 +449,7 @@ export default function ImportWizardModal({ open, onClose, onImportComplete }: I
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm p-4">
       <div className="flex min-h-full items-center justify-center">
         <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
           <div className="border-b border-slate-200 px-6 py-5">

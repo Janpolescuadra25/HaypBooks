@@ -135,7 +135,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-md">
         <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between"><h2 className="text-lg font-bold text-emerald-900">Record Bill Payment</h2><button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button></div>
         <div className="p-6 space-y-4">

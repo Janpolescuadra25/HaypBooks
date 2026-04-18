@@ -185,8 +185,8 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="hub-select-title" className="bg-white rounded-xl shadow-lg max-w-3xl w-full mx-4 p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="hub-select-title" className="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 id="hub-select-title" className="text-lg font-bold">Choose how you want to use HaypBooks today</h2>

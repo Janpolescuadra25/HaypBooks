@@ -53,8 +53,8 @@ export default function AddCompanyModal({ workspaceId, onClose, onSuccess }: Pro
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-bold mb-4">Add New Company</h2>
         
         <form onSubmit={handleSubmit}>

@@ -136,7 +136,7 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
 
   return (
     <>
-    <div className="fixed inset-0 z-[60] flex items-stretch bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-stretch bg-black/60 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}

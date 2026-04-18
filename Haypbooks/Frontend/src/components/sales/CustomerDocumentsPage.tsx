@@ -135,7 +135,7 @@ export default function CustomerDocumentsPage() {
       </div>
 
       {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-y-auto max-h-[90vh]">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-lg font-bold">Customer Documents Documentation</h2>

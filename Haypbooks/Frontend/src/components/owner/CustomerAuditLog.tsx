@@ -119,7 +119,7 @@ export default function CustomerAuditLog({ customerId, customerName, isOpen, onC
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
             onClick={onClose}
           />
 

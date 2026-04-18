@@ -69,7 +69,7 @@ function GroupFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900">{mode === 'create' ? 'New Customer Group' : 'Edit Group'}</h2>
@@ -503,7 +503,7 @@ export default function CustomerGroupsPage() {
 
       {/* Help */}
       {helpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-200 overflow-y-auto max-h-[85vh]">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-base font-semibold">Customer Groups Help</h2>

@@ -173,7 +173,7 @@ export default function OwnerTopBar() {
 
       {/* Logout confirmation modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4">
             <h3 className="text-lg font-black text-emerald-950 mb-1">Sign out?</h3>
             <p className="text-sm text-emerald-600/80 mb-6">You will be redirected to the login page.</p>
