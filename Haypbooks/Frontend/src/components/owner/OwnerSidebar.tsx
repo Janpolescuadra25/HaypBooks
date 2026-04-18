@@ -468,7 +468,7 @@ export default function OwnerSidebar() {
       {!isSecondaryVisible && (
         <button
           onClick={() => setIsSecondaryVisible(true)}
-          className="absolute top-1/2 -translate-y-1/2 right-[-10px] z-30 flex items-center justify-center w-5 h-12 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-l-full shadow-md hover:shadow-lg transition-all cursor-pointer border border-r-0 border-emerald-700"
+          className="absolute top-1/2 -translate-y-1/2 right-[-10px] z-30 flex items-center justify-center w-5 h-12 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer border border-emerald-700"
           aria-label="Expand sidebar"
           title="Open navigation"
         >
