@@ -18,7 +18,7 @@ export default function ModuleTabs({ tabs, basePath }: ModuleTabsProps) {
   const pathname = usePathname()
 
   return (
-    <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <div className="bg-white border-b border-slate-200 shrink-0 shadow-sm">
       <div className="px-6 overflow-x-auto">
         <nav className="flex gap-1 min-w-max" aria-label="Module tabs">
           {tabs.map((tab) => {

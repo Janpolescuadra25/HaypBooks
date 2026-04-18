@@ -11,5 +11,5 @@ export const dynamic = 'force-dynamic'
 // import TopNav from '@/components/layout/top-nav'
 
 export default function OwnerLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>
+  return <div className="h-full">{children}</div>
 }

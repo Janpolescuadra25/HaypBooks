@@ -23,8 +23,8 @@ export default function TransactionsLayout({ children }: { children: React.React
   if (isFullScreen) return <>{children}</>
 
   return (
-    <>
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <div className="flex flex-col h-full">
+      <div className="bg-white border-b border-slate-200 shrink-0 shadow-sm">
         <div className="px-6 overflow-x-auto">
           <nav className="flex gap-1 min-w-max" aria-label="Transactions tabs">
             {TABS.map(tab => {
@@ -48,7 +48,7 @@ export default function TransactionsLayout({ children }: { children: React.React
           </nav>
         </div>
       </div>
-      <div>{children}</div>
-    </>
+      <div className="flex-1 overflow-y-auto">{children}</div>
+    </div>
   )
 }

@@ -161,7 +161,7 @@ export default function Sidebar() {
             )}
           </div>
           <button
-            className={`${sidebarCollapsed ? 'mx-auto' : 'ml-auto'} my-1 inline-flex items-center justify-center size-6 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 transition-colors z-[60]`}
+            className={`${sidebarCollapsed ? 'mx-auto' : 'ml-auto'} my-1 inline-flex items-center justify-center size-6 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 transition-colors`}
             onClick={toggleSidebarCollapsed}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={sidebarCollapsed ? 'Expand' : 'Collapse'}
