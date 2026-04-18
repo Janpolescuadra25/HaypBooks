@@ -7,6 +7,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import ActivityLog, { type ActivityLogItem } from '@/components/ui/ActivityLog'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
 
@@ -141,8 +142,7 @@ export default function QuotesEstimatesPage() {
   // Detail drawer
   const [drawerQuote, setDrawerQuote] = useState<QuoteRow | null>(null)
   const [drawerTab, setDrawerTab] = useState<'details' | 'activity'>('details')
-  interface ActivityEntry { id: string; action: string; recordId: string; changes: any; createdAt: string; user: { id: string; name: string; email: string } }
-  const [drawerActivity, setDrawerActivity] = useState<ActivityEntry[]>([])
+  const [drawerActivity, setDrawerActivity] = useState<ActivityLogItem[]>([])
   const [drawerActivityLoading, setDrawerActivityLoading] = useState(false)
 
   useEffect(() => {
@@ -790,33 +790,11 @@ export default function QuotesEstimatesPage() {
                 <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
                   <Clock size={14} className="text-emerald-600" /> Audit Log
                 </h3>
-                {drawerActivityLoading ? (
-                  <div className="flex items-center justify-center py-10 text-slate-400">
-                    <Loader2 size={18} className="animate-spin mr-2" /> Loading activity…
-                  </div>
-                ) : drawerActivity.length === 0 ? (
-                  <div className="text-center py-10 text-slate-400 text-sm">No activity recorded yet.</div>
-                ) : (
-                  <div className="space-y-3">
-                    {drawerActivity.map(entry => (
-                      <div key={entry.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl text-xs">
-                        <div className="mt-0.5 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <Clock size={11} className="text-emerald-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="font-semibold text-slate-800">{entry.user?.name ?? entry.user?.email ?? 'System'}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-mono uppercase text-[10px]">{entry.action}</span>
-                          </div>
-                          <p className="text-slate-500">{new Date(entry.createdAt).toLocaleString()}</p>
-                          {entry.changes && Object.keys(entry.changes).length > 0 && (
-                            <pre className="mt-1 text-[10px] text-slate-400 bg-white rounded p-1.5 border border-slate-100 overflow-x-auto">{JSON.stringify(entry.changes, null, 2)}</pre>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ActivityLog
+                  entries={drawerActivity}
+                  loading={drawerActivityLoading}
+                  emptyMessage="No activity recorded yet."
+                />
               </div>
             )}
             <div className="px-5 py-4 border-t border-slate-200 flex gap-2">

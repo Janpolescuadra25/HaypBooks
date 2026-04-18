@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
+import { formatActivityValue } from '@/components/ui/ActivityLog'
 
 interface RecentInvoice {
   id: string
@@ -459,9 +460,7 @@ export default function CustomerDetailPage({ customerId }: { customerId: string 
                                   <tr key={k} className="border-t border-gray-100 first:border-0">
                                     <td className="px-3 py-1.5 text-gray-400 font-medium w-32 bg-gray-50">{k}</td>
                                     <td className="px-3 py-1.5 text-gray-700">
-                                      {typeof changes![k] === 'object' && changes![k] !== null
-                                        ? JSON.stringify(changes![k])
-                                        : String(changes![k] ?? '—')}
+                                      {formatActivityValue(changes![k])}
                                     </td>
                                   </tr>
                                 ))}

@@ -14,6 +14,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useToast } from '@/components/ToastProvider'
+import ActivityLog, { type ActivityLogItem } from '@/components/ui/ActivityLog'
 import type { Invoice } from './InvoicesPage'
 import EmailPreviewModal from './EmailPreviewModal'
 import TemplateManagerModal, { type EmailTemplate } from './TemplateManagerModal'
@@ -86,8 +87,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   )
   const [editSaving, setEditSaving] = useState(false)
   // Activity log state
-  interface ActivityEntry { id: string; action: string; recordId: string; changes: any; createdAt: string; user: { id: string; name: string; email: string } }
-  const [activityLog, setActivityLog] = useState<ActivityEntry[]>([])
+  const [activityLog, setActivityLog] = useState<ActivityLogItem[]>([])
   const [activityLoading, setActivityLoading] = useState(false)
 
   useEffect(() => {
@@ -840,33 +840,11 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                 <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                   <Clock size={14} className="text-emerald-600" /> Audit Log
                 </h3>
-                {activityLoading ? (
-                  <div className="flex items-center justify-center py-10 text-gray-400">
-                    <Loader2 size={18} className="animate-spin mr-2" /> Loading activity…
-                  </div>
-                ) : activityLog.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400 text-sm">No activity recorded yet.</div>
-                ) : (
-                  <div className="space-y-3">
-                    {activityLog.map(entry => (
-                      <div key={entry.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl text-xs">
-                        <div className="mt-0.5 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <Clock size={11} className="text-emerald-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="font-semibold text-gray-800">{entry.user?.name ?? entry.user?.email ?? 'System'}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-mono uppercase text-[10px]">{entry.action}</span>
-                          </div>
-                          <p className="text-gray-500">{new Date(entry.createdAt).toLocaleString()}</p>
-                          {entry.changes && Object.keys(entry.changes).length > 0 && (
-                            <pre className="mt-1 text-[10px] text-gray-400 bg-white rounded p-1.5 border border-gray-100 overflow-x-auto">{JSON.stringify(entry.changes, null, 2)}</pre>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ActivityLog
+                  entries={activityLog}
+                  loading={activityLoading}
+                  emptyMessage="No activity recorded yet."
+                />
               </div>
             )}
           </div>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { formatActivityValue } from '@/components/ui/ActivityLog'
 
 interface ActivityEntry {
   id: string
@@ -312,9 +313,7 @@ export default function CustomerActivityPage() {
                                     <tr key={k} className="border-t border-gray-100">
                                       <td className="px-3 py-1.5 text-gray-400 bg-gray-50 font-medium">{k}</td>
                                       <td className="px-3 py-1.5 text-gray-700">
-                                        {typeof changes![k] === 'object' && changes![k] !== null
-                                          ? JSON.stringify(changes![k])
-                                          : String(changes![k] ?? '—')}
+                                        {formatActivityValue(changes![k])}
                                       </td>
                                     </tr>
                                   ))}

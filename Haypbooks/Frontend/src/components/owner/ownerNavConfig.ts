@@ -87,6 +87,7 @@ export const navigationData: NavSection[] = [
       { title: 'Shortcuts', path: '/home/shortcuts' },
       { title: 'Setup Checklist', path: '/home/setup-center' },
       { title: 'Notifications', path: '/home/notifications' },
+      { title: 'Activity Feed', path: '/activity' },
     ],
   },
   {
