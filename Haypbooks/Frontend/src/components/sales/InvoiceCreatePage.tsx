@@ -275,6 +275,49 @@ export default function InvoiceCreatePage() {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
   const [productModalLineItemId, setProductModalLineItemId] = useState<string | null>(null)
 
+  const [colWidths, setColWidths] = useState({
+    index: 40,
+    product: 240,
+    description: 260,
+    quantity: 80,
+    rate: 100,
+    tax: 120,
+    amount: 100,
+    actions: 40,
+  })
+
+  function Resizer({ onResize }: { onResize: (deltaX: number) => void }) {
+    const [dragging, setDragging] = useState(false)
+    const startX = useRef(0)
+
+    useEffect(() => {
+      if (!dragging) return
+      const onMouseMove = (event: MouseEvent) => {
+        const delta = event.clientX - startX.current
+        startX.current = event.clientX
+        onResize(delta)
+      }
+      const onMouseUp = () => setDragging(false)
+      document.addEventListener('mousemove', onMouseMove)
+      document.addEventListener('mouseup', onMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', onMouseMove)
+        document.removeEventListener('mouseup', onMouseUp)
+      }
+    }, [dragging, onResize])
+
+    return (
+      <div
+        onMouseDown={(e) => {
+          e.preventDefault()
+          setDragging(true)
+          startX.current = e.clientX
+        }}
+        className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize ${dragging ? 'bg-emerald-400' : 'bg-gray-200'} hover:bg-emerald-400 transition-colors`}
+      />
+    )
+  }
+
   // Bill To editable fields
   const [billContact, setBillContact] = useState('')
   const [billCompany, setBillCompany] = useState('')
@@ -757,17 +800,17 @@ export default function InvoiceCreatePage() {
             </div>
 
             <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <table className="w-full text-sm border-collapse">
+              <table className="table-fixed w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 w-8 border-r border-gray-200">#</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Product / Service</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Description</th>
-                    <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-20">Qty</th>
-                    <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">Rate</th>
-                    <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-20">Tax %</th>
-                    <th className="text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-32">Amount</th>
-                    <th className="w-10"></th>
+                    <th style={{ width: colWidths.index }} className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-10">#</th>
+                    <th style={{ width: colWidths.product }} className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Product / Service</th>
+                    <th style={{ width: colWidths.description }} className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Description</th>
+                    <th style={{ width: colWidths.quantity }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Qty</th>
+                    <th style={{ width: colWidths.rate }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Rate</th>
+                    <th style={{ width: colWidths.tax }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Tax %</th>
+                    <th style={{ width: colWidths.amount }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Amount</th>
+                    <th style={{ width: colWidths.actions }} className="relative w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -778,33 +821,32 @@ export default function InvoiceCreatePage() {
                     return (
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                         <td className="px-4 py-2 text-gray-400 text-xs border-r border-gray-100 text-center">{i + 1}</td>
-                        <td className="px-4 py-2 border-r border-gray-100">
-                          <div>
-                            <ProductPickerField
-                              label="Product / Service"
-                              companyId={companyId ?? ''}
-                              value={it.itemId ?? null}
-                              disabled={!companyId}
-                              onChange={(selectedId, option) => {
-                                setItems((prev) => prev.map((row) => {
-                                  if (row.id !== it.id) return row
-                                  if (!selectedId) return { ...row, itemId: undefined }
-                                  const selectedItem = catalogItems.find((c) => c.id === selectedId)
-                                  return {
-                                    ...row,
-                                    itemId: selectedId,
-                                    description: selectedItem?.description ?? selectedItem?.name ?? option.primaryLabel,
-                                    unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
-                                    taxRate: selectedItem?.taxRate ?? row.taxRate,
-                                  }
-                                }))
-                              }}
-                              onAddNew={() => setProductModalLineItemId(it.id)}
-                              createLabel="+ New product"
-                            />
-                          </div>
+                        <td style={{ width: colWidths.product }} className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
+                          <ProductPickerField
+                            companyId={companyId ?? ''}
+                            value={it.itemId ?? null}
+                            placeholder="Select product..."
+                            disabled={!companyId}
+                            className="w-full h-8 text-sm"
+                            onChange={(selectedId, option) => {
+                              setItems((prev) => prev.map((row) => {
+                                if (row.id !== it.id) return row
+                                if (!selectedId) return { ...row, itemId: undefined }
+                                const selectedItem = catalogItems.find((c) => c.id === selectedId)
+                                return {
+                                  ...row,
+                                  itemId: selectedId,
+                                  description: selectedItem?.description ?? selectedItem?.name ?? option.primaryLabel,
+                                  unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
+                                  taxRate: selectedItem?.taxRate ?? row.taxRate,
+                                }
+                              }))
+                            }}
+                            onAddNew={() => setProductModalLineItemId(it.id)}
+                            createLabel="+ New product"
+                          />
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
                           <input
                             type="text"
                             aria-label="Description"
@@ -817,32 +859,33 @@ export default function InvoiceCreatePage() {
                               } : row))
                             }}
                             placeholder="Description"
-                            className="w-full text-sm text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/30"
+                            className="w-full h-8 text-sm text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-emerald-500/30"
                           />
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
                           <input
                             type="number" min="0.01" step="0.01"
                             aria-label="Quantity"
                             value={it.quantity}
                             onChange={e => updateItem(it.id, 'quantity', Number(e.target.value))}
-                            className="w-full text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
+                            className="w-full h-8 text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
                           <input
                             type="number" min="0" step="0.01"
                             aria-label="Rate"
                             value={it.unitPrice}
                             onChange={e => updateItem(it.id, 'unitPrice', Number(e.target.value))}
-                            className="w-full text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
+                            className="w-full h-8 text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100">
-                          <div className="space-y-1.5">
+                        <td style={{ width: colWidths.tax }} className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
                             <TaxCodePickerField
-                              label="Tax code"
                               companyId={companyId ?? ''}
                               value={it.taxCodeId ?? null}
+                              placeholder="Search tax code..."
                               disabled={!companyId}
+                              className="w-full h-8 text-sm"
                               onChange={(selectedId, option) => {
                                 if (!selectedId) {
                                   setItems((prev) => prev.map((row) => row.id === it.id ? {
@@ -874,11 +917,8 @@ export default function InvoiceCreatePage() {
                                   taxCodeLabel: undefined,
                                 } : row))
                               }}
-                              className="w-full text-sm text-right text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-emerald-500/30 tabular-nums"
+                              className="w-20 h-8 text-sm text-right text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-emerald-500/30 tabular-nums"
                             />
-                            <p className="text-[11px] text-gray-500 text-right">
-                              Tax: {fmt(lineTaxAmount)} {it.taxCodeLabel ? `• ${it.taxCodeLabel}` : ''}
-                            </p>
                           </div>
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100 text-right">

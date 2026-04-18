@@ -191,24 +191,7 @@ export default function BaseSearchablePicker({
   }, [hasValue, placeholder, selectedOption])
 
   const shouldDisable = disabled || !companyId
-  const triggerText = !companyId ? 'Loading company...' : triggerLabel
-
-  const onTriggerKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (shouldDisable) return
-
-      if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
-        event.preventDefault()
-        setOpen(true)
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setOpen(false)
-      }
-    },
-    [shouldDisable]
-  )
+  const inputValue = open ? query : triggerLabel
 
   const selectOption = useCallback(
     (option: PickerOption) => {
@@ -218,6 +201,51 @@ export default function BaseSearchablePicker({
       onChange(option.id, option)
     },
     [onChange]
+  )
+
+  const onInputKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (shouldDisable) return
+
+      if (!open && (event.key === 'ArrowDown' || event.key === 'Enter')) {
+        event.preventDefault()
+        setOpen(true)
+        return
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setOpen(false)
+        return
+      }
+
+      if (!open && (event.key === 'Backspace' || event.key === 'Delete') && selectedOption) {
+        setSelectedOption(null)
+        onChange('', { id: '', primaryLabel: '' })
+        setQuery('')
+      }
+
+      if (options.length === 0) return
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        setHighlightedIndex((prev) => Math.min(prev + 1, options.length - 1))
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        setHighlightedIndex((prev) => Math.max(prev - 1, 0))
+        return
+      }
+
+      if (event.key === 'Enter' && open) {
+        event.preventDefault()
+        if (highlightedIndex >= 0 && highlightedIndex < options.length) {
+          selectOption(options[highlightedIndex])
+        }
+      }
+    },
+    [highlightedIndex, onChange, options.length, open, selectedOption, shouldDisable, selectOption]
   )
 
   const clearSelection = useCallback(
@@ -232,41 +260,6 @@ export default function BaseSearchablePicker({
     [onChange]
   )
 
-  const onSearchKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!options.length) {
-        if (event.key === 'Escape') setOpen(false)
-        return
-      }
-
-      if (event.key === 'ArrowDown') {
-        event.preventDefault()
-        setHighlightedIndex((prev) => Math.min(prev + 1, options.length - 1))
-        return
-      }
-
-      if (event.key === 'ArrowUp') {
-        event.preventDefault()
-        setHighlightedIndex((prev) => Math.max(prev - 1, 0))
-        return
-      }
-
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        if (highlightedIndex >= 0 && highlightedIndex < options.length) {
-          selectOption(options[highlightedIndex])
-        }
-        return
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setOpen(false)
-      }
-    },
-    [highlightedIndex, options, selectOption]
-  )
-
   return (
     <div ref={rootRef} className={`relative ${className ?? ''}`.trim()} data-testid={testId}>
       {label ? (
@@ -277,21 +270,33 @@ export default function BaseSearchablePicker({
       ) : null}
 
       <div className="relative">
-        <button
-          ref={triggerRef}
-          type="button"
-          disabled={shouldDisable}
-          onClick={() => {
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={(event) => {
             if (shouldDisable) return
-            setOpen((prev) => !prev)
+            setQuery(event.target.value)
+            if (!open) setOpen(true)
           }}
-          onKeyDown={onTriggerKeyDown}
-          className="flex w-full items-center rounded-lg border border-emerald-100 bg-white px-3 py-2 pr-16 text-left text-sm outline-none transition-colors hover:bg-emerald-50/40 focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-          aria-expanded={open ? 'true' : 'false'}
-          aria-haspopup="listbox"
-        >
-          <span className={hasValue ? 'text-slate-900' : 'text-slate-400'}>{triggerText}</span>
-        </button>
+          onFocus={() => {
+            if (shouldDisable) return
+            setOpen(true)
+            setQuery('')
+          }}
+          onKeyDown={onInputKeyDown}
+          onBlur={() => {
+            setTimeout(() => {
+              if (!rootRef.current?.contains(document.activeElement as Node)) {
+                setOpen(false)
+              }
+            }, 100)
+          }}
+          placeholder={placeholder}
+          disabled={shouldDisable}
+          className="w-full h-8 rounded-lg border border-emerald-100 bg-white px-3 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          data-testid={testId}
+        />
 
         {hasValue && !disabled ? (
           <button
@@ -314,31 +319,14 @@ export default function BaseSearchablePicker({
         <div
           ref={dropdownRef}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             top: dropdownStyle.top,
             left: dropdownStyle.left,
-            width: dropdownStyle.width,
+            minWidth: dropdownStyle.width,
             zIndex: 9999,
           }}
           className="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-xl"
         >
-          <div className="border-b border-emerald-100 p-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={onSearchKeyDown}
-                placeholder="Search..."
-                className="w-full rounded-md border border-emerald-100 py-1.5 pl-8 pr-8 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30"
-              />
-              {loading ? (
-                <Loader2 size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-emerald-600" />
-              ) : null}
-            </div>
-          </div>
-
           <div
             role="listbox"
             aria-activedescendant={highlightedIndex >= 0 ? `option-${options[highlightedIndex]?.id}` : undefined}
