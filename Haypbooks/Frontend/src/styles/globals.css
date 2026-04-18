@@ -358,7 +358,7 @@ html { font-size: clamp(14px, 1vw + 12px, 18px); }
 
 .glass-topbar { @apply glass sticky top-4 z-50 w-[calc(100%-1rem)] md:w-[calc(100%-2rem)] mx-auto px-3 py-2; }
 .glass-header { @apply glass w-[calc(100%-1rem)] md:w-[calc(100%-2rem)] mx-auto px-4 pt-2.5 pb-1.5 mt-4 mb-4; }
-.glass-sidebar { @apply glass sticky top-24 h-[calc(100dvh-7rem)] p-4 ml-0 pl-0; }
+.glass-sidebar { @apply glass sticky top-24 h-[calc(100dvh-7rem)] p-4 ml-0 pl-0; z-index: 80; }
 .glass-sidebar[data-collapsed="false"] { width: max-content; min-width: 12rem; max-width: 20rem; }
 .glass-sidebar[data-collapsed="true"] { width: 72px; }
 /* Keep sidebar sticky offset in sync with dashboard subbar in compact zoom */
