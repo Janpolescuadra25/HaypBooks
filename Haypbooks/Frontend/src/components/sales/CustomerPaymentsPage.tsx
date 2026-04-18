@@ -698,7 +698,7 @@ export default function CustomerPaymentsPage() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       {/* Sticky header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+      <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Customer Payments</h1>

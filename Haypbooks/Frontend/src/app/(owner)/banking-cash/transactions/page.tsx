@@ -1210,7 +1210,7 @@ export default function BankFeedPage() {
         const selTotal      = selItems.reduce((s, t) => s + Math.abs(t.amount), 0)
         const selPendingIds = selItems.filter(t => t.status === 'PENDING').map(t => t.id)
         return (
-          <div className="sticky top-[45px] z-30 bg-white border-b border-slate-200 shadow-sm px-6 py-2.5 flex items-center gap-3 flex-wrap">
+          <div className="bg-white border-b border-slate-200 shadow-sm px-6 py-2.5 flex items-center gap-3 flex-wrap">
             <span className="text-sm font-medium text-slate-700">
               {selected.size} selected
               <span className="ml-1.5 text-slate-400 font-normal text-xs">· {fmt(selTotal)} total</span>

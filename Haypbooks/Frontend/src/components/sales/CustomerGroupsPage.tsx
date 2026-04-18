@@ -272,7 +272,7 @@ export default function CustomerGroupsPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -329,7 +329,7 @@ export default function CustomerGroupsPage() {
 
       {/* Batch bar */}
       {selectedIds.size > 0 && (
-        <div className="sticky top-[105px] z-20 bg-emerald-600 text-white px-6 py-2 flex items-center gap-3 text-sm shadow-md">
+        <div className="bg-emerald-600 text-white px-6 py-2 flex items-center gap-3 text-sm shadow-md">
           <span className="font-semibold">{selectedIds.size} selected</span>
           <div className="flex-1" />
           <button
