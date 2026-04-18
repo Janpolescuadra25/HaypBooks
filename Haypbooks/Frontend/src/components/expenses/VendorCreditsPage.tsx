@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 type VendorCreditRow = {
   id: string
@@ -26,6 +27,19 @@ const STATUS_STYLES: Record<string, string> = {
   Void: 'bg-gray-50 text-gray-500 border-gray-200',
 }
 
+const VENDOR_CREDITS_COL_WIDTHS_KEY = 'vendor-credits-cols-v1'
+const defaultVendorCreditsColWidths = {
+  creditNumber: 140,
+  vendor: 200,
+  billNumber: 140,
+  date: 120,
+  amount: 120,
+  appliedAmount: 120,
+  remainingCredit: 130,
+  reason: 220,
+  status: 130,
+}
+
 export default function VendorCreditsPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -34,6 +48,40 @@ export default function VendorCreditsPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [colWidths, setColWidths] = useState<typeof defaultVendorCreditsColWidths>(() => {
+    if (typeof window === 'undefined') return defaultVendorCreditsColWidths
+    try {
+      return {
+        ...defaultVendorCreditsColWidths,
+        ...JSON.parse(localStorage.getItem(VENDOR_CREDITS_COL_WIDTHS_KEY) ?? '{}'),
+      }
+    } catch {
+      return defaultVendorCreditsColWidths
+    }
+  })
+  const colWidthsRef = useRef(colWidths)
+  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
+  const saveColWidths = useCallback((next: typeof defaultVendorCreditsColWidths) => {
+    setColWidths(next)
+    try { localStorage.setItem(VENDOR_CREDITS_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+  }, [])
+  const { containerRef: creditsTableRef, startResize: startCreditsResize, isOverflowing: creditsTableOverflowing } = useFixedWidthResizableMap({
+    widths: colWidths,
+    widthsRef: colWidthsRef,
+    order: ['creditNumber', 'vendor', 'billNumber', 'date', 'amount', 'appliedAmount', 'remainingCredit', 'reason', 'status'],
+    saveWidths: saveColWidths,
+    minWidth: {
+      creditNumber: 110,
+      vendor: 130,
+      billNumber: 110,
+      date: 100,
+      amount: 100,
+      appliedAmount: 100,
+      remainingCredit: 110,
+      reason: 150,
+      status: 110,
+    },
+  })
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
@@ -156,29 +204,71 @@ export default function VendorCreditsPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div ref={creditsTableRef} className={creditsTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
               <table className="w-full min-w-[1080px] table-fixed text-sm">
+                <colgroup>
+                  <col style={{ width: colWidths.creditNumber }} />
+                  <col style={{ width: colWidths.vendor }} />
+                  <col style={{ width: colWidths.billNumber }} />
+                  <col style={{ width: colWidths.date }} />
+                  <col style={{ width: colWidths.amount }} />
+                  <col style={{ width: colWidths.appliedAmount }} />
+                  <col style={{ width: colWidths.remainingCredit }} />
+                  <col style={{ width: colWidths.reason }} />
+                  <col style={{ width: colWidths.status }} />
+                </colgroup>
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {['Credit #', 'Vendor', 'Bill #', 'Date', 'Amount', 'Applied', 'Remaining', 'Reason', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" title={h}>
-                        {h}
-                      </th>
-                    ))}
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title="Credit #">
+                      Credit #
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'creditNumber')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title="Vendor">
+                      Vendor
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'vendor')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber }} title="Bill #">
+                      Bill #
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'billNumber')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }} title="Date">
+                      Date
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'date')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }} title="Amount">
+                      Amount
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'amount')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.appliedAmount, minWidth: colWidths.appliedAmount, maxWidth: colWidths.appliedAmount }} title="Applied">
+                      Applied
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'appliedAmount')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.remainingCredit, minWidth: colWidths.remainingCredit, maxWidth: colWidths.remainingCredit }} title="Remaining">
+                      Remaining
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'remainingCredit')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.reason, minWidth: colWidths.reason, maxWidth: colWidths.reason }} title="Reason">
+                      Reason
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'reason')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }} title="Status">
+                      Status
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'status')} />
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                      <td className="px-4 py-3 font-medium text-slate-800 truncate" title={row.creditNumber}>{row.creditNumber}</td>
-                      <td className="px-4 py-3 text-slate-700 truncate" title={row.vendor}>{row.vendor}</td>
-                      <td className="px-4 py-3 text-slate-600 truncate" title={row.billNumber ?? ''}>{row.billNumber}</td>
-                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.date}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-800">{formatCurrency(row.amount, currency)}</td>
-                      <td className="px-4 py-3 text-emerald-700">{formatCurrency(row.appliedAmount, currency)}</td>
-                      <td className="px-4 py-3 font-semibold text-indigo-700">{formatCurrency(row.remainingCredit, currency)}</td>
-                      <td className="px-4 py-3 text-slate-600 truncate" title={row.reason}>{row.reason}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 font-medium text-slate-800 truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title={row.creditNumber}>{row.creditNumber}</td>
+                      <td className="px-4 py-3 text-slate-700 truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title={row.vendor}>{row.vendor}</td>
+                      <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber }} title={row.billNumber ?? ''}>{row.billNumber}</td>
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }}>{row.date}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-800" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>{formatCurrency(row.amount, currency)}</td>
+                      <td className="px-4 py-3 text-emerald-700" style={{ width: colWidths.appliedAmount, minWidth: colWidths.appliedAmount, maxWidth: colWidths.appliedAmount }}>{formatCurrency(row.appliedAmount, currency)}</td>
+                      <td className="px-4 py-3 font-semibold text-indigo-700" style={{ width: colWidths.remainingCredit, minWidth: colWidths.remainingCredit, maxWidth: colWidths.remainingCredit }}>{formatCurrency(row.remainingCredit, currency)}</td>
+                      <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.reason, minWidth: colWidths.reason, maxWidth: colWidths.reason }} title={row.reason}>{row.reason}</td>
+                      <td className="px-4 py-3" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }}>
                         <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
                           {row.status}
                         </span>

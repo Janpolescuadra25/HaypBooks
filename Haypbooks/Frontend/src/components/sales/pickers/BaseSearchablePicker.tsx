@@ -266,7 +266,10 @@ export default function BaseSearchablePicker({
         </label>
       ) : null}
 
-      <div ref={triggerRef} className="relative">
+      <div
+        ref={triggerRef}
+        className="flex h-8 items-center rounded-lg border border-emerald-100 bg-white transition-colors focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-500/30"
+      >
         <input
           ref={inputRef}
           type="text"
@@ -291,25 +294,38 @@ export default function BaseSearchablePicker({
           }}
           placeholder={placeholder}
           disabled={shouldDisable}
-          className="w-full h-8 rounded-lg border border-emerald-100 bg-white px-3 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-sm outline-none disabled:cursor-not-allowed disabled:text-slate-400"
           data-testid={testId}
         />
 
-        {hasValue && !disabled ? (
+        {hasValue && !shouldDisable ? (
           <button
             type="button"
             onClick={clearSelection}
-            className="absolute right-8 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:bg-emerald-50 hover:text-slate-600"
+            className="inline-flex h-8 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-emerald-50 hover:text-slate-600"
             aria-label="Clear selection"
           >
             <X size={14} />
           </button>
         ) : null}
 
-        <ChevronDown
-          size={16}
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            if (shouldDisable) return
+            setOpen((prev) => {
+              const next = !prev
+              if (next) setQuery('')
+              return next
+            })
+          }}
+          disabled={shouldDisable}
+          aria-label="Toggle options"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-r-lg text-slate-400 hover:bg-emerald-50 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
+        >
+          <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
       </div>
 
       {shouldDisable ? null : open ? createPortal(

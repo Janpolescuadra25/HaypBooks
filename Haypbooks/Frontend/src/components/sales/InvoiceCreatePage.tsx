@@ -15,6 +15,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/invoice-templates/templateStorage'
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
@@ -201,6 +202,16 @@ const parseTaxRateFromLabel = (value?: string): number | null => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+const INVOICE_LINE_COL_WIDTHS_KEY = 'invoice-create-line-cols-v1'
+const defaultLineColWidths = {
+  product: 240,
+  description: 260,
+  quantity: 80,
+  rate: 100,
+  tax: 180,
+  amount: 110,
+}
+
 export default function InvoiceCreatePage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
@@ -275,48 +286,42 @@ export default function InvoiceCreatePage() {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
   const [productModalLineItemId, setProductModalLineItemId] = useState<string | null>(null)
 
-  const [colWidths, setColWidths] = useState({
-    index: 40,
-    product: 240,
-    description: 260,
-    quantity: 80,
-    rate: 100,
-    tax: 120,
-    amount: 100,
-    actions: 40,
+  const [colWidths, setColWidths] = useState<typeof defaultLineColWidths>(() => {
+    if (typeof window === 'undefined') return defaultLineColWidths
+    try {
+      return {
+        ...defaultLineColWidths,
+        ...JSON.parse(localStorage.getItem(INVOICE_LINE_COL_WIDTHS_KEY) ?? '{}'),
+      }
+    } catch {
+      return defaultLineColWidths
+    }
   })
-
-  function Resizer({ onResize }: { onResize: (deltaX: number) => void }) {
-    const [dragging, setDragging] = useState(false)
-    const startX = useRef(0)
-
-    useEffect(() => {
-      if (!dragging) return
-      const onMouseMove = (event: MouseEvent) => {
-        const delta = event.clientX - startX.current
-        startX.current = event.clientX
-        onResize(delta)
-      }
-      const onMouseUp = () => setDragging(false)
-      document.addEventListener('mousemove', onMouseMove)
-      document.addEventListener('mouseup', onMouseUp)
-      return () => {
-        document.removeEventListener('mousemove', onMouseMove)
-        document.removeEventListener('mouseup', onMouseUp)
-      }
-    }, [dragging, onResize])
-
-    return (
-      <div
-        onMouseDown={(e) => {
-          e.preventDefault()
-          setDragging(true)
-          startX.current = e.clientX
-        }}
-        className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize ${dragging ? 'bg-emerald-400' : 'bg-gray-200'} hover:bg-emerald-400 transition-colors`}
-      />
-    )
-  }
+  const colWidthsRef = useRef(colWidths)
+  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
+  const saveColWidths = useCallback((next: typeof defaultLineColWidths) => {
+    setColWidths(next)
+    try {
+      localStorage.setItem(INVOICE_LINE_COL_WIDTHS_KEY, JSON.stringify(next))
+    } catch {
+      // ignore localStorage write errors
+    }
+  }, [])
+  const { containerRef: lineItemsTableRef, startResize: startLineResize, isOverflowing: lineItemsOverflowing } = useFixedWidthResizableMap({
+    widths: colWidths,
+    widthsRef: colWidthsRef,
+    order: ['product', 'description', 'quantity', 'rate', 'tax', 'amount'],
+    saveWidths: saveColWidths,
+    fixedWidth: 80,
+    minWidth: {
+      product: 180,
+      description: 220,
+      quantity: 70,
+      rate: 90,
+      tax: 140,
+      amount: 100,
+    },
+  })
 
   // Bill To editable fields
   const [billContact, setBillContact] = useState('')
@@ -799,18 +804,46 @@ export default function InvoiceCreatePage() {
               </button>
             </div>
 
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div ref={lineItemsTableRef} className={`border border-gray-200 rounded-xl ${lineItemsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
               <table className="table-fixed w-full text-sm">
+                <colgroup>
+                  <col style={{ width: 40 }} />
+                  <col style={{ width: colWidths.product }} />
+                  <col style={{ width: colWidths.description }} />
+                  <col style={{ width: colWidths.quantity }} />
+                  <col style={{ width: colWidths.rate }} />
+                  <col style={{ width: colWidths.tax }} />
+                  <col style={{ width: colWidths.amount }} />
+                  <col style={{ width: 40 }} />
+                </colgroup>
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th style={{ width: colWidths.index }} className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-10">#</th>
-                    <th style={{ width: colWidths.product }} className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Product / Service</th>
-                    <th style={{ width: colWidths.description }} className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Description</th>
-                    <th style={{ width: colWidths.quantity }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Qty</th>
-                    <th style={{ width: colWidths.rate }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Rate</th>
-                    <th style={{ width: colWidths.tax }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Tax %</th>
-                    <th style={{ width: colWidths.amount }} className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200">Amount</th>
-                    <th style={{ width: colWidths.actions }} className="relative w-10"></th>
+                    <th className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-10">#</th>
+                    <th className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 overflow-hidden" style={{ width: colWidths.product, minWidth: colWidths.product, maxWidth: colWidths.product }}>
+                      Product / Service
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startLineResize(e, 'product')} />
+                    </th>
+                    <th className="relative text-left px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 overflow-hidden" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }}>
+                      Description
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startLineResize(e, 'description')} />
+                    </th>
+                    <th className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 overflow-hidden" style={{ width: colWidths.quantity, minWidth: colWidths.quantity, maxWidth: colWidths.quantity }}>
+                      Qty
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startLineResize(e, 'quantity')} />
+                    </th>
+                    <th className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 overflow-hidden" style={{ width: colWidths.rate, minWidth: colWidths.rate, maxWidth: colWidths.rate }}>
+                      Rate
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startLineResize(e, 'rate')} />
+                    </th>
+                    <th className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 overflow-hidden" style={{ width: colWidths.tax, minWidth: colWidths.tax, maxWidth: colWidths.tax }}>
+                      Tax %
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startLineResize(e, 'tax')} />
+                    </th>
+                    <th className="relative text-right px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 overflow-hidden" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>
+                      Amount
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startLineResize(e, 'amount')} />
+                    </th>
+                    <th className="relative w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -821,7 +854,7 @@ export default function InvoiceCreatePage() {
                     return (
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                         <td className="px-4 py-2 text-gray-400 text-xs border-r border-gray-100 text-center">{i + 1}</td>
-                        <td style={{ width: colWidths.product }} className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap" style={{ width: colWidths.product, minWidth: colWidths.product, maxWidth: colWidths.product }}>
                           <ProductPickerField
                             companyId={companyId ?? ''}
                             value={it.itemId ?? null}
@@ -846,7 +879,7 @@ export default function InvoiceCreatePage() {
                             createLabel="+ New product"
                           />
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }}>
                           <input
                             type="text"
                             aria-label="Description"
@@ -862,7 +895,7 @@ export default function InvoiceCreatePage() {
                             className="w-full h-8 text-sm text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-emerald-500/30"
                           />
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap" style={{ width: colWidths.quantity, minWidth: colWidths.quantity, maxWidth: colWidths.quantity }}>
                           <input
                             type="number" min="0.01" step="0.01"
                             aria-label="Quantity"
@@ -870,7 +903,7 @@ export default function InvoiceCreatePage() {
                             onChange={e => updateItem(it.id, 'quantity', Number(e.target.value))}
                             className="w-full h-8 text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap" style={{ width: colWidths.rate, minWidth: colWidths.rate, maxWidth: colWidths.rate }}>
                           <input
                             type="number" min="0" step="0.01"
                             aria-label="Rate"
@@ -878,7 +911,7 @@ export default function InvoiceCreatePage() {
                             onChange={e => updateItem(it.id, 'unitPrice', Number(e.target.value))}
                             className="w-full h-8 text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
-                        <td style={{ width: colWidths.tax }} className="px-4 py-2 border-r border-gray-100 whitespace-nowrap">
+                        <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap" style={{ width: colWidths.tax, minWidth: colWidths.tax, maxWidth: colWidths.tax }}>
                           <div className="flex items-center gap-2">
                             <TaxCodePickerField
                               companyId={companyId ?? ''}
@@ -921,7 +954,7 @@ export default function InvoiceCreatePage() {
                             />
                           </div>
                         </td>
-                        <td className="px-4 py-2 border-r border-gray-100 text-right">
+                        <td className="px-4 py-2 border-r border-gray-100 text-right" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>
                           <span className="text-sm font-semibold text-slate-800 tabular-nums">{fmt(lineTotal)}</span>
                         </td>
                         <td className="px-2 py-2">

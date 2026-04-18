@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Loader2, AlertCircle, Banknote, Clock, Search, RefreshCw,
@@ -10,6 +10,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,16 @@ interface UndepositedPayment {
   paymentMethod?: string
   reference?: string
   daysPending?: number
+}
+
+const UNDEPOSITED_COL_WIDTHS_KEY = 'undeposited-funds-cols-v1'
+const defaultUndepositedColWidths = {
+  date: 118,
+  customer: 220,
+  invoice: 140,
+  method: 150,
+  daysPending: 130,
+  amount: 130,
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -40,6 +51,38 @@ export default function UndepositedFundsPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [colWidths, setColWidths] = useState<typeof defaultUndepositedColWidths>(() => {
+    if (typeof window === 'undefined') return defaultUndepositedColWidths
+    try {
+      return {
+        ...defaultUndepositedColWidths,
+        ...JSON.parse(localStorage.getItem(UNDEPOSITED_COL_WIDTHS_KEY) ?? '{}'),
+      }
+    } catch {
+      return defaultUndepositedColWidths
+    }
+  })
+  const colWidthsRef = useRef(colWidths)
+  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
+  const saveColWidths = useCallback((next: typeof defaultUndepositedColWidths) => {
+    setColWidths(next)
+    try { localStorage.setItem(UNDEPOSITED_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+  }, [])
+  const { containerRef: tableRef, startResize, isOverflowing } = useFixedWidthResizableMap({
+    widths: colWidths,
+    widthsRef: colWidthsRef,
+    order: ['date', 'customer', 'invoice', 'method', 'daysPending', 'amount'],
+    saveWidths: saveColWidths,
+    fixedWidth: 136,
+    minWidth: {
+      date: 100,
+      customer: 140,
+      invoice: 100,
+      method: 120,
+      daysPending: 110,
+      amount: 110,
+    },
+  })
 
   const fetchPayments = useCallback(async () => {
     if (!companyId) return
@@ -236,8 +279,18 @@ export default function UndepositedFundsPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div ref={tableRef} className={isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
             <table className="w-full min-w-[940px] table-fixed text-left">
+              <colgroup>
+                <col style={{ width: 40 }} />
+                <col style={{ width: colWidths.date }} />
+                <col style={{ width: colWidths.customer }} />
+                <col style={{ width: colWidths.invoice }} />
+                <col style={{ width: colWidths.method }} />
+                <col style={{ width: colWidths.daysPending }} />
+                <col style={{ width: colWidths.amount }} />
+                <col style={{ width: 96 }} />
+              </colgroup>
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                   <th className="px-4 py-3 w-10">
@@ -247,13 +300,31 @@ export default function UndepositedFundsPage() {
                         : <Square size={15} />}
                     </button>
                   </th>
-                  <th className="px-4 py-3 w-32 truncate whitespace-nowrap" title="Date">Date</th>
-                  <th className="px-4 py-3 w-48 truncate" title="Customer">Customer</th>
-                  <th className="px-4 py-3 w-32 truncate whitespace-nowrap" title="Invoice #">Invoice #</th>
-                  <th className="px-4 py-3 w-36 truncate" title="Method">Method</th>
-                  <th className="px-4 py-3 w-32 truncate text-center whitespace-nowrap" title="Days Pending">Days Pending</th>
-                  <th className="px-4 py-3 w-32 truncate text-right whitespace-nowrap" title="Amount">Amount</th>
-                  <th className="px-4 py-3" />
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }} title="Date">
+                    Date
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, 'date')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate" style={{ width: colWidths.customer, minWidth: colWidths.customer, maxWidth: colWidths.customer }} title="Customer">
+                    Customer
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, 'customer')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: colWidths.invoice, minWidth: colWidths.invoice, maxWidth: colWidths.invoice }} title="Invoice #">
+                    Invoice #
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, 'invoice')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate" style={{ width: colWidths.method, minWidth: colWidths.method, maxWidth: colWidths.method }} title="Method">
+                    Method
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, 'method')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate text-center whitespace-nowrap" style={{ width: colWidths.daysPending, minWidth: colWidths.daysPending, maxWidth: colWidths.daysPending }} title="Days Pending">
+                    Days Pending
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, 'daysPending')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate text-right whitespace-nowrap" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }} title="Amount">
+                    Amount
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startResize(e, 'amount')} />
+                  </th>
+                  <th className="px-4 py-3 w-24" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -269,17 +340,17 @@ export default function UndepositedFundsPage() {
                           : <Square size={15} />}
                       </button>
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
+                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }}>
                       {new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-medium text-slate-800 truncate" title={p.customerName ?? '—'}>{p.customerName ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-500 font-mono truncate" title={p.invoiceNumber ?? '—'}>{p.invoiceNumber ?? '—'}</td>
-                    <td className="px-4 py-3.5 overflow-hidden">
+                    <td className="px-4 py-3.5 text-sm font-medium text-slate-800 truncate" style={{ width: colWidths.customer, minWidth: colWidths.customer, maxWidth: colWidths.customer }} title={p.customerName ?? '—'}>{p.customerName ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-500 font-mono truncate" style={{ width: colWidths.invoice, minWidth: colWidths.invoice, maxWidth: colWidths.invoice }} title={p.invoiceNumber ?? '—'}>{p.invoiceNumber ?? '—'}</td>
+                    <td className="px-4 py-3.5 overflow-hidden" style={{ width: colWidths.method, minWidth: colWidths.method, maxWidth: colWidths.method }}>
                       <span className="inline-flex max-w-full items-center truncate px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 capitalize" title={p.paymentMethod ?? 'Unknown'}>
                         {p.paymentMethod ?? 'Unknown'}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-center" style={{ width: colWidths.daysPending, minWidth: colWidths.daysPending, maxWidth: colWidths.daysPending }}>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         (p.daysPending ?? 0) > 30 ? 'bg-red-50 text-red-600' :
                         (p.daysPending ?? 0) > 7  ? 'bg-amber-50 text-amber-600' :
@@ -289,10 +360,10 @@ export default function UndepositedFundsPage() {
                         {p.daysPending ?? 0}d
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono font-semibold text-emerald-700 tabular-nums">
+                    <td className="px-4 py-3.5 text-right font-mono font-semibold text-emerald-700 tabular-nums" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>
                       {fmt(p.amount)}
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right w-24">
                       <button
                         onClick={() => goToDeposit([p.id])}
                         className="text-xs px-2 py-1 border border-emerald-200 text-emerald-700 rounded hover:bg-emerald-50 transition-colors whitespace-nowrap"

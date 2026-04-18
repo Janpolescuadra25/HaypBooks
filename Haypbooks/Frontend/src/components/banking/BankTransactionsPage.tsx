@@ -1,11 +1,12 @@
 'use client'
 
-import { Fragment, useMemo, useState, useCallback, useEffect } from 'react'
+import { Fragment, useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { Loader2, X, ArrowRightLeft, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 type TxType = 'Credit' | 'Debit'
 type TxStatus = 'Cleared' | 'Pending' | 'Reconciled' | 'Voided'
@@ -46,6 +47,18 @@ const STATUS_META: Record<TxStatus, { cls: string; dot: string }> = {
   Reconciled: { cls: 'bg-sky-50 text-sky-700 border-sky-200',             dot: 'bg-sky-500' },
   Pending:    { cls: 'bg-amber-50 text-amber-700 border-amber-200',       dot: 'bg-amber-400 animate-pulse' },
   Voided:     { cls: 'bg-slate-100 text-slate-400 border-slate-200',      dot: 'bg-slate-300' },
+}
+
+const TX_COL_WIDTHS_KEY = 'bank-transactions-cols-v1'
+const defaultTxColWidths = {
+  date: 112,
+  description: 320,
+  account: 176,
+  category: 160,
+  debit: 128,
+  credit: 128,
+  balance: 140,
+  status: 132,
 }
 
 function fmt(n: number) { return '₱ ' + n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }
@@ -156,6 +169,40 @@ export default function BankTransactionsPage() {
   const [type, setType] = useState<TxType | 'All'>('All')
   const [status, setStatus] = useState<TxStatus | 'All'>('All')
   const [view, setView] = useState<'transactions' | 'register'>('transactions')
+  const [txColWidths, setTxColWidths] = useState<typeof defaultTxColWidths>(() => {
+    if (typeof window === 'undefined') return defaultTxColWidths
+    try {
+      return {
+        ...defaultTxColWidths,
+        ...JSON.parse(localStorage.getItem(TX_COL_WIDTHS_KEY) ?? '{}'),
+      }
+    } catch {
+      return defaultTxColWidths
+    }
+  })
+  const txColWidthsRef = useRef(txColWidths)
+  useEffect(() => { txColWidthsRef.current = txColWidths }, [txColWidths])
+  const saveTxColWidths = useCallback((next: typeof defaultTxColWidths) => {
+    setTxColWidths(next)
+    try { localStorage.setItem(TX_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+  }, [])
+  const { containerRef: txTableRef, startResize: startTxResize, isOverflowing: txTableOverflowing } = useFixedWidthResizableMap({
+    widths: txColWidths,
+    widthsRef: txColWidthsRef,
+    order: ['date', 'description', 'account', 'category', 'debit', 'credit', 'balance', 'status'],
+    saveWidths: saveTxColWidths,
+    fixedWidth: 136,
+    minWidth: {
+      date: 96,
+      description: 220,
+      account: 130,
+      category: 120,
+      debit: 100,
+      credit: 100,
+      balance: 110,
+      status: 110,
+    },
+  })
 
   const filtered = useMemo(() => {
     let list = DATA
@@ -297,20 +344,56 @@ export default function BankTransactionsPage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div ref={txTableRef} className={txTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
             <table className="w-full min-w-[1000px] table-fixed text-left">
+              <colgroup>
+                <col style={{ width: 40 }} />
+                <col style={{ width: txColWidths.date }} />
+                <col style={{ width: txColWidths.description }} />
+                <col style={{ width: txColWidths.account }} />
+                <col style={{ width: txColWidths.category }} />
+                <col style={{ width: txColWidths.debit }} />
+                <col style={{ width: txColWidths.credit }} />
+                <col style={{ width: txColWidths.balance }} />
+                <col style={{ width: txColWidths.status }} />
+                <col style={{ width: 96 }} />
+              </colgroup>
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                   <th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all" className="rounded border-slate-300 accent-emerald-600" /></th>
-                  <th className="px-4 py-3 w-28 truncate whitespace-nowrap" title="Date">Date</th>
-                  <th className="px-4 py-3 w-[280px] truncate" title="Reference / Description">Reference / Description</th>
-                  <th className="px-4 py-3 w-44 truncate whitespace-nowrap" title="Account">Account</th>
-                  <th className="px-4 py-3 w-40 truncate whitespace-nowrap" title="Category">Category</th>
-                  <th className="px-4 py-3 text-right truncate whitespace-nowrap" title="Debit">Debit</th>
-                  <th className="px-4 py-3 text-right truncate whitespace-nowrap" title="Credit">Credit</th>
-                  <th className="px-4 py-3 text-right truncate whitespace-nowrap" title="Balance">Balance</th>
-                  <th className="px-4 py-3 truncate whitespace-nowrap" title="Status">Status</th>
-                  <th className="px-4 py-3" />
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: txColWidths.date, minWidth: txColWidths.date, maxWidth: txColWidths.date }} title="Date">
+                    Date
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'date')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate" style={{ width: txColWidths.description, minWidth: txColWidths.description, maxWidth: txColWidths.description }} title="Reference / Description">
+                    Reference / Description
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'description')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: txColWidths.account, minWidth: txColWidths.account, maxWidth: txColWidths.account }} title="Account">
+                    Account
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'account')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: txColWidths.category, minWidth: txColWidths.category, maxWidth: txColWidths.category }} title="Category">
+                    Category
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'category')} />
+                  </th>
+                  <th className="relative px-4 py-3 text-right truncate whitespace-nowrap" style={{ width: txColWidths.debit, minWidth: txColWidths.debit, maxWidth: txColWidths.debit }} title="Debit">
+                    Debit
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'debit')} />
+                  </th>
+                  <th className="relative px-4 py-3 text-right truncate whitespace-nowrap" style={{ width: txColWidths.credit, minWidth: txColWidths.credit, maxWidth: txColWidths.credit }} title="Credit">
+                    Credit
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'credit')} />
+                  </th>
+                  <th className="relative px-4 py-3 text-right truncate whitespace-nowrap" style={{ width: txColWidths.balance, minWidth: txColWidths.balance, maxWidth: txColWidths.balance }} title="Balance">
+                    Balance
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'balance')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: txColWidths.status, minWidth: txColWidths.status, maxWidth: txColWidths.status }} title="Status">
+                    Status
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startTxResize(e, 'status')} />
+                  </th>
+                  <th className="px-4 py-3 w-24" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -323,29 +406,29 @@ export default function BankTransactionsPage() {
                     )}
                     <tr className="hover:bg-slate-50 transition-colors group">
                     <td className="px-4 py-3.5"><input type="checkbox" aria-label="Select transaction" className="rounded border-slate-300 accent-emerald-600" /></td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{tx.date}</td>
-                    <td className="px-4 py-3.5 overflow-hidden">
+                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap" style={{ width: txColWidths.date, minWidth: txColWidths.date, maxWidth: txColWidths.date }}>{tx.date}</td>
+                    <td className="px-4 py-3.5 overflow-hidden" style={{ width: txColWidths.description, minWidth: txColWidths.description, maxWidth: txColWidths.description }}>
                       <div className="text-sm font-medium text-slate-800 truncate" title={tx.description}>{tx.description}</div>
                       <div className="text-[11px] text-slate-400 font-mono truncate" title={`${tx.reference}${tx.bankRef ? ` · ${tx.bankRef}` : ''}`}>{tx.reference}{tx.bankRef && ` · ${tx.bankRef}`}</div>
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap truncate" title={tx.account.split(' - ')[0]}>{tx.account.split(' - ')[0]}</td>
-                    <td className="px-4 py-3.5 overflow-hidden">
+                    <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap truncate" style={{ width: txColWidths.account, minWidth: txColWidths.account, maxWidth: txColWidths.account }} title={tx.account.split(' - ')[0]}>{tx.account.split(' - ')[0]}</td>
+                    <td className="px-4 py-3.5 overflow-hidden" style={{ width: txColWidths.category, minWidth: txColWidths.category, maxWidth: txColWidths.category }}>
                       <span className="inline-flex max-w-full items-center truncate px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600" title={tx.category}>{tx.category}</span>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono text-sm">
+                    <td className="px-4 py-3.5 text-right font-mono text-sm" style={{ width: txColWidths.debit, minWidth: txColWidths.debit, maxWidth: txColWidths.debit }}>
                       {tx.type === 'Debit' ? <span className="text-rose-600 font-semibold">{fmt(tx.amount)}</span> : <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono text-sm">
+                    <td className="px-4 py-3.5 text-right font-mono text-sm" style={{ width: txColWidths.credit, minWidth: txColWidths.credit, maxWidth: txColWidths.credit }}>
                       {tx.type === 'Credit' ? <span className="text-emerald-700 font-semibold">{fmt(tx.amount)}</span> : <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-slate-800 whitespace-nowrap">{fmt(tx.balance)}</td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-slate-800 whitespace-nowrap" style={{ width: txColWidths.balance, minWidth: txColWidths.balance, maxWidth: txColWidths.balance }}>{fmt(tx.balance)}</td>
+                    <td className="px-4 py-3.5" style={{ width: txColWidths.status, minWidth: txColWidths.status, maxWidth: txColWidths.status }}>
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_META[tx.status].cls}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[tx.status].dot}`} />
                         {tx.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 w-24">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button className="px-2 py-1 text-xs border border-slate-200 rounded text-slate-600 hover:bg-slate-100 transition-colors">View</button>
                         <button title="More options" className="p-1 text-slate-400 hover:text-slate-600 transition-colors">
@@ -517,11 +600,19 @@ export default function BankTransactionsPage() {
                 <h2 className="text-lg font-bold text-slate-900">Account Activity Log</h2>
                 <p className="text-sm text-slate-500 mt-0.5">{bankAccounts.find(a => a.id === activityAccountId)?.name ?? 'Bank Account'}</p>
               </div>
-              <button onClick={() => setShowActivityDrawer(false)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              <button
+                onClick={() => setShowActivityDrawer(false)}
+                aria-label="Close activity drawer"
+                title="Close"
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
             {bankAccounts.length > 1 && (
               <div className="px-6 py-3 border-b border-slate-100">
                 <select
+                  aria-label="Select bank account for activity log"
                   value={activityAccountId}
                   onChange={e => openActivityDrawer(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400"

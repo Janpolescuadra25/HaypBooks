@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 type PurchaseOrderRow = {
   id: string
@@ -27,6 +28,18 @@ const STATUS_STYLES: Record<string, string> = {
   Closed: 'bg-slate-50 text-slate-500 border-slate-200',
 }
 
+const PURCHASE_ORDERS_COL_WIDTHS_KEY = 'purchase-orders-cols-v1'
+const defaultPurchaseOrdersColWidths = {
+  poNumber: 140,
+  vendor: 200,
+  description: 240,
+  orderDate: 120,
+  expectedDate: 130,
+  totalAmount: 120,
+  receivedAmount: 140,
+  status: 140,
+}
+
 export default function PurchaseOrdersPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -35,6 +48,39 @@ export default function PurchaseOrdersPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [colWidths, setColWidths] = useState<typeof defaultPurchaseOrdersColWidths>(() => {
+    if (typeof window === 'undefined') return defaultPurchaseOrdersColWidths
+    try {
+      return {
+        ...defaultPurchaseOrdersColWidths,
+        ...JSON.parse(localStorage.getItem(PURCHASE_ORDERS_COL_WIDTHS_KEY) ?? '{}'),
+      }
+    } catch {
+      return defaultPurchaseOrdersColWidths
+    }
+  })
+  const colWidthsRef = useRef(colWidths)
+  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
+  const saveColWidths = useCallback((next: typeof defaultPurchaseOrdersColWidths) => {
+    setColWidths(next)
+    try { localStorage.setItem(PURCHASE_ORDERS_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+  }, [])
+  const { containerRef: poTableRef, startResize: startPOResize, isOverflowing: poTableOverflowing } = useFixedWidthResizableMap({
+    widths: colWidths,
+    widthsRef: colWidthsRef,
+    order: ['poNumber', 'vendor', 'description', 'orderDate', 'expectedDate', 'totalAmount', 'receivedAmount', 'status'],
+    saveWidths: saveColWidths,
+    minWidth: {
+      poNumber: 110,
+      vendor: 130,
+      description: 160,
+      orderDate: 100,
+      expectedDate: 100,
+      totalAmount: 100,
+      receivedAmount: 110,
+      status: 110,
+    },
+  })
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
@@ -156,15 +202,52 @@ export default function PurchaseOrdersPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div ref={poTableRef} className={poTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
               <table className="w-full min-w-[980px] table-fixed text-sm">
+                <colgroup>
+                  <col style={{ width: colWidths.poNumber }} />
+                  <col style={{ width: colWidths.vendor }} />
+                  <col style={{ width: colWidths.description }} />
+                  <col style={{ width: colWidths.orderDate }} />
+                  <col style={{ width: colWidths.expectedDate }} />
+                  <col style={{ width: colWidths.totalAmount }} />
+                  <col style={{ width: colWidths.receivedAmount }} />
+                  <col style={{ width: colWidths.status }} />
+                </colgroup>
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {['PO #', 'Vendor', 'Description', 'Order Date', 'Expected Date', 'Total', 'Received', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" title={h}>
-                        {h}
-                      </th>
-                    ))}
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.poNumber, minWidth: colWidths.poNumber, maxWidth: colWidths.poNumber }} title="PO #">
+                      PO #
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'poNumber')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title="Vendor">
+                      Vendor
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'vendor')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }} title="Description">
+                      Description
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'description')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.orderDate, minWidth: colWidths.orderDate, maxWidth: colWidths.orderDate }} title="Order Date">
+                      Order Date
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'orderDate')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.expectedDate, minWidth: colWidths.expectedDate, maxWidth: colWidths.expectedDate }} title="Expected Date">
+                      Expected Date
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'expectedDate')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.totalAmount, minWidth: colWidths.totalAmount, maxWidth: colWidths.totalAmount }} title="Total">
+                      Total
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'totalAmount')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.receivedAmount, minWidth: colWidths.receivedAmount, maxWidth: colWidths.receivedAmount }} title="Received">
+                      Received
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'receivedAmount')} />
+                    </th>
+                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }} title="Status">
+                      Status
+                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'status')} />
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -172,19 +255,19 @@ export default function PurchaseOrdersPage() {
                     const pct = row.totalAmount > 0 ? Math.round((row.receivedAmount / row.totalAmount) * 100) : 0
                     return (
                       <tr key={row.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                        <td className="px-4 py-3 font-medium text-slate-800 truncate" title={row.poNumber}>{row.poNumber}</td>
-                        <td className="px-4 py-3 text-slate-700 truncate" title={row.vendor}>{row.vendor}</td>
-                        <td className="px-4 py-3 text-slate-600 truncate" title={row.description}>{row.description}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.orderDate}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.expectedDate}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-800">{formatCurrency(row.totalAmount, currency)}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 font-medium text-slate-800 truncate" style={{ width: colWidths.poNumber, minWidth: colWidths.poNumber, maxWidth: colWidths.poNumber }} title={row.poNumber}>{row.poNumber}</td>
+                        <td className="px-4 py-3 text-slate-700 truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title={row.vendor}>{row.vendor}</td>
+                        <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }} title={row.description}>{row.description}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.orderDate, minWidth: colWidths.orderDate, maxWidth: colWidths.orderDate }}>{row.orderDate}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.expectedDate, minWidth: colWidths.expectedDate, maxWidth: colWidths.expectedDate }}>{row.expectedDate}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-800" style={{ width: colWidths.totalAmount, minWidth: colWidths.totalAmount, maxWidth: colWidths.totalAmount }}>{formatCurrency(row.totalAmount, currency)}</td>
+                        <td className="px-4 py-3" style={{ width: colWidths.receivedAmount, minWidth: colWidths.receivedAmount, maxWidth: colWidths.receivedAmount }}>
                           <div className="flex flex-col gap-1">
                             <span className="text-emerald-700">{formatCurrency(row.receivedAmount, currency)}</span>
                               <span className="text-xs text-slate-400">{pct}%</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }}>
                           <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
                             {row.status}
                           </span>

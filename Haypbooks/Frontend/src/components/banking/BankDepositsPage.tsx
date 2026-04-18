@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Loader2, AlertCircle, Plus, Search, RefreshCw,
@@ -10,6 +10,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,16 @@ const STATUS_META: Record<DepositStatus, { label: string; cls: string; icon: Rea
   DRAFT:  { label: 'Draft',  cls: 'bg-amber-50 text-amber-700 border-amber-200',     icon: <Clock size={11} /> },
   POSTED: { label: 'Posted', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <CheckCircle2 size={11} /> },
   VOID:   { label: 'Void',   cls: 'bg-slate-100 text-slate-400 border-slate-200',    icon: <Ban size={11} /> },
+}
+
+const DEPOSIT_COL_WIDTHS_KEY = 'bank-deposits-cols-v1'
+const defaultDepositColWidths = {
+  date: 120,
+  depositNumber: 140,
+  bankAccount: 220,
+  reference: 260,
+  status: 132,
+  amount: 136,
 }
 
 function normalizeDepositStatus(value: any): DepositStatus {
@@ -126,6 +137,38 @@ export default function BankDepositsPage() {
   const [actionLoading, setActionLoading] = useState('')
   const [toast, setToast] = useState('')
   const [didApplyQuerySelection, setDidApplyQuerySelection] = useState(false)
+  const [depositColWidths, setDepositColWidths] = useState<typeof defaultDepositColWidths>(() => {
+    if (typeof window === 'undefined') return defaultDepositColWidths
+    try {
+      return {
+        ...defaultDepositColWidths,
+        ...JSON.parse(localStorage.getItem(DEPOSIT_COL_WIDTHS_KEY) ?? '{}'),
+      }
+    } catch {
+      return defaultDepositColWidths
+    }
+  })
+  const depositColWidthsRef = useRef(depositColWidths)
+  useEffect(() => { depositColWidthsRef.current = depositColWidths }, [depositColWidths])
+  const saveDepositColWidths = useCallback((next: typeof defaultDepositColWidths) => {
+    setDepositColWidths(next)
+    try { localStorage.setItem(DEPOSIT_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+  }, [])
+  const { containerRef: depositsTableRef, startResize: startDepositResize, isOverflowing: depositsTableOverflowing } = useFixedWidthResizableMap({
+    widths: depositColWidths,
+    widthsRef: depositColWidthsRef,
+    order: ['date', 'depositNumber', 'bankAccount', 'reference', 'status', 'amount'],
+    saveWidths: saveDepositColWidths,
+    fixedWidth: 96,
+    minWidth: {
+      date: 100,
+      depositNumber: 120,
+      bankAccount: 150,
+      reference: 180,
+      status: 110,
+      amount: 110,
+    },
+  })
 
   // Create form state
   const [form, setForm] = useState({
@@ -383,17 +426,44 @@ export default function BankDepositsPage() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div ref={depositsTableRef} className={depositsTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
             <table className="w-full min-w-[920px] table-fixed text-left">
+              <colgroup>
+                <col style={{ width: depositColWidths.date }} />
+                <col style={{ width: depositColWidths.depositNumber }} />
+                <col style={{ width: depositColWidths.bankAccount }} />
+                <col style={{ width: depositColWidths.reference }} />
+                <col style={{ width: depositColWidths.status }} />
+                <col style={{ width: depositColWidths.amount }} />
+                <col style={{ width: 96 }} />
+              </colgroup>
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                  <th className="px-4 py-3 w-32 truncate whitespace-nowrap" title="Date">Date</th>
-                  <th className="px-4 py-3 w-36 truncate whitespace-nowrap" title="Deposit #">Deposit #</th>
-                  <th className="px-4 py-3 w-48 truncate" title="Bank Account">Bank Account</th>
-                  <th className="px-4 py-3 truncate" title="Reference / Memo">Reference / Memo</th>
-                  <th className="px-4 py-3 w-32 truncate text-center" title="Status">Status</th>
-                  <th className="px-4 py-3 w-32 truncate text-right whitespace-nowrap" title="Amount">Amount</th>
-                  <th className="px-4 py-3" />
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: depositColWidths.date, minWidth: depositColWidths.date, maxWidth: depositColWidths.date }} title="Date">
+                    Date
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDepositResize(e, 'date')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate whitespace-nowrap" style={{ width: depositColWidths.depositNumber, minWidth: depositColWidths.depositNumber, maxWidth: depositColWidths.depositNumber }} title="Deposit #">
+                    Deposit #
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDepositResize(e, 'depositNumber')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate" style={{ width: depositColWidths.bankAccount, minWidth: depositColWidths.bankAccount, maxWidth: depositColWidths.bankAccount }} title="Bank Account">
+                    Bank Account
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDepositResize(e, 'bankAccount')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate" style={{ width: depositColWidths.reference, minWidth: depositColWidths.reference, maxWidth: depositColWidths.reference }} title="Reference / Memo">
+                    Reference / Memo
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDepositResize(e, 'reference')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate text-center" style={{ width: depositColWidths.status, minWidth: depositColWidths.status, maxWidth: depositColWidths.status }} title="Status">
+                    Status
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDepositResize(e, 'status')} />
+                  </th>
+                  <th className="relative px-4 py-3 truncate text-right whitespace-nowrap" style={{ width: depositColWidths.amount, minWidth: depositColWidths.amount, maxWidth: depositColWidths.amount }} title="Amount">
+                    Amount
+                    <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startDepositResize(e, 'amount')} />
+                  </th>
+                  <th className="px-4 py-3 w-24" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -403,21 +473,21 @@ export default function BankDepositsPage() {
                     onClick={() => openDetail(d)}
                     className="hover:bg-slate-50 transition-colors cursor-pointer group"
                   >
-                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
+                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap" style={{ width: depositColWidths.date, minWidth: depositColWidths.date, maxWidth: depositColWidths.date }}>
                       {new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-mono text-slate-700 truncate" title={d.depositNumber ?? '—'}>{d.depositNumber ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-800 truncate" title={d.bankAccountName ?? '—'}>{d.bankAccountName ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-500 truncate" title={d.reference ?? d.memo ?? '—'}>{d.reference ?? d.memo ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-sm font-mono text-slate-700 truncate" style={{ width: depositColWidths.depositNumber, minWidth: depositColWidths.depositNumber, maxWidth: depositColWidths.depositNumber }} title={d.depositNumber ?? '—'}>{d.depositNumber ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-800 truncate" style={{ width: depositColWidths.bankAccount, minWidth: depositColWidths.bankAccount, maxWidth: depositColWidths.bankAccount }} title={d.bankAccountName ?? '—'}>{d.bankAccountName ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-500 truncate" style={{ width: depositColWidths.reference, minWidth: depositColWidths.reference, maxWidth: depositColWidths.reference }} title={d.reference ?? d.memo ?? '—'}>{d.reference ?? d.memo ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-center" style={{ width: depositColWidths.status, minWidth: depositColWidths.status, maxWidth: depositColWidths.status }}>
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_META[d.status].cls}`}>
                         {STATUS_META[d.status].icon} {STATUS_META[d.status].label}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono font-semibold text-emerald-700 tabular-nums">
+                    <td className="px-4 py-3.5 text-right font-mono font-semibold text-emerald-700 tabular-nums" style={{ width: depositColWidths.amount, minWidth: depositColWidths.amount, maxWidth: depositColWidths.amount }}>
                       {fmt(d.amount)}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 w-24">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {d.status === 'DRAFT' && (
                           <>
