@@ -384,6 +384,7 @@ export default function BaseSearchablePicker({
       {shouldDisable ? null : open ? createPortal(
         <div
           ref={dropdownRef}
+          onMouseDown={(event) => event.preventDefault()}
           style={{
             position: 'fixed',
             top: dropdownStyle.top,

@@ -3,10 +3,22 @@
 import BaseSearchablePicker from './BaseSearchablePicker'
 import type { PickerOption, PickerProps } from './types'
 
+export interface ProductPickerItem {
+  id: string
+  name: string
+  type: string
+  sku: string | null
+  description?: string
+  salesPrice: number | null
+  taxRate?: number
+  taxCodeId?: string | null
+}
+
 interface ProductPickerFieldProps extends PickerProps {
   itemType?: 'PRODUCT' | 'SERVICE' | string
   onAddNew?: () => void
   createLabel?: string
+  onSelect?: (item: ProductPickerItem | null) => void
 }
 
 function normalizeItems(payload: any): any[] {
@@ -17,15 +29,31 @@ function normalizeItems(payload: any): any[] {
   return []
 }
 
-function mapItemToOption(item: any): PickerOption {
-  const id = String(item?.id ?? '')
-  const primaryLabel = String(item?.name ?? 'Unnamed item')
-  const secondaryLabel = item?.sku || item?.type || undefined
-  const tertiaryLabel = item?.salesPrice != null ? Number(item.salesPrice).toLocaleString() : undefined
-  return { id, primaryLabel, secondaryLabel, tertiaryLabel }
+function normalizeItem(item: any): ProductPickerItem {
+  return {
+    id: String(item?.id ?? ''),
+    name: String(item?.name ?? 'Unnamed item'),
+    type: String(item?.type ?? ''),
+    sku: item?.sku ?? null,
+    description: item?.description ?? undefined,
+    salesPrice: item?.salesPrice != null ? Number(item.salesPrice) : null,
+    taxRate: item?.taxRate != null ? Number(item.taxRate) : undefined,
+    taxCodeId: item?.taxCodeId ?? null,
+  }
 }
 
-export default function ProductPickerField({ itemType, filters, ...props }: ProductPickerFieldProps) {
+function mapItemToOption(item: any): PickerOption {
+  const normalized = normalizeItem(item)
+  return {
+    id: normalized.id,
+    primaryLabel: normalized.name,
+    secondaryLabel: normalized.sku || normalized.type || undefined,
+    tertiaryLabel: normalized.salesPrice != null ? Number(normalized.salesPrice).toLocaleString() : undefined,
+    data: normalized,
+  }
+}
+
+export default function ProductPickerField({ itemType, filters, onChange, onSelect, ...props }: ProductPickerFieldProps) {
   const mergedFilters = {
     ...(filters ?? {}),
     ...(itemType ? { type: itemType } : {}),
@@ -34,6 +62,10 @@ export default function ProductPickerField({ itemType, filters, ...props }: Prod
   return (
     <BaseSearchablePicker
       {...props}
+      onChange={(id, option) => {
+        onChange(id, option)
+        onSelect?.((option.data as ProductPickerItem | undefined) ?? null)
+      }}
       filters={mergedFilters}
       emptyMessage="No products or services found"
       searchEndpoint={(cid, search, nextFilters) => {

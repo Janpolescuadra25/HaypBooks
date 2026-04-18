@@ -3,6 +3,7 @@ export interface PickerOption {
   primaryLabel: string
   secondaryLabel?: string
   tertiaryLabel?: string
+  data?: unknown
 }
 
 export interface PickerProps {

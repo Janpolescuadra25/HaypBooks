@@ -5,10 +5,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  ArrowLeft, Plus, Trash2, Loader2, AlertCircle, ChevronDown,
-  Save, Send, LayoutTemplate, Search, Check, X, ChevronRight,
-  FileText, Paperclip, RefreshCw, Printer, Download,
-  MoreHorizontal, Info, MapPin, Copy, Ban, History,
+  ArrowLeft, Plus, Trash2, Loader2, AlertCircle,
+  Save, Send, Check, X, ChevronRight,
+  FileText, Paperclip, Printer,
+  MapPin,
   Mail, Phone, Settings, Eye,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
@@ -16,148 +16,15 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import { getPrintTheme } from '@/lib/invoice-templates/printThemes'
 import { getAllTemplates, getDefaultTemplate, recordTemplateUsage } from '@/lib/invoice-templates/templateStorage'
 import type { InvoiceTemplate } from '@/lib/invoice-templates/types'
 import TemplateGallery from '@/components/sales/invoice-templates/TemplateGallery'
 import QuickAddCustomerModal from '@/components/sales/QuickAddCustomerModal'
 import ProductFormModal from '@/components/sales/ProductFormModal'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
-import { ProductPickerField, TaxCodePickerField } from '@/components/sales/pickers'
+import { ProductPickerField, TaxCodePickerField, type ProductPickerItem } from '@/components/sales/pickers'
 import { useToast } from '@/components/ToastProvider'
-
-// ─── Print/PDF template theme definitions ────────────────────────────────────
-type PrintTheme = {
-  bg: string
-  fontClass: string
-  titleClass: string
-  titleBorderClass: string
-  draftNumClass: string
-  metaLabelClass: string
-  addrTitleClass: string
-  addrTextClass: string
-  thRowBg: string
-  thCellClass: string
-  tbodyRowClass: string
-  tdClass: string
-  totalsDividerClass: string
-  totalsDueClass: string
-  totalsDueAmtClass: string
-  memoClass: string
-}
-
-const PRINT_THEMES: Record<string, PrintTheme> = {
-  'builtin-clean': {
-    bg: 'bg-white',
-    fontClass: 'font-sans',
-    titleClass: 'text-4xl font-bold text-gray-900 tracking-tight',
-    titleBorderClass: 'border-b border-gray-300 pb-6 mb-8',
-    draftNumClass: 'text-gray-400 font-mono text-sm mt-1',
-    metaLabelClass: 'font-semibold text-gray-700',
-    addrTitleClass: 'text-xs font-bold uppercase tracking-widest text-gray-400 mb-2',
-    addrTextClass: 'text-sm text-gray-700 space-y-0.5',
-    thRowBg: '',
-    thCellClass: 'font-semibold text-gray-500 text-xs uppercase tracking-wide py-3',
-    tbodyRowClass: 'border-b border-gray-100',
-    tdClass: 'py-3 text-gray-700',
-    totalsDividerClass: 'border-t border-gray-300 pt-4',
-    totalsDueClass: 'font-bold text-gray-900',
-    totalsDueAmtClass: 'text-gray-900',
-    memoClass: 'border-t border-gray-100 pt-6 mt-8 text-sm text-gray-500',
-  },
-  'builtin-colorful': {
-    bg: 'bg-white',
-    fontClass: 'font-sans',
-    titleClass: 'text-4xl font-black text-emerald-700',
-    titleBorderClass: 'border-b-2 border-emerald-300 pb-6 mb-8',
-    draftNumClass: 'text-emerald-400 font-mono text-sm mt-1',
-    metaLabelClass: 'font-semibold text-emerald-700',
-    addrTitleClass: 'text-xs font-bold uppercase tracking-widest text-emerald-500 mb-2',
-    addrTextClass: 'text-sm text-gray-700 space-y-0.5',
-    thRowBg: 'bg-gradient-to-r from-emerald-600 to-teal-500',
-    thCellClass: 'font-bold text-white text-xs uppercase tracking-wide py-3',
-    tbodyRowClass: 'border-b border-emerald-100 even:bg-emerald-50/40',
-    tdClass: 'py-3 text-gray-700',
-    totalsDividerClass: 'border-t-2 border-emerald-300 pt-4',
-    totalsDueClass: 'font-black text-emerald-700',
-    totalsDueAmtClass: 'text-emerald-700',
-    memoClass: 'border-t border-emerald-100 pt-6 mt-8 text-sm text-gray-500',
-  },
-  'builtin-modern': {
-    bg: 'bg-gray-50',
-    fontClass: 'font-sans',
-    titleClass: 'text-3xl font-light text-gray-900 tracking-widest uppercase',
-    titleBorderClass: 'border-b border-gray-200 pb-6 mb-8',
-    draftNumClass: 'text-gray-400 font-light text-sm mt-1',
-    metaLabelClass: 'font-medium text-gray-500',
-    addrTitleClass: 'text-xs font-medium uppercase tracking-widest text-gray-400 mb-2',
-    addrTextClass: 'text-sm text-gray-600 space-y-0.5',
-    thRowBg: 'bg-gray-100',
-    thCellClass: 'font-medium text-gray-500 text-xs uppercase tracking-widest py-3',
-    tbodyRowClass: 'border-b border-gray-100',
-    tdClass: 'py-3.5 text-gray-600 text-sm',
-    totalsDividerClass: 'border-t border-gray-200 pt-4',
-    totalsDueClass: 'font-semibold text-sky-700',
-    totalsDueAmtClass: 'text-sky-700',
-    memoClass: 'border-t border-gray-200 pt-6 mt-8 text-sm text-gray-500',
-  },
-  'builtin-corporate': {
-    bg: 'bg-white',
-    fontClass: 'font-serif',
-    titleClass: 'text-4xl font-bold text-blue-950 tracking-tight uppercase',
-    titleBorderClass: 'border-b-4 border-blue-950 pb-6 mb-8',
-    draftNumClass: 'text-gray-500 font-mono text-sm mt-1',
-    metaLabelClass: 'font-semibold text-blue-950',
-    addrTitleClass: 'text-xs font-bold uppercase tracking-widest text-blue-900 mb-2',
-    addrTextClass: 'text-sm text-gray-800 space-y-0.5 font-serif',
-    thRowBg: 'bg-blue-950',
-    thCellClass: 'font-bold text-white text-xs uppercase tracking-wide py-3',
-    tbodyRowClass: 'border-b border-gray-300',
-    tdClass: 'py-3 text-gray-800',
-    totalsDividerClass: 'border-t-4 border-blue-950 pt-4',
-    totalsDueClass: 'font-bold text-blue-950 uppercase text-sm tracking-wide',
-    totalsDueAmtClass: 'text-blue-950',
-    memoClass: 'border-t-2 border-blue-950 pt-6 mt-8 text-sm text-gray-500 font-serif',
-  },
-  'builtin-creative': {
-    bg: 'bg-amber-50',
-    fontClass: 'font-sans',
-    titleClass: 'text-5xl font-black text-amber-500 tracking-tight',
-    titleBorderClass: 'pb-6 mb-8',
-    draftNumClass: 'text-gray-400 font-mono text-sm mt-1',
-    metaLabelClass: 'font-black text-amber-600',
-    addrTitleClass: 'text-xs font-black uppercase tracking-widest text-amber-400 mb-2',
-    addrTextClass: 'text-sm text-gray-700 space-y-0.5',
-    thRowBg: 'bg-amber-500',
-    thCellClass: 'font-black text-white text-xs uppercase tracking-wide py-3',
-    tbodyRowClass: 'border-b-2 border-amber-100',
-    tdClass: 'py-3 text-gray-700',
-    totalsDividerClass: 'border-t-4 border-amber-500 pt-4',
-    totalsDueClass: 'font-black text-amber-600',
-    totalsDueAmtClass: 'text-amber-600',
-    memoClass: 'border-t-2 border-amber-200 pt-6 mt-8 text-sm text-gray-500',
-  },
-  'builtin-classic': {
-    bg: 'bg-amber-50/40',
-    fontClass: 'font-serif',
-    titleClass: 'text-4xl font-bold text-gray-900',
-    titleBorderClass: 'border-b-2 border-gray-900 pb-6 mb-8',
-    draftNumClass: 'text-gray-500 font-serif text-sm mt-1',
-    metaLabelClass: 'font-semibold text-gray-800',
-    addrTitleClass: 'text-xs font-bold uppercase tracking-widest text-gray-500 mb-2',
-    addrTextClass: 'text-sm text-gray-800 space-y-0.5 font-serif',
-    thRowBg: '',
-    thCellClass: 'font-bold text-gray-900 text-xs uppercase tracking-wide py-3 border-b-2 border-gray-900',
-    tbodyRowClass: 'border-b border-gray-400',
-    tdClass: 'py-3 text-gray-800 font-serif',
-    totalsDividerClass: 'border-t-2 border-gray-900 pt-4',
-    totalsDueClass: 'font-bold text-gray-900 uppercase font-serif',
-    totalsDueAmtClass: 'text-gray-900',
-    memoClass: 'border-t border-gray-400 pt-6 mt-8 text-sm text-gray-600 font-serif',
-  },
-}
-
-const getPrintTheme = (templateId: string): PrintTheme =>
-  PRINT_THEMES[templateId] ?? PRINT_THEMES['builtin-clean']
 
 interface CustomerAddress { line1?: string; city?: string; state?: string; zip?: string; country?: string }
 interface Customer {
@@ -181,16 +48,6 @@ interface LineItem {
   taxRate: number
   taxCodeId?: string
   taxCodeLabel?: string
-}
-
-interface CatalogItem {
-  id: string
-  name: string
-  type: string
-  sku: string | null
-  description?: string
-  salesPrice: number | null
-  taxRate?: number
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9)
@@ -222,7 +79,6 @@ export default function InvoiceCreatePage() {
   // Template
   const [template, setTemplate] = useState<InvoiceTemplate>(getDefaultTemplate)
   const [showGallery, setShowGallery] = useState(false)
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false)
   const [allTemplates, setAllTemplates] = useState<InvoiceTemplate[]>([])
 
   useEffect(() => { setAllTemplates(getAllTemplates()) }, [])
@@ -269,8 +125,6 @@ export default function InvoiceCreatePage() {
   const [discountType, setDiscountType] = useState<'pct' | 'flat'>('pct')
   const [discountValue, setDiscountValue] = useState(0)
 
-  const invoiceSettingsMessage = 'Coming soon'
-
   // Address & contact auto-fill
   const [customerEmail, setCustomerEmail] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -278,9 +132,6 @@ export default function InvoiceCreatePage() {
   const [billAddress, setBillAddress] = useState({ line1: '', city: '', state: '', zip: '' })
   const [shipSameAsBill, setShipSameAsBill] = useState(true)
   const [shipAddress, setShipAddress] = useState({ line1: '', city: '', state: '', zip: '' })
-
-  // Catalog (products & services for line item picker)
-  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
 
   // Quick-add customer
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
@@ -345,54 +196,6 @@ export default function InvoiceCreatePage() {
   const [saving, setSaving] = useState(false)
   const [saveAction, setSaveAction] = useState<'draft' | 'send'>('draft')
   const [error, setError] = useState('')
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
-  const [showSaveDraftMenu, setShowSaveDraftMenu] = useState(false)
-  const [showSendMenu, setShowSendMenu] = useState(false)
-
-  const loadInvoiceDependencies = useCallback(async () => {
-    if (!companyId) return
-
-    const [catalogResult, customersResult] = await Promise.allSettled([
-      apiClient.get(`/companies/${companyId}/inventory/items?limit=500`),
-      apiClient.get(`/companies/${companyId}/ar/customers`),
-    ])
-
-    if (catalogResult.status === 'fulfilled') {
-      const catalogData = catalogResult.value.data
-      const list: any[] = Array.isArray(catalogData) ? catalogData : catalogData.items ?? []
-      setCatalogItems(list.map(i => ({
-        id: i.id,
-        name: i.name,
-        type: i.type,
-        sku: i.sku ?? null,
-        description: i.description ?? '',
-        salesPrice: i.salesPrice != null ? Number(i.salesPrice) : null,
-        taxRate: i.taxRate != null ? Number(i.taxRate) : undefined,
-      })))
-    } else {
-      setCatalogItems([])
-    }
-
-    if (customersResult.status === 'fulfilled') {
-      const customersData = customersResult.value.data
-      const list: any[] = Array.isArray(customersData)
-        ? customersData
-        : customersData?.data ?? customersData.items ?? customersData.customers ?? []
-      setCustomers(list.map(c => ({
-        contactId: c.contactId ?? c.id,
-        name: c.name ?? c.displayName ?? '',
-        email: c.email ?? c.contact?.email ?? '',
-        phone: c.phone ?? c.phoneNumber ?? '',
-        balance: Number(c.balance ?? 0),
-        billingAddress: c.billingAddress ?? c.address,
-        shippingAddress: c.shippingAddress,
-        paymentTerms: c.paymentTerms ?? c.terms,
-        taxRate: c.taxRate != null ? Number(c.taxRate) : undefined,
-      })))
-    } else {
-      setCustomers([])
-    }
-  }, [companyId])
 
   const loadCustomers = useCallback(async () => {
     if (!companyId) return
@@ -418,8 +221,8 @@ export default function InvoiceCreatePage() {
   }, [companyId])
 
   useEffect(() => {
-    void loadInvoiceDependencies()
-  }, [loadInvoiceDependencies])
+    void loadCustomers()
+  }, [loadCustomers])
 
   useEffect(() => {
     setMemo(template.defaultMessage)
@@ -459,7 +262,6 @@ export default function InvoiceCreatePage() {
   const discountAmt = discountType === 'pct'
     ? subtotal * (Number(discountValue) / 100)
     : Number(discountValue)
-  const taxable = subtotal - discountAmt
   const taxTotal = template.defaults.taxTreatment !== 'none'
     ? items.reduce((sum, it) => {
         const lineTotal = it.quantity * it.unitPrice
@@ -476,7 +278,7 @@ export default function InvoiceCreatePage() {
     setItems(p => p.map(it => it.id === id ? { ...it, [f]: v } : it))
 
   const handleCreatedProduct = (saved: any) => {
-    const product: CatalogItem = {
+    const product: ProductPickerItem = {
       id: String(saved.id),
       name: saved.name ?? '',
       type: saved.type ?? '',
@@ -484,15 +286,16 @@ export default function InvoiceCreatePage() {
       description: saved.description ?? '',
       salesPrice: saved.salesPrice != null ? Number(saved.salesPrice) : null,
       taxRate: saved.taxRate != null ? Number(saved.taxRate) : undefined,
+      taxCodeId: saved.taxCodeId ?? null,
     }
-    setCatalogItems(prev => [product, ...prev])
     if (productModalLineItemId) {
       setItems(prev => prev.map(row => row.id === productModalLineItemId ? {
         ...row,
         itemId: product.id,
-        description: product.name,
+        description: product.description ?? product.name,
         unitPrice: product.salesPrice ?? row.unitPrice,
         taxRate: product.taxRate ?? row.taxRate,
+        taxCodeId: product.taxCodeId ?? row.taxCodeId,
       } : row))
     }
     setProductModalLineItemId(null)
@@ -849,8 +652,6 @@ export default function InvoiceCreatePage() {
                 <tbody>
                   {items.map((it, i) => {
                     const lineTotal = it.quantity * it.unitPrice
-                    const lineTaxAmount = lineTotal * ((it.taxRate || 0) / 100)
-                    const selectedCatalogItem = it.itemId ? catalogItems.find((c) => c.id === it.itemId) : undefined
                     return (
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                         <td className="px-4 py-2 text-gray-400 text-xs border-r border-gray-100 text-center">{i + 1}</td>
@@ -861,17 +662,26 @@ export default function InvoiceCreatePage() {
                             placeholder="Select product..."
                             disabled={!companyId}
                             className="w-full h-8 text-sm"
-                            onChange={(selectedId, option) => {
+                            onChange={(selectedId) => {
                               setItems((prev) => prev.map((row) => {
                                 if (row.id !== it.id) return row
                                 if (!selectedId) return { ...row, itemId: undefined }
-                                const selectedItem = catalogItems.find((c) => c.id === selectedId)
                                 return {
                                   ...row,
                                   itemId: selectedId,
-                                  description: selectedItem?.description ?? selectedItem?.name ?? option.primaryLabel,
-                                  unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
-                                  taxRate: selectedItem?.taxRate ?? row.taxRate,
+                                }
+                              }))
+                            }}
+                            onSelect={(selectedItem) => {
+                              if (!selectedItem) return
+                              setItems((prev) => prev.map((row) => {
+                                if (row.id !== it.id) return row
+                                return {
+                                  ...row,
+                                  description: selectedItem.description ?? selectedItem.name,
+                                  unitPrice: selectedItem.salesPrice ?? row.unitPrice,
+                                  taxRate: selectedItem.taxRate ?? row.taxRate,
+                                  taxCodeId: selectedItem.taxCodeId ?? row.taxCodeId,
                                 }
                               }))
                             }}
@@ -1373,67 +1183,26 @@ export default function InvoiceCreatePage() {
             Cancel
           </button>
           <div className="flex items-center gap-2">
-            {/* Save Draft split-button */}
-            <div className="relative flex">
-              <button onClick={() => handleSave('draft')} disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 border-r-0 text-emerald-700 rounded-l-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50">
-                {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                Save Draft
-              </button>
-              <button onClick={() => setShowSaveDraftMenu(p => !p)} aria-label="Toggle save draft options" title="Toggle save draft options"
-                className="px-2 py-2 border border-emerald-200 text-emerald-700 rounded-r-xl hover:bg-emerald-50 transition-colors">
-                <ChevronDown size={12} />
-              </button>
-              <AnimatePresence>
-                {showSaveDraftMenu && (
-                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
-                    className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-52 z-50">
-                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Continue Editing</button>
-                    <button onClick={() => { handleSave('draft'); setShowSaveDraftMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Close</button>
-                    <div className="border-t border-gray-100 my-1" />
-                    <button onClick={() => setShowSaveDraftMenu(false)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save as Template</button>
-                    <button onClick={() => setShowSaveDraftMenu(false)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Save &amp; Create Similar</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            {/* Send Invoice split-button */}
-            <div className="relative flex">
-              <button onClick={() => handleSave('send')} disabled={saving}
-                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-l-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm border-r border-emerald-500">
-                {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                Send Invoice
-              </button>
-              <button onClick={() => setShowSendMenu(p => !p)} aria-label="Toggle send options" title="Toggle send options"
-                className="px-2 py-2 bg-emerald-700 text-white rounded-r-xl hover:bg-emerald-800 transition-colors shadow-sm">
-                <ChevronDown size={12} />
-              </button>
-              <AnimatePresence>
-                {showSendMenu && (
-                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
-                    className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-56 z-50">
-                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send Now (email immediately)</button>
-                    <button type="button" title={invoiceSettingsMessage} tabIndex={-1}
-                      className="w-full cursor-not-allowed text-left px-3 py-2 text-xs text-gray-300">Schedule Send</button>
-                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Payment Link</button>
-                    <button onClick={() => setShowSendMenu(false)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Preview Before Sending</button>
-                    <button onClick={() => { handleSave('send'); setShowSendMenu(false) }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">Send with Reminder</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <button
+              onClick={() => handleSave('draft')}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
+            >
+              {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Save as Draft
+            </button>
+            <button
+              onClick={() => handleSave('send')}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
+            >
+              {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Send Invoice
+            </button>
             {/* ⚙️ Invoice Settings button → opens large modal */}
             <button
               type="button"
-              title={invoiceSettingsMessage}
+              title="Coming soon"
               className="flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-400">
               <Settings size={15} />
               Invoice Settings
@@ -1477,17 +1246,6 @@ export default function InvoiceCreatePage() {
           onSaved={handleCreatedProduct}
           onClose={() => setProductModalLineItemId(null)}
         />
-      )}
-
-      {/* Dismiss overlays */}
-      {showMoreMenu && (
-        <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
-      )}
-      {showSaveDraftMenu && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowSaveDraftMenu(false)} />
-      )}
-      {showSendMenu && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowSendMenu(false)} />
       )}
     </div>
   )
