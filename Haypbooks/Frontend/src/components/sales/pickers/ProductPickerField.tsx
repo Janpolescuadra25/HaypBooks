@@ -5,6 +5,8 @@ import type { PickerOption, PickerProps } from './types'
 
 interface ProductPickerFieldProps extends PickerProps {
   itemType?: 'PRODUCT' | 'SERVICE' | string
+  onAddNew?: () => void
+  createLabel?: string
 }
 
 function normalizeItems(payload: any): any[] {

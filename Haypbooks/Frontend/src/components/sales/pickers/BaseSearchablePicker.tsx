@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { MouseEvent as ReactMouseEvent } from 'react'
-import { ChevronDown, Loader2, Search, X } from 'lucide-react'
+import { ChevronDown, Loader2, Search, Plus, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import type { PickerOption, PickerProps } from './types'
 
@@ -11,6 +11,8 @@ interface BaseSearchablePickerProps extends PickerProps {
   searchEndpoint: (companyId: string, search: string, filters?: Record<string, string>) => string
   mapResponseToOptions: (responseData: any) => PickerOption[]
   emptyMessage?: string
+  onAddNew?: (() => void)
+  createLabel?: string
 }
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -19,8 +21,8 @@ export default function BaseSearchablePicker({
   companyId,
   value,
   onChange,
-  placeholder = 'Select an option...',
   label,
+  placeholder = label ?? 'Select an option...',
   required = false,
   disabled = false,
   filters,
@@ -30,6 +32,8 @@ export default function BaseSearchablePicker({
   searchEndpoint,
   mapResponseToOptions,
   emptyMessage = 'No matching results',
+  onAddNew,
+  createLabel,
 }: BaseSearchablePickerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -89,8 +93,15 @@ export default function BaseSearchablePicker({
     const rect = trigger.getBoundingClientRect()
     const width = Math.min(rect.width, window.innerWidth - 16)
     const left = Math.max(8, Math.min(rect.left + window.scrollX, window.innerWidth - width - 8))
+    const dropdownHeight = 320
+    const availableBottom = window.innerHeight - rect.bottom - 8
+    const availableTop = rect.top - 8
+    const top = availableBottom < 220 && availableTop > availableBottom
+      ? Math.max(8, rect.top + window.scrollY - dropdownHeight)
+      : rect.bottom + window.scrollY
+
     setDropdownStyle({
-      top: rect.bottom + window.scrollY,
+      top,
       left,
       width,
     })
@@ -338,35 +349,69 @@ export default function BaseSearchablePicker({
             ) : fetchError ? (
               <p className="px-3 py-4 text-center text-xs text-rose-500">{fetchError}</p>
             ) : options.length === 0 ? (
-              <p className="px-3 py-4 text-center text-xs text-slate-500">{emptyMessage}</p>
-            ) : (
-              options.map((option, index) => (
-                <button
-                  key={option.id}
-                  id={`option-${option.id}`}
-                  ref={(element) => {
-                    optionRefs.current[index] = element
-                  }}
-                  type="button"
-                  role="option"
-                  aria-selected={highlightedIndex === index ? 'true' : 'false'}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                  onClick={() => selectOption(option)}
-                  className={`flex w-full items-start justify-between gap-3 border-b border-slate-100 px-3 py-2 text-left last:border-b-0 ${
-                    highlightedIndex === index ? 'bg-emerald-50' : 'hover:bg-emerald-50/70'
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">{option.primaryLabel}</p>
-                    {option.secondaryLabel ? (
-                      <p className="truncate text-xs text-slate-500">{option.secondaryLabel}</p>
-                    ) : null}
+              <>
+                {onAddNew ? (
+                  <div className="border-b border-slate-100 px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false)
+                        onAddNew()
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                    >
+                      <Plus size={12} />
+                      {createLabel ?? `+ Add new ${label ?? 'option'}`}
+                    </button>
                   </div>
-                  {option.tertiaryLabel ? (
-                    <span className="shrink-0 text-xs text-slate-500">{option.tertiaryLabel}</span>
-                  ) : null}
-                </button>
-              ))
+                ) : null}
+                <p className="px-3 py-4 text-center text-xs text-slate-500">{emptyMessage}</p>
+              </>
+            ) : (
+              <>
+                {options.map((option, index) => (
+                  <button
+                    key={option.id}
+                    id={`option-${option.id}`}
+                    ref={(element) => {
+                      optionRefs.current[index] = element
+                    }}
+                    type="button"
+                    role="option"
+                    aria-selected={highlightedIndex === index ? 'true' : 'false'}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => selectOption(option)}
+                    className={`flex w-full items-start justify-between gap-3 border-b border-slate-100 px-3 py-2 text-left last:border-b-0 ${
+                      highlightedIndex === index ? 'bg-emerald-50' : 'hover:bg-emerald-50/70'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{option.primaryLabel}</p>
+                      {option.secondaryLabel ? (
+                        <p className="truncate text-xs text-slate-500">{option.secondaryLabel}</p>
+                      ) : null}
+                    </div>
+                    {option.tertiaryLabel ? (
+                      <span className="shrink-0 text-xs text-slate-500">{option.tertiaryLabel}</span>
+                    ) : null}
+                  </button>
+                ))}
+                {onAddNew ? (
+                  <div className="border-t border-slate-100 px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false)
+                        onAddNew()
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                    >
+                      <Plus size={12} />
+                      {createLabel ?? `+ Add new ${label ?? 'option'}`}
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
         </div>, document.body

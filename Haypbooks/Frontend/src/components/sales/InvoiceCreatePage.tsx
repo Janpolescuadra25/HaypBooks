@@ -779,35 +779,29 @@ export default function InvoiceCreatePage() {
                       <tr key={it.id} className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
                         <td className="px-4 py-2 text-gray-400 text-xs border-r border-gray-100 text-center">{i + 1}</td>
                         <td className="px-4 py-2 border-r border-gray-100">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                              <ProductPickerField
-                                companyId={companyId ?? ''}
-                                value={it.itemId ?? null}
-                                placeholder="Search products or services..."
-                                disabled={!companyId}
-                                onChange={(selectedId, option) => {
-                                  setItems((prev) => prev.map((row) => {
-                                    if (row.id !== it.id) return row
-                                    if (!selectedId) return { ...row, itemId: undefined }
-                                    const selectedItem = catalogItems.find((c) => c.id === selectedId)
-                                    return {
-                                      ...row,
-                                      itemId: selectedId,
-                                      description: selectedItem?.description ?? selectedItem?.name ?? option.primaryLabel,
-                                      unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
-                                      taxRate: selectedItem?.taxRate ?? row.taxRate,
-                                    }
-                                  }))
-                                }}
-                              />
-                            </div>
-                            <button type="button" onClick={() => setProductModalLineItemId(it.id)}
+                          <div>
+                            <ProductPickerField
+                              label="Product / Service"
+                              companyId={companyId ?? ''}
+                              value={it.itemId ?? null}
                               disabled={!companyId}
-                              aria-label="Create new product"
-                              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 whitespace-nowrap disabled:text-slate-300 disabled:hover:text-slate-300 disabled:cursor-not-allowed">
-                              + New product
-                            </button>
+                              onChange={(selectedId, option) => {
+                                setItems((prev) => prev.map((row) => {
+                                  if (row.id !== it.id) return row
+                                  if (!selectedId) return { ...row, itemId: undefined }
+                                  const selectedItem = catalogItems.find((c) => c.id === selectedId)
+                                  return {
+                                    ...row,
+                                    itemId: selectedId,
+                                    description: selectedItem?.description ?? selectedItem?.name ?? option.primaryLabel,
+                                    unitPrice: selectedItem?.salesPrice ?? row.unitPrice,
+                                    taxRate: selectedItem?.taxRate ?? row.taxRate,
+                                  }
+                                }))
+                              }}
+                              onAddNew={() => setProductModalLineItemId(it.id)}
+                              createLabel="+ New product"
+                            />
                           </div>
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100">
@@ -845,9 +839,9 @@ export default function InvoiceCreatePage() {
                         <td className="px-4 py-2 border-r border-gray-100">
                           <div className="space-y-1.5">
                             <TaxCodePickerField
+                              label="Tax code"
                               companyId={companyId ?? ''}
                               value={it.taxCodeId ?? null}
-                              placeholder="Search tax code..."
                               disabled={!companyId}
                               onChange={(selectedId, option) => {
                                 if (!selectedId) {
