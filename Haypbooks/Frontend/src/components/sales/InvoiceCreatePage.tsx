@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   ArrowLeft, Plus, Trash2, Loader2, AlertCircle,
-  Save, Send, Check, X, ChevronRight, ChevronDown,
+  Save, Send, Check, X, ChevronRight,
   FileText, Paperclip, Printer,
   MapPin,
   Mail, Phone, Settings, Eye,
@@ -199,8 +199,6 @@ export default function InvoiceCreatePage() {
   const [error, setError] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>(DEFAULT_INVOICE_SETTINGS)
-  const [showSaveMenu, setShowSaveMenu] = useState(false)
-  const [showSendMenu, setShowSendMenu] = useState(false)
 
   const loadCustomers = useCallback(async () => {
     if (!companyId) return
@@ -306,8 +304,7 @@ export default function InvoiceCreatePage() {
     setProductModalLineItemId(null)
   }
 
-  const handleSave = async (action: 'draft' | 'send', options?: { navigate?: boolean }) => {
-    const navigate = options?.navigate ?? false
+  const handleSave = async (action: 'draft' | 'send') => {
     if (!customerId) { setError('Please select a customer.'); return }
     const validItems = items.filter(it => it.description.trim())
     if (validItems.length === 0) { setError('Add at least one line item.'); return }
@@ -342,21 +339,17 @@ export default function InvoiceCreatePage() {
           ...(emailBcc ? { bcc: emailBcc } : {}),
           sendCopy: emailSendCopyToSelf,
         })
-        toast.success('Invoice sent successfully')
-      }
-
-      if (action === 'draft') {
+        toast.success('Invoice sent')
+        router.push('/sales/billing/invoices')
+      } else {
         toast.success('Invoice saved as draft')
       }
 
       recordTemplateUsage(template.id)
-      if (navigate) router.push('/sales/billing/invoices')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to save invoice')
     } finally {
       setSaving(false)
-      setShowSaveMenu(false)
-      setShowSendMenu(false)
     }
   }
 
@@ -1196,58 +1189,25 @@ export default function InvoiceCreatePage() {
             Cancel
           </button>
           <div className="flex items-center gap-2">
-            <div className="relative inline-flex items-center">
-              <button
-                onClick={() => handleSave('draft')}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-l-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
-              >
-                {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                Save as Draft
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowSaveMenu(v => !v) }}
-                className="px-2 py-2 border-y border-r border-emerald-200 rounded-r-xl text-emerald-700 hover:bg-emerald-50"
-                aria-label="More save options"
-              >
-                <ChevronDown size={14} />
-              </button>
-              {showSaveMenu && (
-                <div className="absolute right-0 bottom-full mb-2 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
-                  <button onClick={() => handleSave('draft', { navigate: true })} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Save &amp; Close</button>
-                </div>
-              )}
-            </div>
-
-            <div className="relative inline-flex items-center">
-              <button
-                onClick={() => handleSave('send', { navigate: true })}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-l-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                Send Invoice
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowSendMenu(v => !v) }}
-                className="px-2 py-2 border-y border-r bg-emerald-50 border-emerald-200 rounded-r-xl text-emerald-700 hover:bg-emerald-100"
-                aria-label="More send options"
-              >
-                <ChevronDown size={14} />
-              </button>
-              {showSendMenu && (
-                <div className="absolute right-0 bottom-full mb-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
-                  <button onClick={() => { handleSave('send', { navigate: true }); setShowSendMenu(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Send &amp; Close</button>
-                  <button onClick={() => { handleSave('send', { navigate: false }); setShowSendMenu(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Send &amp; Stay</button>
-                  <button onClick={() => { setShowSettings(true); setShowSendMenu(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Schedule Send…</button>
-                </div>
-              )}
-            </div>
-
+            <button
+              onClick={() => handleSave('draft')}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
+            >
+              {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Save Draft
+            </button>
+            <button
+              onClick={() => handleSave('send')}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
+            >
+              {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Send Invoice
+            </button>
             <button onClick={() => setActiveCreateTab('print')} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">
               <Printer size={14} /> Print
             </button>
-
             <button
               type="button"
               onClick={() => setShowSettings(true)}
