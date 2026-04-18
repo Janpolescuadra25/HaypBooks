@@ -215,7 +215,7 @@ Primary Module
 ### Billing
 - Invoices `/sales/billing/invoices`
 - Recurring Invoices `/sales/billing/recurring-invoices`
-- Credit Notes `/sales/billing/credit-notes`
+- Credit Notes `/sales/revenue/credit-notes`
 - Payment Links `/sales/billing/payment-links`
 - Customer Statements `/sales/billing/customer-statements`
 

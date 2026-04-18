@@ -304,7 +304,7 @@
         "items": [
           {"title": "Invoices", "path": "/sales/billing/invoices"},
           {"title": "Recurring Invoices", "path": "/sales/billing/recurring-invoices"},
-          {"title": "Credit Notes", "path": "/sales/billing/credit-notes"},
+          {"title": "Credit Notes", "path": "/sales/revenue/credit-notes"},
           {"title": "Payment Links", "path": "/sales/billing/payment-links"},
           {"title": "Customer Statements", "path": "/sales/billing/customer-statements"}
         ]

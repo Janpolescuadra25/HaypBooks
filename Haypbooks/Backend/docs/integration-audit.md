@@ -166,7 +166,7 @@ All controllers verified under `Backend/src/`:
 |---|---|---|---|---|
 | `/sales/billing/invoices` | **COMPLETE** | `GET/POST /companies/:id/sales/invoices`, `PUT`, `void` | ✅ Yes | Full invoices page with list, detail, status management |
 | `/sales/billing/invoices/new` | **COMPLETE** | `POST /companies/:id/sales/invoices`, `GET customers`, `GET accounts` | ✅ Yes | Full invoice creation form with line items, tax, customer lookup |
-| `/sales/billing/credit-notes` | **COMPLETE** | `GET /companies/:id/ar/credit-notes` (AR module) | ✅ Yes | Lists credit notes with issue/void actions |
+| `/sales/revenue/credit-notes` | **COMPLETE** | `GET /companies/:id/ar/credit-notes` (AR module) | ✅ Yes | Lists credit notes with issue/void actions |
 | `/sales/billing/recurring-invoices` | **COMPLETE** | `GET /companies/:id/ar/recurring` | ✅ Yes | Recurring templates list with activate/deactivate |
 | `/sales/billing/customer-statements` | **STUB** | None | ✅ Partial (reporting) | ComingSoon — Q2 2026 |
 | `/sales/billing/payment-links` | **STUB** | None | ❌ No endpoint | ComingSoon — Q2 2026 |

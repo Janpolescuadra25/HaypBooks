@@ -74,7 +74,7 @@ routes=[
     ('Sales','Sales Ops','Sales Orders','/sales/sales-operations/sales-orders','src/app/(owner)/sales/sales-operations/sales-orders/page.tsx'),
     ('Sales','Billing','Invoices','/sales/billing/invoices','src/app/(owner)/sales/billing/invoices/page.tsx'),
     ('Sales','Billing','Recurring Invoices','/sales/billing/recurring-invoices','src/app/(owner)/sales/billing/recurring-invoices/page.tsx'),
-    ('Sales','Billing','Credit Notes','/sales/billing/credit-notes','src/app/(owner)/sales/billing/credit-notes/page.tsx'),
+    ('Sales','Revenue','Credit Notes','/sales/revenue/credit-notes','src/app/(owner)/sales/revenue/credit-notes/page.tsx'),
     ('Sales','Billing','Payment Links','/sales/billing/payment-links','src/app/(owner)/sales/billing/payment-links/page.tsx'),
     ('Sales','Billing','Customer Statements','/sales/billing/customer-statements','src/app/(owner)/sales/billing/customer-statements/page.tsx'),
 ]
