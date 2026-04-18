@@ -468,7 +468,7 @@ export default function OwnerSidebar() {
       {!isSecondaryVisible && (
         <button
           onClick={() => setIsSecondaryVisible(true)}
-          className="absolute top-[15px] left-[79px] z-50 flex items-center justify-center p-1.5 bg-green-500 hover:bg-green-400 active:bg-green-600 text-white rounded-lg shadow-lg shadow-green-500/30 transition-all"
+          className="absolute top-[15px] left-[79px] z-30 flex items-center justify-center p-1.5 bg-green-500 hover:bg-green-400 active:bg-green-600 text-white rounded-lg shadow-lg shadow-green-500/30 transition-all"
           aria-label="Expand sidebar"
         >
           <ChevronRight size={13} />
