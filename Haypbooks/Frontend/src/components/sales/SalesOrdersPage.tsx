@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Plus, Search, Trash2, X, AlertCircle, Loader2, RefreshCw,
   Download, Eye, FileText, FileX, ArrowUpDown, Clock,
@@ -96,6 +97,7 @@ function compareSalesOrders(a: SalesOrder, b: SalesOrder, key: SortKey, dir: Sor
 const emptyLine = (): SalesOrderLine => ({ description: '', quantity: 1, unitPrice: 0 })
 
 export default function SalesOrdersPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const toast = useToast()
 
@@ -301,6 +303,7 @@ export default function SalesOrdersPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={fetchItems} title="Refresh" className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 border border-emerald-100 transition-colors"><RefreshCw size={15} /></button>
           <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-100 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors"><Download size={15} /> Export</button>
+          <button onClick={() => router.push('/sales/sales/orders/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-100 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors"><Clock size={15} /> Activity Log</button>
           <div className="relative">
             <button onClick={() => setShowColMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-100 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors"><Eye size={15} /> Columns</button>
             {showColMenu && (

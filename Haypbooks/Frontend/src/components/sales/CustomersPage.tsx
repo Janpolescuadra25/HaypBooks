@@ -290,7 +290,7 @@ export default function CustomersPage() {
           </button>
           <button onClick={() => router.push('/sales/customers/activity')} title="Activity Log"
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-100 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors">
-            <Clock size={15} /> History
+            <Clock size={15} /> Activity Log
           </button>
           <div className="relative">
             <button onClick={() => setShowColMenu(v => !v)}

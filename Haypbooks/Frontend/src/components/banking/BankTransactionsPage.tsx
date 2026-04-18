@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Loader2, X, ArrowRightLeft, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -64,6 +65,7 @@ const defaultTxColWidths = {
 function fmt(n: number) { return '₱ ' + n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }
 
 export default function BankTransactionsPage() {
+  const router = useRouter()
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [items, setItems] = useState<any[]>([])
@@ -258,9 +260,8 @@ export default function BankTransactionsPage() {
               Transfer Funds
             </button>
             <button
-              onClick={() => openActivityDrawer(bankAccounts[0]?.id ?? '')}
-              disabled={bankAccounts.length === 0}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-40"
+              onClick={() => router.push('/banking-cash/transactions/activity')}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
             >
               <Clock className="w-4 h-4" />
               Activity Log

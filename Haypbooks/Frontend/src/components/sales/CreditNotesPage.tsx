@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowUpDown, Clock, Download, Loader2, Plus, RefreshCw, X } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -129,6 +130,7 @@ function compareCreditNotes(a: CreditNoteRow, b: CreditNoteRow, key: SortKey, di
 }
 
 export default function CreditNotesPage() {
+  const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
 
@@ -442,6 +444,12 @@ export default function CreditNotesPage() {
             </button>
             <button onClick={fetchData} className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Refresh">
               <RefreshCw size={16} />
+            </button>
+            <button
+              onClick={() => router.push('/sales/revenue/credit-notes/activity')}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+            >
+              <Clock size={15} /> Activity Log
             </button>
             {/* Column visibility */}
             <div className="relative">

@@ -185,6 +185,12 @@ export default function UndepositedFundsPage() {
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
+          <button
+            onClick={() => router.push('/banking-cash/transactions/undeposited-funds/activity')}
+            className="flex items-center gap-2 px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium rounded-lg transition-colors"
+          >
+            <Clock size={14} /> Activity Log
+          </button>
           {selected.size > 0 && (
             <button
               onClick={() => goToDeposit(Array.from(selected))}

@@ -287,6 +287,10 @@ export default function InvoicesPage() {
             className="p-2 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors" title="Refresh">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
+          <button onClick={() => router.push('/sales/billing/invoices/activity')}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">
+            <Clock size={15} /> Activity Log
+          </button>
           <button onClick={() => router.push('/sales/billing/invoices/new')}
             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
             <Plus size={16} /> New Invoice

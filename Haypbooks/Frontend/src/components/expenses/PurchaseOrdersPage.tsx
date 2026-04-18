@@ -1,6 +1,8 @@
 'use client'
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -41,6 +43,7 @@ const defaultPurchaseOrdersColWidths = {
 }
 
 export default function PurchaseOrdersPage() {
+  const router = useRouter()
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [items, setItems] = useState<PurchaseOrderRow[]>([])
@@ -127,6 +130,12 @@ export default function PurchaseOrdersPage() {
             <p className="text-sm text-slate-500 mt-1">Create and track purchase orders with vendors</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push('/expenses/purchasing/orders/activity')}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg shadow-sm"
+            >
+              <Clock size={15} /> Activity Log
+            </button>
             <button className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">
               New PO
             </button>

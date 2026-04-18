@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowUpDown, Ban, Plus, RefreshCw, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -227,6 +228,7 @@ function loadCPCols(): ColDef[] {
 }
 
 export default function CustomerPaymentsPage() {
+  const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
 
@@ -709,6 +711,12 @@ export default function CustomerPaymentsPage() {
               title="Refresh"
             >
               <RefreshCw size={16} />
+            </button>
+            <button
+              onClick={() => router.push('/sales/collections/payments/activity')}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+            >
+              <Clock size={15} /> Activity Log
             </button>
             <button
               onClick={openModal}

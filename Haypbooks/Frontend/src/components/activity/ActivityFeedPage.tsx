@@ -211,7 +211,7 @@ export default function ActivityFeedPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-emerald-900">
-            <Clock3 size={22} className="text-emerald-600" /> Global Activity Feed
+            <Clock3 size={22} className="text-emerald-600" /> Audit Trail
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Review changes across invoices, customers, payments, products, and accounting records.

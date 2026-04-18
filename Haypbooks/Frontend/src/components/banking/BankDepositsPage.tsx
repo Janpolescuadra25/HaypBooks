@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Loader2, AlertCircle, Plus, Search, RefreshCw,
   Banknote, CheckCircle2, Clock, Ban, ExternalLink, X,
@@ -120,6 +120,7 @@ function normalizeDeposit(deposit: any): BankDeposit {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BankDepositsPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -354,6 +355,12 @@ export default function BankDepositsPage() {
           <button onClick={fetchAll} title="Refresh"
             className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={() => router.push('/banking-cash/transactions/deposits/activity')}
+            className="flex items-center gap-2 px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium rounded-lg transition-colors"
+          >
+            <Clock size={14} /> Activity Log
           </button>
           <button
             onClick={() => setShowCreateModal(true)}

@@ -1089,7 +1089,7 @@ export default function BankFeedPage() {
             onClick={() => router.push('/banking-cash/transactions/activity')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <Clock size={14} /> Activity
+            <Clock size={14} /> Activity Log
           </button>
           <button
             onClick={() => selectedAcct && loadTransactions(selectedAcct)}
