@@ -8,13 +8,24 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import ColumnResizer from '@/components/ColumnResizer'
 import CustomerPickerField from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
 import { InvoicePickerField } from './pickers'
 
-const CREDIT_REASONS = ['Returned Goods', 'Billing Error', 'Discount Adjustment', 'Price Correction', 'Service Issue', 'Other']
+const CREDIT_REASONS = ['Returned Goods', 'Price Adjustment', 'Overpayment', 'Billing Error', 'Discount Applied', 'Writing Off Bad Debt', 'Other']
+const REFUND_METHODS = ['Check', 'ACH', 'Credit Card', 'Cash']
 const STATUS_OPTIONS = ['', 'DRAFT', 'ISSUED', 'APPLIED', 'VOID']
 const OPEN_INVOICE_STATUSES = 'SENT,PARTIAL,PARTIALLY_PAID,OVERDUE'
+
+type CreditNoteType = 'credit' | 'refund'
+
+interface InvoiceApplyRow {
+  invoiceId: string
+  invoiceNumber: string
+  balanceDue: number
+  amountToApply: string
+}
 
 interface CreditNoteRow {
   id: string
@@ -27,10 +38,15 @@ interface CreditNoteRow {
   amount: number
   status: string
   memo: string
+  reasonCode: string
+  reasonDetails?: string
+  type: CreditNoteType
+  appliedAmount: number
+  unappliedAmount: number
 }
 
 interface CustomerOption { id: string; name: string }
-interface InvoiceOption { id: string; invoiceNumber: string; balance: number }
+interface InvoiceOption { id: string; invoiceNumber: string; balance: number; date?: string }
 
 interface ColDef {
   key: string; label: string; visible: boolean; width: number; align?: 'left' | 'right'
@@ -39,10 +55,13 @@ interface ColDef {
 const DEFAULT_COLS: ColDef[] = [
   { key: 'creditNoteNumber', label: 'CN #', visible: true, width: 120, align: 'left' },
   { key: 'customer', label: 'Customer', visible: true, width: 180, align: 'left' },
+  { key: 'type', label: 'Type', visible: true, width: 100, align: 'left' },
   { key: 'invoiceNumber', label: 'Invoice #', visible: true, width: 120, align: 'left' },
   { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
   { key: 'amount', label: 'Amount', visible: true, width: 120, align: 'right' },
-  { key: 'memo', label: 'Reason', visible: true, width: 160, align: 'left' },
+  { key: 'appliedAmount', label: 'Applied', visible: true, width: 120, align: 'right' },
+  { key: 'unappliedAmount', label: 'Unapplied', visible: true, width: 120, align: 'right' },
+  { key: 'reasonCode', label: 'Reason', visible: true, width: 150, align: 'left' },
   { key: 'status', label: 'Status', visible: true, width: 96, align: 'left' },
 ]
 
@@ -61,6 +80,8 @@ function loadCols(): ColDef[] {
 }
 
 function normalizeCN(cn: any): CreditNoteRow {
+  const amount = Number(cn.amount ?? cn.totalAmount ?? 0)
+  const appliedAmount = Number(cn.appliedAmount ?? cn.applied ?? 0)
   return {
     id: cn.id,
     creditNoteNumber: cn.creditNoteNumber ?? `CN-${cn.id?.slice(0, 8)}`,
@@ -69,9 +90,14 @@ function normalizeCN(cn: any): CreditNoteRow {
     invoiceId: cn.invoiceId ?? null,
     invoiceNumber: cn.invoiceNumber ?? null,
     date: cn.date ?? cn.issuedAt ?? null,
-    amount: Number(cn.amount ?? cn.totalAmount ?? 0),
+    amount,
     status: cn.status ?? 'DRAFT',
-    memo: cn.memo ?? cn.reason ?? '',
+    memo: cn.reasonDetails ?? cn.memo ?? '',
+    reasonCode: cn.reasonCode ?? cn.reason ?? 'Other',
+    reasonDetails: cn.reasonDetails ?? '',
+    type: cn.type === 'refund' ? 'refund' : 'credit',
+    appliedAmount,
+    unappliedAmount: Number(cn.unappliedAmount ?? Math.max(0, amount - appliedAmount)),
   }
 }
 
@@ -111,12 +137,14 @@ function parsePickerDueAmount(value?: string): number | null {
 }
 
 type SortDirection = 'asc' | 'desc'
-type SortKey = 'creditNoteNumber' | 'customer' | 'invoiceNumber' | 'date' | 'amount' | 'memo' | 'status'
+type SortKey = 'creditNoteNumber' | 'customer' | 'type' | 'invoiceNumber' | 'date' | 'amount' | 'appliedAmount' | 'unappliedAmount' | 'reasonCode' | 'memo' | 'status'
 
 function compareCreditNotes(a: CreditNoteRow, b: CreditNoteRow, key: SortKey, dir: SortDirection): number {
   const asc = dir === 'asc' ? 1 : -1
-  if (key === 'amount') {
-    return a.amount === b.amount ? 0 : a.amount > b.amount ? asc : -asc
+  if (key === 'amount' || key === 'appliedAmount' || key === 'unappliedAmount') {
+    const av = Number((a as any)[key] ?? 0)
+    const bv = Number((b as any)[key] ?? 0)
+    return av === bv ? 0 : av > bv ? asc : -asc
   }
   if (key === 'date') {
     const ad = a.date ? new Date(a.date).getTime() : 0
@@ -161,9 +189,27 @@ export default function CreditNotesPage() {
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
   const [invoices, setInvoices] = useState<InvoiceOption[]>([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
-  const [nc, setNc] = useState({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
+  const [nc, setNc] = useState({
+    customerId: '',
+    invoiceId: '',
+    totalAmount: '',
+    reasonCode: CREDIT_REASONS[0],
+    reasonDetails: '',
+    creditType: 'credit' as CreditNoteType,
+    refundMethod: REFUND_METHODS[0],
+    refundDate: new Date().toISOString().split('T')[0],
+    refundReference: '',
+    bankAccountId: '',
+  })
+  const [appliedInvoices, setAppliedInvoices] = useState<InvoiceApplyRow[]>([])
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [duplicateWarning, setDuplicateWarning] = useState<CreditNoteRow[] | null>(null)
+  const [filterReason, setFilterReason] = useState('')
+  const [filterType, setFilterType] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
@@ -317,8 +363,15 @@ export default function CreditNotesPage() {
         id: inv.id,
         invoiceNumber: inv.invoiceNumber ?? inv.id?.slice(0, 8),
         balance: Number(inv.balance ?? inv.amountDue ?? inv.amount ?? 0),
+        date: inv.date ?? inv.issueDate ?? inv.createdAt ?? null,
       }))
       setInvoices(openInvoices)
+      setAppliedInvoices(openInvoices.map((inv) => ({
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        balanceDue: inv.balance,
+        amountToApply: '',
+      })))
       const selectedInvoice = openInvoices.find((inv) => inv.id === preferredInvoiceId)
       setApplyInvoiceBalance(selectedInvoice ? selectedInvoice.balance : null)
       setApplyForm((prev) => ({
@@ -371,12 +424,35 @@ export default function CreditNotesPage() {
     finally { setCustLoading(false) }
   }, [companyId])
 
+  const loadBankAccounts = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/chart-of-accounts`, { params: { type: 'bank', limit: 50 } })
+      const raw: any[] = Array.isArray(data) ? data : data?.items ?? data?.accounts ?? []
+      setBankAccounts(raw.map((account: any) => ({ id: account.id, name: account.name || account.accountNumber || 'Bank Account' })))
+    } catch { setBankAccounts([]) }
+  }, [companyId])
+
   function openModal() {
     setEditingId(null)
-    setNc({ customerId: '', invoiceId: '', totalAmount: '', reason: CREDIT_REASONS[0] })
+    setNc({
+      customerId: '',
+      invoiceId: '',
+      totalAmount: '',
+      reasonCode: CREDIT_REASONS[0],
+      reasonDetails: '',
+      creditType: 'credit',
+      refundMethod: REFUND_METHODS[0],
+      refundDate: new Date().toISOString().split('T')[0],
+      refundReference: '',
+      bankAccountId: '',
+    })
+    setAppliedInvoices([])
+    setDuplicateWarning(null)
     setSaveError('')
     setNewOpen(true)
     loadCustomers()
+    loadBankAccounts()
   }
 
   function openEditCN(row: CreditNoteRow) {
@@ -385,11 +461,20 @@ export default function CreditNotesPage() {
       customerId: row.customerId ?? '',
       invoiceId: row.invoiceId ?? '',
       totalAmount: row.amount ? String(row.amount) : '',
-      reason: row.memo || CREDIT_REASONS[0],
+      reasonCode: row.reasonCode || CREDIT_REASONS[0],
+      reasonDetails: row.reasonDetails ?? '',
+      creditType: row.type ?? 'credit',
+      refundMethod: row.type === 'refund' ? REFUND_METHODS[0] : REFUND_METHODS[0],
+      refundDate: new Date().toISOString().split('T')[0],
+      refundReference: '',
+      bankAccountId: '',
     })
+    setAppliedInvoices([])
+    setDuplicateWarning(null)
     setSaveError('')
     setNewOpen(true)
     loadCustomers()
+    loadBankAccounts()
     if (row.customerId) loadInvoicesForCustomer(row.customerId, row.invoiceId ?? '')
   }
 
@@ -397,34 +482,60 @@ export default function CreditNotesPage() {
     e.preventDefault()
     if (!companyId) return
     if (!nc.customerId) { setSaveError('Select a customer'); return }
+    if (!nc.reasonCode) { setSaveError('Select a reason code'); return }
+    if (nc.reasonCode === 'Other' && !nc.reasonDetails.trim()) { setSaveError('Provide details for Other reason'); return }
+    if (nc.creditType === 'refund' && !nc.refundMethod) { setSaveError('Select a refund method'); return }
+    if (nc.creditType === 'refund' && !nc.bankAccountId) { setSaveError('Select a bank account'); return }
+
     const newAmount = parseApplyAmount(nc.totalAmount)
     if (!Number.isFinite(newAmount) || newAmount <= 0) { setSaveError('Enter a valid amount'); return }
+
+    const appliedTotal = appliedInvoices.reduce((total, row) => {
+      const amount = parseApplyAmount(row.amountToApply)
+      return total + (Number.isFinite(amount) ? amount : 0)
+    }, 0)
+    if (appliedTotal > newAmount) { setSaveError('Applied amount cannot exceed credit total'); return }
+    for (const invoice of appliedInvoices) {
+      const amount = parseApplyAmount(invoice.amountToApply)
+      if (!invoice.amountToApply) continue
+      if (!Number.isFinite(amount) || amount < 0) { setSaveError('Enter valid apply amounts'); return }
+      if (amount > invoice.balanceDue) { setSaveError(`Amount on invoice ${invoice.invoiceNumber} cannot exceed balance due`); return }
+    }
+
     setSaving(true); setSaveError('')
+    const payload: any = {
+      customerId: nc.customerId,
+      invoiceId: nc.invoiceId || undefined,
+      totalAmount: newAmount,
+      reasonCode: nc.reasonCode,
+      reasonDetails: nc.reasonCode === 'Other' ? nc.reasonDetails.trim() : undefined,
+      type: nc.creditType,
+      appliedInvoices: appliedInvoices
+        .filter(row => parseApplyAmount(row.amountToApply) > 0)
+        .map(row => ({ invoiceId: row.invoiceId, amount: parseApplyAmount(row.amountToApply) })),
+    }
+    if (nc.creditType === 'refund') {
+      payload.refundMethod = nc.refundMethod
+      payload.refundDate = nc.refundDate
+      payload.refundReference = nc.refundReference
+      payload.bankAccountId = nc.bankAccountId
+    }
+
     try {
       if (editingId) {
-        await apiClient.put(`/companies/${companyId}/ar/credit-notes/${editingId}`, {
-          customerId: nc.customerId,
-          invoiceId: nc.invoiceId || undefined,
-          totalAmount: newAmount,
-          reason: nc.reason,
-        })
+        await apiClient.put(`/companies/${companyId}/ar/credit-notes/${editingId}`, payload)
         setNewOpen(false)
         fetchData()
         showToast('Credit note updated')
         setEditingId(null)
       } else {
-        await apiClient.post(`/companies/${companyId}/ar/credit-notes`, {
-          customerId: nc.customerId,
-          invoiceId: nc.invoiceId || undefined,
-          totalAmount: newAmount,
-          reason: nc.reason,
-        })
+        await apiClient.post(`/companies/${companyId}/ar/credit-notes`, payload)
         setNewOpen(false)
         fetchData()
         showToast('Credit note created')
       }
     } catch (err: any) {
-      setSaveError(err?.response?.data?.message || 'Failed to create credit note')
+      setSaveError(err?.response?.data?.message || 'Failed to save credit note')
     } finally {
       setSaving(false)
     }
@@ -433,16 +544,28 @@ export default function CreditNotesPage() {
   // ─── Search filter ────────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    if (!search) return items
-    const q = search.toLowerCase()
-    return items.filter(r =>
-      r.creditNoteNumber?.toLowerCase().includes(q) ||
-      r.customer?.toLowerCase().includes(q) ||
-      (r.invoiceNumber ?? '').toLowerCase().includes(q) ||
-      r.memo?.toLowerCase().includes(q) ||
-      r.status?.toLowerCase().includes(q)
-    )
-  }, [search, items])
+    return items.filter((r) => {
+      if (search) {
+        const q = search.toLowerCase()
+        if (!(
+          r.creditNoteNumber?.toLowerCase().includes(q) ||
+          r.customer?.toLowerCase().includes(q) ||
+          (r.invoiceNumber ?? '').toLowerCase().includes(q) ||
+          r.reasonCode?.toLowerCase().includes(q) ||
+          r.memo?.toLowerCase().includes(q) ||
+          r.status?.toLowerCase().includes(q)
+        )) {
+          return false
+        }
+      }
+      if (statusFilter && r.status !== statusFilter) return false
+      if (filterReason && r.reasonCode !== filterReason) return false
+      if (filterType && r.type !== filterType) return false
+      if (filterDateFrom && new Date(r.date ?? '').getTime() < new Date(filterDateFrom).getTime()) return false
+      if (filterDateTo && new Date(r.date ?? '').getTime() > new Date(filterDateTo).getTime()) return false
+      return true
+    })
+  }, [search, items, statusFilter, filterReason, filterType, filterDateFrom, filterDateTo])
 
   const sorted = useMemo(() => {
     const next = [...filtered]
@@ -505,15 +628,44 @@ export default function CreditNotesPage() {
             placeholder="Search by number, customer, reason…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm w-64"
+            className="w-full max-w-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
           />
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
           >
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s || 'All Statuses'}</option>)}
           </select>
+          <select
+            value={filterReason}
+            onChange={e => setFilterReason(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+          >
+            <option value="">All Reasons</option>
+            {CREDIT_REASONS.map(code => <option key={code} value={code}>{code}</option>)}
+          </select>
+          <select
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+          >
+            <option value="">All Types</option>
+            <option value="credit">Credit</option>
+            <option value="refund">Refund</option>
+          </select>
+          <input
+            type="date"
+            value={filterDateFrom}
+            onChange={e => setFilterDateFrom(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+          />
+          <input
+            type="date"
+            value={filterDateTo}
+            onChange={e => setFilterDateTo(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+          />
         </div>
       </div>
 
@@ -552,7 +704,12 @@ export default function CreditNotesPage() {
                       <ArrowUpDown size={11} className={`shrink-0 ${sortKey === col.key ? 'text-emerald-600' : 'text-slate-300'}`} />
                     </button>
                     {ci < visibleCols.length - 1 && (
-                      <span onMouseDown={e => onResizeStart(e, col.key)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-400/30" />
+                      <ColumnResizer
+                        colKey={col.key}
+                        width={col.width}
+                        onChange={(_, next) => saveCols(cols.map((c) => c.key === col.key ? { ...c, width: next } : c))}
+                        min={80}
+                      />
                     )}
                   </th>
                 ))}
@@ -581,9 +738,17 @@ export default function CreditNotesPage() {
                       <td key={col.key} className={`px-4 py-3 truncate cursor-pointer border-r border-slate-100 ${col.align === 'right' ? 'text-right tabular-nums' : ''}`} onClick={() => { setDrawerCN(row); setDrawerTab('details'); setCnActivity([]) }}>
                         {col.key === 'creditNoteNumber' && <span className="font-mono text-xs text-slate-700">{row.creditNoteNumber}</span>}
                         {col.key === 'customer' && <span className="font-medium text-slate-900">{row.customer}</span>}
+                        {col.key === 'type' && (
+                          <span className={`inline-block px-2.5 py-0.5 text-xs font-medium rounded-full border ${row.type === 'refund' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                            {row.type === 'refund' ? 'Refund' : 'Credit'}
+                          </span>
+                        )}
                         {col.key === 'invoiceNumber' && <span className="text-slate-600">{row.invoiceNumber ?? '—'}</span>}
                         {col.key === 'date' && <span className="text-slate-600">{fmtDate(row.date)}</span>}
                         {col.key === 'amount' && <span className="font-semibold text-slate-800">{formatCurrency(row.amount, currency)}</span>}
+                        {col.key === 'appliedAmount' && <span className="font-medium text-slate-900">{formatCurrency(row.appliedAmount, currency)}</span>}
+                        {col.key === 'unappliedAmount' && <span className="font-medium text-slate-900">{formatCurrency(row.unappliedAmount, currency)}</span>}
+                        {col.key === 'reasonCode' && <span className="text-slate-600 truncate max-w-[140px] inline-block" title={row.reasonCode}>{row.reasonCode || '—'}</span>}
                         {col.key === 'memo' && <span className="text-slate-600 truncate max-w-[140px] inline-block" title={row.memo}>{row.memo || '—'}</span>}
                         {col.key === 'status' && (
                           <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusBadge(row.status)}`}>
@@ -815,42 +980,172 @@ export default function CreditNotesPage() {
                 placeholder="Select customer..."
                 createLabel="+ Create New Customer"
                 onOpen={loadCustomers}
-                onChange={(id) => { setNc((p) => ({ ...p, customerId: id })); setInvoices([]) }}
+                onChange={(id) => {
+                  setNc((p) => ({ ...p, customerId: id }))
+                  loadInvoicesForCustomer(id)
+                }}
                 onCreateNew={() => setShowQuickAddCustomer(true)}
               />
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
-                <select
-                  required
-                  value={nc.reason}
-                  onChange={e => setNc(p => ({ ...p, reason: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                >
-                  {CREDIT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center gap-2 rounded-full bg-white p-1">
+                  {(['credit', 'refund'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setNc((prev) => ({ ...prev, creditType: type }))}
+                      className={`flex-1 px-3 py-2 text-sm font-semibold rounded-full transition-colors ${nc.creditType === type ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      {type === 'credit' ? 'Issue Credit' : 'Issue Refund'}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
-                <input
-                  required
-                  type="text"
-                  inputMode="decimal"
-                  value={newAmountFocused ? nc.totalAmount : formatApplyAmount(nc.totalAmount)}
-                  onFocus={() => setNewAmountFocused(true)}
-                  onBlur={() => setNewAmountFocused(false)}
-                  onChange={e => {
-                    const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
-                    if ((normalized.match(/\./g) ?? []).length > 1) return
-                    setNc(p => ({ ...p, totalAmount: normalized }))
-                  }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="0.00"
-                />
+
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
+                  <select
+                    required
+                    value={nc.reasonCode}
+                    onChange={e => setNc(p => ({ ...p, reasonCode: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                  >
+                    {CREDIT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                {nc.reasonCode === 'Other' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Reason details *</label>
+                    <input
+                      value={nc.reasonDetails}
+                      onChange={e => setNc(p => ({ ...p, reasonDetails: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                      placeholder="Enter details"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                  <input
+                    required
+                    type="text"
+                    inputMode="decimal"
+                    value={newAmountFocused ? nc.totalAmount : formatApplyAmount(nc.totalAmount)}
+                    onFocus={() => setNewAmountFocused(true)}
+                    onBlur={() => setNewAmountFocused(false)}
+                    onChange={e => {
+                      const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
+                      if ((normalized.match(/\./g) ?? []).length > 1) return
+                      setNc(p => ({ ...p, totalAmount: normalized }))
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
+
+              {nc.creditType === 'refund' && (
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Refund Method</label>
+                      <select
+                        value={nc.refundMethod}
+                        onChange={e => setNc(p => ({ ...p, refundMethod: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                      >
+                        {REFUND_METHODS.map(method => <option key={method} value={method}>{method}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Refund Date</label>
+                      <input
+                        type="date"
+                        value={nc.refundDate}
+                        onChange={e => setNc(p => ({ ...p, refundDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Refund Reference</label>
+                      <input
+                        value={nc.refundReference}
+                        onChange={e => setNc(p => ({ ...p, refundReference: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                        placeholder="Reference #"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Bank Account</label>
+                      <select
+                        value={nc.bankAccountId}
+                        onChange={e => setNc(p => ({ ...p, bankAccountId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                      >
+                        <option value="">Select an account</option>
+                        {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-slate-800">Apply to Invoices</p>
+                  <p className="text-sm text-slate-500">Remaining Unapplied: {formatCurrency(Math.max(0, parseApplyAmount(nc.totalAmount) - appliedInvoices.reduce((sum, row) => sum + (parseApplyAmount(row.amountToApply) || 0), 0)), currency)}</p>
+                </div>
+                {invoicesLoading ? (
+                  <p className="text-sm text-slate-500">Loading open invoices…</p>
+                ) : appliedInvoices.length === 0 ? (
+                  <p className="text-sm text-slate-500">Select a customer to view open invoices.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-semibold">
+                          <th className="px-3 py-2 text-left">Invoice #</th>
+                          <th className="px-3 py-2 text-left">Date</th>
+                          <th className="px-3 py-2 text-right">Original</th>
+                          <th className="px-3 py-2 text-right">Balance Due</th>
+                          <th className="px-3 py-2 text-right">Amount to Apply</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {appliedInvoices.map((invoice) => (
+                          <tr key={invoice.invoiceId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="px-3 py-2 truncate">{invoice.invoiceNumber}</td>
+                            <td className="px-3 py-2 text-slate-600">{fmtDate(invoices.find(i => i.id === invoice.invoiceId)?.date ?? null)}</td>
+                            <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
+                            <td className="px-3 py-2 text-right text-slate-700">{formatCurrency(invoice.balanceDue, currency)}</td>
+                            <td className="px-3 py-2 text-right">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={invoice.amountToApply}
+                                onChange={e => {
+                                  const normalized = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
+                                  if ((normalized.match(/\./g) ?? []).length > 1) return
+                                  setAppliedInvoices(prev => prev.map((row) => row.invoiceId === invoice.invoiceId ? { ...row, amountToApply: normalized } : row))
+                                }}
+                                className="w-full px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-right"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
               {saveError && <p className="text-sm text-rose-500">{saveError}</p>}
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setNewOpen(false)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60">
+                <button type="button" onClick={() => setNewOpen(false)} className="px-4 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">Cancel</button>
+                <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50">
                   {saving ? 'Saving…' : 'Create Credit Note'}
                 </button>
               </div>

@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Plus, Search, X, AlertCircle, Loader2, CreditCard, Ban } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import ColumnResizer from '@/components/ColumnResizer'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ui/Toast'
@@ -14,6 +16,15 @@ interface BillPayment {
   date: string; amount: number; method?: string; reference?: string; status?: string
 }
 interface Bill { id: string; billNumber?: string; vendorName?: string; total: number; amountDue?: number; status: string }
+interface PaymentCol { key: string; label: string; width: number; align?: 'left' | 'right' }
+const PAYMENT_COLS: PaymentCol[] = [
+  { key: 'paymentNumber', label: 'Payment #', width: 120, align: 'left' },
+  { key: 'vendorName', label: 'Vendor', width: 180, align: 'left' },
+  { key: 'date', label: 'Date', width: 120, align: 'left' },
+  { key: 'method', label: 'Method', width: 140, align: 'left' },
+  { key: 'amount', label: 'Amount', width: 120, align: 'right' },
+  { key: 'actions', label: 'Actions', width: 96, align: 'right' },
+]
 
 export default function BillPaymentsPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
@@ -22,6 +33,15 @@ export default function BillPaymentsPage() {
   const [payments, setPayments] = useState<BillPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [cols, setCols] = useState<PaymentCol[]>(() => PAYMENT_COLS)
+  const colsRef = useRef(cols)
+  const { containerRef, startResize: onResizeStart, isOverflowing: paymentsIsOverflowing } = useFixedWidthResizableColumns({
+    columns: cols,
+    columnsRef: colsRef,
+    saveColumns: (next) => setCols(next),
+    fixedWidth: 80,
+  })
+  useEffect(() => { colsRef.current = cols }, [cols])
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
 
@@ -74,15 +94,28 @@ export default function BillPaymentsPage() {
 
       {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700"><AlertCircle size={16} /> {error} <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button></div>}
 
-      <div className="bg-white rounded-xl border border-emerald-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead><tr className="bg-emerald-50/50 border-b border-emerald-100">
-            <th className="text-left px-4 py-3 font-medium text-emerald-700">Payment #</th>
-            <th className="text-left px-4 py-3 font-medium text-emerald-700">Vendor</th>
-            <th className="text-left px-4 py-3 font-medium text-emerald-700 hidden md:table-cell">Date</th>
-            <th className="text-left px-4 py-3 font-medium text-emerald-700 hidden lg:table-cell">Method</th>
-            <th className="text-right px-4 py-3 font-medium text-emerald-700">Amount</th>
-            <th className="text-right px-4 py-3 font-medium text-emerald-700 w-20">Actions</th>
+      <div ref={containerRef} className={`bg-white rounded-xl border border-emerald-100 ${paymentsIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+        <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+          <thead><tr className="bg-slate-50 text-slate-700 font-semibold text-xs uppercase tracking-wider">
+            {cols.map((col, index) => (
+              <th
+                key={col.key}
+                style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
+                className={`px-4 py-3 border-r border-slate-200 ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+              >
+                <div className="relative flex items-center justify-between gap-2">
+                  <span>{col.label}</span>
+                  {index < cols.length - 1 && (
+                    <ColumnResizer
+                      colKey={col.key}
+                      width={col.width}
+                      onChange={(_, next) => setCols(prev => prev.map(c => c.key === col.key ? { ...c, width: next } : c))}
+                      min={80}
+                    />
+                  )}
+                </div>
+              </th>
+            ))}
           </tr></thead>
           <tbody>
             {filtered.length === 0 ? (
@@ -119,6 +152,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
   const [reference, setReference] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [billHistory, setBillHistory] = useState<BillPayment[]>([])
 
   useEffect(() => {
     apiClient.get(`/companies/${companyId}/bills`).then(({ data }) => {
@@ -127,11 +161,24 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
     }).catch(() => {})
   }, [companyId])
 
+  useEffect(() => {
+    if (!companyId || !billId) {
+      setBillHistory([])
+      return
+    }
+    apiClient.get(`/companies/${companyId}/bill-payments`, { params: { billId } })
+      .then(({ data }) => setBillHistory(Array.isArray(data) ? data : data.payments ?? []))
+      .catch(() => setBillHistory([]))
+  }, [companyId, billId])
+
   const selectedBill = bills.find(b => b.id === billId)
+  const remainingBalance = selectedBill ? Number(selectedBill.amountDue ?? selectedBill.total) - Number(amount || 0) : 0
+  const paymentStatus = selectedBill ? (remainingBalance <= 0 ? 'Paid' : remainingBalance < (selectedBill.amountDue ?? selectedBill.total) ? 'Partial' : 'Open') : 'Open'
 
   const handleSave = async () => {
     if (!billId) { setError('Select a bill.'); return }
     if (!amount || Number(amount) <= 0) { setError('Enter a valid amount.'); return }
+    if (selectedBill && Number(amount) > Number(selectedBill.amountDue ?? selectedBill.total)) { setError('Amount cannot exceed balance due.'); return }
     setSaving(true); setError('')
     try {
       await apiClient.post(`/companies/${companyId}/ap/bill-payments`, { billId, amount: Number(amount), date, method, reference })
@@ -144,29 +191,110 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between"><h2 className="text-lg font-bold text-emerald-900">Record Bill Payment</h2><button onClick={onClose} className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button></div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Record Bill Payment</h2>
+          <button onClick={onClose} className="p-2 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"><X size={18} /></button>
+        </div>
         <div className="p-6 space-y-4">
-          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700">{error}</div>}
-          <div><label className="block text-xs font-medium text-emerald-700 mb-1">Bill *</label>
-            <select value={billId} onChange={e => { setBillId(e.target.value); const b = bills.find(b => b.id === e.target.value); if (b) setAmount(String(b.amountDue ?? b.total)) }} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-              <option value="">Select a bill…</option>{bills.map(b => <option key={b.id} value={b.id}>{b.billNumber ?? b.id.slice(0, 8)} — {b.vendorName} ({fmt(b.amountDue ?? b.total)})</option>)}
+          {selectedBill && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-slate-500">Balance Due</p>
+                  <p className="text-xl font-semibold text-slate-900">{fmt(selectedBill.amountDue ?? selectedBill.total)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Remaining</p>
+                  <p className={`text-xl font-semibold ${remainingBalance <= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>{fmt(Math.max(0, remainingBalance))}</p>
+                </div>
+                <div>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : paymentStatus === 'Partial' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>
+                    {paymentStatus}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedBill && billHistory.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Payment History</p>
+                  <p className="text-sm text-slate-500">Total paid so far: {fmt(billHistory.reduce((sum, payment) => sum + payment.amount, 0))}</p>
+                </div>
+                <div className="text-sm text-slate-500">Remaining: {fmt(Math.max(0, (selectedBill.amountDue ?? selectedBill.total) - billHistory.reduce((sum, payment) => sum + payment.amount, 0)))}</div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-semibold">
+                      <th className="px-3 py-2 text-left">Date</th>
+                      <th className="px-3 py-2 text-left">Ref #</th>
+                      <th className="px-3 py-2 text-right">Amount</th>
+                      <th className="px-3 py-2 text-left">Method</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {billHistory.map(payment => (
+                      <tr key={payment.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td className="px-3 py-2 text-slate-700">{new Date(payment.date).toLocaleDateString('en-US')}</td>
+                        <td className="px-3 py-2 text-slate-600 truncate">{payment.reference ?? payment.paymentNumber ?? '—'}</td>
+                        <td className="px-3 py-2 text-right text-slate-900 font-semibold">{fmt(payment.amount)}</td>
+                        <td className="px-3 py-2 text-slate-600">{payment.method ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{error}</div>}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Bill *</label>
+            <select value={billId} onChange={e => {
+              setBillId(e.target.value)
+              const b = bills.find(bill => bill.id === e.target.value)
+              if (b) setAmount(String(b.amountDue ?? b.total))
+            }} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+              <option value="">Select a bill…</option>
+              {bills.map(b => <option key={b.id} value={b.id}>{b.billNumber ?? b.id.slice(0, 8)} — {b.vendorName} ({fmt(b.amountDue ?? b.total)})</option>)}
             </select>
-            {selectedBill && <p className="text-xs text-emerald-500 mt-1">Due: {fmt(selectedBill.amountDue ?? selectedBill.total)}</p>}
+            {selectedBill && <p className="text-sm text-slate-500 mt-1">Balance due: {fmt(selectedBill.amountDue ?? selectedBill.total)}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">Amount *</label><input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">Date</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Payment Amount *</label>
+              <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">Method</label><select value={method} onChange={e => setMethod(e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"><option value="CASH">Cash</option><option value="CHECK">Check</option><option value="BANK_TRANSFER">Bank Transfer</option><option value="CREDIT_CARD">Credit Card</option></select></div>
-            <div><label className="block text-xs font-medium text-emerald-700 mb-1">Reference</label><input value={reference} onChange={e => setReference(e.target.value)} className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" placeholder="Ref #" /></div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Method</label>
+              <select value={method} onChange={e => setMethod(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                <option value="CASH">Cash</option>
+                <option value="CHECK">Check</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CREDIT_CARD">Credit Card</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Reference</label>
+              <input value={reference} onChange={e => setReference(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" placeholder="Reference #" />
+            </div>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">{saving && <Loader2 size={14} className="animate-spin" />} Record Payment</button>
+        <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-1.5">{saving && <Loader2 size={14} className="animate-spin" />} Record Payment</button>
         </div>
       </motion.div>
     </motion.div>
