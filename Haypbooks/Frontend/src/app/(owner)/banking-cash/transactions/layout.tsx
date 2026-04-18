@@ -24,7 +24,7 @@ export default function TransactionsLayout({ children }: { children: React.React
 
   return (
     <>
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="px-6 overflow-x-auto">
           <nav className="flex gap-1 min-w-max" aria-label="Transactions tabs">
             {TABS.map(tab => {
