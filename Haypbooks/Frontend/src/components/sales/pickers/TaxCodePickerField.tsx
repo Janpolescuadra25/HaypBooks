@@ -21,7 +21,7 @@ function mapTaxCodeToOption(code: any): PickerOption {
   const id = String(code?.id ?? '')
   const codeValue = String(code?.code ?? '').trim()
   const nameValue = String(code?.name ?? '').trim()
-  const primaryLabel = codeValue && nameValue ? `${codeValue} — ${nameValue}` : (codeValue || nameValue || 'Unnamed tax code')
+  const primaryLabel = codeValue || nameValue || 'Unnamed tax code'
   const secondaryLabel = formatRateLabel(code)
   const tertiaryLabel = code?.isDefault ? 'Default' : undefined
   return {
@@ -36,6 +36,7 @@ export default function TaxCodePickerField(props: PickerProps) {
   return (
     <BaseSearchablePicker
       {...props}
+      compact={true}
       emptyMessage="No tax codes found"
       searchEndpoint={(cid, search) => {
         const params = new URLSearchParams()

@@ -208,7 +208,7 @@ const defaultLineColWidths = {
   description: 260,
   quantity: 80,
   rate: 100,
-  tax: 180,
+  tax: 120,
   amount: 110,
 }
 
@@ -318,7 +318,7 @@ export default function InvoiceCreatePage() {
       description: 220,
       quantity: 70,
       rate: 90,
-      tax: 140,
+      tax: 100,
       amount: 100,
     },
   })
@@ -912,47 +912,30 @@ export default function InvoiceCreatePage() {
                             className="w-full h-8 text-sm text-right text-slate-800 bg-transparent border-0 outline-none focus:ring-0 tabular-nums" />
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap" style={{ width: colWidths.tax, minWidth: colWidths.tax, maxWidth: colWidths.tax }}>
-                          <div className="flex items-center gap-2">
-                            <TaxCodePickerField
-                              companyId={companyId ?? ''}
-                              value={it.taxCodeId ?? null}
-                              placeholder="Search tax code..."
-                              disabled={!companyId}
-                              className="w-full h-8 text-sm"
-                              onChange={(selectedId, option) => {
-                                if (!selectedId) {
-                                  setItems((prev) => prev.map((row) => row.id === it.id ? {
-                                    ...row,
-                                    taxCodeId: undefined,
-                                    taxCodeLabel: undefined,
-                                  } : row))
-                                  return
-                                }
-                                const parsedRate = parseTaxRateFromLabel(option.secondaryLabel)
+                          <TaxCodePickerField
+                            companyId={companyId ?? ''}
+                            value={it.taxCodeId ?? null}
+                            placeholder="Select tax"
+                            disabled={!companyId}
+                            className="w-full h-8 text-sm"
+                            onChange={(selectedId, option) => {
+                              if (!selectedId) {
                                 setItems((prev) => prev.map((row) => row.id === it.id ? {
                                   ...row,
-                                  taxCodeId: selectedId,
-                                  taxCodeLabel: option.primaryLabel,
-                                  taxRate: parsedRate ?? row.taxRate,
-                                } : row))
-                              }}
-                            />
-                            <input
-                              type="number" min="0" max="100" step="0.5"
-                              aria-label="Tax percentage"
-                              value={it.taxRate}
-                              onChange={e => {
-                                const nextRate = e.target.value
-                                setItems((prev) => prev.map((row) => row.id === it.id ? {
-                                  ...row,
-                                  taxRate: Number(nextRate),
                                   taxCodeId: undefined,
                                   taxCodeLabel: undefined,
                                 } : row))
-                              }}
-                              className="w-20 h-8 text-sm text-right text-slate-800 bg-transparent border border-gray-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-emerald-500/30 tabular-nums"
-                            />
-                          </div>
+                                return
+                              }
+                              const parsedRate = parseTaxRateFromLabel(option.secondaryLabel)
+                              setItems((prev) => prev.map((row) => row.id === it.id ? {
+                                ...row,
+                                taxCodeId: selectedId,
+                                taxCodeLabel: option.primaryLabel,
+                                taxRate: parsedRate ?? row.taxRate,
+                              } : row))
+                            }}
+                          />
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100 text-right" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>
                           <span className="text-sm font-semibold text-slate-800 tabular-nums">{fmt(lineTotal)}</span>

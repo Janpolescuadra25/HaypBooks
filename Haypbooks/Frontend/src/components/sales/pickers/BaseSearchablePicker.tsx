@@ -13,6 +13,7 @@ interface BaseSearchablePickerProps extends PickerProps {
   emptyMessage?: string
   onAddNew?: (() => void)
   createLabel?: string
+  compact?: boolean
 }
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -34,9 +35,10 @@ export default function BaseSearchablePicker({
   emptyMessage = 'No matching results',
   onAddNew,
   createLabel,
+  compact = false,
 }: BaseSearchablePickerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
-  const triggerRef = useRef<HTMLDivElement | null>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -92,17 +94,27 @@ export default function BaseSearchablePicker({
     if (!trigger) return
 
     const rect = trigger.getBoundingClientRect()
+    const top = rect.bottom + 4
+
+    if (compact) {
+      setDropdownStyle({
+        top,
+        left: rect.left,
+        width: Math.max(rect.width, 200),
+      })
+      return
+    }
+
     const viewportPadding = 8
     const width = Math.min(Math.max(rect.width, 260), window.innerWidth - viewportPadding * 2)
     const left = Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - width - viewportPadding))
-    const top = rect.bottom + 4
 
     setDropdownStyle({
       top,
       left,
       width,
     })
-  }, [])
+  }, [compact])
 
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
@@ -116,7 +128,7 @@ export default function BaseSearchablePicker({
   }, [])
 
   useEffect(() => {
-    if (!open) {
+    if (!open || compact) {
       setQuery('')
       setHighlightedIndex(-1)
       return
@@ -143,10 +155,15 @@ export default function BaseSearchablePicker({
       const len = inputRef.current?.value.length ?? 0
       inputRef.current?.setSelectionRange(len, len)
     })
-  }, [open])
+  }, [compact, open])
 
   useEffect(() => {
     if (!open) return
+
+    if (compact) {
+      void fetchOptions('')
+      return
+    }
 
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -156,7 +173,20 @@ export default function BaseSearchablePicker({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [fetchOptions, open, query])
+  }, [compact, fetchOptions, open, query])
+
+  useEffect(() => {
+    if (!open) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setOpen(false)
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open])
 
   useEffect(() => {
     if (!value) {
@@ -189,6 +219,18 @@ export default function BaseSearchablePicker({
 
   const shouldDisable = disabled || !companyId
   const inputValue = open ? query : triggerLabel
+  const setTriggerRef = useCallback((node: HTMLElement | null) => {
+    triggerRef.current = node
+  }, [])
+
+  const toggleOpen = useCallback(() => {
+    if (shouldDisable) return
+    setOpen((prev) => {
+      const next = !prev
+      if (next) setQuery('')
+      return next
+    })
+  }, [shouldDisable])
 
   const selectOption = useCallback(
     (option: PickerOption) => {
@@ -266,67 +308,78 @@ export default function BaseSearchablePicker({
         </label>
       ) : null}
 
-      <div
-        ref={triggerRef}
-        className="flex h-8 items-center rounded-lg border border-emerald-100 bg-white transition-colors focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-500/30"
-      >
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={(event) => {
-            if (shouldDisable) return
-            setQuery(event.target.value)
-            if (!open) setOpen(true)
-          }}
-          onFocus={() => {
-            if (shouldDisable) return
-            setOpen(true)
-            setQuery('')
-          }}
-          onKeyDown={onInputKeyDown}
-          onBlur={() => {
-            setTimeout(() => {
-              if (!rootRef.current?.contains(document.activeElement as Node)) {
-                setOpen(false)
-              }
-            }, 100)
-          }}
-          placeholder={placeholder}
+      {compact ? (
+        <button
+          ref={setTriggerRef}
+          type="button"
+          onClick={toggleOpen}
           disabled={shouldDisable}
-          className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-sm outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+          aria-label={label ?? placeholder}
+          title={triggerLabel}
           data-testid={testId}
-        />
+          className="flex h-8 w-full cursor-pointer items-center justify-between gap-2 rounded border border-gray-300 bg-white px-2.5 text-left text-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          <span className={`min-w-0 flex-1 truncate ${hasValue ? 'text-slate-800' : 'text-slate-400'}`}>
+            {triggerLabel}
+          </span>
+          <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+      ) : (
+        <div
+          ref={setTriggerRef}
+          className="flex h-8 items-center rounded-lg border border-emerald-100 bg-white transition-colors focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-500/30"
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={(event) => {
+              if (shouldDisable) return
+              setQuery(event.target.value)
+              if (!open) setOpen(true)
+            }}
+            onFocus={() => {
+              if (shouldDisable) return
+              setOpen(true)
+              setQuery('')
+            }}
+            onKeyDown={onInputKeyDown}
+            onBlur={() => {
+              setTimeout(() => {
+                if (!rootRef.current?.contains(document.activeElement as Node)) {
+                  setOpen(false)
+                }
+              }, 100)
+            }}
+            placeholder={placeholder}
+            disabled={shouldDisable}
+            className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-sm outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+            data-testid={testId}
+          />
 
-        {hasValue && !shouldDisable ? (
+          {hasValue && !shouldDisable ? (
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="inline-flex h-8 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-emerald-50 hover:text-slate-600"
+              aria-label="Clear selection"
+            >
+              <X size={14} />
+            </button>
+          ) : null}
+
           <button
             type="button"
-            onClick={clearSelection}
-            className="inline-flex h-8 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-emerald-50 hover:text-slate-600"
-            aria-label="Clear selection"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={toggleOpen}
+            disabled={shouldDisable}
+            aria-label="Toggle options"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-r-lg text-slate-400 hover:bg-emerald-50 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
           >
-            <X size={14} />
+            <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
-        ) : null}
-
-        <button
-          type="button"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => {
-            if (shouldDisable) return
-            setOpen((prev) => {
-              const next = !prev
-              if (next) setQuery('')
-              return next
-            })
-          }}
-          disabled={shouldDisable}
-          aria-label="Toggle options"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-r-lg text-slate-400 hover:bg-emerald-50 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
-        >
-          <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
+        </div>
+      )}
 
       {shouldDisable ? null : open ? createPortal(
         <div
@@ -340,11 +393,7 @@ export default function BaseSearchablePicker({
           }}
           className="rounded-lg border border-gray-200 bg-white shadow-xl"
         >
-          <div
-            role="listbox"
-            aria-activedescendant={highlightedIndex >= 0 ? `option-${options[highlightedIndex]?.id}` : undefined}
-            className="max-h-60 overflow-auto"
-          >
+          <div className="max-h-60 overflow-auto">
             {loading && options.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-slate-500">Searching...</p>
             ) : fetchError ? (
@@ -378,8 +427,6 @@ export default function BaseSearchablePicker({
                       optionRefs.current[index] = element
                     }}
                     type="button"
-                    role="option"
-                    aria-selected={highlightedIndex === index ? 'true' : 'false'}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => selectOption(option)}
                     className={`w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 ${
