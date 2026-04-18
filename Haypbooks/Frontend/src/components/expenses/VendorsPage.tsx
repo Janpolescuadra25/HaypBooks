@@ -7,6 +7,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useToast } from '@/components/ui/Toast'
 
 interface Vendor {
   id: string; name: string; email?: string; phone?: string; address?: string; city?: string; state?: string; country?: string; taxId?: string; balance?: number; status?: string
@@ -15,10 +16,12 @@ interface Vendor {
 export default function VendorsPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Vendor | null>(null)
 
@@ -41,6 +44,37 @@ export default function VendorsPage() {
     return vendors.filter(v => v.name.toLowerCase().includes(q) || (v.email ?? '').toLowerCase().includes(q))
   }, [vendors, search])
 
+  const toggleSelectAll = () => {
+    const allSelected = filtered.length > 0 && filtered.every((item) => selectedIds.includes(item.id))
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !filtered.some((item) => item.id === id)))
+    } else {
+      setSelectedIds((prev) => [...new Set([...prev, ...filtered.map((item) => item.id)])])
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])
+  }
+
+  const handleDeleteSelected = async () => {
+    if (!companyId || selectedIds.length === 0) return
+    setLoading(true)
+    setError('')
+    try {
+      await Promise.all(selectedIds.map((id) => apiClient.delete(`/companies/${companyId}/vendors/${id}`)))
+      setVendors((prev) => prev.filter((vendor) => !selectedIds.includes(vendor.id)))
+      setSelectedIds([])
+      toast.success(`${selectedIds.length} selected vendor${selectedIds.length === 1 ? '' : 's'} deleted`)
+    } catch (e: any) {
+      const message = e?.response?.data?.message ?? 'Failed to delete selected vendors'
+      setError(message)
+      toast.error(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!companyId) return
     try { await apiClient.delete(`/companies/${companyId}/vendors/${id}`); fetchVendors() }
@@ -58,10 +92,17 @@ export default function VendorsPage() {
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div><h1 className="text-2xl font-bold text-emerald-900">Vendors</h1><p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} vendors</p></div>
-        <button onClick={() => { setEditing(null); setShowForm(true) }}
-          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
-          <Plus size={16} /> Add Vendor
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button onClick={handleDeleteSelected} className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors">
+              Delete Selected ({selectedIds.length})
+            </button>
+          )}
+          <button onClick={() => { setEditing(null); setShowForm(true) }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+            <Plus size={16} /> Add Vendor
+          </button>
+        </div>
       </div>
       <div className="bg-white rounded-xl border border-emerald-100 p-3">
         <div className="relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
@@ -72,6 +113,11 @@ export default function VendorsPage() {
       <div className="bg-white rounded-xl border border-emerald-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead><tr className="bg-emerald-50/50 border-b border-emerald-100">
+            <th className="w-10 px-3 py-3 text-left text-emerald-700">
+              <button onClick={toggleSelectAll} className="text-emerald-600 hover:text-emerald-900 transition-colors">
+                {filtered.length > 0 && filtered.every((vendor) => selectedIds.includes(vendor.id)) ? '▣' : '▢'}
+              </button>
+            </th>
             <th className="text-left px-4 py-3 font-medium text-emerald-700">Name</th>
             <th className="text-left px-4 py-3 font-medium text-emerald-700 hidden md:table-cell">Email</th>
             <th className="text-left px-4 py-3 font-medium text-emerald-700 hidden lg:table-cell">Phone</th>
@@ -80,15 +126,22 @@ export default function VendorsPage() {
           </tr></thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-emerald-400"><Building size={24} className="mx-auto mb-2 opacity-50" />No vendors found.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-emerald-400"><Building size={24} className="mx-auto mb-2 opacity-50" />No vendors found.</td></tr>
             ) : (
-              filtered.map(v => (
-                <tr key={v.id} className="border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors">
-                  <td className="px-4 py-2.5 font-medium text-emerald-900">{v.name}</td>
-                  <td className="px-4 py-2.5 text-emerald-600/70 hidden md:table-cell">{v.email ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-emerald-600/70 hidden lg:table-cell">{v.phone ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(v.balance ?? 0)}</td>
-                  <td className="px-4 py-2.5 text-right">
+              filtered.map(v => {
+                const isSelected = selectedIds.includes(v.id)
+                return (
+                  <tr key={v.id} className={`border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors ${isSelected ? 'bg-emerald-50/60' : ''}`}>
+                    <td className="px-3 py-2">
+                      <button onClick={() => toggleSelect(v.id)} className="text-emerald-500 hover:text-emerald-900 transition-colors">
+                        {isSelected ? '▣' : '▢'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-2.5 font-medium text-emerald-900">{v.name}</td>
+                    <td className="px-4 py-2.5 text-emerald-600/70 hidden md:table-cell">{v.email ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-emerald-600/70 hidden lg:table-cell">{v.phone ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(v.balance ?? 0)}</td>
+                    <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => { setEditing(v); setShowForm(true) }} className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Edit2 size={14} /></button>
                       <button onClick={() => handleDelete(v.id)} className="p-1 rounded hover:bg-red-100 text-red-400"><Trash2 size={14} /></button>

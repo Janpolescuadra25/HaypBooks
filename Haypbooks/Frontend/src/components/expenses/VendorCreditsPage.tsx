@@ -8,6 +8,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import { useToast } from '@/components/ui/Toast'
 
 type VendorCreditRow = {
   id: string
@@ -46,11 +47,13 @@ export default function VendorCreditsPage() {
   const router = useRouter()
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [items, setItems] = useState<VendorCreditRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [colWidths, setColWidths] = useState<typeof defaultVendorCreditsColWidths>(() => {
     if (typeof window === 'undefined') return defaultVendorCreditsColWidths
     try {
@@ -117,6 +120,38 @@ export default function VendorCreditsPage() {
     return list
   }, [items, search, statusFilter])
 
+  const toggleSelectAll = () => {
+    const visibleIds = filtered.map((v) => v.id)
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id))
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)))
+    } else {
+      setSelectedIds((prev) => [...new Set([...prev, ...visibleIds])])
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])
+  }
+
+  const handleDeleteSelected = async () => {
+    if (!companyId || selectedIds.length === 0) return
+    setLoading(true)
+    setError('')
+    try {
+      await Promise.all(selectedIds.map((id) => apiClient.delete(`/companies/${companyId}/ap/vendor-credits/${id}`)))
+      setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)))
+      toast.success(`${selectedIds.length} selected credit${selectedIds.length === 1 ? '' : 's'} deleted`)
+      setSelectedIds([])
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Failed to delete selected credits'
+      setError(message)
+      toast.error(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const totalAvailable = useMemo(
     () => items.filter((v) => v.status === 'Open' || v.status === 'Partially Applied').reduce((s, v) => s + (v.remainingCredit ?? 0), 0),
     [items]
@@ -132,6 +167,14 @@ export default function VendorCreditsPage() {
             <p className="text-sm text-slate-500 mt-1">Manage credits received from vendors</p>
           </div>
           <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm"
+              >
+                Delete Selected ({selectedIds.length})
+              </button>
+            )}
             <button
               onClick={() => router.push('/expenses/payables/vendor-credits/activity')}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg shadow-sm"
@@ -216,6 +259,7 @@ export default function VendorCreditsPage() {
             <div ref={creditsTableRef} className={creditsTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
               <table className="w-full min-w-[1080px] table-fixed text-sm">
                 <colgroup>
+                  <col style={{ width: 44 }} />
                   <col style={{ width: colWidths.creditNumber }} />
                   <col style={{ width: colWidths.vendor }} />
                   <col style={{ width: colWidths.billNumber }} />
@@ -228,6 +272,11 @@ export default function VendorCreditsPage() {
                 </colgroup>
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
+                    <th className="w-10 px-3 py-3 text-left text-slate-500">
+                      <button onClick={toggleSelectAll} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                        {filtered.length > 0 && filtered.every((row) => selectedIds.includes(row.id)) ? '▣' : '▢'}
+                      </button>
+                    </th>
                     <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title="Credit #">
                       Credit #
                       <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'creditNumber')} />
@@ -267,10 +316,17 @@ export default function VendorCreditsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                      <td className="px-4 py-3 font-medium text-slate-800 truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title={row.creditNumber}>{row.creditNumber}</td>
-                      <td className="px-4 py-3 text-slate-700 truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title={row.vendor}>{row.vendor}</td>
+                  {filtered.map((row) => {
+                    const isSelected = selectedIds.includes(row.id)
+                    return (
+                      <tr key={row.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-indigo-50/40' : ''}`}>
+                        <td className="px-3 py-2">
+                          <button onClick={() => toggleSelect(row.id)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                            {isSelected ? '▣' : '▢'}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-slate-800 truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title={row.creditNumber}>{row.creditNumber}</td>
+                        <td className="px-4 py-3 text-slate-700 truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title={row.vendor}>{row.vendor}</td>
                       <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber }} title={row.billNumber ?? ''}>{row.billNumber}</td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }}>{row.date}</td>
                       <td className="px-4 py-3 font-semibold text-slate-800" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>{formatCurrency(row.amount, currency)}</td>

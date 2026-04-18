@@ -5,6 +5,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useToast } from '@/components/ui/Toast'
 
 type Tab = 'expenses' | 'receipts' | 'mileage' | 'reimbursements'
 
@@ -74,6 +75,7 @@ interface Props {
 export default function ExpenseCapturePage({ initialTab = 'expenses' }: Props) {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [activeTab, setActiveTab] = useState<Tab>(initialTab)
   const [search, setSearch] = useState('')
 
@@ -84,6 +86,50 @@ export default function ExpenseCapturePage({ initialTab = 'expenses' }: Props) {
   const [reimbursements, setReimbursements] = useState<ReimbursementRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const activeRows = useMemo(() => {
+    switch (activeTab) {
+      case 'expenses': return expenses
+      case 'receipts': return receipts
+      case 'mileage': return mileage
+      case 'reimbursements': return reimbursements
+      default: return []
+    }
+  }, [activeTab, expenses, receipts, mileage, reimbursements])
+
+  const handleExport = () => {
+    const headers: string[] = []
+    const rows: string[][] = []
+
+    if (activeTab === 'expenses') {
+      headers.push('Date', 'Employee', 'Category', 'Description', 'Amount', 'Status')
+      rows.push(...expenses.map((row) => [row.date, row.employee, row.category, row.description, String(row.amount), row.status]))
+    } else if (activeTab === 'receipts') {
+      headers.push('Date', 'Merchant', 'Employee', 'Category', 'Amount', 'Status')
+      rows.push(...receipts.map((row) => [row.date, row.merchant, row.employee, row.category, String(row.amount), row.status]))
+    } else if (activeTab === 'mileage') {
+      headers.push('Date', 'Employee', 'Purpose', 'Miles', 'Rate', 'Amount', 'Status')
+      rows.push(...mileage.map((row) => [row.date, row.employee, row.purpose, String(row.miles), String(row.ratePerMile), String(row.amount), row.status]))
+    } else if (activeTab === 'reimbursements') {
+      headers.push('Employee', 'Submitted Date', 'Description', 'Amount', 'Payment Method', 'Status')
+      rows.push(...reimbursements.map((row) => [row.employee, row.submittedDate, row.description, String(row.totalAmount), row.paymentMethod, row.status]))
+    }
+
+    if (activeRows.length === 0) {
+      toast.warning('No records available to export.')
+      return
+    }
+
+    const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `expense-capture-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success('Export downloaded')
+  }
 
   const fetchData = useCallback(async () => {
     if (!companyId) return
@@ -286,6 +332,12 @@ export default function ExpenseCapturePage({ initialTab = 'expenses' }: Props) {
             <p className="text-sm text-slate-500 mt-1">Track expenses, receipts, mileage, and reimbursements</p>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={handleExport} className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg shadow-sm">
+              Export CSV
+            </button>
+            <button title="OCR scanning will be available in a future release" disabled className="px-4 py-2 text-sm font-semibold text-slate-400 bg-slate-100 rounded-lg shadow-sm cursor-not-allowed opacity-60">
+              OCR Scan
+            </button>
             <button className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">
               {NEW_LABELS[activeTab]}
             </button>

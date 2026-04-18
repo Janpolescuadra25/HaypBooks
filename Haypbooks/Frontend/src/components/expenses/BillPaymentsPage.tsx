@@ -7,6 +7,7 @@ import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useToast } from '@/components/ui/Toast'
 
 interface BillPayment {
   id: string; paymentNumber?: string; vendorId?: string; vendorName?: string; billId?: string; billNumber?: string
@@ -17,6 +18,7 @@ interface Bill { id: string; billNumber?: string; vendorName?: string; total: nu
 export default function BillPaymentsPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [payments, setPayments] = useState<BillPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -42,8 +44,15 @@ export default function BillPaymentsPage() {
 
   const handleVoid = async (id: string) => {
     if (!companyId) return
-    try { await apiClient.post(`/companies/${companyId}/bill-payments/${id}/void`); fetchPayments() }
-    catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to void') }
+    try {
+      await apiClient.post(`/companies/${companyId}/bill-payments/${id}/void`)
+      setPayments((prev) => prev.filter((payment) => payment.id !== id))
+      toast.success('Payment voided')
+    } catch (e: any) {
+      const message = e?.response?.data?.message ?? 'Failed to void'
+      setError(message)
+      toast.error(message)
+    }
   }
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
