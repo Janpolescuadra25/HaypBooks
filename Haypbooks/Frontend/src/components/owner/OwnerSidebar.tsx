@@ -468,10 +468,11 @@ export default function OwnerSidebar() {
       {!isSecondaryVisible && (
         <button
           onClick={() => setIsSecondaryVisible(true)}
-          className="absolute top-[15px] left-[79px] z-30 flex items-center justify-center p-1.5 bg-green-500 hover:bg-green-400 active:bg-green-600 text-white rounded-lg shadow-lg shadow-green-500/30 transition-all"
+          className="absolute top-1/2 -translate-y-1/2 right-[-10px] z-30 flex items-center justify-center w-5 h-12 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-l-md shadow-md hover:shadow-lg transition-all cursor-pointer border border-r-0 border-emerald-700"
           aria-label="Expand sidebar"
+          title="Open navigation"
         >
-          <ChevronRight size={13} />
+          <ChevronRight size={14} strokeWidth={2.5} />
         </button>
       )}
     </div>
