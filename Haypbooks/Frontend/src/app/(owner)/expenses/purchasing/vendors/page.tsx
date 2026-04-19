@@ -1,7 +1,7 @@
 'use client'
 
-import VendorsCrudPage from '@/components/owner/VendorsCrudPage'
+import VendorsPage from '@/components/expenses/VendorsPage'
 
 export default function Page() {
-  return <VendorsCrudPage />
+  return <VendorsPage />
 }

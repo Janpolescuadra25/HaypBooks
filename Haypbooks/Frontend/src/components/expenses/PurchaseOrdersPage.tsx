@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock } from 'lucide-react'
+import { Clock, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import DataPage from '@/components/shared/DataPage'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import ColumnResizer from '@/components/ColumnResizer'
 
 type PurchaseOrderRow = {
   id: string
@@ -21,6 +23,21 @@ type PurchaseOrderRow = {
   status: 'Draft' | 'Sent' | 'Partially Received' | 'Received' | 'Cancelled' | 'Closed'
 }
 
+type SortKey = 'poNumber' | 'vendor' | 'description' | 'orderDate' | 'expectedDate' | 'totalAmount' | 'receivedAmount' | 'status'
+
+const PO_TABLE_ORDER: SortKey[] = ['poNumber', 'vendor', 'description', 'orderDate', 'expectedDate', 'totalAmount', 'receivedAmount', 'status']
+const DEFAULT_PO_COL_WIDTHS: Record<SortKey, number> = {
+  poNumber: 140,
+  vendor: 200,
+  description: 240,
+  orderDate: 120,
+  expectedDate: 130,
+  totalAmount: 120,
+  receivedAmount: 140,
+  status: 140,
+}
+const PO_COLUMNS_STORAGE_KEY = 'purchase-orders-cols-v1'
+
 const STATUS_STYLES: Record<string, string> = {
   Draft: 'bg-gray-50 text-gray-600 border-gray-200',
   Sent: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -30,16 +47,26 @@ const STATUS_STYLES: Record<string, string> = {
   Closed: 'bg-slate-50 text-slate-500 border-slate-200',
 }
 
-const PURCHASE_ORDERS_COL_WIDTHS_KEY = 'purchase-orders-cols-v1'
-const defaultPurchaseOrdersColWidths = {
-  poNumber: 140,
-  vendor: 200,
-  description: 240,
-  orderDate: 120,
-  expectedDate: 130,
-  totalAmount: 120,
-  receivedAmount: 140,
-  status: 140,
+function loadPOWidthMap(): Record<string, number> {
+  try {
+    const saved = localStorage.getItem(PO_COLUMNS_STORAGE_KEY)
+    if (!saved) return DEFAULT_PO_COL_WIDTHS
+    const parsed = JSON.parse(saved) as Record<string, number>
+    return { ...DEFAULT_PO_COL_WIDTHS, ...Object.fromEntries(Object.entries(parsed).filter(([key]) => PO_TABLE_ORDER.includes(key as SortKey))) }
+  } catch {
+    return DEFAULT_PO_COL_WIDTHS
+  }
+}
+
+function comparePOs(a: PurchaseOrderRow, b: PurchaseOrderRow, key: SortKey, dir: 'asc' | 'desc') {
+  const left = a[key] ?? ''
+  const right = b[key] ?? ''
+  if (key === 'totalAmount' || key === 'receivedAmount') {
+    return dir === 'asc' ? Number(left) - Number(right) : Number(right) - Number(left)
+  }
+  return dir === 'asc'
+    ? String(left).toLowerCase().localeCompare(String(right).toLowerCase())
+    : String(right).toLowerCase().localeCompare(String(left).toLowerCase())
 }
 
 export default function PurchaseOrdersPage() {
@@ -51,28 +78,25 @@ export default function PurchaseOrdersPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [colWidths, setColWidths] = useState<typeof defaultPurchaseOrdersColWidths>(() => {
-    if (typeof window === 'undefined') return defaultPurchaseOrdersColWidths
-    try {
-      return {
-        ...defaultPurchaseOrdersColWidths,
-        ...JSON.parse(localStorage.getItem(PURCHASE_ORDERS_COL_WIDTHS_KEY) ?? '{}'),
-      }
-    } catch {
-      return defaultPurchaseOrdersColWidths
-    }
-  })
-  const colWidthsRef = useRef(colWidths)
-  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
-  const saveColWidths = useCallback((next: typeof defaultPurchaseOrdersColWidths) => {
-    setColWidths(next)
-    try { localStorage.setItem(PURCHASE_ORDERS_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+  const [sortKey, setSortKey] = useState<SortKey>('orderDate')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [widths, setWidths] = useState<Record<string, number>>(() => loadPOWidthMap())
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const widthsRef = useRef(widths)
+
+  useEffect(() => { widthsRef.current = widths }, [widths])
+
+  const saveWidths = useCallback((next: Record<string, number>) => {
+    setWidths(next)
+    try { localStorage.setItem(PO_COLUMNS_STORAGE_KEY, JSON.stringify(next)) } catch { }
   }, [])
-  const { containerRef: poTableRef, startResize: startPOResize, isOverflowing: poTableOverflowing } = useFixedWidthResizableMap({
-    widths: colWidths,
-    widthsRef: colWidthsRef,
-    order: ['poNumber', 'vendor', 'description', 'orderDate', 'expectedDate', 'totalAmount', 'receivedAmount', 'status'],
-    saveWidths: saveColWidths,
+
+  const { containerRef } = useFixedWidthResizableMap({
+    widths,
+    widthsRef,
+    order: PO_TABLE_ORDER,
+    saveWidths,
     minWidth: {
       poNumber: 110,
       vendor: 130,
@@ -107,22 +131,107 @@ export default function PurchaseOrdersPage() {
     if (search) {
       const q = search.toLowerCase()
       list = list.filter((p) =>
-        p.poNumber?.toLowerCase().includes(q) ||
-        p.vendor?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
+        p.poNumber.toLowerCase().includes(q) ||
+        p.vendor.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
       )
     }
     return list
   }, [items, search, statusFilter])
 
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => comparePOs(a, b, sortKey, sortDir))
+  }, [filtered, sortKey, sortDir])
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, pageSize, sorted.length])
+
+  const paged = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, currentPage, pageSize])
+
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+  const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return d } }
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey !== key) {
+      setSortKey(key)
+      setSortDir('asc')
+      return
+    }
+    setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+  }
+
+  const columns = useMemo(() => {
+    const makeHeader = (label: string, key: SortKey, width: number) => (
+      <div className="relative flex items-center gap-2">
+        <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-2 text-left font-medium text-slate-800 hover:text-slate-900">
+          {label}
+          {sortKey === key ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
+        </button>
+        <ColumnResizer colKey={key} width={width} onChange={(_, next) => setWidths((prev) => ({ ...prev, [key]: next }))} min={80} />
+      </div>
+    )
+
+    return [
+      {
+        accessorKey: 'poNumber',
+        header: makeHeader('PO #', 'poNumber', widths.poNumber),
+        meta: { align: 'left', style: { width: widths.poNumber, minWidth: widths.poNumber, maxWidth: widths.poNumber } },
+      },
+      {
+        accessorKey: 'vendor',
+        header: makeHeader('Vendor', 'vendor', widths.vendor),
+        meta: { align: 'left', style: { width: widths.vendor, minWidth: widths.vendor, maxWidth: widths.vendor } },
+      },
+      {
+        accessorKey: 'description',
+        header: makeHeader('Description', 'description', widths.description),
+        meta: { align: 'left', style: { width: widths.description, minWidth: widths.description, maxWidth: widths.description } },
+      },
+      {
+        accessorKey: 'orderDate',
+        header: makeHeader('Order Date', 'orderDate', widths.orderDate),
+        meta: { align: 'left', style: { width: widths.orderDate, minWidth: widths.orderDate, maxWidth: widths.orderDate } },
+        cell: ({ getValue }) => <span>{fmtDate(String(getValue() ?? ''))}</span>,
+      },
+      {
+        accessorKey: 'expectedDate',
+        header: makeHeader('Expected Date', 'expectedDate', widths.expectedDate),
+        meta: { align: 'left', style: { width: widths.expectedDate, minWidth: widths.expectedDate, maxWidth: widths.expectedDate } },
+      },
+      {
+        accessorKey: 'totalAmount',
+        header: makeHeader('Total', 'totalAmount', widths.totalAmount),
+        meta: { align: 'right', style: { width: widths.totalAmount, minWidth: widths.totalAmount, maxWidth: widths.totalAmount } },
+        cell: ({ getValue }) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
+      },
+      {
+        accessorKey: 'receivedAmount',
+        header: makeHeader('Received', 'receivedAmount', widths.receivedAmount),
+        meta: { align: 'right', style: { width: widths.receivedAmount, minWidth: widths.receivedAmount, maxWidth: widths.receivedAmount } },
+        cell: ({ getValue }) => <span className="font-semibold text-indigo-700 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: makeHeader('Status', 'status', widths.status),
+        meta: { align: 'left', style: { width: widths.status, minWidth: widths.status, maxWidth: widths.status } },
+        cell: ({ getValue }) => <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border ${STATUS_STYLES[String(getValue() ?? '')] ?? ''}`}>{String(getValue() ?? '')}</span>,
+      },
+    ]
+  }, [fmt, sortKey, sortDir, widths])
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const totalOpen = useMemo(
     () => items.filter((p) => p.status === 'Sent' || p.status === 'Partially Received').reduce((s, p) => s + (p.totalAmount ?? 0), 0),
-    [items]
+    [items],
   )
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -142,12 +251,11 @@ export default function PurchaseOrdersPage() {
           </div>
         </div>
 
-        {/* Status filters */}
         <div className="px-6 pb-3 flex gap-2 flex-wrap">
           {(['ALL', 'Draft', 'Sent', 'Partially Received', 'Received', 'Cancelled', 'Closed'] as const).map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setStatusFilter(s); setCurrentPage(1) }}
               className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
                 statusFilter === s
                   ? 'bg-indigo-600 text-white border-indigo-600'
@@ -162,20 +270,17 @@ export default function PurchaseOrdersPage() {
           ))}
         </div>
 
-        {/* Search */}
         <div className="px-6 pb-4">
           <input
             placeholder="Search by PO #, vendor, or description"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
             className="w-full max-w-sm px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 px-6 py-6">
-        {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[
             { label: 'Total POs', value: items.length },
@@ -192,102 +297,65 @@ export default function PurchaseOrdersPage() {
           ))}
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          {loading || companyLoading ? (
-            <div className="flex items-center justify-center py-20 text-slate-400 text-sm">Loading purchase orders…</div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-2">
-              <p className="text-red-600 text-sm">{error}</p>
-              <button onClick={fetchData} className="text-sm text-indigo-600 hover:underline">Retry</button>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
-              <p className="text-sm">No purchase orders found</p>
-              {search && (
-                <button onClick={() => setSearch('')} className="text-xs text-indigo-600 hover:underline">
-                  Clear search
-                </button>
-              )}
-            </div>
-          ) : (
-            <div ref={poTableRef} className={poTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
-              <table className="w-full min-w-[980px] table-fixed text-sm">
-                <colgroup>
-                  <col style={{ width: colWidths.poNumber }} />
-                  <col style={{ width: colWidths.vendor }} />
-                  <col style={{ width: colWidths.description }} />
-                  <col style={{ width: colWidths.orderDate }} />
-                  <col style={{ width: colWidths.expectedDate }} />
-                  <col style={{ width: colWidths.totalAmount }} />
-                  <col style={{ width: colWidths.receivedAmount }} />
-                  <col style={{ width: colWidths.status }} />
-                </colgroup>
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.poNumber, minWidth: colWidths.poNumber, maxWidth: colWidths.poNumber }} title="PO #">
-                      PO #
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'poNumber')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title="Vendor">
-                      Vendor
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'vendor')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }} title="Description">
-                      Description
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'description')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.orderDate, minWidth: colWidths.orderDate, maxWidth: colWidths.orderDate }} title="Order Date">
-                      Order Date
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'orderDate')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.expectedDate, minWidth: colWidths.expectedDate, maxWidth: colWidths.expectedDate }} title="Expected Date">
-                      Expected Date
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'expectedDate')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.totalAmount, minWidth: colWidths.totalAmount, maxWidth: colWidths.totalAmount }} title="Total">
-                      Total
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'totalAmount')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.receivedAmount, minWidth: colWidths.receivedAmount, maxWidth: colWidths.receivedAmount }} title="Received">
-                      Received
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'receivedAmount')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }} title="Status">
-                      Status
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startPOResize(e, 'status')} />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map((row) => {
-                    const pct = row.totalAmount > 0 ? Math.round((row.receivedAmount / row.totalAmount) * 100) : 0
-                    return (
-                      <tr key={row.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                        <td className="px-4 py-3 font-medium text-slate-800 truncate" style={{ width: colWidths.poNumber, minWidth: colWidths.poNumber, maxWidth: colWidths.poNumber }} title={row.poNumber}>{row.poNumber}</td>
-                        <td className="px-4 py-3 text-slate-700 truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title={row.vendor}>{row.vendor}</td>
-                        <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }} title={row.description}>{row.description}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.orderDate, minWidth: colWidths.orderDate, maxWidth: colWidths.orderDate }}>{row.orderDate}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.expectedDate, minWidth: colWidths.expectedDate, maxWidth: colWidths.expectedDate }}>{row.expectedDate}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-800" style={{ width: colWidths.totalAmount, minWidth: colWidths.totalAmount, maxWidth: colWidths.totalAmount }}>{formatCurrency(row.totalAmount, currency)}</td>
-                        <td className="px-4 py-3" style={{ width: colWidths.receivedAmount, minWidth: colWidths.receivedAmount, maxWidth: colWidths.receivedAmount }}>
-                          <div className="flex flex-col gap-1">
-                            <span className="text-emerald-700">{formatCurrency(row.receivedAmount, currency)}</span>
-                              <span className="text-xs text-slate-400">{pct}%</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }}>
-                          <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
-                            {row.status}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataPage
+            title="Purchase Orders"
+            subtitle={`${sorted.length} purchase orders`}
+            primaryActionLabel="New PO"
+            onPrimaryAction={() => {}}
+            secondaryActions={
+              <button
+                type="button"
+                onClick={() => router.push('/expenses/purchasing/orders/activity')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Clock size={15} /> Activity Log
+              </button>
+            }
+            filters={(
+              <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
+                    placeholder="Search purchase orders…"
+                    className="w-full pl-9 pr-3 py-2 border border-emerald-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  />
+                </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+                  className="w-full max-w-xs px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Sent">Sent</option>
+                  <option value="Partially Received">Partially Received</option>
+                  <option value="Received">Received</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+            )}
+            columns={columns}
+            data={paged}
+            isLoading={loading || companyLoading}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={sorted.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+            selectedIds={[]}
+            onSelectionChange={() => {}}
+            getRowId={(row) => row.id}
+            emptyTitle="No purchase orders found"
+            emptyDescription="Try a different search or create a new PO."
+            emptyPrimaryAction="New PO"
+            onEmptyPrimaryAction={() => {}}
+          />
         </div>
       </div>
     </div>

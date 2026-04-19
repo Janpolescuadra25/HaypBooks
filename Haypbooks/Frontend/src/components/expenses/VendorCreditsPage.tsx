@@ -1,13 +1,15 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock } from 'lucide-react'
+import { Clock, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import apiClient from '@/lib/api-client'
-import { useCompanyId } from '@/hooks/useCompanyId'
-import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import DataPage from '@/components/shared/DataPage'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import ColumnResizer from '@/components/ColumnResizer'
 import { useToast } from '@/components/ui/Toast'
 
 type VendorCreditRow = {
@@ -23,6 +25,17 @@ type VendorCreditRow = {
   status: 'Open' | 'Applied' | 'Partially Applied' | 'Void'
 }
 
+type SortKey =
+  | 'creditNumber'
+  | 'vendor'
+  | 'billNumber'
+  | 'date'
+  | 'amount'
+  | 'appliedAmount'
+  | 'remainingCredit'
+  | 'reason'
+  | 'status'
+
 const STATUS_STYLES: Record<string, string> = {
   Open: 'bg-blue-50 text-blue-700 border-blue-200',
   Applied: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -31,7 +44,7 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 const VENDOR_CREDITS_COL_WIDTHS_KEY = 'vendor-credits-cols-v1'
-const defaultVendorCreditsColWidths = {
+const DEFAULT_VENDOR_CREDITS_COL_WIDTHS: Record<SortKey, number> = {
   creditNumber: 140,
   vendor: 200,
   billNumber: 140,
@@ -41,6 +54,29 @@ const defaultVendorCreditsColWidths = {
   remainingCredit: 130,
   reason: 220,
   status: 130,
+}
+
+function loadVendorCreditWidths(): Record<string, number> {
+  if (typeof window === 'undefined') return DEFAULT_VENDOR_CREDITS_COL_WIDTHS
+  try {
+    return {
+      ...DEFAULT_VENDOR_CREDITS_COL_WIDTHS,
+      ...JSON.parse(localStorage.getItem(VENDOR_CREDITS_COL_WIDTHS_KEY) ?? '{}'),
+    }
+  } catch {
+    return DEFAULT_VENDOR_CREDITS_COL_WIDTHS
+  }
+}
+
+function compareVendorCredits(a: VendorCreditRow, b: VendorCreditRow, key: SortKey, dir: 'asc' | 'desc') {
+  const left = a[key] ?? ''
+  const right = b[key] ?? ''
+  if (key === 'amount' || key === 'appliedAmount' || key === 'remainingCredit') {
+    return dir === 'asc' ? Number(left) - Number(right) : Number(right) - Number(left)
+  }
+  return dir === 'asc'
+    ? String(left).toLowerCase().localeCompare(String(right).toLowerCase())
+    : String(right).toLowerCase().localeCompare(String(left).toLowerCase())
 }
 
 export default function VendorCreditsPage() {
@@ -54,24 +90,21 @@ export default function VendorCreditsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [colWidths, setColWidths] = useState<typeof defaultVendorCreditsColWidths>(() => {
-    if (typeof window === 'undefined') return defaultVendorCreditsColWidths
-    try {
-      return {
-        ...defaultVendorCreditsColWidths,
-        ...JSON.parse(localStorage.getItem(VENDOR_CREDITS_COL_WIDTHS_KEY) ?? '{}'),
-      }
-    } catch {
-      return defaultVendorCreditsColWidths
-    }
-  })
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() => loadVendorCreditWidths())
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
   const colWidthsRef = useRef(colWidths)
+
   useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
-  const saveColWidths = useCallback((next: typeof defaultVendorCreditsColWidths) => {
+
+  const saveColWidths = useCallback((next: Record<string, number>) => {
     setColWidths(next)
-    try { localStorage.setItem(VENDOR_CREDITS_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+    try { localStorage.setItem(VENDOR_CREDITS_COL_WIDTHS_KEY, JSON.stringify(next)) } catch { }
   }, [])
-  const { containerRef: creditsTableRef, startResize: startCreditsResize, isOverflowing: creditsTableOverflowing } = useFixedWidthResizableMap({
+
+  const { containerRef: creditsTableRef, isOverflowing: creditsTableOverflowing } = useFixedWidthResizableMap({
     widths: colWidths,
     widthsRef: colWidthsRef,
     order: ['creditNumber', 'vendor', 'billNumber', 'date', 'amount', 'appliedAmount', 'remainingCredit', 'reason', 'status'],
@@ -111,30 +144,113 @@ export default function VendorCreditsPage() {
     if (search) {
       const q = search.toLowerCase()
       list = list.filter((v) =>
-        v.creditNumber?.toLowerCase().includes(q) ||
-        v.vendor?.toLowerCase().includes(q) ||
-        v.billNumber?.toLowerCase().includes(q) ||
-        v.reason?.toLowerCase().includes(q)
+        v.creditNumber.toLowerCase().includes(q) ||
+        v.vendor.toLowerCase().includes(q) ||
+        v.billNumber.toLowerCase().includes(q) ||
+        v.reason.toLowerCase().includes(q)
       )
     }
     return list
   }, [items, search, statusFilter])
 
-  const toggleSelectAll = () => {
-    const visibleIds = filtered.map((v) => v.id)
-    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id))
-    if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)))
-    } else {
-      setSelectedIds((prev) => [...new Set([...prev, ...visibleIds])])
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => compareVendorCredits(a, b, sortKey, sortDir))
+  }, [filtered, sortKey, sortDir])
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, pageSize, sorted.length])
+
+  const paged = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, currentPage, pageSize])
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  const totalAvailable = useMemo(
+    () => items.filter((v) => v.status === 'Open' || v.status === 'Partially Applied').reduce((sum, v) => sum + (v.remainingCredit ?? 0), 0),
+    [items],
+  )
+
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey !== key) {
+      setSortKey(key)
+      setSortDir('asc')
+      return
     }
+    setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
   }
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])
-  }
+  const columns = useMemo(() => {
+    const makeHeader = (label: string, key: SortKey, width: number) => (
+      <div className="relative flex items-center gap-2">
+        <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-2 text-left font-medium text-slate-800 hover:text-slate-900">
+          {label}
+          {sortKey === key ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
+        </button>
+        <ColumnResizer colKey={key} width={width} onChange={(_, next) => setColWidths((prev) => ({ ...prev, [key]: next }))} min={80} />
+      </div>
+    )
 
-  const handleDeleteSelected = async () => {
+    return [
+      {
+        accessorKey: 'creditNumber',
+        header: makeHeader('Credit #', 'creditNumber', colWidths.creditNumber),
+        meta: { align: 'left', style: { width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber } },
+      },
+      {
+        accessorKey: 'vendor',
+        header: makeHeader('Vendor', 'vendor', colWidths.vendor),
+        meta: { align: 'left', style: { width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor } },
+      },
+      {
+        accessorKey: 'billNumber',
+        header: makeHeader('Bill #', 'billNumber', colWidths.billNumber),
+        meta: { align: 'left', style: { width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber } },
+      },
+      {
+        accessorKey: 'date',
+        header: makeHeader('Date', 'date', colWidths.date),
+        meta: { align: 'left', style: { width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date } },
+      },
+      {
+        accessorKey: 'amount',
+        header: makeHeader('Amount', 'amount', colWidths.amount),
+        meta: { align: 'right', style: { width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount } },
+        cell: ({ getValue }) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
+      },
+      {
+        accessorKey: 'appliedAmount',
+        header: makeHeader('Applied', 'appliedAmount', colWidths.appliedAmount),
+        meta: { align: 'right', style: { width: colWidths.appliedAmount, minWidth: colWidths.appliedAmount, maxWidth: colWidths.appliedAmount } },
+        cell: ({ getValue }) => <span className="font-semibold text-slate-900 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
+      },
+      {
+        accessorKey: 'remainingCredit',
+        header: makeHeader('Remaining', 'remainingCredit', colWidths.remainingCredit),
+        meta: { align: 'right', style: { width: colWidths.remainingCredit, minWidth: colWidths.remainingCredit, maxWidth: colWidths.remainingCredit } },
+        cell: ({ getValue }) => <span className="font-semibold text-indigo-700 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
+      },
+      {
+        accessorKey: 'reason',
+        header: makeHeader('Reason', 'reason', colWidths.reason),
+        meta: { align: 'left', style: { width: colWidths.reason, minWidth: colWidths.reason, maxWidth: colWidths.reason } },
+      },
+      {
+        accessorKey: 'status',
+        header: makeHeader('Status', 'status', colWidths.status),
+        meta: { align: 'left', style: { width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status } },
+        cell: ({ getValue }) => <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border ${STATUS_STYLES[String(getValue() ?? '')]}`}>
+          {String(getValue() ?? '')}
+        </span>,
+      },
+    ]
+  }, [colWidths, fmt, sortDir, sortKey])
+
+  const handleDeleteSelected = useCallback(async () => {
     if (!companyId || selectedIds.length === 0) return
     setLoading(true)
     setError('')
@@ -150,16 +266,10 @@ export default function VendorCreditsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const totalAvailable = useMemo(
-    () => items.filter((v) => v.status === 'Open' || v.status === 'Partially Applied').reduce((s, v) => s + (v.remainingCredit ?? 0), 0),
-    [items]
-  )
+  }, [companyId, selectedIds, toast])
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -187,12 +297,11 @@ export default function VendorCreditsPage() {
           </div>
         </div>
 
-        {/* Status filters */}
         <div className="px-6 pb-3 flex gap-2 flex-wrap">
           {(['ALL', 'Open', 'Partially Applied', 'Applied', 'Void'] as const).map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setStatusFilter(s); setCurrentPage(1) }}
               className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
                 statusFilter === s
                   ? 'bg-indigo-600 text-white border-indigo-600'
@@ -207,20 +316,17 @@ export default function VendorCreditsPage() {
           ))}
         </div>
 
-        {/* Search */}
         <div className="px-6 pb-4">
           <input
             placeholder="Search by credit #, vendor, bill, or reason"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
             className="w-full max-w-sm px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 px-6 py-6">
-        {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[
             { label: 'Total Credits', value: items.length },
@@ -237,114 +343,66 @@ export default function VendorCreditsPage() {
           ))}
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          {loading || companyLoading ? (
-            <div className="flex items-center justify-center py-20 text-slate-400 text-sm">Loading vendor credits…</div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-2">
-              <p className="text-red-600 text-sm">{error}</p>
-              <button onClick={fetchData} className="text-sm text-indigo-600 hover:underline">Retry</button>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
-              <p className="text-sm">No vendor credits found</p>
-              {search && (
-                <button onClick={() => setSearch('')} className="text-xs text-indigo-600 hover:underline">
-                  Clear search
+          <div ref={creditsTableRef} className={creditsTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
+            <DataPage
+              title="Vendor Credits"
+              subtitle={`${sorted.length} credits`}
+              primaryActionLabel="New Vendor Credit"
+              onPrimaryAction={() => {}}
+              secondaryActions={(
+                <button
+                  type="button"
+                  onClick={() => router.push('/expenses/payables/vendor-credits/activity')}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <Clock size={15} /> Activity Log
                 </button>
               )}
-            </div>
-          ) : (
-            <div ref={creditsTableRef} className={creditsTableOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}>
-              <table className="w-full min-w-[1080px] table-fixed text-sm">
-                <colgroup>
-                  <col style={{ width: 44 }} />
-                  <col style={{ width: colWidths.creditNumber }} />
-                  <col style={{ width: colWidths.vendor }} />
-                  <col style={{ width: colWidths.billNumber }} />
-                  <col style={{ width: colWidths.date }} />
-                  <col style={{ width: colWidths.amount }} />
-                  <col style={{ width: colWidths.appliedAmount }} />
-                  <col style={{ width: colWidths.remainingCredit }} />
-                  <col style={{ width: colWidths.reason }} />
-                  <col style={{ width: colWidths.status }} />
-                </colgroup>
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="w-10 px-3 py-3 text-left text-slate-500">
-                      <button onClick={toggleSelectAll} className="text-slate-400 hover:text-indigo-600 transition-colors">
-                        {filtered.length > 0 && filtered.every((row) => selectedIds.includes(row.id)) ? '▣' : '▢'}
-                      </button>
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title="Credit #">
-                      Credit #
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'creditNumber')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title="Vendor">
-                      Vendor
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'vendor')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber }} title="Bill #">
-                      Bill #
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'billNumber')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }} title="Date">
-                      Date
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'date')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }} title="Amount">
-                      Amount
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'amount')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.appliedAmount, minWidth: colWidths.appliedAmount, maxWidth: colWidths.appliedAmount }} title="Applied">
-                      Applied
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'appliedAmount')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.remainingCredit, minWidth: colWidths.remainingCredit, maxWidth: colWidths.remainingCredit }} title="Remaining">
-                      Remaining
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'remainingCredit')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.reason, minWidth: colWidths.reason, maxWidth: colWidths.reason }} title="Reason">
-                      Reason
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'reason')} />
-                    </th>
-                    <th className="relative px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide truncate" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }} title="Status">
-                      Status
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/60" onMouseDown={e => startCreditsResize(e, 'status')} />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map((row) => {
-                    const isSelected = selectedIds.includes(row.id)
-                    return (
-                      <tr key={row.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-indigo-50/40' : ''}`}>
-                        <td className="px-3 py-2">
-                          <button onClick={() => toggleSelect(row.id)} className="text-slate-400 hover:text-indigo-600 transition-colors">
-                            {isSelected ? '▣' : '▢'}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-slate-800 truncate" style={{ width: colWidths.creditNumber, minWidth: colWidths.creditNumber, maxWidth: colWidths.creditNumber }} title={row.creditNumber}>{row.creditNumber}</td>
-                        <td className="px-4 py-3 text-slate-700 truncate" style={{ width: colWidths.vendor, minWidth: colWidths.vendor, maxWidth: colWidths.vendor }} title={row.vendor}>{row.vendor}</td>
-                        <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.billNumber, minWidth: colWidths.billNumber, maxWidth: colWidths.billNumber }} title={row.billNumber ?? ''}>{row.billNumber}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap" style={{ width: colWidths.date, minWidth: colWidths.date, maxWidth: colWidths.date }}>{row.date}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-800" style={{ width: colWidths.amount, minWidth: colWidths.amount, maxWidth: colWidths.amount }}>{formatCurrency(row.amount, currency)}</td>
-                        <td className="px-4 py-3 text-emerald-700" style={{ width: colWidths.appliedAmount, minWidth: colWidths.appliedAmount, maxWidth: colWidths.appliedAmount }}>{formatCurrency(row.appliedAmount, currency)}</td>
-                        <td className="px-4 py-3 font-semibold text-indigo-700" style={{ width: colWidths.remainingCredit, minWidth: colWidths.remainingCredit, maxWidth: colWidths.remainingCredit }}>{formatCurrency(row.remainingCredit, currency)}</td>
-                        <td className="px-4 py-3 text-slate-600 truncate" style={{ width: colWidths.reason, minWidth: colWidths.reason, maxWidth: colWidths.reason }} title={row.reason}>{row.reason}</td>
-                        <td className="px-4 py-3" style={{ width: colWidths.status, minWidth: colWidths.status, maxWidth: colWidths.status }}>
-                          <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_STYLES[row.status] ?? ''}`}>
-                            {row.status}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+              filters={(
+                <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
+                      placeholder="Search vendor credits…"
+                      className="w-full pl-9 pr-3 py-2 border border-emerald-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    />
+                  </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+                    className="w-full max-w-xs px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  >
+                    <option value="ALL">All Status</option>
+                    <option value="Open">Open</option>
+                    <option value="Partially Applied">Partially Applied</option>
+                    <option value="Applied">Applied</option>
+                    <option value="Void">Void</option>
+                  </select>
+                </div>
+              )}
+              columns={columns}
+              data={paged}
+              isLoading={loading}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={sorted.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              getRowId={(row) => row.id}
+              bulkActions={[{ label: 'Delete selected', onClick: handleDeleteSelected, variant: 'destructive' }]}
+              emptyTitle="No vendor credits found"
+              emptyDescription="Try a different search or apply a different filter."
+              emptyPrimaryAction="New Vendor Credit"
+              onEmptyPrimaryAction={() => {}}
+            />
+          </div>
         </div>
       </div>
     </div>

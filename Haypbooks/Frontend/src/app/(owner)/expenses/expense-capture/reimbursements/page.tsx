@@ -1,5 +1,7 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+'use client'
+
+import ExpenseCapturePage from '@/components/expenses/ExpenseCapturePage'
 
 export default function Page() {
-  return <TabComingSoon title="Reimbursements" />
+  return <ExpenseCapturePage initialTab="reimbursements" />
 }

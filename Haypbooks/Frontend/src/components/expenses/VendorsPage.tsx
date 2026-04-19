@@ -9,10 +9,21 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 import ColumnResizer from '@/components/ColumnResizer'
+import DataPage from '@/components/shared/DataPage'
 import { useToast } from '@/components/ui/Toast'
 
 interface Vendor {
-  id: string; name: string; email?: string; phone?: string; address?: string; city?: string; state?: string; country?: string; taxId?: string; balance?: number; status?: string
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  country?: string
+  taxId?: string
+  balance?: number
+  status?: string
 }
 
 type SortKey = 'name' | 'email' | 'phone' | 'status' | 'balance'
@@ -72,25 +83,21 @@ export default function VendorsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Vendor | null>(null)
-  const [sortKey, setSortKey] = useState<SortKey | null>(null)
-  const [sortDir, setSortDir] = useState<SortDir>(null)
+  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [widths, setWidths] = useState<Record<string, number>>(() => loadVendorWidthMap())
+  const [pageSize, setPageSize] = useState(25)
+  const [currentPage, setCurrentPage] = useState(1)
   const widthsRef = useRef(widths)
 
-  useEffect(() => {
-    widthsRef.current = widths
-  }, [widths])
+  useEffect(() => { widthsRef.current = widths }, [widths])
 
   const saveWidths = useCallback((next: Record<string, number>) => {
     setWidths(next)
-    try {
-      localStorage.setItem(VENDOR_COLUMNS_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      // ignore storage failures
-    }
+    try { localStorage.setItem(VENDOR_COLUMNS_STORAGE_KEY, JSON.stringify(next)) } catch { }
   }, [])
 
-  const { containerRef, startResize } = useFixedWidthResizableMap({
+  const { containerRef } = useFixedWidthResizableMap({
     widths,
     widthsRef,
     order: VENDOR_TABLE_ORDER,
@@ -107,8 +114,11 @@ export default function VendorsPage() {
       const { data } = await apiClient.get(`/companies/${companyId}/vendors`)
       setVendors(Array.isArray(data) ? data : data.vendors ?? [])
       setError('')
-    } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load vendors') }
-    finally { setLoading(false) }
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to load vendors')
+    } finally {
+      setLoading(false)
+    }
   }, [companyId])
 
   useEffect(() => { fetchVendors() }, [fetchVendors])
@@ -117,7 +127,7 @@ export default function VendorsPage() {
     if (!search) return vendors
     const q = search.toLowerCase()
     return vendors.filter((vendor) =>
-      vendor.name.toLowerCase().includes(q) || (vendor.email ?? '').toLowerCase().includes(q),
+      vendor.name.toLowerCase().includes(q) || (vendor.email ?? '').toLowerCase().includes(q) || (vendor.phone ?? '').toLowerCase().includes(q),
     )
   }, [vendors, search])
 
@@ -125,6 +135,17 @@ export default function VendorsPage() {
     if (!sortKey || !sortDir) return filtered
     return [...filtered].sort((a, b) => compareVendors(a, b, sortKey, sortDir))
   }, [filtered, sortKey, sortDir])
+
+  useEffect(() => {
+    if (currentPage > Math.max(1, Math.ceil(sorted.length / pageSize))) {
+      setCurrentPage(Math.max(1, Math.ceil(sorted.length / pageSize)))
+    }
+  }, [currentPage, pageSize, sorted.length])
+
+  const pagedVendors = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, currentPage, pageSize])
 
   const totalPayables = useMemo(() => vendors.reduce((sum, vendor) => sum + (vendor.balance ?? 0), 0), [vendors])
   const activeCount = useMemo(() => vendors.filter((vendor) => normalizeStatus(vendor.status) === 'Active').length, [vendors])
@@ -135,32 +156,7 @@ export default function VendorsPage() {
       setSortDir('asc')
       return
     }
-
-    if (sortDir === 'asc') {
-      setSortDir('desc')
-      return
-    }
-
-    if (sortDir === 'desc') {
-      setSortKey(null)
-      setSortDir(null)
-      return
-    }
-
-    setSortDir('asc')
-  }
-
-  const toggleSelectAll = () => {
-    const allSelected = sorted.length > 0 && sorted.every((item) => selectedIds.includes(item.id))
-    if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !sorted.some((item) => item.id === id)))
-    } else {
-      setSelectedIds((prev) => [...new Set([...prev, ...sorted.map((item) => item.id)])])
-    }
-  }
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+    setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
   }
 
   const handleDeleteSelected = async () => {
@@ -193,43 +189,74 @@ export default function VendorsPage() {
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
-  if (cidLoading || (loading && vendors.length === 0)) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="h-28 rounded-3xl bg-slate-100 animate-pulse" />
-          <div className="h-28 rounded-3xl bg-slate-100 animate-pulse" />
-          <div className="h-28 rounded-3xl bg-slate-100 animate-pulse" />
-        </div>
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4">
-          <div className="h-12 rounded-2xl bg-slate-100 animate-pulse" />
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="h-14 rounded-2xl bg-slate-100 animate-pulse" />
-          ))}
-        </div>
+  const columns = useMemo(() => {
+    const makeHeader = (label: string, key: SortKey, width: number) => (
+      <div className="relative flex items-center gap-2">
+        <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-2 text-left font-medium text-slate-800 hover:text-slate-900">
+          {label}
+          {sortKey === key ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
+        </button>
+        <ColumnResizer colKey={key} width={width} onChange={(_, next) => setWidths((prev) => ({ ...prev, [key]: next }))} min={80} />
       </div>
     )
-  }
-  if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
+
+    return [
+      {
+        accessorKey: 'name',
+        header: makeHeader('Name', 'name', widths.name),
+        meta: { align: 'left', style: { width: widths.name, minWidth: widths.name, maxWidth: widths.name } },
+      },
+      {
+        accessorKey: 'email',
+        header: makeHeader('Email', 'email', widths.email),
+        meta: { align: 'left', hideBelow: 'md', style: { width: widths.email, minWidth: widths.email, maxWidth: widths.email } },
+      },
+      {
+        accessorKey: 'phone',
+        header: makeHeader('Phone', 'phone', widths.phone),
+        meta: { align: 'left', hideBelow: 'lg', style: { width: widths.phone, minWidth: widths.phone, maxWidth: widths.phone } },
+      },
+      {
+        accessorKey: 'status',
+        header: makeHeader('Status', 'status', widths.status),
+        meta: { align: 'left', style: { width: widths.status, minWidth: widths.status, maxWidth: widths.status } },
+        cell: ({ getValue }) => {
+          const label = normalizeStatus(String(getValue() ?? ''))
+          const classes = label === 'Inactive'
+            ? 'bg-slate-100 text-slate-700 border-slate-200'
+            : label === 'On Hold'
+              ? 'bg-amber-50 text-amber-700 border-amber-100'
+              : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+          return <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium ${classes}`}>{label}</span>
+        },
+      },
+      {
+        accessorKey: 'balance',
+        header: makeHeader('Balance', 'balance', widths.balance),
+        meta: { align: 'right', style: { width: widths.balance, minWidth: widths.balance, maxWidth: widths.balance } },
+        cell: ({ getValue }) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
+      },
+      {
+        accessorKey: 'id',
+        header: 'Actions',
+        meta: { align: 'right', style: { width: 120, minWidth: 120, maxWidth: 120 } },
+        cell: ({ row }) => {
+          const vendor = row.original as Vendor
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button onClick={() => { setEditing(vendor); setShowForm(true) }} className="p-1 rounded hover:bg-emerald-100 text-emerald-600" data-no-row-toggle><Edit2 size={14} /></button>
+              <button onClick={() => handleDelete(vendor.id)} className="p-1 rounded hover:bg-red-100 text-red-400" data-no-row-toggle><Trash2 size={14} /></button>
+            </div>
+          )
+        },
+      },
+    ]
+  }, [fmt, sortKey, sortDir, widths])
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Vendors</h1>
-          <p className="text-sm text-emerald-600/70 mt-1">{sorted.length} visible vendors</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {selectedIds.length > 0 && (
-            <button onClick={handleDeleteSelected} className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors">
-              Delete Selected ({selectedIds.length})
-            </button>
-          )}
-          <button onClick={() => { setEditing(null); setShowForm(true) }} className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
-            <Plus size={16} /> Add Vendor
-          </button>
-        </div>
-      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-lg">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Total vendors</p>
@@ -244,12 +271,48 @@ export default function VendorsPage() {
           <p className="mt-3 text-3xl font-semibold text-slate-900">{fmt(totalPayables)}</p>
         </div>
       </div>
-      <div className="bg-white rounded-3xl border border-emerald-100 p-4">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input type="text" placeholder="Search vendors…" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-      </div>
+
+      <DataPage
+        title="Vendors"
+        subtitle={`${sorted.length} visible vendors`}
+        primaryActionLabel="Add Vendor"
+        onPrimaryAction={() => { setEditing(null); setShowForm(true) }}
+        secondaryActions={
+          <button onClick={handleDeleteSelected} disabled={selectedIds.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">
+            Delete Selected ({selectedIds.length})
+          </button>
+        }
+        filters={(
+          <div className="relative w-full max-w-md">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
+              placeholder="Search vendors…"
+              className="w-full pl-9 pr-3 py-2 border border-emerald-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            />
+          </div>
+        )}
+        columns={columns}
+        data={pagedVendors}
+        isLoading={loading}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={sorted.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        bulkActions={[{ label: 'Delete Selected', icon: <Trash2 size={14} />, onClick: handleDeleteSelected, variant: 'destructive' }]}
+        emptyTitle="No vendors found"
+        emptyDescription="Try a different search or add your first vendor."
+        emptyPrimaryAction="Add Vendor"
+        onEmptyPrimaryAction={() => { setEditing(null); setShowForm(true) }}
+      />
+
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700">
           <AlertCircle size={16} />
@@ -257,78 +320,16 @@ export default function VendorsPage() {
           <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button>
         </div>
       )}
-      <div className="bg-white rounded-3xl border border-emerald-100 overflow-hidden">
-        <div ref={containerRef} className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-emerald-50/50 border-b border-emerald-100">
-                <th className="w-10 px-3 py-3 text-left text-emerald-700">
-                  <button onClick={toggleSelectAll} className="text-emerald-600 hover:text-emerald-900 transition-colors">
-                    {sorted.length > 0 && sorted.every((vendor) => selectedIds.includes(vendor.id)) ? '▣' : '▢'}
-                  </button>
-                </th>
-                {VENDOR_TABLE_ORDER.map((key) => (
-                  <th key={key} style={{ width: widths[key], minWidth: widths[key], maxWidth: widths[key] }} className="relative px-4 py-3 text-left text-emerald-700">
-                    <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-2 text-left font-medium text-slate-800 hover:text-slate-900">
-                      {key === 'name' ? 'Name' : key === 'email' ? 'Email' : key === 'phone' ? 'Phone' : key === 'status' ? 'Status' : 'Balance'}
-                      {(sortKey === key && sortDir) ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
-                    </button>
-                    <ColumnResizer colKey={key} width={widths[key]} onChange={(_, next) => saveWidths({ ...widths, [key]: next })} min={80} />
-                  </th>
-                ))}
-                <th className="w-24 px-4 py-3 text-right text-emerald-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-emerald-400">
-                    <Building size={24} className="mx-auto mb-2 opacity-50" />
-                    No vendors found.
-                  </td>
-                </tr>
-              ) : (
-                sorted.map((v) => {
-                  const isSelected = selectedIds.includes(v.id)
-                  const statusLabel = normalizeStatus(v.status)
-                  const statusClasses = statusLabel === 'Inactive'
-                    ? 'bg-slate-100 text-slate-700 border-slate-200'
-                    : statusLabel === 'On Hold'
-                      ? 'bg-amber-50 text-amber-700 border-amber-100'
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-100'
 
-                  return (
-                    <tr key={v.id} className={`border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors ${isSelected ? 'bg-emerald-50/60' : ''}`}>
-                      <td className="px-3 py-2">
-                        <button onClick={() => toggleSelect(v.id)} className="text-emerald-500 hover:text-emerald-900 transition-colors">
-                          {isSelected ? '▣' : '▢'}
-                        </button>
-                      </td>
-                      <td className="px-4 py-2.5 font-medium text-emerald-900">{v.name}</td>
-                      <td className="px-4 py-2.5 text-emerald-600/70 hidden md:table-cell">{v.email ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-emerald-600/70 hidden lg:table-cell">{v.phone ?? '—'}</td>
-                      <td className="px-4 py-2.5">
-                        <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium ${statusClasses}`}>
-                          {statusLabel}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(v.balance ?? 0)}</td>
-                      <td className="px-4 py-2.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => { setEditing(v); setShowForm(true) }} className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Edit2 size={14} /></button>
-                          <button onClick={() => handleDelete(v.id)} className="p-1 rounded hover:bg-red-100 text-red-400"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
       <AnimatePresence>
-        {showForm && <VendorFormModal companyId={companyId!} vendor={editing} onClose={() => { setShowForm(false); setEditing(null) }} onSaved={() => { setShowForm(false); setEditing(null); fetchVendors() }} />}
+        {showForm && (
+          <VendorFormModal
+            companyId={companyId!}
+            vendor={editing}
+            onClose={() => { setShowForm(false); setEditing(null) }}
+            onSaved={() => { setShowForm(false); setEditing(null); fetchVendors() }}
+          />
+        )}
       </AnimatePresence>
     </div>
   )

@@ -6,6 +6,7 @@ type Column<T> = {
   hideBelow?: 'sm' | 'md' | 'lg' | 'xl'
   headerClassName?: string
   cellClassName?: string
+  style?: React.CSSProperties
 }
 
 interface DataTableProps<T extends Record<string, any>> {
@@ -53,7 +54,7 @@ export function DataTable<T extends Record<string, any>>({ columns, rows, keyFie
             {columns.map((c) => {
               const alignClass = c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : 'text-left'
               return (
-                <th key={String(c.key)} scope="col" className={`px-3 py-2 ${alignClass} ${c.hideBelow ? `hidden ${c.hideBelow}:table-cell` : ''} ${c.headerClassName || ''}`}>{c.header}</th>
+                <th key={String(c.key)} scope="col" style={c.style} className={`px-3 py-2 ${alignClass} ${c.hideBelow ? `hidden ${c.hideBelow}:table-cell` : ''} ${c.headerClassName || ''}`}>{c.header}</th>
               )
             })}
           </tr>
@@ -83,6 +84,7 @@ export function DataTable<T extends Record<string, any>>({ columns, rows, keyFie
                 return (
                   <td
                     key={String(c.key)}
+                    style={c.style}
                     className={`${cellPad} ${alignClass} ${visibility(c.hideBelow)} ${c.cellClassName || ''}`}
                     onClick={(e)=>{
                       // prevent nested interactive elements from triggering row click

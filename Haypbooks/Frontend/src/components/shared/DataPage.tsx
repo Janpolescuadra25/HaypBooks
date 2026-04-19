@@ -29,6 +29,7 @@ type InternalColumn<T> = {
   hideBelow?: 'sm' | 'md' | 'lg' | 'xl'
   headerClassName?: string
   cellClassName?: string
+  style?: React.CSSProperties
 }
 
 interface DataPageProps<T extends Record<string, any>> {
@@ -89,6 +90,7 @@ function mapColumns<T extends Record<string, any>>(columns: ColumnDef<T, any>[])
       hideBelow: (col.meta as any)?.hideBelow,
       headerClassName: (col.meta as any)?.headerClassName,
       cellClassName: (col.meta as any)?.cellClassName,
+      style: (col.meta as any)?.style,
     }
   })
 }

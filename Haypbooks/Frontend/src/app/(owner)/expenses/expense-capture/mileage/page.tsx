@@ -1,10 +1,7 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+'use client'
+
+import ExpenseCapturePage from '@/components/expenses/ExpenseCapturePage'
 
 export default function Page() {
-  return (
-    <ComingSoon
-      featureName="Mileage"
-      estimatedTime="Q2 2026"
-    />
-  )
+  return <ExpenseCapturePage initialTab="mileage" />
 }

@@ -183,7 +183,7 @@ export const navigationData: NavSection[] = [
         icon: Receipt,
         items: [
           {
-            title: 'Purchasing',
+            title: 'Procurement',
             path: '/expenses/purchasing',
             tabs: [
               { label: 'Vendors',            value: 'vendors',            status: 'existing' },
@@ -194,7 +194,7 @@ export const navigationData: NavSection[] = [
             ],
           },
           {
-            title: 'Bills & Payments',
+            title: 'Payables',
             path: '/expenses/bills-payments',
             tabs: [
               { label: 'Bills',             value: 'bills',             status: 'existing' },
@@ -206,7 +206,7 @@ export const navigationData: NavSection[] = [
             ],
           },
           {
-            title: 'Expense Capture',
+            title: 'Employee Expenses',
             path: '/expenses/expense-capture',
             tabs: [
               { label: 'Expenses',         value: 'expenses',         status: 'coming-soon' },

@@ -1,30 +1,78 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Plus, Search, X, AlertCircle, Loader2, CreditCard, Ban } from 'lucide-react'
+import { Plus, Search, X, AlertCircle, Loader2, CreditCard, Ban, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
-import ColumnResizer from '@/components/ColumnResizer'
+import DataPage from '@/components/shared/DataPage'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import ColumnResizer from '@/components/ColumnResizer'
 import { useToast } from '@/components/ui/Toast'
 
-interface BillPayment {
-  id: string; paymentNumber?: string; vendorId?: string; vendorName?: string; billId?: string; billNumber?: string
-  date: string; amount: number; method?: string; reference?: string; status?: string
+interface Bill {
+  id: string
+  billNumber?: string
+  vendorId?: string
+  vendorName?: string
+  status?: string
+  amountDue?: number
+  total: number
+  date: string
 }
-interface Bill { id: string; billNumber?: string; vendorName?: string; total: number; amountDue?: number; status: string }
-interface PaymentCol { key: string; label: string; width: number; align?: 'left' | 'right' }
-const PAYMENT_COLS: PaymentCol[] = [
-  { key: 'paymentNumber', label: 'Payment #', width: 120, align: 'left' },
-  { key: 'vendorName', label: 'Vendor', width: 180, align: 'left' },
-  { key: 'date', label: 'Date', width: 120, align: 'left' },
-  { key: 'method', label: 'Method', width: 140, align: 'left' },
-  { key: 'amount', label: 'Amount', width: 120, align: 'right' },
-  { key: 'actions', label: 'Actions', width: 96, align: 'right' },
-]
+
+interface BillPayment {
+  id: string
+  paymentNumber?: string
+  vendorId?: string
+  vendorName?: string
+  billId?: string
+  billNumber?: string
+  date: string
+  amount: number
+  method?: string
+  reference?: string
+  status?: string
+}
+
+type SortKey = 'paymentNumber' | 'vendorName' | 'date' | 'method' | 'amount'
+
+const PAYMENT_TABLE_ORDER: SortKey[] = ['paymentNumber', 'vendorName', 'date', 'method', 'amount']
+const DEFAULT_PAYMENT_COL_WIDTHS: Record<SortKey, number> = {
+  paymentNumber: 130,
+  vendorName: 190,
+  date: 120,
+  method: 140,
+  amount: 130,
+}
+const PAYMENT_COLUMNS_STORAGE_KEY = 'bill-payments-column-widths-v1'
+
+function loadPaymentWidthMap(): Record<string, number> {
+  try {
+    const saved = localStorage.getItem(PAYMENT_COLUMNS_STORAGE_KEY)
+    if (!saved) return DEFAULT_PAYMENT_COL_WIDTHS
+    const parsed = JSON.parse(saved) as Record<string, number>
+    return {
+      ...DEFAULT_PAYMENT_COL_WIDTHS,
+      ...Object.fromEntries(Object.entries(parsed).filter(([key]) => PAYMENT_TABLE_ORDER.includes(key as SortKey))),
+    }
+  } catch {
+    return DEFAULT_PAYMENT_COL_WIDTHS
+  }
+}
+
+function comparePayments(a: BillPayment, b: BillPayment, key: SortKey, dir: 'asc' | 'desc') {
+  const left = a[key] ?? ''
+  const right = b[key] ?? ''
+  if (key === 'amount') {
+    return dir === 'asc' ? Number(left) - Number(right) : Number(right) - Number(left)
+  }
+  return dir === 'asc'
+    ? String(left).toLowerCase().localeCompare(String(right).toLowerCase())
+    : String(right).toLowerCase().localeCompare(String(left).toLowerCase())
+}
 
 export default function BillPaymentsPage() {
   const { companyId, loading: cidLoading, error: cidError } = useCompanyId()
@@ -33,25 +81,44 @@ export default function BillPaymentsPage() {
   const [payments, setPayments] = useState<BillPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [cols, setCols] = useState<PaymentCol[]>(() => PAYMENT_COLS)
-  const colsRef = useRef(cols)
-  const { containerRef, startResize: onResizeStart, isOverflowing: paymentsIsOverflowing } = useFixedWidthResizableColumns({
-    columns: cols,
-    columnsRef: colsRef,
-    saveColumns: (next) => setCols(next),
-    fixedWidth: 80,
-  })
-  useEffect(() => { colsRef.current = cols }, [cols])
   const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [widths, setWidths] = useState<Record<string, number>>(() => loadPaymentWidthMap())
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
   const [showForm, setShowForm] = useState(false)
+  const widthsRef = useRef(widths)
+
+  useEffect(() => { widthsRef.current = widths }, [widths])
+
+  const saveWidths = useCallback((next: Record<string, number>) => {
+    setWidths(next)
+    try { localStorage.setItem(PAYMENT_COLUMNS_STORAGE_KEY, JSON.stringify(next)) } catch { }
+  }, [])
+
+  const { containerRef } = useFixedWidthResizableMap({
+    widths,
+    widthsRef,
+    order: PAYMENT_TABLE_ORDER,
+    saveWidths,
+    fixedWidth: 80,
+    minWidth: 100,
+    fallbackMinWidth: 100,
+  })
 
   const fetchPayments = useCallback(async () => {
-    if (!companyId) return; setLoading(true)
+    if (!companyId) return
+    setLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/bill-payments`)
-      setPayments(Array.isArray(data) ? data : data.payments ?? []); setError('')
-    } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load payments') }
-    finally { setLoading(false) }
+      setPayments(Array.isArray(data) ? data : data.payments ?? [])
+      setError('')
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to load payments')
+    } finally {
+      setLoading(false)
+    }
   }, [companyId])
 
   useEffect(() => { fetchPayments() }, [fetchPayments])
@@ -59,10 +126,30 @@ export default function BillPaymentsPage() {
   const filtered = useMemo(() => {
     if (!search) return payments
     const q = search.toLowerCase()
-    return payments.filter(p => (p.vendorName ?? '').toLowerCase().includes(q) || (p.paymentNumber ?? '').toLowerCase().includes(q) || (p.reference ?? '').toLowerCase().includes(q))
+    return payments.filter((p) =>
+      (p.vendorName ?? '').toLowerCase().includes(q) ||
+      (p.paymentNumber ?? '').toLowerCase().includes(q) ||
+      (p.reference ?? '').toLowerCase().includes(q),
+    )
   }, [payments, search])
 
-  const handleVoid = async (id: string) => {
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => comparePayments(a, b, sortKey, sortDir))
+  }, [filtered, sortKey, sortDir])
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, pageSize, sorted.length])
+
+  const paged = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, currentPage, pageSize])
+
+  const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
     try {
       await apiClient.post(`/companies/${companyId}/bill-payments/${id}/void`)
@@ -73,68 +160,135 @@ export default function BillPaymentsPage() {
       setError(message)
       toast.error(message)
     }
-  }
+  }, [companyId, toast])
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-  const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return d } }
+  const fmtDate = (d: string) => {
+    try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return d }
+  }
 
-  if (cidLoading || (loading && payments.length === 0))
+  const toggleSort = (key: SortKey) => {
+    if (sortKey !== key) {
+      setSortKey(key)
+      setSortDir('asc')
+      return
+    }
+    setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+  }
+
+  const columns = useMemo(() => {
+    const makeHeader = (label: string, key: SortKey, width: number) => (
+      <div className="relative flex items-center gap-2">
+        <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-2 text-left font-medium text-slate-800 hover:text-slate-900">
+          {label}
+          {sortKey === key ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
+        </button>
+        <ColumnResizer colKey={key} width={width} onChange={(_, next) => setWidths((prev) => ({ ...prev, [key]: next }))} min={80} />
+      </div>
+    )
+
+    return [
+      {
+        accessorKey: 'paymentNumber',
+        header: makeHeader('Payment #', 'paymentNumber', widths.paymentNumber),
+        meta: { align: 'left', style: { width: widths.paymentNumber, minWidth: widths.paymentNumber, maxWidth: widths.paymentNumber } },
+      },
+      {
+        accessorKey: 'vendorName',
+        header: makeHeader('Vendor', 'vendorName', widths.vendorName),
+        meta: { align: 'left', style: { width: widths.vendorName, minWidth: widths.vendorName, maxWidth: widths.vendorName } },
+      },
+      {
+        accessorKey: 'date',
+        header: makeHeader('Date', 'date', widths.date),
+        meta: { align: 'left', style: { width: widths.date, minWidth: widths.date, maxWidth: widths.date } },
+        cell: ({ getValue }) => <span>{fmtDate(String(getValue() ?? ''))}</span>,
+      },
+      {
+        accessorKey: 'method',
+        header: makeHeader('Method', 'method', widths.method),
+        meta: { align: 'left', style: { width: widths.method, minWidth: widths.method, maxWidth: widths.method } },
+      },
+      {
+        accessorKey: 'amount',
+        header: makeHeader('Amount', 'amount', widths.amount),
+        meta: { align: 'right', style: { width: widths.amount, minWidth: widths.amount, maxWidth: widths.amount } },
+        cell: ({ getValue }) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
+      },
+      {
+        accessorKey: 'id',
+        header: 'Actions',
+        meta: { align: 'right', style: { width: 120, minWidth: 120, maxWidth: 120 } },
+        cell: ({ row }) => {
+          const payment = row.original as BillPayment
+          return (
+            <div className="flex items-center justify-end gap-1">
+              {payment.status !== 'VOIDED' && (
+                <button onClick={() => handleVoid(payment.id)} className="p-1 rounded hover:bg-red-100 text-red-400" data-no-row-toggle title="Void"><Ban size={14} /></button>
+              )}
+            </div>
+          )
+        },
+      },
+    ]
+  }, [fmt, handleVoid, sortKey, sortDir, widths])
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+
+  if (cidLoading || (loading && payments.length === 0)) {
     return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /><span className="ml-2 text-emerald-700">Loading…</span></div>
-  if (cidError) return <div className="p-6 text-center text-red-600">{cidError}</div>
+  }
+
+  if (cidError) {
+    return <div className="p-6 text-center text-red-600">{cidError}</div>
+  }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div><h1 className="text-2xl font-bold text-emerald-900">Bill Payments</h1><p className="text-sm text-emerald-600/70 mt-0.5">{filtered.length} payments</p></div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> Record Payment</button>
-      </div>
+    <div className="p-4 sm:p-6 space-y-6">
+      <DataPage
+        title="Bill Payments"
+        subtitle={`${sorted.length} payments`}
+        primaryActionLabel="Record Payment"
+        onPrimaryAction={() => setShowForm(true)}
+        filters={(
+          <div className="grid gap-3 lg:grid-cols-[1fr]">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
+                placeholder="Search payments…"
+                className="w-full pl-9 pr-3 py-2 border border-emerald-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              />
+            </div>
+          </div>
+        )}
+        columns={columns}
+        data={paged}
+        isLoading={loading}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={sorted.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+        selectedIds={[]}
+        onSelectionChange={() => {}}
+        getRowId={(row) => row.id}
+        emptyTitle="No payments found"
+        emptyDescription="Try a different search or record a payment."
+        emptyPrimaryAction="Record Payment"
+        onEmptyPrimaryAction={() => setShowForm(true)}
+      />
 
-      <div className="bg-white rounded-xl border border-emerald-100 p-3"><div className="relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-        <input type="text" placeholder="Search payments…" value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div></div>
-
-      {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700"><AlertCircle size={16} /> {error} <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button></div>}
-
-      <div ref={containerRef} className={`bg-white rounded-xl border border-emerald-100 ${paymentsIsOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
-        <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
-          <thead><tr className="bg-slate-50 text-slate-700 font-semibold text-xs uppercase tracking-wider">
-            {cols.map((col, index) => (
-              <th
-                key={col.key}
-                style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
-                className={`px-4 py-3 border-r border-slate-200 ${col.align === 'right' ? 'text-right' : 'text-left'}`}
-              >
-                <div className="relative flex items-center justify-between gap-2">
-                  <span>{col.label}</span>
-                  {index < cols.length - 1 && (
-                    <ColumnResizer
-                      colKey={col.key}
-                      width={col.width}
-                      onChange={(_, next) => setCols(prev => prev.map(c => c.key === col.key ? { ...c, width: next } : c))}
-                      min={80}
-                    />
-                  )}
-                </div>
-              </th>
-            ))}
-          </tr></thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-emerald-400"><CreditCard size={24} className="mx-auto mb-2 opacity-50" />No payments found.</td></tr>
-            ) : filtered.map(p => (
-              <tr key={p.id} className="border-t border-emerald-50 hover:bg-emerald-50/30 transition-colors">
-                <td className="px-4 py-2.5 font-mono text-xs text-emerald-600">{p.paymentNumber ?? p.id.slice(0, 8)}</td>
-                <td className="px-4 py-2.5 font-medium text-emerald-900">{p.vendorName ?? '—'}</td>
-                <td className="px-4 py-2.5 text-emerald-600/70 hidden md:table-cell">{fmtDate(p.date)}</td>
-                <td className="px-4 py-2.5 text-emerald-600/70 hidden lg:table-cell">{p.method ?? 'N/A'}</td>
-                <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">{fmt(p.amount)}</td>
-                <td className="px-4 py-2.5 text-right">
-                  {p.status !== 'VOIDED' && <button onClick={() => handleVoid(p.id)} className="p-1 rounded hover:bg-red-100 text-red-400" title="Void"><Ban size={14} /></button>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700">
+          <AlertCircle size={16} />
+          {error}
+          <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button>
+        </div>
+      )}
 
       <AnimatePresence>
         {showForm && <BillPaymentFormModal companyId={companyId!} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); fetchPayments() }} />}
@@ -157,7 +311,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
   useEffect(() => {
     apiClient.get(`/companies/${companyId}/bills`).then(({ data }) => {
       const all = Array.isArray(data) ? data : data.bills ?? []
-      setBills(all.filter((b: Bill) => ['APPROVED', 'PARTIALLY_PAID', 'PENDING'].includes(b.status)))
+      setBills(all.filter((b: Bill) => ['APPROVED', 'PARTIALLY_PAID', 'PENDING'].includes(String(b.status))))
     }).catch(() => {})
   }, [companyId])
 
@@ -171,7 +325,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
       .catch(() => setBillHistory([]))
   }, [companyId, billId])
 
-  const selectedBill = bills.find(b => b.id === billId)
+  const selectedBill = bills.find((b) => b.id === billId)
   const remainingBalance = selectedBill ? Number(selectedBill.amountDue ?? selectedBill.total) - Number(amount || 0) : 0
   const paymentStatus = selectedBill ? (remainingBalance <= 0 ? 'Paid' : remainingBalance < (selectedBill.amountDue ?? selectedBill.total) ? 'Partial' : 'Open') : 'Open'
 
@@ -192,7 +346,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Record Bill Payment</h2>
           <button onClick={onClose} className="p-2 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"><X size={18} /></button>
@@ -238,7 +392,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
                     </tr>
                   </thead>
                   <tbody>
-                    {billHistory.map(payment => (
+                    {billHistory.map((payment) => (
                       <tr key={payment.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="px-3 py-2 text-slate-700">{new Date(payment.date).toLocaleDateString('en-US')}</td>
                         <td className="px-3 py-2 text-slate-600 truncate">{payment.reference ?? payment.paymentNumber ?? '—'}</td>
@@ -256,30 +410,31 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Bill *</label>
-            <select value={billId} onChange={e => {
+            <select value={billId} onChange={(e) => {
               setBillId(e.target.value)
-              const b = bills.find(bill => bill.id === e.target.value)
+              const b = bills.find((bill) => bill.id === e.target.value)
               if (b) setAmount(String(b.amountDue ?? b.total))
             }} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
               <option value="">Select a bill…</option>
-              {bills.map(b => <option key={b.id} value={b.id}>{b.billNumber ?? b.id.slice(0, 8)} — {b.vendorName} ({fmt(b.amountDue ?? b.total)})</option>)}
+              {bills.map((b) => <option key={b.id} value={b.id}>{b.billNumber ?? b.id.slice(0, 8)} — {b.vendorName} ({fmt(b.amountDue ?? b.total)})</option>)}
             </select>
             {selectedBill && <p className="text-sm text-slate-500 mt-1">Balance due: {fmt(selectedBill.amountDue ?? selectedBill.total)}</p>}
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Payment Amount *</label>
-              <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" />
+              <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Method</label>
-              <select value={method} onChange={e => setMethod(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+              <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
                 <option value="CASH">Cash</option>
                 <option value="CHECK">Check</option>
                 <option value="BANK_TRANSFER">Bank Transfer</option>
@@ -288,7 +443,7 @@ function BillPaymentFormModal({ companyId, onClose, onSaved }: { companyId: stri
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Reference</label>
-              <input value={reference} onChange={e => setReference(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" placeholder="Reference #" />
+              <input value={reference} onChange={(e) => setReference(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" placeholder="Reference #" />
             </div>
           </div>
         </div>
