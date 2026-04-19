@@ -103,17 +103,19 @@ export const navigationData: NavSection[] = [
             title: 'Bank Transactions',
             path: '/banking-cash/transactions',
             tabs: [
-              { label: 'Bank Transactions', value: 'transactions', status: 'existing' },
-              { label: 'Bank Rules',        value: 'rules',        status: 'existing' },
+              { label: 'Bank Transactions', value: 'transactions',      status: 'existing' },
+              { label: 'Undeposited Funds', value: 'undeposited-funds', status: 'existing' },
+              { label: 'Deposits',         value: 'deposits',         status: 'existing' },
+              { label: 'Bank Rules',       value: 'rules',            status: 'existing' },
             ],
           },
           {
             title: 'Reconciliation',
             path: '/banking-cash/reconciliation',
             tabs: [
-              { label: 'Reconcile',  value: 'reconcile',  status: 'existing' },
-              { label: 'History',    value: 'history',    status: 'existing' },
-              { label: 'Statements', value: 'statements', status: 'coming-soon' },
+              { label: 'Reconcile',          value: 'reconcile',          status: 'existing' },
+              { label: 'History',            value: 'history',            status: 'existing' },
+              { label: 'Statement Archive',  value: 'statement-archive',  status: 'existing' },
             ],
           },
         ],
@@ -173,7 +175,7 @@ export const navigationData: NavSection[] = [
         ],
       },
       {
-        title: 'Expenses (Procure-to-Pay)',
+        title: 'Expenses',
         items: [
           {
             title: 'Purchasing',

@@ -50,39 +50,21 @@ export const OPERATIONS_NAV: OperationsSection[] = [
     subsections: [
       {
         id: 'transactions',
-        label: 'Transactions',
+        label: 'Bank Transactions',
         tabs: [
           { id: 'bank-transactions',    label: 'Bank Transactions',    path: '/banking-cash/transactions/bank-transactions' },
           { id: 'undeposited-funds',    label: 'Undeposited Funds',    path: '/banking-cash/transactions/undeposited-funds' },
           { id: 'deposits',             label: 'Deposits',             path: '/banking-cash/transactions/deposits' },
+          { id: 'rules',                label: 'Bank Rules',          path: '/banking-cash/transactions/rules' },
         ],
       },
       {
         id: 'reconciliation',
         label: 'Reconciliation',
         tabs: [
-          { id: 'reconciliation-hub',   label: 'Reconciliation Hub',   path: '/banking-cash/reconciliation/reconciliation-hub' },
           { id: 'reconcile',            label: 'Reconcile',            path: '/banking-cash/reconciliation/reconcile' },
           { id: 'history',              label: 'History',              path: '/banking-cash/reconciliation/history' },
           { id: 'statement-archive',    label: 'Statement Archive',    path: '/banking-cash/reconciliation/statement-archive' },
-        ],
-      },
-      {
-        id: 'management',
-        label: 'Management',
-        tabs: [
-          { id: 'transaction-rules',    label: 'Transaction Rules',    path: '/banking-cash/transactions/rules' },
-          { id: 'recurring-transactions', label: 'Recurring Transactions', path: '/banking-cash/management/recurring-transactions' },
-          { id: 'app-transactions',     label: 'App Transactions',     path: '/banking-cash/management/app-transactions' },
-        ],
-      },
-      {
-        id: 'cash-management',
-        label: 'Cash Management',
-        tabs: [
-          { id: 'cash-position',        label: 'Cash Position',        path: '/banking-cash/cash-management/cash-position' },
-          { id: 'cash-flow-projection', label: 'Cash Flow Projection', path: '/banking-cash/cash-management/cash-flow-projection' },
-          { id: 'short-term-forecast',  label: 'Short-Term Forecast',  path: '/banking-cash/cash-management/short-term-forecast' },
         ],
       },
     ],
@@ -148,11 +130,11 @@ export const OPERATIONS_NAV: OperationsSection[] = [
   },
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 3. Expenses (Procure-to-Pay)
+  // 3. Expenses
   // ───────────────────────────────────────────────────────────────────────────
   {
     id: 'expenses',
-    label: 'Expenses (Procure-to-Pay)',
+    label: 'Expenses',
     subsections: [
       {
         id: 'purchasing',
