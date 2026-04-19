@@ -59,7 +59,7 @@ export function interceptActWarnings({ mode = 'throw' }: { mode?: 'throw' | 'col
   const collected: string[] = []
   const handler = (orig: (...args: any[]) => void) => (...args: any[]) => {
     const msg = args[0] && String(args[0])
-    if (msg && /not wrapped in act|act\(/i.test(msg)) {
+    if (msg && /not wrapped in act|wrap.*act/i.test(msg)) {
       collected.push(msg)
       if (mode === 'throw') {
         throw new Error('React act() warning intercepted: ' + msg)

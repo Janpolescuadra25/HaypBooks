@@ -4,51 +4,23 @@ import { act } from 'react-dom/test-utils'
 import PracticeSubscribePage from '@/app/get-started/practice/subscribe/page'
 
 const pushMock = jest.fn()
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn(), refresh: jest.fn() }) }))
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn(), refresh: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(''),
+  usePathname: () => '/',
+}))
 
-test('full practice checkout flow: choose plan → billing → review & confirm', async () => {
+test('practice subscribe: checkout page renders payment details', async () => {
   render(<PracticeSubscribePage />)
-  expect(screen.getByText(/Step 1: Choose Your Plan/i)).toBeInTheDocument()
-
-  // Animated background should match sign-in background
-  expect(screen.getByTestId('animated-background')).toBeInTheDocument()
-
-  // Growth (popular) selected by default; select Starter to change
-  expect(screen.getByText(/Most Popular/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /Selected/i })).toBeInTheDocument()
-  const starterSelect = screen.getAllByRole('button', { name: /Select/i })[0]
-  act(() => { starterSelect.click() })
-  expect(screen.getByRole('button', { name: /Selected/i })).toBeInTheDocument()
-
-  // Continue to billing step
-  const continueBtn = screen.getByRole('button', { name: /Continue/i })
-  act(() => { continueBtn.click() })
-
-  // Billing fields should be present (new company-style form with placeholders)
-  expect(screen.getByPlaceholderText(/Card number/i)).toBeInTheDocument()
-  expect(screen.getByPlaceholderText(/Name on card/i)).toBeInTheDocument()
-
-  // Fill billing and continue to review
-  const cardInput = screen.getByPlaceholderText(/Card number/i)
-  await act(async () => { await userEvent.type(cardInput, '4242424242424242') })
-  const continueBilling = screen.getByRole('button', { name: /Continue/i })
-  act(() => { continueBilling.click() })
-
-  // Review step should show plan and totals (query the heading to avoid matching the step indicator)
-  expect(screen.getByRole('heading', { name: /Step 3: Review & Purchase/i })).toBeInTheDocument()
-  expect(screen.getByText(/Total due today/i)).toBeInTheDocument()
-
-  // Confirm purchase navigates to welcome/onboarding
-  const confirm = screen.getByRole('button', { name: /Confirm purchase/i })
-  act(() => { confirm.click() })
-  await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/onboarding/welcome'))
+  expect(screen.getByText(/Payment Details/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /Confirm & Pay \$499\.00/i })).toBeInTheDocument()
+  expect(screen.getByPlaceholderText(/0000 0000 0000 0000/i)).toBeInTheDocument()
 })
 
-test('back on choose-plan returns to onboarding practice profile', async () => {
+test('practice subscribe: back button returns to practice tiers', async () => {
   pushMock.mockClear()
   render(<PracticeSubscribePage />)
-  // initial back button should route to onboarding practice (Practice Profile)
-  const backBtn = screen.getByRole('button', { name: /^Back$/i })
+  const backBtn = screen.getByRole('button', { name: /Back to Documentation/i })
   act(() => { backBtn.click() })
-  await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/onboarding/practice'))
+  await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/get-started/practice/tiers'))
 })

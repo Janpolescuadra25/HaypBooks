@@ -1,5 +1,8 @@
 module.exports = {
   testEnvironment: 'jsdom',
+  testEnvironmentOptions: {
+    url: 'http://localhost/',
+  },
   testMatch: ['<rootDir>/src/__tests__/**/*.test.(ts|tsx|js)'],
   testPathIgnorePatterns: ['<rootDir>/src/__tests__/.*print.*\\.test\\.(ts|tsx)$'],
   transform: {

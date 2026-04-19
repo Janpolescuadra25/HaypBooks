@@ -1087,6 +1087,15 @@
 			"problemMatcher": [
 				"$tsc"
 			]
+		},
+		{
+			"label": "Run HubLayout Jest Test",
+			"type": "shell",
+			"command": "npx jest --runInBand src/__tests__/hub/HubLayout.test.tsx --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
 		}
 	]
 }

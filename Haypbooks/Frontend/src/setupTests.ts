@@ -30,10 +30,31 @@ if (
 // Polyfill Fetch API objects for Node test environment
 // Use require to ensure polyfills above are applied first
 const undici = require('undici') as typeof import('undici')
+const TEST_BASE_URL = 'http://localhost'
+const originalFetch = typeof global.fetch === 'undefined' ? undici.fetch : global.fetch
+const normalizeFetchInput = (input: RequestInfo) => {
+	if (typeof input === 'string' && input.startsWith('/')) {
+		return new URL(input, TEST_BASE_URL).toString()
+	}
+	if (input instanceof URL && input.pathname.startsWith('/')) {
+		return new URL(input.pathname + input.search + input.hash, TEST_BASE_URL)
+	}
+	if (typeof input === 'object' && input !== null && 'url' in input && typeof (input as any).url === 'string' && (input as any).url.startsWith('/')) {
+		const request = input as Request
+		return new undici.Request(new URL(request.url, TEST_BASE_URL).toString(), request)
+	}
+	return input
+}
+const normalizedFetch = (input: RequestInfo, init?: RequestInit) => {
+	return originalFetch(normalizeFetchInput(input) as any, init)
+}
 // @ts-ignore
-if (typeof global.fetch === 'undefined') {
+global.fetch = normalizedFetch as any
+// @ts-ignore
+globalThis.fetch = normalizedFetch as any
+if (typeof window !== 'undefined') {
 	// @ts-ignore
-	global.fetch = undici.fetch as any
+	window.fetch = normalizedFetch as any
 }
 // @ts-ignore
 if (typeof global.Request === 'undefined') {
@@ -62,30 +83,18 @@ jest.mock('next/navigation', () => ({
 	usePathname: () => '/',
 }))
 
-// Stub `window.location` navigation methods so assigning `href` doesn't trigger
-// jsdom's "Not implemented: navigation" error during tests. Individual tests can override if needed.
-try {
-	const originalLocation = window.location
-	// Create a fake location object that intercepts href assignments.
-	const fakeLocation: any = {
-		// Keep other original properties accessible
-		...originalLocation,
-		// internal storage for href
-		_isHref: originalLocation?.href || '',
-		get href() {
-			return this._isHref
-		},
-		set href(val) {
-			this._isHref = String(val)
-		},
-		assign: jest.fn(),
-		replace: jest.fn(),
+// Patch `window.location` navigation methods when available so client code can
+// call assign/replace/reload without failing in jsdom. Directly overriding the
+// non-configurable jsdom location object is not reliable, so only patch methods.
+if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
+	const locationObj: any = window.location as any
+	if (typeof locationObj.assign !== 'function') {
+		locationObj.assign = jest.fn()
 	}
-	Object.defineProperty(window, 'location', {
-		configurable: true,
-		value: fakeLocation,
-	})
-} catch (err) {
-	// Best-effort; some environments may not allow redefining location during setup.
-	/* noop */
-} 
+	if (typeof locationObj.replace !== 'function') {
+		locationObj.replace = jest.fn()
+	}
+	if (typeof locationObj.reload !== 'function') {
+		locationObj.reload = jest.fn()
+	}
+}

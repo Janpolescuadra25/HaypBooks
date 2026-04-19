@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 import CompanyCompletePage from '@/app/get-started/complete/page'
 
@@ -7,43 +7,32 @@ jest.mock('next/navigation', () => ({
 }))
 
 describe('Company Complete Page', () => {
-  const mockPush = jest.fn()
+  const mockReplace = jest.fn()
 
   beforeEach(() => {
-    ;(useRouter as jest.Mock).mockReturnValue({ push: mockPush })
-    mockPush.mockClear()
+    ;(useRouter as jest.Mock).mockReturnValue({ replace: mockReplace })
+    mockReplace.mockClear()
+    global.fetch = jest.fn(() => Promise.resolve({ ok: false })) as any
   })
 
-  it('renders success message with paid subscription confirmation', () => {
-    render(<CompanyCompletePage />)
-
-    expect(screen.getByText(/Your subscription is active!/i)).toBeInTheDocument()
-    expect(screen.getByText(/Welcome to HaypBooks — full access to all features./i)).toBeInTheDocument()
-    expect(screen.getByText(/Your card has been charged/i)).toBeInTheDocument()
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
-  it('displays ready to get started section', () => {
+  it('redirects to hub when the user is not authenticated', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false } as any)
     render(<CompanyCompletePage />)
 
-    expect(screen.getByText(/Ready to get started?/i)).toBeInTheDocument()
-    expect(screen.getByText(/Your company setup is complete\. Let’s manage your books with clarity\./i)).toBeInTheDocument()
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/hub'))
   })
 
-  it('has Go to Dashboard button that routes to dashboard', () => {
+  it('redirects to hub with companyId when the user has a company', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ companies: [{ id: 'company-123' }] }),
+    } as any)
     render(<CompanyCompletePage />)
 
-    const setupButton = screen.getByRole('button', { name: /Go to Dashboard/i })
-    expect(setupButton).toBeInTheDocument()
-
-    setupButton.click()
-    expect(mockPush).toHaveBeenCalledWith('/dashboard')
-  })
-
-  it('displays support link', () => {
-    render(<CompanyCompletePage />)
-
-    const supportLink = screen.getByText(/chat with us/i)
-    expect(supportLink).toBeInTheDocument()
-    expect(supportLink.tagName).toBe('A')
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/hub?companyId=company-123'))
   })
 })

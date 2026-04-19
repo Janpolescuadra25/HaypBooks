@@ -1827,6 +1827,87 @@
 			],
 			"isBackground": false,
 			"group": "test"
+		},
+		{
+			"label": "Run HubLayout Jest Test",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand src/__tests__/hub/HubLayout.test.tsx --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run Hub Tests",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand src/__tests__/hub --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run Full Frontend Jest Suite",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run Hub Subset Jest Tests",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand src/__tests__/hub/HubLayout.test.tsx src/__tests__/hub/HubSidebar.test.tsx src/__tests__/hub/OwnerWorkspace.test.tsx --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Capture Full Jest Report",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand --json --outputFile=tmp-jest-report.json > tmp-full-jest-output.txt 2>&1",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run PracticeHub page test",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand src/__tests__/practice-hub/PracticeHubPage.test.tsx --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run PracticeHub Templates Tests",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand src/__tests__/practice-hub/PracticeHubPage.test.tsx --testNamePattern=\"Practice Hub — Templates\" --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run PracticeHub Templates Only",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand src/__tests__/practice-hub/PracticeHubPage.test.tsx --testNamePattern=\"Practice Hub — Templates\" --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run PracticeHub Templates Only After Fix",
+			"type": "shell",
+			"command": "cd Haypbooks/Frontend && npx jest --runInBand src/__tests__/practice-hub/PracticeHubPage.test.tsx --testNamePattern=\"Practice Hub — Templates\" --verbose",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
 		}
 	]
 }

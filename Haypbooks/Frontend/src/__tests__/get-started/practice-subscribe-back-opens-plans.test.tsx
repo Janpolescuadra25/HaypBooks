@@ -3,13 +3,17 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const pushMock = jest.fn()
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn(), refresh: jest.fn() }) }))
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn(), refresh: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(''),
+  usePathname: () => '/',
+}))
 
 import PracticeSubscribePage from '@/app/get-started/practice/subscribe/page'
 
-test('back from practice subscribe navigates to onboarding practice with plans param', async () => {
+test('back from practice subscribe navigates to practice tiers', async () => {
   render(<PracticeSubscribePage />)
-  const back = screen.getByRole('button', { name: /Back/i })
+  const back = screen.getByRole('button', { name: /Back to Documentation/i })
   await userEvent.click(back)
-  expect(pushMock).toHaveBeenCalledWith('/onboarding/practice?plans=1')
+  expect(pushMock).toHaveBeenCalledWith('/get-started/practice/tiers')
 })

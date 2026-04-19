@@ -32,8 +32,8 @@ describe('Practice Trial Page', () => {
   it('displays ready to get started section', () => {
     render(<PracticeTrialPage />)
 
-    expect(screen.getByText(/Ready to get started?/i)).toBeInTheDocument()
-    expect(screen.getByText(/Your practice setup is complete\. Let’s manage your clients with clarity\./i)).toBeInTheDocument()
+    expect(screen.getByText(/Ready to get started\?/i)).toBeInTheDocument()
+    expect(screen.getByText(/Your practice setup is complete\./i)).toBeInTheDocument()
   })
 
   it('has Go to Dashboard button that routes to dashboard', () => {

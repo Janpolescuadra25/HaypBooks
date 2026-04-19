@@ -1,0 +1,2971 @@
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+  console.error
+    Error: AggregateError
+        at Object.dispatchError (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\xhr-utils.js:62:19)
+        at Request.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\xhr\XMLHttpRequest-impl.js:655:18)
+        at Request.emit (node:events:530:35)
+        at ClientRequest.<anonymous> (C:\Users\HomePC\Desktop\Haypbooksv9\Haypbooks\Frontend\node_modules\jsdom\lib\jsdom\living\helpers\http-request.js:127:14)
+        at ClientRequest.emit (node:events:518:28)
+        at emitErrorEvent (node:_http_client:104:11)
+        at Socket.socketErrorListener (node:_http_client:518:5)
+        at Socket.emit (node:events:518:28)
+        at emitErrorNT (node:internal/streams/destroy:170:8)
+        at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+        at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      type: 'XMLHttpRequest'
+    }
+
+    [0m [90m 69 |[39m       [36mif[39m (mode [33m===[39m [32m'collect'[39m [33m||[39m mode [33m===[39m [32m'silent'[39m) [36mreturn[39m
+     [90m 70 |[39m     }
+    [31m[1m>[22m[39m[90m 71 |[39m     orig([33m...[39margs)
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 72 |[39m   }
+     [90m 73 |[39m   console[33m.[39merror [33m=[39m handler(originalError)
+     [90m 74 |[39m   console[33m.[39mwarn [33m=[39m handler(originalWarn)[0m
+
+      at console.error (src/test-utils/act-helpers.ts:71:5)
+      at VirtualConsole.<anonymous> (node_modules/@jest/environment-jsdom-abstract/build/index.js:78:23)
+      at Object.dispatchError (node_modules/jsdom/lib/jsdom/living/xhr/xhr-utils.js:65:53)
+      at Request.<anonymous> (node_modules/jsdom/lib/jsdom/living/xhr/XMLHttpRequest-impl.js:655:18)
+      at ClientRequest.<anonymous> (node_modules/jsdom/lib/jsdom/living/helpers/http-request.js:127:14)
+
+PASS src/__tests__/practice-hub/PracticeHubPage.test.tsx (7.297 s)
+  Practice Hub - Shell
+    √ renders top bar and global search (183 ms)
+    √ renders primary icon-rail groups (141 ms)
+    √ closes and reopens secondary nav panel (283 ms)
+  Practice Hub - Dashboard
+    √ shows dashboard fallback content when API data is unavailable (194 ms)
+    √ opens and closes dashboard help modal (171 ms)
+  Practice Hub - Client List
+    √ renders empty-state fallback and help modal (273 ms)
+  Practice Hub docs panel - Practice Health
+    √ renders docs prompt and modal flow (218 ms)
+  Practice Hub docs panel - Shortcuts
+    √ renders docs prompt and modal flow (195 ms)
+  Practice Hub docs panel - Client Onboarding
+    √ renders docs prompt and modal flow (221 ms)
+  Practice Hub docs panel - Client Documents
+    √ renders docs prompt and modal flow (212 ms)
+  Practice Hub docs panel - Client CRM & Leads
+    √ renders docs prompt and modal flow (212 ms)
+  Practice Hub docs panel - Communications
+    √ renders docs prompt and modal flow (191 ms)
+  Practice Hub docs panel - Work Queue
+    √ renders docs prompt and modal flow (153 ms)
+  Practice Hub docs panel - WIP Ledger
+    √ renders docs prompt and modal flow (185 ms)
+  Practice Hub docs panel - Calendar
+    √ renders docs prompt and modal flow (165 ms)
+  Practice Hub docs panel - Books Review
+    √ renders docs prompt and modal flow (169 ms)
+  Practice Hub docs panel - Reconciliation Hub
+    √ renders docs prompt and modal flow (228 ms)
+  Practice Hub docs panel - Adjusting Entries
+    √ renders docs prompt and modal flow (169 ms)
+  Practice Hub docs panel - Client Requests
+    √ renders docs prompt and modal flow (174 ms)
+  Practice Hub docs panel - Invoice List
+    √ renders docs prompt and modal flow (232 ms)
+  Practice Hub docs panel - Rate Cards
+    √ renders docs prompt and modal flow (227 ms)
+  Practice Hub docs panel - Practice Profile
+    √ renders docs prompt and modal flow (182 ms)
+  Practice Hub docs panel - Subscriptions
+    √ renders docs prompt and modal flow (180 ms)
+  Practice Hub docs panel - Templates
+    √ renders docs prompt and modal flow (169 ms)
+  Practice Hub docs panel - Integrations
+    √ renders docs prompt and modal flow (170 ms)
+  Practice Hub docs panel - Team Members
+    √ renders docs prompt and modal flow (183 ms)
+  Practice Hub docs panel - Client Analytics
+    √ renders docs prompt and modal flow (154 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        8.31 s
+Ran all test suites matching /src\\__tests__\\practice-hub\\PracticeHubPage.test.tsx/i.
+Jest did not exit one second after the test run has completed.
+
+'This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue.
