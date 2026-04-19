@@ -6,11 +6,13 @@ import BulkActionBar, { type BulkAction } from './BulkActionBar'
 import EmptyStateEnhanced from './EmptyStateEnhanced'
 import { StatusBadge } from './StatusBadgeSet'
 
+/* eslint-disable no-unused-vars */
 type ColumnDef<T, TValue = unknown> = {
   id?: string
   accessorKey?: keyof T | string
   header?: React.ReactNode | (() => React.ReactNode)
-  cell?: (props: {
+  // eslint-disable-next-line no-unused-vars
+  cell?: (args: {
     getValue: () => TValue
     row: { original: T }
     column: ColumnDef<T, TValue>
@@ -23,7 +25,7 @@ type InternalColumn<T> = {
   key: keyof T
   header: React.ReactNode
   align?: 'left' | 'center' | 'right'
-  render?: (value: unknown, row: T) => React.ReactNode
+  render?: (_value: unknown, _row: T) => React.ReactNode
   hideBelow?: 'sm' | 'md' | 'lg' | 'xl'
   headerClassName?: string
   cellClassName?: string
@@ -42,12 +44,16 @@ interface DataPageProps<T extends Record<string, any>> {
   currentPage: number
   totalPages: number
   totalCount?: number
-  onPageChange: (page: number) => void
+  // eslint-disable-next-line no-unused-vars
+  onPageChange: (_page: number) => void
   pageSize?: number
-  onPageSizeChange?: (size: number) => void
+  // eslint-disable-next-line no-unused-vars
+  onPageSizeChange?: (_size: number) => void
   selectedIds: string[]
-  onSelectionChange: (ids: string[]) => void
-  getRowId?: (row: T) => string
+  // eslint-disable-next-line no-unused-vars
+  onSelectionChange: (_ids: string[]) => void
+  // eslint-disable-next-line no-unused-vars
+  getRowId?: (_row: T) => string
   bulkActions?: BulkAction[]
   emptyTitle?: string
   emptyDescription?: string
@@ -57,6 +63,7 @@ interface DataPageProps<T extends Record<string, any>> {
   className?: string
   compact?: boolean
 }
+/* eslint-enable no-unused-vars */
 
 function mapColumns<T extends Record<string, any>>(columns: ColumnDef<T, any>[]): InternalColumn<T>[] {
   return columns.map((col, index) => {
