@@ -401,6 +401,9 @@ export default function OwnerSidebar() {
                         >
                           <div className="flex items-center gap-2">
                             {isOpen && <div className="w-1 h-4 bg-emerald-500 rounded-full shrink-0" />}
+                            {group.icon ? (
+                              <group.icon size={14} className="text-slate-400" />
+                            ) : null}
                             <span className="text-[11px] font-bold uppercase tracking-wider">
                               {title}
                             </span>

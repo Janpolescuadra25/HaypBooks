@@ -16,6 +16,7 @@ import {
   Users,
   Receipt,
   BookOpen,
+  ShoppingCart,
   BarChart3,
   ShieldCheck,
   Zap,
@@ -55,6 +56,7 @@ export interface NavItem {
 
 export interface NavGroup {
   title?: string
+  icon?: any
   items: NavItem[]
   /** Restrict visibility to specific country codes (ISO2) */
   countries?: string[]
@@ -98,6 +100,7 @@ export const navigationData: NavSection[] = [
     groups: [
       {
         title: 'Banking',
+        icon: Landmark,
         items: [
           {
             title: 'Bank Transactions',
@@ -122,6 +125,7 @@ export const navigationData: NavSection[] = [
       },
       {
         title: 'Sales',
+        icon: ShoppingCart,
         items: [
           {
             title: 'Customers',
@@ -176,6 +180,7 @@ export const navigationData: NavSection[] = [
       },
       {
         title: 'Expenses',
+        icon: Receipt,
         items: [
           {
             title: 'Purchasing',
@@ -215,6 +220,7 @@ export const navigationData: NavSection[] = [
       },
       {
         title: 'Inventory',
+        icon: Package,
         items: [
           {
             title: 'Items',
@@ -269,6 +275,7 @@ export const navigationData: NavSection[] = [
       },
       {
         title: 'Projects',
+        icon: FolderKanban,
         items: [
           {
             title: 'Setup',
@@ -312,6 +319,7 @@ export const navigationData: NavSection[] = [
       },
       {
         title: 'Time',
+        icon: Clock,
         items: [
           {
             title: 'Entry',
