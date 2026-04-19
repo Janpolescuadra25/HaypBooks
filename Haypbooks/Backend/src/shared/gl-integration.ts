@@ -45,6 +45,7 @@ export const SYSTEM_ACCOUNTS = {
     OPERATING_EXPENSES:   { code: '5000', name: 'Operating Expenses',  typeId: 2 },
     RETAINED_EARNINGS:    { code: '3100', name: 'Retained Earnings',   typeId: 5 },
     INCOME_SUMMARY:       { code: '3200', name: 'Income Summary',      typeId: 5 },
+    OPENING_BALANCE_EQUITY: { code: '3050', name: 'Opening Balance Equity', typeId: 5 },
 } as const
 
 /**
@@ -54,8 +55,9 @@ export const SYSTEM_ACCOUNTS = {
 export async function resolveAccount(
     tx: any,
     companyId: string,
-    def: { code: string; name: string; typeId: number },
+    def: { code: string; name: string; typeId: number; currency?: string },
 ): Promise<{ id: string; typeId: number; normalSide: string | null }> {
+    const currency = def.currency ?? 'PHP'
     let acct = await tx.account.findUnique({
         where: { companyId_code: { companyId, code: def.code } },
         select: { id: true, typeId: true, normalSide: true },
@@ -69,7 +71,7 @@ export async function resolveAccount(
                 name: def.name,
                 typeId: def.typeId,
                 isSystem: true,
-                currency: 'PHP',
+                currency,
             },
             select: { id: true, typeId: true, normalSide: true },
         })
@@ -94,6 +96,9 @@ export async function createAndPostJE(
         date: Date
         description: string
         createdById: string
+        currency?: string
+        postingStatus?: 'DRAFT' | 'POSTED' | 'VOIDED'
+        transactionSource?: string
         lines: Array<{ accountId: string; debit: number; credit: number; description?: string }>
     },
 ): Promise<string> {
@@ -111,8 +116,9 @@ export async function createAndPostJE(
             companyId: data.companyId,
             date: data.date,
             description: data.description,
-            currency: 'PHP',
-            postingStatus: 'DRAFT',
+            currency: data.currency ?? 'PHP',
+            postingStatus: data.postingStatus ?? 'DRAFT',
+            transactionSource: data.transactionSource,
             createdById: data.createdById,
             lines: {
                 create: data.lines.map(l => ({
@@ -184,6 +190,7 @@ export async function createReversingJE(
             id: true,
             workspaceId: true,
             createdById: true,
+            currency: true,
             lines: {
                 select: {
                     accountId: true,
@@ -209,6 +216,7 @@ export async function createReversingJE(
         date: new Date(),
         description: `Reversal – ${reason}`,
         createdById: origJe.createdById ?? 'system',
+        currency: origJe.currency ?? 'PHP',
         lines: reversedLines,
     })
 

@@ -2,6 +2,16 @@ import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { AccountingService } from './accounting.service'
 import { AccountingRepository } from './accounting.repository'
 
+jest.mock('../shared/gl-integration', () => ({
+  resolveAccount: jest.fn(),
+  createAndPostJE: jest.fn(),
+  SYSTEM_ACCOUNTS: {
+    OPENING_BALANCE_EQUITY: { code: '3050', name: 'Opening Balance Equity', typeId: 5 },
+  },
+}))
+
+const { resolveAccount, createAndPostJE } = require('../shared/gl-integration') as any
+
 describe('AccountingService - COA validation rules', () => {
   let service: AccountingService
   let mockRepo: any
@@ -12,10 +22,12 @@ describe('AccountingService - COA validation rules', () => {
       findAccountById: jest.fn(),
       updateAccount: jest.fn(),
       softDeleteAccount: jest.fn(),
+      createAccount: jest.fn(),
     }
     mockPrisma = {
       workspaceUser: { findFirst: jest.fn().mockResolvedValue({ id: 'u1' }) },
-      account: { findFirst: jest.fn(), findUnique: jest.fn() },
+      account: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+      company: { findUnique: jest.fn() },
     }
     service = new AccountingService(mockRepo as any, mockPrisma as any)
   })
@@ -23,6 +35,21 @@ describe('AccountingService - COA validation rules', () => {
   it('prevents changing account type once balance is non-zero', async () => {
     mockRepo.findAccountById.mockResolvedValue({ id: 'a1', typeId: 1, balance: 100, isSystem: false })
     await expect(service.updateAccount('u1', 'c1', 'a1', { typeId: 2 })).rejects.toThrow(BadRequestException)
+  })
+
+  it('creates an opening balance journal entry using company currency', async () => {
+    mockPrisma.company.findUnique.mockResolvedValue({ currency: 'EUR', fiscalYearStart: 4, workspaceId: 'ws1' })
+    mockRepo.createAccount.mockResolvedValue({ id: 'a1', code: '1100', name: 'Receivable', normalSide: 'DEBIT' })
+    mockRepo.findAccountById.mockResolvedValue({ id: 'a1', code: '1100', name: 'Receivable', balance: 100, normalSide: 'DEBIT' })
+    ;(resolveAccount as jest.Mock).mockResolvedValue({ id: 'eq1', normalSide: 'CREDIT' })
+    ;(createAndPostJE as jest.Mock).mockResolvedValue('je1')
+
+    const account = await service.createAccount('u1', 'c1', { code: '1100', name: 'Receivable', openingBalance: 100, typeId: 1 })
+
+    expect(mockRepo.createAccount).toHaveBeenCalledWith(expect.objectContaining({ companyId: 'c1', currency: 'EUR' }))
+    expect(resolveAccount).toHaveBeenCalledWith(expect.anything(), 'c1', expect.objectContaining({ code: '3050', currency: 'EUR' }))
+    expect(createAndPostJE).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ currency: 'EUR', transactionSource: 'OPENING_BALANCE', postingStatus: 'POSTED' }))
+    expect(account).toEqual(expect.objectContaining({ id: 'a1', balance: 100 }))
   })
 
   it('prevents deactivating an account with active children', async () => {

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { AccountingRepository } from './accounting.repository'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { listTemplates, findTemplateForIndustry, writeTemplatesToDisk } from './coa-templates'
+import { resolveAccount, createAndPostJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
 
 // ─── Default Chart of Accounts Templates ───────────────────────────────────
 // Core account ranges are based on standard accounting conventions.
@@ -381,6 +382,16 @@ export class AccountingService {
         return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
     }
 
+    private resolveOpeningBalanceDate(company: { fiscalYearStart?: number | null } | null): Date {
+        const month = company?.fiscalYearStart && company.fiscalYearStart >= 1 && company.fiscalYearStart <= 12
+            ? company.fiscalYearStart
+            : 1
+        const now = new Date()
+        const currentMonth = now.getMonth() + 1
+        const year = currentMonth < month ? now.getFullYear() - 1 : now.getFullYear()
+        return new Date(year, month - 1, 1)
+    }
+
     async listAccountTypes() {
         return this.repo.findAccountTypes()
     }
@@ -433,7 +444,13 @@ export class AccountingService {
         const openingBalance = resolved.openingBalance != null ? Number(resolved.openingBalance) : 0
         delete resolved.openingBalance
 
-        const account = await this.repo.createAccount({ companyId, ...resolved })
+        const company = await this.prisma.company.findUnique({
+            where: { id: companyId },
+            select: { currency: true, fiscalYearStart: true, workspaceId: true },
+        })
+        const currency = company?.currency ?? 'PHP'
+
+        const account = await this.repo.createAccount({ companyId, ...resolved, currency })
 
         // Best-effort audit log for account creation
         this.getWorkspaceId(companyId).then(workspaceId =>
@@ -455,13 +472,39 @@ export class AccountingService {
             })
         ).catch(() => {})
 
-        // If an opening balance was provided, update it
+        // If an opening balance was provided, create an opening-balance journal entry instead of directly mutating the account balance.
         if (openingBalance !== 0) {
-            await this.prisma.account.update({
-                where: { id: account.id },
-                data: { balance: openingBalance },
+            const openingBalanceEquity = await resolveAccount(this.prisma, companyId, {
+                ...SYSTEM_ACCOUNTS.OPENING_BALANCE_EQUITY,
+                currency,
             })
-            return { ...account, balance: openingBalance }
+
+            const normalSide = (account.normalSide ?? 'DEBIT').toUpperCase() as 'DEBIT' | 'CREDIT'
+            const openingBalanceDate = this.resolveOpeningBalanceDate(company)
+
+            const lines = normalSide === 'DEBIT'
+                ? [
+                    { accountId: account.id, debit: openingBalance, credit: 0 },
+                    { accountId: openingBalanceEquity.id, debit: 0, credit: openingBalance },
+                ]
+                : [
+                    { accountId: account.id, debit: 0, credit: openingBalance },
+                    { accountId: openingBalanceEquity.id, debit: openingBalance, credit: 0 },
+                ]
+
+            await createAndPostJE(this.prisma, {
+                workspaceId: company?.workspaceId ?? await this.getWorkspaceId(companyId),
+                companyId,
+                date: openingBalanceDate,
+                description: 'Opening Balance',
+                createdById: userId,
+                currency,
+                postingStatus: 'POSTED',
+                transactionSource: 'OPENING_BALANCE',
+                lines,
+            })
+
+            return await this.repo.findAccountById(companyId, account.id)
         }
 
         return account
