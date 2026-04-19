@@ -459,6 +459,7 @@ export default function InvoicesPage() {
             <Clock size={15} /> Activity Log
           </button>
           <button onClick={() => router.push('/sales/billing/invoices/new')}
+            aria-label="Create new invoice"
             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
             <Plus size={16} /> New Invoice
           </button>
@@ -586,7 +587,7 @@ export default function InvoicesPage() {
               </td></tr>
             ) : (
               sorted.map(inv => (
-                <tr key={inv.id} className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(inv.id) ? 'bg-blue-50/20' : ''}`}>
+                <tr key={inv.id} className={`group border-b border-gray-100 hover:bg-blue-50/30 transition-colors duration-150 ${selected.has(inv.id) ? 'bg-blue-50/20' : ''}`}>
                   <td className="px-4 py-2.5 border-r border-gray-100">
                     <button onClick={() => toggleSelect(inv.id)} className="text-gray-300 hover:text-emerald-600 transition-colors">
                       {selected.has(inv.id)
