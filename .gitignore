@@ -32,3 +32,11 @@ artifacts/
 # Prisma generated client
 Haypbooks/Backend/node_modules/.prisma/
 Haypbooks/Backend/node_modules/.prisma/client/
+
+# Cleanup artifacts
+*.bak
+*.disabled
+backups/
+docs/JP/
+db-studio/
+*.ps1
