@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge'
 
-type StatusDomain = 'invoice' | 'journal-entry' | 'payment'
+type StatusDomain = 'invoice' | 'journal-entry' | 'payment' | 'customer'
 
 interface StatusProps {
   label: string
@@ -88,6 +88,19 @@ export function getPaymentStatusProps(status: string): StatusProps {
   }
 }
 
+export function getCustomerStatusProps(status: string): StatusProps {
+  const normalized = normalizeStatus(status)
+
+  switch (normalized) {
+    case 'ACTIVE':
+      return { label: 'Active', className: STATUS_CLASSES.emerald }
+    case 'INACTIVE':
+      return { label: 'Inactive', className: STATUS_CLASSES.slate }
+    default:
+      return { label: formatLabel(normalized), className: STATUS_CLASSES.slate }
+  }
+}
+
 interface StatusBadgeProps {
   status: string
   domain: StatusDomain
@@ -100,6 +113,8 @@ export function StatusBadge({ status, domain, className = '' }: StatusBadgeProps
       ? getJournalEntryStatusProps(status)
       : domain === 'payment'
       ? getPaymentStatusProps(status)
+      : domain === 'customer'
+      ? getCustomerStatusProps(status)
       : getInvoiceStatusProps(status)
 
   return (
