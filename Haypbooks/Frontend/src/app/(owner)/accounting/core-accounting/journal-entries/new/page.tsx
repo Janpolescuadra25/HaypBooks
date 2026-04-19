@@ -1,9 +1,9 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, X, AlertCircle, Loader2, Check, Info } from 'lucide-react'
+import { ArrowLeft, Plus, X, AlertCircle, Loader2, Check, Info, Upload, Repeat, Paperclip } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -49,6 +49,17 @@ export default function NewJournalEntryPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [copyBanner, setCopyBanner] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceInterval, setRecurrenceInterval] = useState<'Monthly' | 'Quarterly' | 'Yearly'>('Monthly')
+  const [attachmentCount, setAttachmentCount] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const nextRunDate = useMemo(() => {
+    if (!date) return new Date().toISOString().split('T')[0]
+    const next = new Date(date)
+    next.setDate(1)
+    next.setMonth(next.getMonth() + 1)
+    return next.toISOString().split('T')[0]
+  }, [date])
 
   const safeBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 2) {
@@ -159,6 +170,8 @@ export default function NewJournalEntryPage() {
         description: memo,
         reference,
         postingStatus: status,
+        recurrenceSchedule: isRecurring ? `${recurrenceInterval} / ${nextRunDate}` : undefined,
+        attachmentCount: attachmentCount > 0 ? attachmentCount : undefined,
         lines: validLines.map(l => ({
           accountId: l.accountId,
           debit: Number(l.debit) || 0,
@@ -255,6 +268,76 @@ export default function NewJournalEntryPage() {
                 className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Recurring schedule + attachments */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Recurring schedule</h2>
+              <p className="text-xs text-slate-500">Enable repeating entries for this journal entry.</p>
+            </div>
+            <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+                className="h-4 w-4 rounded text-emerald-600 border-slate-300"
+              />
+              Repeat
+            </label>
+          </div>
+          {isRecurring && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Frequency</label>
+                <select
+                  value={recurrenceInterval}
+                  onChange={(e) => setRecurrenceInterval(e.target.value as 'Monthly' | 'Quarterly' | 'Yearly')}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                >
+                  <option value="Monthly">Monthly</option>
+                  <option value="Quarterly">Quarterly</option>
+                  <option value="Yearly">Yearly</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs font-medium text-slate-700 mb-1">Next run date</p>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  {nextRunDate}
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Supporting documents</p>
+                <p className="text-xs text-slate-500">Attach receipts, invoices, or reference files.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                >
+                  <Upload size={14} /> Upload
+                </button>
+                <span className="text-xs text-slate-500">{attachmentCount} attached</span>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                const files = event.target.files
+                if (!files) return
+                setAttachmentCount((prev) => prev + files.length)
+              }}
+            />
           </div>
         </div>
 

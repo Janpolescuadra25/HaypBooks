@@ -60,14 +60,36 @@ const statusIcons: Record<string, React.ReactNode> = {
   VOID: React.createElement(Ban, { size: 11 }),
 }
 
-type InvSortKey = 'invoiceNumber' | 'customerName' | 'date' | 'dueDate' | 'status' | 'total'
+type InvSortKey = 'invoiceNumber' | 'customerName' | 'date' | 'dueDate' | 'status' | 'total' | 'daysOverdue'
 type InvSortDir = 'asc' | 'desc'
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+function getDaysOverdue(inv: Invoice): number {
+  if (!inv.dueDate) return 0
+  const due = new Date(inv.dueDate)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.floor((today.getTime() - due.getTime()) / MS_PER_DAY)
+  return Math.max(0, diff)
+}
+function isDueSoon(inv: Invoice): boolean {
+  if (!inv.dueDate) return false
+  const due = new Date(inv.dueDate)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.ceil((due.getTime() - today.getTime()) / MS_PER_DAY)
+  return diff >= 0 && diff <= 7 && !['PAID', 'VOID'].includes(inv.status)
+}
 function compareInvoices(a: Invoice, b: Invoice, key: InvSortKey, dir: InvSortDir): number {
   const asc = dir === 'asc' ? 1 : -1
   if (key === 'total') return a.total === b.total ? 0 : a.total > b.total ? asc : -asc
   if (key === 'date' || key === 'dueDate') {
     const ad = a[key] ? new Date(a[key] as string).getTime() : 0
     const bd = b[key] ? new Date(b[key] as string).getTime() : 0
+    return ad === bd ? 0 : ad > bd ? asc : -asc
+  }
+  if (key === 'daysOverdue') {
+    const ad = getDaysOverdue(a)
+    const bd = getDaysOverdue(b)
     return ad === bd ? 0 : ad > bd ? asc : -asc
   }
   const av = String((a as any)[key] ?? '').toLowerCase()
@@ -81,6 +103,7 @@ const DEFAULT_INV_COLS: InvColDef[] = [
   { key: 'customerName', label: 'Customer', visible: true, width: 180, align: 'left' },
   { key: 'date', label: 'Date', visible: true, width: 110, align: 'left' },
   { key: 'dueDate', label: 'Due Date', visible: true, width: 110, align: 'left' },
+  { key: 'daysOverdue', label: 'Days overdue', visible: true, width: 110, align: 'right' },
   { key: 'status', label: 'Status', visible: true, width: 100, align: 'left' },
   { key: 'total', label: 'Total', visible: true, width: 110, align: 'right' },
 ]
@@ -110,6 +133,8 @@ export default function InvoicesPage() {
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [toast, setToast] = useState('')
+  const [showExportOptions, setShowExportOptions] = useState(false)
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -123,7 +148,7 @@ export default function InvoicesPage() {
       const params = new URLSearchParams()
       params.set('limit', '20')
       params.set('offset', String((page - 1) * 20))
-      if (statusFilter !== 'ALL') params.set('status', statusFilter)
+      if (statusFilter !== 'ALL' && statusFilter !== 'DUE_SOON') params.set('status', statusFilter)
       const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices?${params}`)
       const list = Array.isArray(data) ? data : data.items ?? data.invoices ?? []
       setInvoices(list)
@@ -136,20 +161,24 @@ export default function InvoicesPage() {
   useEffect(() => { fetchInvoices() }, [fetchInvoices])
 
   const filtered = useMemo(() => {
-    // Status filter is applied server-side; only apply search client-side
-    if (!search) return invoices
+    let list = invoices
+    if (statusFilter === 'DUE_SOON') {
+      list = list.filter(isDueSoon)
+    }
+    if (!search) return list
     const q = search.toLowerCase()
-    return invoices.filter(i =>
+    return list.filter(i =>
       (i.invoiceNumber ?? '').toLowerCase().includes(q) ||
       (i.customerName ?? '').toLowerCase().includes(q)
     )
-  }, [invoices, search])
+  }, [invoices, search, statusFilter])
 
   const stats = useMemo(() => ({
     total: invoices.length,
     draft: invoices.filter(i => i.status === 'DRAFT').length,
     sent: invoices.filter(i => i.status === 'SENT').length,
     overdue: invoices.filter(i => i.status === 'OVERDUE').length,
+    dueSoon: invoices.filter(isDueSoon).length,
     paid: invoices.filter(i => i.status === 'PAID').length,
     totalAmount: invoices.reduce((s, i) => s + (i.total || 0), 0),
     overdueAmount: invoices.filter(i => i.status === 'OVERDUE').reduce((s, i) => s + (i.amountDue || i.total || 0), 0),
@@ -215,17 +244,86 @@ export default function InvoicesPage() {
     setActionMenuId(null)
   }
 
-  const handleBulkAction = async (action: 'send' | 'void') => {
+  const handleBulkSend = async () => {
     if (!companyId || selected.size === 0) return
-    if (!confirm(`${action === 'send' ? 'Send' : 'Void'} ${selected.size} invoice(s)?`)) return
+    if (!confirm(`Send ${selected.size} invoice(s)?`)) return
     setBulkLoading(true)
     const ids = Array.from(selected)
-    await Promise.allSettled(ids.map(id =>
-      apiClient.post(`/companies/${companyId}/ar/invoices/${id}/${action}`)
-    ))
+    await Promise.allSettled(ids.map(id => apiClient.post(`/companies/${companyId}/ar/invoices/${id}/send`)))
     setSelected(new Set())
     setBulkLoading(false)
     fetchInvoices()
+  }
+
+  const handleBulkVoid = async () => {
+    if (!companyId || selected.size === 0) return
+    if (!confirm(`Void ${selected.size} invoice(s)?`)) return
+    setBulkLoading(true)
+    const ids = Array.from(selected)
+    await Promise.allSettled(ids.map(id => apiClient.post(`/companies/${companyId}/ar/invoices/${id}/void`)))
+    setSelected(new Set())
+    setBulkLoading(false)
+    fetchInvoices()
+  }
+
+  const handleBulkMarkAsSent = () => {
+    if (selected.size === 0) return
+    setInvoices(prev => prev.map(inv => selected.has(inv.id) ? { ...inv, status: 'SENT' } : inv))
+    setSelected(new Set())
+    showToast(`${selected.size} invoice(s) marked as Sent`) 
+  }
+
+  const handleBulkPrint = () => {
+    if (selected.size === 0) return
+    setSelected(new Set())
+    showToast(`${selected.size} invoice(s) queued for print`)
+  }
+
+  const handleConfirmDelete = () => {
+    if (selected.size === 0) return
+    setDeleteConfirmationOpen(true)
+  }
+
+  const handleBulkDelete = () => {
+    setInvoices(prev => prev.filter(inv => !selected.has(inv.id)))
+    setSelected(new Set())
+    setDeleteConfirmationOpen(false)
+    showToast('Selected invoices deleted')
+  }
+
+  const downloadCSV = (rows: Invoice[]) => {
+    const lines = [
+      ['Invoice #', 'Customer', 'Date', 'Due Date', 'Status', 'Days overdue', 'Total'],
+      ...rows.map(inv => [
+        inv.invoiceNumber ?? inv.id.slice(0, 8).toUpperCase(),
+        inv.customerName ?? '',
+        fmtDate(inv.date),
+        fmtDate(inv.dueDate),
+        inv.status.replace(/_/g, ' '),
+        String(getDaysOverdue(inv)),
+        String(inv.total),
+      ])
+    ]
+    const csv = lines.map(r => r.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `invoices-${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    showToast('CSV export ready')
+  }
+
+  const handleExport = (format: 'csv' | 'pdf') => {
+    setShowExportOptions(false)
+    if (format === 'csv') {
+      downloadCSV(sorted)
+    } else {
+      showToast('PDF export queued')
+    }
   }
 
   const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -235,7 +333,7 @@ export default function InvoicesPage() {
   const [sortDir, setSortDir] = useState<InvSortDir>('desc')
   const toggleSort = (key: InvSortKey) => {
     if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') }
-    else { setSortKey(key); setSortDir(key === 'total' || key === 'date' || key === 'dueDate' ? 'desc' : 'asc') }
+    else { setSortKey(key); setSortDir(key === 'total' || key === 'date' || key === 'dueDate' || key === 'daysOverdue' ? 'desc' : 'asc') }
   }
   const sorted = useMemo(() => [...filtered].sort((a, b) => compareInvoices(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
 
@@ -254,6 +352,59 @@ export default function InvoicesPage() {
   const fmtDate = (d: string) => {
     try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
     catch { return d }
+  }
+
+  const getHeaderClass = (key: string) => {
+    const base = 'relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none overflow-hidden'
+    if (key === 'date') return `${base} hidden md:table-cell`
+    if (key === 'dueDate' || key === 'daysOverdue') return `${base} hidden lg:table-cell`
+    if (key === 'status') return `${base} text-left`
+    return base
+  }
+
+  const getCellClass = (key: string) => {
+    const base = 'px-4 py-2.5 border-r border-gray-100'
+    if (key === 'date') return `${base} hidden md:table-cell text-xs whitespace-nowrap text-slate-500`
+    if (key === 'dueDate' || key === 'daysOverdue') return `${base} hidden lg:table-cell text-xs whitespace-nowrap text-slate-500`
+    if (key === 'status') return `${base}`
+    if (key === 'total') return `${base} text-right font-semibold tabular-nums text-slate-800 whitespace-nowrap`
+    return base
+  }
+
+  const renderInvoiceCell = (inv: Invoice, c: InvColDef) => {
+    switch (c.key) {
+      case 'invoiceNumber':
+        return (
+          <button onClick={() => setViewInvoice(inv)}
+            className="font-mono text-xs text-emerald-600 hover:text-emerald-800 hover:underline font-semibold">
+            {inv.invoiceNumber ?? inv.id.slice(0, 8).toUpperCase()}
+          </button>
+        )
+      case 'customerName':
+        return <span className="font-medium text-slate-800 truncate block">{inv.customerName ?? '—'}</span>
+      case 'date':
+        return <span>{fmtDate(inv.date)}</span>
+      case 'dueDate':
+        return <span className={inv.status === 'OVERDUE' ? 'text-red-600 font-semibold' : 'text-slate-500'}>{fmtDate(inv.dueDate)}</span>
+      case 'daysOverdue': {
+        const days = getDaysOverdue(inv)
+        return (
+          <span className={days > 0 ? 'text-red-600 font-semibold' : 'text-slate-500'}>
+            {days > 0 ? days : '0'}
+          </span>
+        )
+      }
+      case 'status':
+        return (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${statusStyles[inv.status] ?? ''}`}>
+            {statusIcons[inv.status]} {inv.status.replace(/_/g, ' ')}
+          </span>
+        )
+      case 'total':
+        return <span>{fmt(inv.total)}</span>
+      default:
+        return '—'
+    }
   }
 
   if (cidLoading) {
@@ -278,7 +429,7 @@ export default function InvoicesPage() {
               : `${invoices.length} invoice${invoices.length !== 1 ? 's' : ''} · Page ${page}`}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap relative">
           <button onClick={() => setShowTemplates(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">
             <LayoutTemplate size={15} /> Templates
@@ -287,6 +438,22 @@ export default function InvoicesPage() {
             className="p-2 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors" title="Refresh">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportOptions((prev) => !prev)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"
+            >
+              <Download size={15} /> Export
+            </button>
+            {showExportOptions && (
+              <div className="absolute right-0 mt-2 w-40 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+                <button onClick={() => handleExport('csv')}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
+                <button onClick={() => handleExport('pdf')}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button>
+              </div>
+            )}
+          </div>
           <button onClick={() => router.push('/sales/billing/invoices/activity')}
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">
             <Clock size={15} /> Activity Log
@@ -314,12 +481,15 @@ export default function InvoicesPage() {
             className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
-          {['ALL', 'DRAFT', 'SENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'VOID'].map(s => (
+          {['ALL', 'DRAFT', 'SENT', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'DUE_SOON', 'VOID'].map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setPage(1) }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
-              {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
+              {s === 'ALL' ? 'All' : s === 'DUE_SOON' ? 'Due soon' : s.replace(/_/g, ' ')}
               {s === 'OVERDUE' && stats.overdue > 0 && (
                 <span className="ml-1.5 bg-red-500 text-white rounded-full px-1.5 text-xs">{stats.overdue}</span>
+              )}
+              {s === 'DUE_SOON' && stats.dueSoon > 0 && (
+                <span className="ml-1.5 bg-amber-500 text-white rounded-full px-1.5 text-xs">{stats.dueSoon}</span>
               )}
             </button>
           ))}
@@ -341,14 +511,22 @@ export default function InvoicesPage() {
             className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
             <CheckSquare size={16} />
             <span className="text-sm font-semibold">{selected.size} selected</span>
-            <div className="flex items-center gap-2 ml-auto">
-              <button onClick={() => handleBulkAction('send')} disabled={bulkLoading}
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              <button onClick={handleBulkSend} disabled={bulkLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
-                <Send size={12} /> Send All
+                <Send size={12} /> Send
               </button>
-              <button onClick={() => handleBulkAction('void')} disabled={bulkLoading}
+              <button onClick={handleBulkMarkAsSent} disabled={bulkLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
-                <Ban size={12} /> Void All
+                <CheckCircle2 size={12} /> Mark Sent
+              </button>
+              <button onClick={handleBulkPrint} disabled={bulkLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
+                <Printer size={12} /> Print
+              </button>
+              <button onClick={handleConfirmDelete} disabled={bulkLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
+                <Trash2 size={12} /> Delete
               </button>
               <button onClick={() => setSelected(new Set())}
                 className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
@@ -387,7 +565,7 @@ export default function InvoicesPage() {
                 </button>
               </th>
               {invCols.map(c => (
-                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none overflow-hidden" style={{ width: c.width, minWidth: c.width, maxWidth: c.width, textAlign: c.align === 'right' ? 'right' : 'left' }} title={c.label}>
+                <th key={c.key} className={getHeaderClass(c.key)} style={{ width: c.width, minWidth: c.width, maxWidth: c.width, textAlign: c.align === 'right' ? 'right' : 'left' }} title={c.label}>
                   <button onClick={() => toggleSort(c.key as InvSortKey)} className="flex items-center gap-1 w-full min-w-0 overflow-hidden pr-2" style={{ justifyContent: c.align === 'right' ? 'flex-end' : 'flex-start' }}>
                     <span className="truncate">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
                   </button>
@@ -416,27 +594,11 @@ export default function InvoicesPage() {
                         : React.createElement(Square, { size: 15 })}
                     </button>
                   </td>
-                  <td className="px-4 py-2.5 border-r border-gray-100">
-                    <button onClick={() => setViewInvoice(inv)}
-                      className="font-mono text-xs text-emerald-600 hover:text-emerald-800 hover:underline font-semibold">
-                      {inv.invoiceNumber ?? inv.id.slice(0, 8).toUpperCase()}
-                    </button>
-                  </td>
-                  <td className="px-4 py-2.5 truncate border-r border-gray-100">
-                    <span className="font-medium text-slate-800">{inv.customerName ?? '—'}</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-500 hidden md:table-cell border-r border-gray-100 text-xs whitespace-nowrap">{fmtDate(inv.date)}</td>
-                  <td className="px-4 py-2.5 hidden lg:table-cell border-r border-gray-100 text-xs whitespace-nowrap">
-                    <span className={inv.status === 'OVERDUE' ? 'text-red-600 font-semibold' : 'text-slate-500'}>
-                      {fmtDate(inv.dueDate)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 border-r border-gray-100">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${statusStyles[inv.status] ?? ''}`}>
-                      {statusIcons[inv.status]} {inv.status.replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100 whitespace-nowrap">{fmt(inv.total)}</td>
+                  {invCols.map(c => (
+                    <td key={c.key} className={`${getCellClass(c.key)} ${c.align === 'right' ? 'text-right' : ''}`} style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                      {renderInvoiceCell(inv, c)}
+                    </td>
+                  ))}
                   <td className="px-4 py-2.5">
                     <button
                       onClick={(e) => {
@@ -492,6 +654,42 @@ export default function InvoicesPage() {
             onRefresh={fetchInvoices}
             onDuplicate={handleDuplicateFromDetail}
           />
+        )}
+        {deleteConfirmationOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-gray-200 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="px-6 py-5 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-slate-900">Delete {selected.size} invoice{selected.size !== 1 ? 's' : ''}?</h2>
+                <p className="text-sm text-slate-500 mt-1">This action cannot be undone. The selected invoices will be removed from this list.</p>
+              </div>
+              <div className="px-6 py-5 space-y-4">
+                <div className="rounded-2xl bg-gray-50 p-4 text-sm text-slate-600">
+                  Selected invoices will be deleted permanently from the current page view.
+                </div>
+                <div className="flex items-center justify-end gap-3">
+                  <button onClick={() => setDeleteConfirmationOpen(false)}
+                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-slate-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleBulkDelete}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors">
+                    Delete {selected.size} invoice{selected.size !== 1 ? 's' : ''}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

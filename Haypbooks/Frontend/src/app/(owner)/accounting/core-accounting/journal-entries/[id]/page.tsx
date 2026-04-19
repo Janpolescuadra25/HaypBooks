@@ -1,12 +1,13 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Edit2, CheckCircle, XCircle, Trash2, Loader2,
-  AlertCircle, Check, Plus, X, ChevronRight, Copy,
+  AlertCircle, Check, Plus, X, ChevronRight, Copy, Repeat,
+  Upload, Paperclip,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -34,6 +35,8 @@ interface JournalEntry {
   reference?: string
   postingStatus: 'DRAFT' | 'POSTED' | 'VOIDED'
   lines: JELine[]
+  recurrenceSchedule?: string
+  attachmentCount?: number
   createdAt?: string
   updatedAt?: string
   createdBy?: { name?: string; email: string }
@@ -78,6 +81,17 @@ export default function JournalEntryDetailPage() {
   const [editLines, setEditLines] = useState<Array<{ accountId: string; debit: string; credit: string; description: string }>>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [saveError, setSaveError] = useState('')
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceInterval, setRecurrenceInterval] = useState<'Monthly' | 'Quarterly' | 'Yearly'>('Monthly')
+  const [attachmentCount, setAttachmentCount] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const nextRunDate = useMemo(() => {
+    const dateSource = editDate || new Date().toISOString().split('T')[0]
+    const next = new Date(dateSource)
+    next.setDate(1)
+    next.setMonth(next.getMonth() + 1)
+    return next.toISOString().split('T')[0]
+  }, [editDate])
 
   const fetchEntry = useCallback(async () => {
     if (!companyId || !params?.id) return
@@ -113,6 +127,9 @@ export default function JournalEntryDetailPage() {
       credit: l.credit ? String(l.credit) : '',
       description: l.description ?? '',
     })))
+    setIsRecurring(Boolean(entry.recurrenceSchedule))
+    setRecurrenceInterval(entry.recurrenceSchedule?.startsWith('Quarterly') ? 'Quarterly' : entry.recurrenceSchedule?.startsWith('Yearly') ? 'Yearly' : 'Monthly')
+    setAttachmentCount(entry.attachmentCount ?? 0)
     setEditMode(true)
     setSaveError('')
   }
@@ -142,6 +159,8 @@ export default function JournalEntryDetailPage() {
         date: editDate,
         description: editMemo,
         reference: editReference,
+        recurrenceSchedule: isRecurring ? `${recurrenceInterval} / ${nextRunDate}` : undefined,
+        attachmentCount: attachmentCount > 0 ? attachmentCount : undefined,
         lines: validLines.map(l => ({
           accountId: l.accountId,
           debit: Number(l.debit) || 0,
@@ -334,6 +353,22 @@ export default function JournalEntryDetailPage() {
             </div>
           </div>
 
+          <div className="px-6 py-4 border-b border-gray-100 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {entry.recurrenceSchedule && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                <p className="text-xs text-slate-500">Recurring schedule</p>
+                <p className="mt-1 font-semibold text-slate-900">{entry.recurrenceSchedule}</p>
+              </div>
+            )}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm flex items-center gap-3">
+              <Paperclip size={18} className="text-slate-500" />
+              <div>
+                <p className="text-xs text-slate-500">Attachments</p>
+                <p className="mt-1 font-semibold text-slate-900">{entry.attachmentCount ?? 0} file{(entry.attachmentCount ?? 0) !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Lines table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -423,6 +458,75 @@ export default function JournalEntryDetailPage() {
                   className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Recurring schedule</h2>
+                <p className="text-xs text-slate-500">Enable repeating entries for this journal entry.</p>
+              </div>
+              <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="h-4 w-4 rounded text-emerald-600 border-slate-300"
+                />
+                Repeat
+              </label>
+            </div>
+            {isRecurring && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Frequency</label>
+                  <select
+                    value={recurrenceInterval}
+                    onChange={(e) => setRecurrenceInterval(e.target.value as 'Monthly' | 'Quarterly' | 'Yearly')}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  >
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Yearly">Yearly</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-medium text-slate-700 mb-1">Next run date</p>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                    {nextRunDate}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Attachments</h3>
+                  <p className="text-xs text-slate-500">Upload support documents for this entry.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                  >
+                    <Upload size={14} /> Add files
+                  </button>
+                  <span className="text-xs text-slate-500">{attachmentCount} attached</span>
+                </div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  const files = event.target.files
+                  if (!files) return
+                  setAttachmentCount((prev) => prev + files.length)
+                }}
+              />
             </div>
           </div>
 

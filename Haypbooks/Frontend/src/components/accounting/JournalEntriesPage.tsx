@@ -7,7 +7,8 @@ import {
   Plus, Search, Eye, X, AlertCircle, Loader2,
   FileText, RefreshCw, Ban, Pencil, Copy, Clock,
   CheckCircle, XCircle, MoreVertical, Download,
-  Printer, Trash2, Upload, Keyboard,
+  Printer, Trash2, Upload, Keyboard, ArrowRightLeft,
+  Paperclip, Repeat,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -30,6 +31,9 @@ interface JournalEntry {
   lines: JELine[]
   totalDebit?: number
   totalCredit?: number
+  reversalOfId?: string
+  recurrenceSchedule?: string
+  attachmentCount?: number
   createdAt?: string
   updatedAt?: string
 }
@@ -49,6 +53,32 @@ const statusStyles: Record<string, string> = {
   DRAFT: 'bg-gray-50 text-gray-700 border-gray-200',
   POSTED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   VOIDED: 'bg-red-50 text-red-600 border-red-200',
+}
+
+function getNextRecurrenceDate(dateString: string): string {
+  const date = new Date(dateString)
+  date.setDate(1)
+  date.setMonth(date.getMonth() + 1)
+  return date.toISOString().split('T')[0]
+}
+
+function buildReversalPreview(entry: JournalEntry) {
+  const originalDate = new Date(entry.date)
+  const nextMonth = new Date(originalDate)
+  nextMonth.setDate(1)
+  nextMonth.setMonth(nextMonth.getMonth() + 1)
+
+  return {
+    date: nextMonth.toISOString().split('T')[0],
+    description: `Reversal of ${entry.entryNumber ?? entry.id.slice(0, 8)}`,
+    reversalOfId: entry.id,
+    lines: (entry.lines ?? []).map((line) => ({
+      ...line,
+      debit: line.credit,
+      credit: line.debit,
+      description: `Reversal: ${line.description ?? 'No description'}`,
+    })),
+  }
 }
 
 /* ──── Dropdown Menu (lightweight) ──── */
@@ -138,6 +168,7 @@ export default function JournalEntriesPage() {
   const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [reverseEntry, setReverseEntry] = useState<JournalEntry | null>(null)
   const [page, setPage] = useState(1)
   const pageSize = 25
 
@@ -228,9 +259,8 @@ export default function JournalEntriesPage() {
     }
   }, [companyId, fetchEntries])
 
-  const handleVoid = useCallback(async (id: string) => {
+  const executeVoidEntry = useCallback(async (id: string) => {
     if (!companyId) return
-    if (!window.confirm('Void this posted entry? This will create a reversing entry and cannot be undone.')) return
     try {
       await apiClient.post(`/companies/${companyId}/accounting/journal-entries/${id}/void`, { reason: 'Voided by user' })
       fetchEntries()
@@ -238,6 +268,22 @@ export default function JournalEntriesPage() {
       setError(e?.response?.data?.message ?? 'Failed to void entry')
     }
   }, [companyId, fetchEntries])
+
+  const handleVoid = useCallback(async (id: string) => {
+    if (!companyId) return
+    if (!window.confirm('Void this posted entry? This will create a reversing entry and cannot be undone.')) return
+    await executeVoidEntry(id)
+  }, [companyId, executeVoidEntry])
+
+  const prepareReverseEntry = useCallback((entry: JournalEntry) => {
+    setReverseEntry(entry)
+  }, [])
+
+  const confirmReverseEntry = useCallback(async () => {
+    if (!reverseEntry) return
+    await executeVoidEntry(reverseEntry.id)
+    setReverseEntry(null)
+  }, [executeVoidEntry, reverseEntry])
 
   const handleDelete = useCallback(async (id: string) => {
     if (!companyId) return
@@ -472,7 +518,7 @@ export default function JournalEntriesPage() {
                         <div className="text-xs text-gray-400 truncate max-w-[220px]">{firstAccountName}{entry.lines && entry.lines.length > 1 ? ` +${entry.lines.length - 1} more` : ''}</div>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 border-r border-gray-100">
+                    <td className="px-4 py-2.5 border-r border-gray-100 space-y-1">
                       {!balanced ? (
                         <span className="bg-red-50 text-red-600 px-2 py-0.5 text-xs font-semibold rounded-full border border-red-200">Out of Balance</span>
                       ) : (
@@ -480,6 +526,18 @@ export default function JournalEntriesPage() {
                           {entry.status}
                         </span>
                       )}
+                      <div className="flex flex-wrap items-center gap-1">
+                        {entry.recurrenceSchedule && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            <Repeat size={10} /> Recurring
+                          </span>
+                        )}
+                        {(entry.attachmentCount ?? 0) > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            <Paperclip size={10} /> {entry.attachmentCount}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100 whitespace-nowrap">{fmt(debit)}</td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800 border-r border-gray-100 whitespace-nowrap">{fmt(credit)}</td>
@@ -507,9 +565,9 @@ export default function JournalEntriesPage() {
                           </button>
                         )}
                         {entry.status === 'POSTED' && (
-                          <button onClick={() => handleVoid(entry.id)}
-                            className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500" title="Void">
-                            <Ban size={13} />
+                          <button onClick={() => prepareReverseEntry(entry)}
+                            className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500" title="Reverse entry">
+                            <ArrowRightLeft size={13} />
                           </button>
                         )}
                         <button onClick={() => openAuditLog(entry.id)}
@@ -524,7 +582,7 @@ export default function JournalEntriesPage() {
                           onEdit={() => router.push(`/accounting/core-accounting/journal-entries/${entry.id}`)}
                           onCopy={() => handleCopyAsNew(entry)}
                           onPost={() => handlePost(entry.id)}
-                          onVoid={() => handleVoid(entry.id)}
+                          onVoid={() => prepareReverseEntry(entry)}
                           onAudit={() => openAuditLog(entry.id)}
                           onDelete={() => handleDelete(entry.id)}
                         />
@@ -574,6 +632,66 @@ export default function JournalEntriesPage() {
         )}
       </div>
 
+      {/* Reverse preview modal */}
+      <AnimatePresence>
+        {reverseEntry && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <motion.div initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }}
+              className="w-full max-w-2xl rounded-3xl bg-white border border-gray-200 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="px-6 py-5 border-b border-gray-100">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Reverse journal entry</h2>
+                    <p className="text-sm text-slate-500 mt-1">Create a reversing entry dated {getNextRecurrenceDate(reverseEntry.date)} with debits and credits swapped.</p>
+                  </div>
+                  <button onClick={() => setReverseEntry(null)} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100">
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                  This reversal will keep the original entry for audit purposes and create a new entry that balances the original amounts.
+                </div>
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 text-slate-600">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Account</th>
+                        <th className="px-4 py-2 text-left">Description</th>
+                        <th className="px-4 py-2 text-right">Debit</th>
+                        <th className="px-4 py-2 text-right">Credit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {buildReversalPreview(reverseEntry).lines.map((line, index) => (
+                        <tr key={index} className="border-t border-slate-100">
+                          <td className="px-4 py-2 text-slate-700">{line.accountName ?? line.accountCode ?? line.accountId}</td>
+                          <td className="px-4 py-2 text-slate-600">{line.description}</td>
+                          <td className="px-4 py-2 text-right font-semibold tabular-nums text-slate-800">{fmt(line.debit)}</td>
+                          <td className="px-4 py-2 text-right font-semibold tabular-nums text-slate-800">{fmt(line.credit)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-end gap-3">
+                  <button onClick={() => setReverseEntry(null)}
+                    className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={confirmReverseEntry}
+                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors">
+                    Confirm reversal
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* View detail modal */}
       <AnimatePresence>
         {viewEntry && (
@@ -588,6 +706,13 @@ export default function JournalEntriesPage() {
 
 /* ──── Detail Modal ──── */
 function JEDetailModal({ entry, onClose, fmt }: { entry: JournalEntry; onClose: () => void; fmt: (n: number) => string }) {
+  const [attachmentCount, setAttachmentCount] = useState(entry.attachmentCount ?? 0)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return
+    setAttachmentCount(prev => prev + files.length)
+  }
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
@@ -634,6 +759,31 @@ function JEDetailModal({ entry, onClose, fmt }: { entry: JournalEntry; onClose: 
               </tr>
             </tfoot>
           </table>
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Attachments</p>
+                <p className="text-xs text-slate-500">Upload supporting files for this journal entry.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                >
+                  <Upload size={14} /> Upload files
+                </button>
+                <span className="text-xs text-slate-500">{attachmentCount} attached</span>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(event) => handleFiles(event.target.files)}
+            />
+          </div>
         </div>
       </motion.div>
     </motion.div>

@@ -11,6 +11,7 @@ import {
   FilterX,
   RefreshCw,
   Search,
+  Download,
 } from 'lucide-react'
 import ActivityLog, { type ActivityLogItem, formatEntityLabel } from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
@@ -57,6 +58,27 @@ function getFromDate(range: DateRange): string | undefined {
   return new Date(now - 30 * dayMs).toISOString()
 }
 
+function formatTimestamp(timestamp?: string | null): string {
+  if (!timestamp) return '--'
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return '--'
+  return date.toLocaleString()
+}
+
+function buildActivityCsv(entries: ActivityLogItem[]): string {
+  const rows = [
+    ['Timestamp', 'Entity', 'Action', 'User', 'Details'],
+    ...entries.map((entry) => [
+      formatTimestamp(entry.createdAt),
+      formatEntityLabel(entry.tableName),
+      normalizeAction(entry.action).replace(/_/g, ' '),
+      entry.user?.name || entry.user?.email || 'System',
+      typeof entry.changes === 'object' ? JSON.stringify(entry.changes) : String(entry.changes ?? ''),
+    ]),
+  ]
+  return rows.map((row) => row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(',')).join('\n')
+}
+
 function normalizeTable(tableName?: string | null): string {
   return String(tableName ?? '')
     .replace(/[^a-zA-Z0-9]/g, '')
@@ -95,6 +117,8 @@ export default function ActivityFeedPage() {
   const [tableFilter, setTableFilter] = useState('')
   const [userFilter, setUserFilter] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('30d')
+  const [showExportOptions, setShowExportOptions] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
 
   const {
     entries,
@@ -187,6 +211,31 @@ export default function ActivityFeedPage() {
     patchFilters({ from: getFromDate('30d') })
   }
 
+  const handleExport = (type: 'csv' | 'pdf') => {
+    setShowExportOptions(false)
+    if (type === 'csv') {
+      const csv = buildActivityCsv(visibleEntries)
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `activity-log-${new Date().toISOString().slice(0, 10)}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setToastMessage('Activity log exported as CSV')
+    } else {
+      setToastMessage('PDF export is not available yet')
+    }
+  }
+
+  useEffect(() => {
+    if (!toastMessage) return
+    const timer = window.setTimeout(() => setToastMessage(''), 3000)
+    return () => window.clearTimeout(timer)
+  }, [toastMessage])
+
   if (companyLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-slate-500">
@@ -217,12 +266,31 @@ export default function ActivityFeedPage() {
             Review changes across invoices, customers, payments, products, and accounting records.
           </p>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
-        >
-          <RefreshCw size={14} /> Refresh
-        </button>
+        <div className="flex items-center gap-2 relative">
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+          >
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExportOptions((prev) => !prev)}
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+            >
+              <Download size={14} /> Export
+            </button>
+            {showExportOptions && (
+              <div className="absolute right-0 z-10 mt-2 w-40 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+                <button onClick={() => handleExport('csv')}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
+                <button onClick={() => handleExport('pdf')}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Export PDF</button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-3">
@@ -304,6 +372,12 @@ export default function ActivityFeedPage() {
           </div>
         </div>
       </div>
+
+      {toastMessage && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {toastMessage}
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
