@@ -182,7 +182,7 @@ export default function OwnerDashboard() {
             isPositive={(cash?.totalBalance ?? kpis?.bankBalance ?? 0) >= 0}
             icon={Wallet}
             subtitle={`${cash?.accounts?.length ?? 0} bank accounts`}
-            href="/banking-cash/cash-accounts/bank-accounts"
+            href="/banking/cash-accounts/bank-accounts"
           />
         </div>
       )}
@@ -320,7 +320,7 @@ export default function OwnerDashboard() {
         <div className="bg-white p-6 rounded-[24px] border border-emerald-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-emerald-950">Bank Accounts</h2>
-            <Link href="/banking-cash/cash-accounts/bank-accounts" className="text-emerald-600 text-xs font-bold flex items-center gap-1 hover:underline">
+            <Link href="/banking/cash-accounts/bank-accounts" className="text-emerald-600 text-xs font-bold flex items-center gap-1 hover:underline">
               View all <ChevronRight size={12} />
             </Link>
           </div>
@@ -329,7 +329,7 @@ export default function OwnerDashboard() {
               <Wallet size={32} className="text-slate-300 mb-3" />
               <p className="text-sm font-semibold text-slate-500 mb-1">No bank accounts yet</p>
               <p className="text-xs text-slate-400 mb-3">Add your first account to start tracking your cash flow.</p>
-              <Link href="/banking-cash/cash-accounts/bank-accounts" className="text-xs font-bold text-emerald-600 hover:underline">
+              <Link href="/banking/cash-accounts/bank-accounts" className="text-xs font-bold text-emerald-600 hover:underline">
                 Add bank account →
               </Link>
             </div>

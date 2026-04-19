@@ -4,7 +4,7 @@ import { loadContext, gotoSalesPage, waitForTableToLoad } from '../helpers/navig
 const PAGE_INVOICES = '/sales/billing/invoices'
 const PAGE_PAYMENTS = '/sales/collections/payments'
 const PAGE_CREDIT_NOTES = '/sales/revenue/credit-notes'
-const PAGE_UNDEPOSITED = '/banking-cash/transactions/undeposited-funds'
+const PAGE_UNDEPOSITED = '/banking/transactions/undeposited-funds'
 
 function uniqueName(base: string) {
   return `${base} ${Date.now().toString().slice(-6)}`

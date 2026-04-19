@@ -7,7 +7,7 @@ import { navigationData, NavItem } from './ownerNavConfig'
 const BUILT_PATHS = new Set([
   '/home/dashboard',
   '/accounting/core-accounting/chart-of-accounts',
-  '/banking-cash/cash-accounts/bank-accounts',
+  '/banking/cash-accounts/bank-accounts',
   '/sales/customers/customers',
   '/sales/billing/invoices',
   '/sales/collections/customer-payments',

@@ -12,7 +12,7 @@ import {
   mockStore,
   type MockBankTransaction,
   type MockReconciliation,
-} from '@/app/(owner)/banking-cash/transactions/mockGLState'
+} from '@/app/(owner)/banking/transactions/mockGLState'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

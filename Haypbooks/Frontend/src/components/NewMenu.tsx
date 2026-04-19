@@ -13,7 +13,7 @@ const QUICK_LINKS = [
   { label: 'New Invoice', href: '/sales/billing/invoices' },
   { label: 'New Bill', href: '/expenses/payables/bills' },
   { label: 'New Journal Entry', href: '/accounting/core-accounting/journal-entries' },
-  { label: 'Bank Reconciliation', href: '/banking-cash/bank-accounts/reconcile' },
+  { label: 'Bank Reconciliation', href: '/banking/bank-accounts/reconcile' },
   { label: 'Run Payroll', href: '/payroll-workforce/payroll-processing/payroll-runs' },
   { label: 'New Expense', href: '/expenses/expense-management/expense-claims' },
 ]

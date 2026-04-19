@@ -260,7 +260,7 @@ export default function BankTransactionsPage() {
               Transfer Funds
             </button>
             <button
-              onClick={() => router.push('/banking-cash/transactions/activity')}
+              onClick={() => router.push('/banking/transactions/activity')}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 bg-white text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
             >
               <Clock className="w-4 h-4" />

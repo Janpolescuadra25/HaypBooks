@@ -102,10 +102,10 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
     pathname.includes('/journal-entries/') ||
     pathname.endsWith('/audit-log') ||
     pathname.includes('/invoices/new') ||
-    pathname.includes('/banking-cash/transactions/match') ||
-    pathname.includes('/banking-cash/transactions/split') ||
-    pathname.includes('/banking-cash/transactions/transfer') ||
-    pathname.includes('/banking-cash/transactions/view-record')
+    pathname.includes('/banking/transactions/match') ||
+    pathname.includes('/banking/transactions/split') ||
+    pathname.includes('/banking/transactions/transfer') ||
+    pathname.includes('/banking/transactions/view-record')
 
   return (
     <>

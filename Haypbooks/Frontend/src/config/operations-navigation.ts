@@ -335,7 +335,7 @@ export function findTab(
 }
 
 /**
- * Given a pathname (e.g. '/banking-cash/transactions/bank-transactions'), return the
+ * Given a pathname (e.g. '/banking/transactions/bank-transactions'), return the
  * matching { section, subsection, tab } tuple, or null if not found.
  */
 export function resolveNavFromPath(pathname: string): {

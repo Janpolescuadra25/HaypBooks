@@ -503,7 +503,7 @@ test.describe('Customer Payments - fullscreen payment flow', () => {
     await expect(createdRow).toBeVisible({ timeout: 10_000 })
     await expect(createdRow).toContainText(/undeposited/i)
 
-    await page.goto('/banking-cash/transactions/undeposited-funds')
+    await page.goto('/banking/transactions/undeposited-funds')
     await page.waitForLoadState('networkidle')
 
     const undepositedSearchInput = page.locator('input[placeholder*="Search by customer"]').first()

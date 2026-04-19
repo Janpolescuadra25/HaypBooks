@@ -357,7 +357,7 @@ export default function BankDepositsPage() {
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
-            onClick={() => router.push('/banking-cash/transactions/deposits/activity')}
+            onClick={() => router.push('/banking/transactions/deposits/activity')}
             className="flex items-center gap-2 px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium rounded-lg transition-colors"
           >
             <Clock size={14} /> Activity Log

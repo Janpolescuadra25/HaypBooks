@@ -5,7 +5,7 @@ export default function Page() {
     <ModuleActivityPage
       title="Bank Transactions Activity Log"
       subtitle="Track categorization, matching, transfer, and reconciliation changes."
-      backHref="/banking-cash/transactions"
+      backHref="/banking/transactions"
       entityType="BankTransaction"
       emptyMessage="No bank transaction activity recorded yet."
       searchPlaceholder="Search transaction activity..."

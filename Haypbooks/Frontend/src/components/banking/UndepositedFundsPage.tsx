@@ -154,7 +154,7 @@ export default function UndepositedFundsPage() {
   }
 
   const goToDeposit = (ids: string[]) => {
-    router.push(`/banking-cash/transactions/deposits?paymentIds=${ids.join(',')}`)
+    router.push(`/banking/transactions/deposits?paymentIds=${ids.join(',')}`)
   }
 
   if (cidLoading) return (
@@ -186,7 +186,7 @@ export default function UndepositedFundsPage() {
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
-            onClick={() => router.push('/banking-cash/transactions/undeposited-funds/activity')}
+            onClick={() => router.push('/banking/transactions/undeposited-funds/activity')}
             className="flex items-center gap-2 px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium rounded-lg transition-colors"
           >
             <Clock size={14} /> Activity Log

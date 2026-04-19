@@ -96,7 +96,7 @@ function getSourceRoute(sourceType: SourceType, sourceId?: string): string | nul
     case 'PAYMENT':        return `/sales/billing/invoices/${sourceId}`
     case 'BILL':           return `/purchases/bills/${sourceId}`
     case 'BILL_PAYMENT':   return `/purchases/bills/${sourceId}`
-    case 'BANK_DEPOSIT':   return `/banking-cash/transactions/${sourceId}`
+    case 'BANK_DEPOSIT':   return `/banking/transactions/${sourceId}`
     case 'REFUND':         return `/sales/billing/invoices/${sourceId}`
     case 'MANUAL_JOURNAL': return `/accounting/core-accounting/journal-entries/${sourceId}`
     default:               return null
