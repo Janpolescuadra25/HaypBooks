@@ -487,7 +487,7 @@ export default function WriteOffsPage() {
       {/* Detail Drawer */}
       {detailItem && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
           <div className="relative bg-white w-full max-w-md shadow-2xl overflow-y-auto flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold text-gray-900">{detailItem.writeOffNumber}</h2>

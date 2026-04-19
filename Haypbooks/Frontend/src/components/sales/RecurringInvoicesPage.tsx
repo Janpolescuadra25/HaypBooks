@@ -456,7 +456,7 @@ export default function RecurringInvoicesPage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h2 className="text-lg font-semibold text-gray-900">New Recurring Template</h2>
@@ -524,8 +524,8 @@ export default function RecurringInvoicesPage() {
       )}
 
       {detailItem && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
           <div className="relative bg-white w-full max-w-md shadow-2xl overflow-y-auto flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold text-gray-900">{getRowName(detailItem)}</h2>
