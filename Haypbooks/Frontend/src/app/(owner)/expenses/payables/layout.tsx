@@ -1,4 +1,6 @@
+import { ReactNode } from 'react'
 import ModuleTabs from '@/components/shared/ModuleTabs'
+import { ToastProvider } from '@/components/ui/Toast'
 
 const TABS = [
   { label: 'Bills', value: 'bills' },
@@ -8,13 +10,15 @@ const TABS = [
   { label: 'Vendor Credits', value: 'vendor-credits' },
 ]
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col h-full">
-      <ModuleTabs tabs={TABS} basePath="/expenses/payables" />
-      <div className="flex-1 overflow-y-auto">
-        {children}
+    <ToastProvider>
+      <div className="flex flex-col h-full">
+        <ModuleTabs tabs={TABS} basePath="/expenses/payables" />
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   )
 }

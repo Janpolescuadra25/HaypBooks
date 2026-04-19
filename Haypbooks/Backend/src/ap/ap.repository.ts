@@ -6,6 +6,12 @@ import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } f
 export class ApRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+        if (currency) return currency
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
     // ─── Vendors ──────────────────────────────────────────────────────────────
 
     async findVendors(workspaceId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
@@ -123,7 +129,7 @@ export class ApRepository {
             data: {
                 workspaceId: data.workspaceId, companyId: data.companyId, vendorId: data.vendorId,
                 status: 'DRAFT', postingStatus: 'DRAFT', total, balance: total,
-                currency: data.currency ?? 'PHP', dueAt: data.dueAt ?? null,
+                currency: await this.resolveCurrency(data.companyId, data.currency), dueAt: data.dueAt ?? null,
                 paymentTermId: data.paymentTermId ?? null, description: data.description ?? null,
                 createdById: data.createdById,
                 lines: {
@@ -266,7 +272,7 @@ export class ApRepository {
                     workspaceId: data.workspaceId, companyId: data.companyId, billId: data.billId,
                     amount: data.amount, paymentDate: data.paymentDate, method: data.method,
                     referenceNumber: data.referenceNumber ?? null, bankAccountId: data.bankAccountId ?? null,
-                    currency: data.currency ?? 'PHP', createdById: data.createdById,
+                    currency: await this.resolveCurrency(data.companyId, data.currency), createdById: data.createdById,
                 },
             })
 
@@ -388,7 +394,7 @@ export class ApRepository {
                 data: {
                     workspaceId, companyId, vendorId: po.vendorId,
                     status: 'DRAFT', postingStatus: 'DRAFT', total: po.total, balance: po.total,
-                    currency: 'PHP', createdById,
+                    currency: await this.resolveCurrency(companyId), createdById,
                     lines: {
                         create: po.lines.map((l) => ({
                             companyId, workspaceId,

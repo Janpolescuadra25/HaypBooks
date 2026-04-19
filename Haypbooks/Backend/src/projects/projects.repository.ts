@@ -5,6 +5,12 @@ import { PrismaService } from '../repositories/prisma/prisma.service'
 export class ProjectsRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+        if (currency) return currency
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
     // ─── Projects ─────────────────────────────────────────────────────────────
 
     async findProjects(companyId: string, opts: { status?: string; search?: string; limit?: number; offset?: number } = {}) {
@@ -52,7 +58,7 @@ export class ProjectsRepository {
                 startDate: data.startDate ?? null,
                 endDate: data.endDate ?? null,
                 status: data.status ?? 'ACTIVE',
-                currency: data.currency ?? 'PHP',
+                currency: await this.resolveCurrency(companyId, data.currency),
             },
         })
     }

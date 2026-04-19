@@ -77,6 +77,12 @@ export class SubLedgerService {
 
   // ─── Core: create + immediately post a JE inside a transaction ────────────
 
+  private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+    if (currency) return currency
+    const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+    return company?.currency ?? 'PHP'
+  }
+
   private async createPostedJE(tx: any, data: {
     workspaceId: string
     companyId: string
@@ -100,7 +106,7 @@ export class SubLedgerService {
         companyId: data.companyId,
         date: data.date,
         description: data.description,
-        currency: data.currency ?? 'PHP',
+        currency: await this.resolveCurrency(data.companyId, data.currency),
         postingStatus: 'POSTED',
         entryNumber: data.entryNumber,
         createdById: data.createdById ?? null,
@@ -227,7 +233,7 @@ export class SubLedgerService {
           companyId: invoice.companyId,
           date: (invoice as any).issuedAt ?? (invoice as any).date ?? new Date(),
           description: `Invoice ${(invoice as any).invoiceNumber ?? invoiceId}`,
-          currency: invoice.currency ?? 'PHP',
+          currency: invoice.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -282,7 +288,7 @@ export class SubLedgerService {
           companyId: invoice.companyId,
           date: new Date(),
           description: `Invoice reversal ${invoice.invoiceNumber ?? invoice.id}`,
-          currency: invoice.currency ?? 'PHP',
+          currency: invoice.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: reversalLines,
@@ -329,7 +335,7 @@ export class SubLedgerService {
           companyId: (payment as any).companyId,
           date: (payment as any).paymentDate ?? new Date(),
           description: `Receipt ${(payment as any).referenceNumber ?? paymentId}`,
-          currency: (payment as any).currency ?? 'PHP',
+          currency: (payment as any).currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -382,7 +388,7 @@ export class SubLedgerService {
           companyId: (payment as any).companyId,
           date: new Date(),
           description: `Payment reversal ${(payment as any).referenceNumber ?? paymentId}`,
-          currency: (payment as any).currency ?? 'PHP',
+          currency: (payment as any).currency,
           createdById: postedById,
           entryNumber,
           lines: reversalLines,
@@ -477,7 +483,7 @@ export class SubLedgerService {
           companyId: bill.companyId,
           date: (bill as any).issuedAt ?? (bill as any).date ?? new Date(),
           description: `Bill ${(bill as any).billNumber ?? billId}`,
-          currency: bill.currency ?? 'PHP',
+          currency: bill.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: finalLines,
@@ -529,7 +535,7 @@ export class SubLedgerService {
           companyId,
           date: payment.paymentDate ?? new Date(),
           description: `Bill Payment ${payment.referenceNumber ?? billPaymentId}`,
-          currency: payment.currency ?? 'PHP',
+          currency: payment.currency ?? undefined,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -576,7 +582,7 @@ export class SubLedgerService {
           companyId: deposit.companyId,
           date: (deposit as any).depositDate ?? (deposit as any).date ?? new Date(),
           description: `Bank Deposit ${(deposit as any).referenceNumber ?? depositId}`,
-          currency: (deposit as any).currency ?? 'PHP',
+          currency: (deposit as any).currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -621,7 +627,7 @@ export class SubLedgerService {
           companyId: refund.companyId,
           date: (refund as any).refundDate ?? new Date(),
           description: `Customer Refund ${(refund as any).referenceNumber ?? refundId}`,
-          currency: (refund as any).currency ?? 'PHP',
+          currency: (refund as any).currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -666,7 +672,7 @@ export class SubLedgerService {
           companyId: refund.companyId,
           date: (refund as any).refundDate ?? new Date(),
           description: `Vendor Refund ${(refund as any).referenceNumber ?? refundId}`,
-          currency: (refund as any).currency ?? 'PHP',
+          currency: (refund as any).currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -721,7 +727,7 @@ export class SubLedgerService {
           companyId: cn.companyId,
           date: cn.issuedAt ?? new Date(),
           description: `Credit Note ${cn.creditNoteNumber}`,
-          currency: company.currency ?? 'PHP',
+          currency: company.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -775,7 +781,7 @@ export class SubLedgerService {
           companyId: cn.companyId,
           date: new Date(),
           description: `Credit Note Void ${cn.creditNoteNumber}`,
-          currency: company.currency ?? 'PHP',
+          currency: company.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -826,7 +832,7 @@ export class SubLedgerService {
           companyId: writeOff.companyId,
           date: writeOff.writeOffDate ?? new Date(),
           description: writeOff.reason ? `Write-off: ${writeOff.reason}` : `Write-off ${writeOffId}`,
-          currency: company.currency ?? 'PHP',
+          currency: company.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -869,7 +875,7 @@ export class SubLedgerService {
           companyId: writeOff.companyId,
           date: new Date(),
           description: `Write-off Reversed ${writeOffId}`,
-          currency: company.currency ?? 'PHP',
+          currency: company.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -921,7 +927,7 @@ export class SubLedgerService {
           companyId: refund.companyId,
           date: refund.refundDate ?? new Date(),
           description: `Refund ${refund.referenceNumber ?? refundId}`,
-          currency: refund.currency ?? company.currency ?? 'PHP',
+          currency: refund.currency ?? company.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -964,7 +970,7 @@ export class SubLedgerService {
           companyId: refund.companyId,
           date: new Date(),
           description: `Refund Reversed ${refund.referenceNumber ?? refundId}`,
-          currency: refund.currency ?? company.currency ?? 'PHP',
+          currency: refund.currency ?? company.currency,
           createdById: postedById,
           entryNumber,
           lines: [
@@ -1013,7 +1019,7 @@ export class SubLedgerService {
           companyId: data.companyId,
           date: new Date(),
           description: data.description ?? `Revenue Recognition ${data.recognitionId}`,
-          currency: data.currency ?? 'PHP',
+          currency: data.currency,
           createdById: data.postedById,
           entryNumber,
           lines: [
@@ -1052,7 +1058,7 @@ export class SubLedgerService {
           companyId: data.companyId,
           date: new Date(),
           description: `Revenue Recognition Reversed ${data.recognitionId}`,
-          currency: data.currency ?? 'PHP',
+          currency: data.currency,
           createdById: data.postedById,
           entryNumber,
           lines: [

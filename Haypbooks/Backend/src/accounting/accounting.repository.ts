@@ -6,6 +6,12 @@ import { resolveAccount, createAndPostJE, SYSTEM_ACCOUNTS } from '../shared/gl-i
 export class AccountingRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+        if (currency) return currency
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
     // ─── Chart of Accounts ───────────────────────────────────────────────────
 
     async countAccounts(companyId: string, includeInactive = false, includeDeleted = false) {
@@ -79,7 +85,7 @@ export class AccountingRepository {
                 name: data.name,
                 typeId: data.typeId,
                 parentId: data.parentId ?? null,
-                currency: data.currency ?? 'PHP',
+                currency: await this.resolveCurrency(data.companyId, data.currency),
                 normalSide: data.normalSide as any ?? null,
                 isHeader: data.isHeader ?? false,
                 liquidityType: data.liquidityType as any ?? null,
@@ -282,7 +288,7 @@ export class AccountingRepository {
                 companyId: data.companyId,
                 date: data.date,
                 description: data.description,
-                currency: data.currency ?? 'PHP',
+                currency: await this.resolveCurrency(data.companyId, data.currency),
                 postingStatus: data.postingStatus ?? 'DRAFT',
                 createdById: data.createdById,
                 lines: {

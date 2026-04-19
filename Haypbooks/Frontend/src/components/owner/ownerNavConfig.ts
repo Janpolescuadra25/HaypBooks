@@ -206,7 +206,7 @@ export const navigationData: NavSection[] = [
             ],
           },
           {
-            title: 'Employee Expenses',
+            title: 'Expense Management',
             path: '/expenses/expense-capture',
             tabs: [
               { label: 'Expenses',         value: 'expenses',         status: 'coming-soon' },

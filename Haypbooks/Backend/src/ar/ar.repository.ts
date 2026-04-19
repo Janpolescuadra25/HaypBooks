@@ -7,6 +7,12 @@ import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } f
 export class ArRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+        if (currency) return currency
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
     private isPastDue(dueDate: Date | null | undefined) {
         if (!dueDate) return false
         return new Date(dueDate).getTime() < Date.now()
@@ -733,7 +739,7 @@ export class ArRepository {
                 postingStatus: 'DRAFT',
                 totalAmount,
                 balance: totalAmount,
-                currency: data.currency ?? 'PHP',
+                currency: await this.resolveCurrency(data.companyId, data.currency),
                 date: new Date(),
                 dueDate: data.dueDate ?? null,
                 paymentTermId: data.paymentTermId ?? null,
@@ -2112,7 +2118,7 @@ export class ArRepository {
         let amount = Number(data.amount ?? 0)
         let customerId = data.customerId ?? null
         let description = data.description ?? ''
-        let currency = data.currency ?? 'PHP'
+        let currency = data.currency ?? null
         const invoiceId = data.invoiceId ?? null
 
         if (invoiceId) {
@@ -2127,6 +2133,10 @@ export class ArRepository {
 
         if (amount <= 0) {
             throw new Error('amount must be greater than 0')
+        }
+
+        if (!currency) {
+            currency = await this.resolveCurrency(companyId)
         }
 
         const count = await this.prisma.paymentLink.count({ where: { companyId } })

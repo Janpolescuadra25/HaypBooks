@@ -17,6 +17,12 @@ export class BankingService {
         return company.workspaceId
     }
 
+    private async resolveCurrency(companyId: string, currency?: string) {
+        if (currency) return currency
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
     private async assertAccess(userId: string, companyId: string) {
         const m = await this.prisma.workspaceUser.findFirst({
             where: { status: 'ACTIVE', userId, workspace: { companies: { some: { id: companyId } } } },
@@ -225,7 +231,7 @@ export class BankingService {
                                 companyId,
                                 date: txn.date,
                                 description: `Bank Transaction — ${txn.description}`,
-                                currency: 'PHP',
+                                currency: await this.resolveCurrency(companyId),
                                 postingStatus: 'DRAFT',
                                 createdById: userId,
                                 transactionSource: 'Bank Transaction',
@@ -299,7 +305,7 @@ export class BankingService {
                             companyId,
                             date: txn.date,
                             description: `Bank Transaction (Split) — ${txn.description}`,
-                            currency: 'PHP',
+                            currency: await this.resolveCurrency(companyId),
                             postingStatus: 'DRAFT',
                             createdById: userId,
                             transactionSource: 'Bank Transaction (Split)',
@@ -392,7 +398,7 @@ export class BankingService {
                         companyId,
                         date: txns[0].date,
                         description: `Batch Categorize — ${categoryName} (${txns.length} transactions)`,
-                        currency: 'PHP',
+                        currency: await this.resolveCurrency(companyId),
                         postingStatus: 'DRAFT',
                         createdById: userId,
                         transactionSource: 'Bank Transaction (Batch)',

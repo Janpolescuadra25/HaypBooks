@@ -429,7 +429,12 @@ export class ArService {
         }
     }
 
-    private normalizePaymentLinkRow(row: any) {
+    private async getCompanyCurrency(companyId: string) {
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
+    private async normalizePaymentLinkRow(row: any) {
         const expiresAt = row.expiresAt instanceof Date
             ? row.expiresAt.toISOString().split('T')[0]
             : (row.expiresAt ?? '-')
@@ -437,13 +442,14 @@ export class ArService {
         const effectiveStatus = isExpired && String(row.status ?? '').toUpperCase() === 'ACTIVE'
             ? 'EXPIRED'
             : row.status
+        const currency = row.currency ?? (row.companyId ? await this.getCompanyCurrency(row.companyId) : 'PHP')
 
         return {
             id: row.id,
             linkId: row.linkId,
             description: row.description ?? '',
             amount: Number(row.amount ?? 0),
-            currency: row.currency ?? 'PHP',
+            currency,
             createdDate: row.createdAt instanceof Date ? row.createdAt.toISOString().split('T')[0] : row.createdAt,
             expiryDate: expiresAt,
             views: Number(row.viewCount ?? 0),
@@ -1373,7 +1379,7 @@ export class ArService {
             search: opts.search,
             status: opts.status,
         })
-        return rows.map((row: any) => this.normalizePaymentLinkRow(row))
+        return Promise.all(rows.map((row: any) => this.normalizePaymentLinkRow(row)))
     }
 
     async createPaymentLink(userId: string, companyId: string, data: any) {

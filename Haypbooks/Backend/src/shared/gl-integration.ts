@@ -52,12 +52,17 @@ export const SYSTEM_ACCOUNTS = {
  * Resolve a system account by code within a company,
  * creating it if it doesn't exist.
  */
+async function resolveCompanyCurrency(tx: any, companyId: string): Promise<string> {
+    const company = await tx.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+    return company?.currency ?? 'PHP'
+}
+
 export async function resolveAccount(
     tx: any,
     companyId: string,
     def: { code: string; name: string; typeId: number; currency?: string },
 ): Promise<{ id: string; typeId: number; normalSide: string | null }> {
-    const currency = def.currency ?? 'PHP'
+    const currency = def.currency ?? await resolveCompanyCurrency(tx, companyId)
     let acct = await tx.account.findUnique({
         where: { companyId_code: { companyId, code: def.code } },
         select: { id: true, typeId: true, normalSide: true },
@@ -116,7 +121,7 @@ export async function createAndPostJE(
             companyId: data.companyId,
             date: data.date,
             description: data.description,
-            currency: data.currency ?? 'PHP',
+            currency: data.currency ?? await resolveCompanyCurrency(tx, data.companyId),
             postingStatus: data.postingStatus ?? 'DRAFT',
             transactionSource: data.transactionSource,
             createdById: data.createdById,
@@ -216,7 +221,7 @@ export async function createReversingJE(
         date: new Date(),
         description: `Reversal – ${reason}`,
         createdById: origJe.createdById ?? 'system',
-        currency: origJe.currency ?? 'PHP',
+        currency: origJe.currency ?? await resolveCompanyCurrency(tx, companyId),
         lines: reversedLines,
     })
 

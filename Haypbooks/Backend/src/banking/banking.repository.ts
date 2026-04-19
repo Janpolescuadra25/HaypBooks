@@ -5,6 +5,12 @@ import { PrismaService } from '../repositories/prisma/prisma.service'
 export class BankingRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private async resolveCurrency(companyId: string, currency?: string): Promise<string> {
+        if (currency) return currency
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
     // ─── Bank Accounts ────────────────────────────────────────────────────────
 
     async findBankAccounts(workspaceId: string, opts: { search?: string } = {}) {
@@ -315,7 +321,7 @@ export class BankingRepository {
                 data: {
                     workspaceId: data.workspaceId, companyId: data.companyId,
                     bankAccountId: data.bankAccountId, depositDate: data.depositDate,
-                    totalAmount, currency: data.currency ?? 'PHP',
+                    totalAmount, currency: await this.resolveCurrency(data.companyId, data.currency),
                     referenceNumber: data.referenceNumber ?? null, status: 'DRAFT',
                     lines: {
                         create: payments.map((p) => ({ paymentReceivedId: p.id, amount: p.amount })),

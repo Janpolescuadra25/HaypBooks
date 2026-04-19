@@ -5,6 +5,12 @@ import { PrismaService } from '../repositories/prisma/prisma.service'
 export class OrganizationService {
     constructor(private readonly prisma: PrismaService) { }
 
+    private async resolveCurrency(companyId: string, currency?: string) {
+        if (currency) return currency
+        const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { currency: true } })
+        return company?.currency ?? 'PHP'
+    }
+
     private async assertAccess(userId: string, companyId: string) {
         const m = await this.prisma.workspaceUser.findFirst({
             where: { status: 'ACTIVE', userId, workspace: { companies: { some: { id: companyId } } } },
@@ -37,7 +43,7 @@ export class OrganizationService {
                 taxId: data.taxId,
                 registrationNo: data.registrationNo,
                 jurisdiction: data.jurisdiction,
-                currency: data.currency ?? 'PHP',
+                currency: await this.resolveCurrency(companyId, data.currency),
                 isActive: data.isActive ?? true,
             },
         })
