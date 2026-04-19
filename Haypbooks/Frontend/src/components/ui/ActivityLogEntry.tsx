@@ -331,7 +331,7 @@ export default function ActivityLogEntry({ entry, showEntityBadge = false, onNav
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-900">{description}</p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                 <span>by {actor}</span>
                 <span className="text-slate-300">|</span>
                 <span>{formatTimestamp(entry.createdAt)}</span>

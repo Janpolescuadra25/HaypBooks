@@ -43,7 +43,7 @@ export default function ActivityLog({
     <div className={`space-y-3 ${className ?? ''}`}>
       {entries.map((entry, index) => (
         <ActivityLogEntry
-          key={entry.id || `${entry.recordId ?? 'entry'}-${index}`}
+          key={entry.id || (entry as any)._id || (entry as any).uuid || (entry as any).entryId || (entry as any).activityId || `${entry.recordId ?? 'entry'}-${index}`}
           entry={entry}
           showEntityBadge={showEntityBadge}
           onNavigate={onEntryNavigate}
