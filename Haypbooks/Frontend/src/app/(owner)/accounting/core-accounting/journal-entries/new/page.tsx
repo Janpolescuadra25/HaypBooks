@@ -245,6 +245,7 @@ export default function NewJournalEntryPage() {
               </label>
               <input
                 type="date"
+                autoFocus
                 value={date}
                 onChange={e => setDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
