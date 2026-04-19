@@ -261,7 +261,7 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
       {/* Logout confirmation modal (mounted outside the user menu so it can't be unmounted when the menu closes) */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowLogoutConfirm(false)} aria-hidden="true"></div>
+          <div className="fixed inset-0 bg-black/40" onClick={() => setShowLogoutConfirm(false)} aria-hidden="true"></div>
           <div role="dialog" aria-modal="true" aria-labelledby="logout-title" className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h3 id="logout-title" className="text-lg font-semibold text-slate-800">Confirm sign out</h3>
             <p className="text-sm text-slate-600 mt-2">Are you sure you want to sign out? You will be returned to the sign in page.</p>

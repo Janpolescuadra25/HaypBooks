@@ -841,7 +841,7 @@ export default function ClientMailPage() {
       {showNewModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200]">
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" aria-hidden="true" onClick={handleReqClose} />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px]" aria-hidden="true" onClick={handleReqClose} />
 
           {/* Dialog card */}
           <div
