@@ -183,20 +183,21 @@ export const navigationData: NavSection[] = [
             tabs: [
               { label: 'Vendors',            value: 'vendors',            status: 'existing' },
               { label: 'Purchase Requests',  value: 'purchase-requests',  status: 'coming-soon' },
-              { label: 'Orders',             value: 'orders',             status: 'coming-soon' },
+              { label: 'Purchase Orders',    value: 'orders',             status: 'coming-soon' },
               { label: 'RFQ',                value: 'rfq',                status: 'coming-soon' },
               { label: 'Approvals',          value: 'approvals',          status: 'coming-soon' },
             ],
           },
           {
             title: 'Bills & Payments',
-            path: '/expenses/payables',
+            path: '/expenses/bills-payments',
             tabs: [
               { label: 'Bills',             value: 'bills',             status: 'existing' },
               { label: 'Recurring Bills',   value: 'recurring-bills',   status: 'coming-soon' },
               { label: 'Bill Payments',     value: 'bill-payments',     status: 'existing' },
               { label: 'Payment Runs',      value: 'payment-runs',      status: 'coming-soon' },
               { label: 'Vendor Credits',    value: 'vendor-credits',    status: 'coming-soon' },
+              { label: 'A/P Aging',         value: 'ap-aging',          status: 'coming-soon' },
             ],
           },
           {
