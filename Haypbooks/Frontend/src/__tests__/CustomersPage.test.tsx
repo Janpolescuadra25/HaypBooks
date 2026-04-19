@@ -1,6 +1,7 @@
 import React from 'react'
 import userEvent from '@testing-library/user-event'
-import { render, screen, waitFor } from '@/test-utils'
+import { act } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@/test-utils'
 
 const pushMock = jest.fn()
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn(), refresh: jest.fn() }) }))
@@ -49,6 +50,13 @@ const defaultApiMocks = () => {
 }
 
 describe('CustomersPage', () => {
+  const clickAddCustomerButton = async () => {
+    const addButtons = await screen.findAllByRole('button', { name: 'Add Customer' })
+    await act(async () => {
+      await userEvent.click(addButtons[0])
+    })
+  }
+
   beforeEach(() => {
     jest.clearAllMocks()
     defaultApiMocks()
@@ -64,8 +72,8 @@ describe('CustomersPage', () => {
   it('opens the add customer modal when Add Customer is clicked', async () => {
     render(<CustomersPage />)
 
-    const addButton = await screen.findByRole('button', { name: 'Add Customer' })
-    await userEvent.click(addButton)
+    expect(await screen.findByText('1 customer')).toBeInTheDocument()
+    await clickAddCustomerButton()
 
     expect(await screen.findByRole('dialog', { name: /new customer/i })).toBeInTheDocument()
   })
@@ -73,7 +81,8 @@ describe('CustomersPage', () => {
   it('shows customer status badges in the table', async () => {
     render(<CustomersPage />)
 
-    expect(await screen.findByText('Active')).toBeInTheDocument()
+    const activeNodes = await screen.findAllByText('Active')
+    expect(activeNodes.some((node) => node.tagName.toLowerCase() === 'span')).toBe(true)
   })
 
   it('shows empty state when no customers exist', async () => {
@@ -87,29 +96,42 @@ describe('CustomersPage', () => {
     render(<CustomersPage />)
 
     expect(await screen.findByText('No customers yet')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add Customer' })).toBeInTheDocument()
+    const addButtons = screen.getAllByRole('button', { name: 'Add Customer' })
+    expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows bulk actions after selecting a row', async () => {
     render(<CustomersPage />)
 
-    const rowCheckbox = await screen.findByRole('checkbox', { name: 'Select row 1' })
-    await userEvent.click(rowCheckbox)
+    expect(await screen.findByText('1 customer')).toBeInTheDocument()
+    const rowCheckboxes = await screen.findAllByRole('checkbox')
+    await act(async () => {
+      await userEvent.click(rowCheckboxes[0])
+    })
 
-    expect(await screen.findByText('1 item selected')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('1 item selected')).toBeInTheDocument()
+    })
+
     expect(screen.getByRole('button', { name: 'Delete Selected' })).toBeInTheDocument()
   })
 
   it('opens delete confirmation and deletes the customer', async () => {
     render(<CustomersPage />)
 
+    expect(await screen.findByText('1 customer')).toBeInTheDocument()
     const deleteButton = await screen.findByTitle('Delete')
-    await userEvent.click(deleteButton)
+    await act(async () => {
+      await userEvent.click(deleteButton)
+    })
 
-    expect(await screen.findByRole('dialog', { name: /delete customer/i })).toBeInTheDocument()
+    const deleteDialog = await screen.findByRole('dialog', { name: /delete customer/i })
+    expect(deleteDialog).toBeInTheDocument()
 
-    const confirmButton = screen.getByRole('button', { name: 'Delete' })
-    await userEvent.click(confirmButton)
+    const confirmButton = within(deleteDialog).getByRole('button', { name: 'Delete' })
+    await act(async () => {
+      await userEvent.click(confirmButton)
+    })
 
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith('/companies/company-1/ar/customers/cust-1')

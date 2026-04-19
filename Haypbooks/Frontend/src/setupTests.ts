@@ -41,12 +41,12 @@ const normalizeFetchInput = (input: RequestInfo) => {
 	}
 	if (typeof input === 'object' && input !== null && 'url' in input && typeof (input as any).url === 'string' && (input as any).url.startsWith('/')) {
 		const request = input as Request
-		return new undici.Request(new URL(request.url, TEST_BASE_URL).toString(), request)
+		return new undici.Request(new URL(request.url, TEST_BASE_URL).toString(), request as any)
 	}
 	return input
 }
 const normalizedFetch = (input: RequestInfo, init?: RequestInit) => {
-	return originalFetch(normalizeFetchInput(input) as any, init)
+	return originalFetch(normalizeFetchInput(input) as any, init as any)
 }
 // @ts-ignore
 global.fetch = normalizedFetch as any
