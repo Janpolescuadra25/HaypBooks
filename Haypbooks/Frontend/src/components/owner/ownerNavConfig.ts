@@ -104,7 +104,7 @@ export const navigationData: NavSection[] = [
         items: [
           {
             title: 'Bank Transactions',
-            path: '/banking-cash/transactions',
+            path: '/banking/transactions',
             tabs: [
               { label: 'Bank Transactions', value: 'transactions',      status: 'existing' },
               { label: 'Undeposited Funds', value: 'undeposited-funds', status: 'existing' },
@@ -114,7 +114,7 @@ export const navigationData: NavSection[] = [
           },
           {
             title: 'Reconciliation',
-            path: '/banking-cash/reconciliation',
+            path: '/banking/reconciliation',
             tabs: [
               { label: 'Reconcile',          value: 'reconcile',          status: 'existing' },
               { label: 'History',            value: 'history',            status: 'existing' },

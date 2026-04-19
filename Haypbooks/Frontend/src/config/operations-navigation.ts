@@ -45,26 +45,26 @@ export const OPERATIONS_NAV: OperationsSection[] = [
   // 1. Banking
   // ───────────────────────────────────────────────────────────────────────────
   {
-    id: 'cash-banking',
+    id: 'banking',
     label: 'Banking',
     subsections: [
       {
         id: 'transactions',
         label: 'Bank Transactions',
         tabs: [
-          { id: 'bank-transactions',    label: 'Bank Transactions',    path: '/banking-cash/transactions/bank-transactions' },
-          { id: 'undeposited-funds',    label: 'Undeposited Funds',    path: '/banking-cash/transactions/undeposited-funds' },
-          { id: 'deposits',             label: 'Deposits',             path: '/banking-cash/transactions/deposits' },
-          { id: 'rules',                label: 'Bank Rules',          path: '/banking-cash/transactions/rules' },
+          { id: 'bank-transactions',    label: 'Bank Transactions',    path: '/banking/transactions/bank-transactions' },
+          { id: 'undeposited-funds',    label: 'Undeposited Funds',    path: '/banking/transactions/undeposited-funds' },
+          { id: 'deposits',             label: 'Deposits',             path: '/banking/transactions/deposits' },
+          { id: 'rules',                label: 'Bank Rules',          path: '/banking/transactions/rules' },
         ],
       },
       {
         id: 'reconciliation',
         label: 'Reconciliation',
         tabs: [
-          { id: 'reconcile',            label: 'Reconcile',            path: '/banking-cash/reconciliation/reconcile' },
-          { id: 'history',              label: 'History',              path: '/banking-cash/reconciliation/history' },
-          { id: 'statement-archive',    label: 'Statement Archive',    path: '/banking-cash/reconciliation/statement-archive' },
+          { id: 'reconcile',            label: 'Reconcile',            path: '/banking/reconciliation/reconcile' },
+          { id: 'history',              label: 'History',              path: '/banking/reconciliation/history' },
+          { id: 'statement-archive',    label: 'Statement Archive',    path: '/banking/reconciliation/statement-archive' },
         ],
       },
     ],

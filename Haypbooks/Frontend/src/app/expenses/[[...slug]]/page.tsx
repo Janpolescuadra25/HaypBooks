@@ -31,12 +31,12 @@ function resolveTitle(sectionId: string, slug: string[] | undefined): string {
 function resolveComponent(slug: string[] | undefined) {
   const key = slug?.join('/') ?? ''
   switch (key) {
-    case 'vendors/vendors': return <VendorsPage />
-    case 'vendors/purchase-orders': return <PurchaseOrdersPage />
-    case 'payables/bills': return <BillsPage />
-    case 'payables/bill-payments': return <BillPaymentsPage />
-    case 'payables/ap-aging': return <ApAgingPage />
-    case 'payables/vendor-credits': return <VendorCreditsPage />
+    case 'purchasing/vendors': return <VendorsPage />
+    case 'purchasing/purchase-orders': return <PurchaseOrdersPage />
+    case 'bills-payments/bills': return <BillsPage />
+    case 'bills-payments/bill-payments': return <BillPaymentsPage />
+    case 'bills-payments/vendor-credits': return <VendorCreditsPage />
+    case 'bills-payments/ap-aging': return <ApAgingPage />
     case 'expense-capture/expenses': return <ExpenseCapturePage initialTab="expenses" />
     case 'expense-capture/receipts': return <ExpenseCapturePage initialTab="receipts" />
     case 'expense-capture/mileage': return <ExpenseCapturePage initialTab="mileage" />
