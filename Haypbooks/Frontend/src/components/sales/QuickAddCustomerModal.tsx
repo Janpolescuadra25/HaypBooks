@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, Loader2, AlertCircle, UserPlus } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 
 interface NewCustomer {
   contactId: string
@@ -71,12 +72,13 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-        onClick={onClose}>
+      <ModalPortal>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={onClose}>
         <motion.div
           initial={{ scale: 0.96, y: 8 }}
           animate={{ scale: 1, y: 0 }}
@@ -191,6 +193,7 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
           </div>
         </motion.div>
       </motion.div>
+      </ModalPortal>
     </AnimatePresence>
   )
 }

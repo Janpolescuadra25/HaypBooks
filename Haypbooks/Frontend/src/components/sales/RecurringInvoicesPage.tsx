@@ -14,6 +14,7 @@ import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { useToast } from '@/components/ToastProvider'
 import CustomerPickerField, { type CustomerPickerOption } from './CustomerPickerField'
 import QuickAddCustomerModal from './QuickAddCustomerModal'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -456,12 +457,13 @@ export default function RecurringInvoicesPage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="text-lg font-semibold text-gray-900">New Recurring Template</h2>
-              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
-            </div>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="relative z-[10000] bg-white rounded-2xl shadow-2xl w-full max-w-md">
+              <div className="flex items-center justify-between px-6 py-4 border-b">
+                <h2 className="text-lg font-semibold text-gray-900">New Recurring Template</h2>
+                <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+              </div>
             <div className="p-6 space-y-4">
               <CustomerPickerField
                 label="Customer *"
@@ -508,6 +510,7 @@ export default function RecurringInvoicesPage() {
             </div>
           </div>
         </div>
+      </ModalPortal>
       )}
 
       {showQuickAddCustomer && companyId && (
@@ -524,9 +527,10 @@ export default function RecurringInvoicesPage() {
       )}
 
       {detailItem && (
-        <div className="fixed inset-0 z-[100] flex justify-end">
-          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
-          <div className="relative bg-white w-full max-w-md shadow-2xl overflow-y-auto flex flex-col">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] flex justify-end">
+            <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
+            <div className="relative z-[10000] bg-white w-full max-w-md shadow-2xl overflow-y-auto flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold text-gray-900">{getRowName(detailItem)}</h2>
               <button onClick={() => setDetailItem(null)} className="p-1.5 rounded hover:bg-gray-100"><X size={18} /></button>
@@ -559,6 +563,7 @@ export default function RecurringInvoicesPage() {
             </div>
           </div>
         </div>
+      </ModalPortal>
       )}
     </div>
   )

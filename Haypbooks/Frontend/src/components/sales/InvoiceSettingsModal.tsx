@@ -6,6 +6,7 @@ import {
   X, Settings, Calendar, CreditCard, Bell, ChevronDown, ChevronRight,
   Check, RefreshCw, Clock, Repeat, DollarSign, FileText, Eye, Type,
 } from 'lucide-react'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 
 export interface InvoiceSettings {
   // ── Scheduling & Recurrency ──────────────────
@@ -170,9 +171,10 @@ export default function InvoiceSettingsModal({ initial, onApply, onClose }: Prop
     s.enablePartialPayments || s.requirePO || s.enableDeposit || s.autoReminders
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <motion.div
+    <ModalPortal>
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
@@ -674,5 +676,6 @@ export default function InvoiceSettingsModal({ initial, onApply, onClose }: Prop
         </div>
       </motion.div>
     </div>
+    </ModalPortal>
   )
 }

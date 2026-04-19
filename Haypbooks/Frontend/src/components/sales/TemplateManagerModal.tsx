@@ -7,6 +7,7 @@ import {
   Mail, Loader2, AlertCircle, Check, ChevronDown,
 } from 'lucide-react'
 import apiClient from '@/lib/api-client'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface EmailTemplate {
@@ -135,8 +136,9 @@ export default function TemplateManagerModal({ companyId, onClose, onTemplatesCh
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <motion.div
+    <ModalPortal>
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.97 }}
@@ -325,5 +327,6 @@ export default function TemplateManagerModal({ companyId, onClose, onTemplatesCh
         </div>
       </motion.div>
     </div>
+    </ModalPortal>
   )
 }

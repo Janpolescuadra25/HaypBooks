@@ -5,6 +5,7 @@ import { X, Loader2, AlertCircle, Clock } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 import type { Item } from './ProductsServicesPage'
 
 interface Props {
@@ -117,8 +118,9 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="relative z-[10000] w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="text-lg font-bold text-slate-900">{isEdit ? `Edit "${item.name}"` : 'New Product / Service'}</h2>
@@ -348,5 +350,6 @@ export default function ProductFormModal({ item, onSaved, onClose }: Props) {
         )}
       </div>
     </div>
+    </ModalPortal>
   )
 }
