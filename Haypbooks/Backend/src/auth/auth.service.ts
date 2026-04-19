@@ -5,7 +5,7 @@ import { Injectable, UnauthorizedException, ConflictException, Inject, BadReques
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from '../utils/bcrypt-fallback'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
-import { USER_REPOSITORY } from '../repositories/mock/mock-repositories.module'
+import { USER_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 import { LoginDto, SignupDto } from './dto/auth.dto'
 import { normalizePhoneOrThrow } from '../utils/phone.util'
 import { hmacPhone } from '../utils/hmac.util'

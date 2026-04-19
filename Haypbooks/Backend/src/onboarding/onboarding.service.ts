@@ -1,7 +1,7 @@
 import { Injectable, Inject, BadRequestException, Logger } from '@nestjs/common'
 import { IOnboardingRepository } from '../repositories/interfaces/onboarding.repository.interface'
 import { IUserRepository } from '../repositories/interfaces/user.repository.interface'
-import { ONBOARDING_REPOSITORY, USER_REPOSITORY } from '../repositories/mock/mock-repositories.module'
+import { ONBOARDING_REPOSITORY, USER_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
 import { CompanyService } from '../companies/company.service'
 import { TenantsService } from '../tenants/tenants.service'
 import { AccountingService } from '../accounting/accounting.service'
@@ -77,7 +77,7 @@ export class OnboardingService {
 
         // Look up workspace by ownerUserId directly (avoids WorkspaceUser table)
         try {
-          const existingWs = await this.prisma.workspace.findFirst({ where: { ownerUserId: userId } })
+          const existingWs = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
           if (existingWs) {
             // Workspace exists — ensure/update Practice record
             const existingPractice = await this.prisma.practice.findFirst({ where: { workspaceId: existingWs.id } })
@@ -162,7 +162,7 @@ export class OnboardingService {
 
         await this.prisma.$transaction(async (tx) => {
           let workspaceId: string | null = null
-          const existingWorkspace = await tx.workspace.findFirst({ where: { ownerUserId: userId } })
+          const existingWorkspace = await tx.workspace.findUnique({ where: { ownerUserId: userId } })
           if (existingWorkspace) {
             workspaceId = existingWorkspace.id
             this.logger.log('[ONBOARDING-COMPLETE] ✅ Found existing workspace: ' + workspaceId)
@@ -317,7 +317,7 @@ export class OnboardingService {
       const normalizedFirm = String(val).trim().slice(0, 140)
       try {
         // Look up workspace by ownerUserId directly (avoids WorkspaceUser table which doesn't include type)
-        const existingWorkspace = await this.prisma.workspace.findFirst({ where: { ownerUserId: userId } })
+        const existingWorkspace = await this.prisma.workspace.findUnique({ where: { ownerUserId: userId } })
         if (existingWorkspace) {
           createdTenant = existingWorkspace
           this.logger.log('[ONBOARDING-COMPLETE] ✅ Found existing workspace for accountant: ' + existingWorkspace.id)

@@ -21,11 +21,22 @@ describe('OnboardingService', () => {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'w1' }),
       },
+      role: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'r1' }),
+      },
+      workspaceUser: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({ id: 'wu1' }),
+        create: jest.fn().mockResolvedValue({ id: 'wu1' }),
+      },
       company: {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'c1' }),
+        update: jest.fn().mockResolvedValue({ id: 'c1' }),
       },
       country: { findFirst: jest.fn().mockResolvedValue(null) },
+      bankAccount: { create: jest.fn().mockResolvedValue({ id: 'b1' }) },
       practice: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'p1' }) },
     }
     const accountingSvc = { seedDefaultAccounts: jest.fn().mockResolvedValue(undefined) } as any
