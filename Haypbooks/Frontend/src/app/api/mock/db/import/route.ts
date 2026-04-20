@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/mock/db'
+import { db } from '@/mocks/db'
 
 function mergeSnapshotIntoDb(snapshot: any) {
   // Only merge keys that exist on the running DB and are arrays/objects

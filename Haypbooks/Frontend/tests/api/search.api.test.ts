@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-import { seedIfNeeded } from '@/mock/db'
+import { seedIfNeeded } from '@/mocks/db'
 
 function makeReq(url: string) {
   return new NextRequest(url)

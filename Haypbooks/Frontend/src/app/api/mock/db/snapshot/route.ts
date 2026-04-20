@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/mock/db'
+import { db } from '@/mocks/db'
 
 export async function GET() {
   // Allow only when running in development or when mock mode is explicitly enabled

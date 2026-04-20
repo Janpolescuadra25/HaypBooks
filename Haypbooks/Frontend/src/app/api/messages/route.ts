@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db, seedIfNeeded } from '@/mock/db'
+import { db, seedIfNeeded } from '@/mocks/db'
 import { getRoleFromCookies, hasPermission } from '@/lib/rbac-server'
 
 export async function GET() {

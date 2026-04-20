@@ -1,6 +1,6 @@
 import { getAuditEvents, logEvent } from '@/lib/audit'
 import { getPermissionsForRole, hasPermission, getRoleFromCookies } from '@/lib/rbac'
-import '../mock/seed'
+import '../mocks/seed'
 import {
   listTransactions as dbListTransactions,
   createTransaction as dbCreateTransaction,
@@ -35,9 +35,9 @@ import {
   cancelBillSchedule as dbCancelBillSchedule,
   billApprovalAction as dbBillApprovalAction,
   voidBill as dbVoidBill,
-} from '../mock/db'
+} from '../mocks/db'
 import { nextCheckNumber, upsertCheck } from '../app/api/checks/store'
-import { computeARAging, computeAPAging, listUnpaidBills, computeCustomerStatement, computeCustomerARSnapshot, computeVendorStatement } from '../mock/aggregations'
+import { computeARAging, computeAPAging, listUnpaidBills, computeCustomerStatement, computeCustomerARSnapshot, computeVendorStatement } from '../mocks/aggregations'
 
 // Minimal mock router. Mirrors key API endpoints the UI depends on.
 export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
@@ -73,13 +73,13 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     const body = typeof raw === 'string' ? JSON.parse(raw) : raw
     const date = String(body?.date || '')
     if (!/\d{4}-\d{2}-\d{2}/.test(date)) throw new Error('400 Bad Request: date is required')
-    const closeDate = (await import('../mock/db')).closePeriod(date)
+    const closeDate = (await import('../mocks/db')).closePeriod(date)
     return { closeDate, closed: closeDate } as unknown as T
   }
 
   // Settings: reopen period
   if (pathname === '/api/settings/reopen-period' && method === 'POST') {
-    ;(await import('../mock/db')).reopenPeriodWithAudit()
+    ;(await import('../mocks/db')).reopenPeriodWithAudit()
     return { ok: true } as unknown as T
   }
 
@@ -149,7 +149,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     // RBAC: view connectors requires reports:read
     const role = getRoleFromCookies()
     if (!hasPermission(role, 'reports:read' as any)) throw new Error('403 Forbidden: reports:read required')
-    const { ensureAppSeeded } = await import('../mock/db')
+    const { ensureAppSeeded } = await import('../mocks/db')
     ensureAppSeeded()
     const connectors = (db.appConnectors || []).map(c => ({
       id: c.id, name: c.name, kind: c.kind, status: c.status, lastSyncAt: c.lastSyncAt || null, lastSyncStatus: c.lastSyncStatus || null,
@@ -163,7 +163,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     if (!hasPermission(role, 'journal:write' as any)) throw new Error('403 Forbidden: journal:write required')
     const id = pathname.split('/').slice(-2, -1)[0]
     try {
-      const { triggerAppSync } = await import('../mock/db')
+      const { triggerAppSync } = await import('../mocks/db')
       const run = triggerAppSync(id)
       return { run, newPostings: run.newPostings } as unknown as T
     } catch (e: any) {
@@ -180,7 +180,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     const status = url.searchParams.get('status') || undefined
     const start = url.searchParams.get('start') || undefined
     const end = url.searchParams.get('end') || undefined
-    const { listAppPostings, ensureAppSeeded } = await import('../mock/db')
+    const { listAppPostings, ensureAppSeeded } = await import('../mocks/db')
     ensureAppSeeded()
     const rows = listAppPostings({ connectorId, status: status as any, start, end })
     return { postings: rows, total: rows.length } as unknown as T
@@ -191,7 +191,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     const role = getRoleFromCookies()
     if (!hasPermission(role, 'reports:read' as any)) throw new Error('403 Forbidden: reports:read required')
     const id = pathname.split('/').slice(-2, -1)[0]
-    const { previewAppPosting } = await import('../mock/db')
+    const { previewAppPosting } = await import('../mocks/db')
     try {
       const preview = previewAppPosting(id)
       return { preview } as unknown as T
@@ -207,7 +207,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     const role = getRoleFromCookies()
     if (!hasPermission(role, 'journal:write' as any)) throw new Error('403 Forbidden: journal:write required')
     const id = pathname.split('/').slice(-2, -1)[0]
-    const { postAppPosting } = await import('../mock/db')
+    const { postAppPosting } = await import('../mocks/db')
     try {
       const posting = postAppPosting(id)
       return { posting } as unknown as T
@@ -223,7 +223,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     const role = getRoleFromCookies()
     if (!hasPermission(role, 'journal:write' as any)) throw new Error('403 Forbidden: journal:write required')
     const id = pathname.split('/').slice(-2, -1)[0]
-    const { ignoreAppPosting } = await import('../mock/db')
+    const { ignoreAppPosting } = await import('../mocks/db')
     try {
       const posting = ignoreAppPosting(id)
       return { posting } as unknown as T
@@ -283,7 +283,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
         }
       }
     }
-    const { computeAdjustedTrialBalance } = await import('../mock/aggregations')
+    const { computeAdjustedTrialBalance } = await import('../mocks/aggregations')
     const atb = computeAdjustedTrialBalance({ start: start || undefined, end: end || undefined })
     return {
       period,
@@ -1290,7 +1290,7 @@ export async function mockApi<T>(path: string, init?: RequestInit): Promise<T> {
     const results: Array<{ billId: string; billNumber: string; vendorCreditId: string; creditNumber: string; amount: number }> = []
     const jeBefore = (db.journalEntries || []).length
     // Reuse apply function from mock db
-    const { applyVendorCreditToBill } = await import('../mock/db')
+    const { applyVendorCreditToBill } = await import('../mocks/db')
     // Local mirrors for dryRun simulation
     const billBalMap = new Map<string, number>()
     const vcRemMap = new Map<string, number>()

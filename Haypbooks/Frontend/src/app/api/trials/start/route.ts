@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db, seedIfNeeded } from '@/mock/db'
+import { db, seedIfNeeded } from '@/mocks/db'
 
 export async function POST(req: Request) {
   try {

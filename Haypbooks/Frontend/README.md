@@ -35,7 +35,7 @@ npm run dev
 
 - Client-side mocks (MSW): runs in the browser during development/test and intercepts network requests.
 - In-process mock router (`src/lib/mock-api.ts`): a direct function call path that returns mocked responses without network.
-- Seeded in-memory DB (`src/mock/db.ts`, `src/mock/seed.ts`): deterministic dataset used by both MSW handlers and server API routes so behavior is consistent.
+- Seeded in-memory DB (`src/mocks/db.ts`, `src/mocks/seed.ts`): deterministic dataset used by both MSW handlers and server API routes so behavior is consistent.
 
 Why two mock surfaces? MSW simulates real network interactions for the browser, while the in-process mock router lets the app run without performing HTTP calls (useful for tests or server-only flows). Both share the same seed and business logic.
 
@@ -256,7 +256,7 @@ If you still see memory issues, lower the max workers further via: `npm run test
 - Report pagination: API list endpoints accept typical paging params (`page`, `pageSize`) where applicable. CSV exports stream the full filtered set for determinism in tests; UI list views paginate for performance.
 
 ### Invoices backend unification
-- All invoices API routes are now backed by the stateful mock DB (`src/mock/db.ts`) with audit logging for create/update/send/apply-payment/void.
+- All invoices API routes are now backed by the stateful mock DB (`src/mocks/db.ts`) with audit logging for create/update/send/apply-payment/void.
 - The legacy invoices store has been removed; routes read/write directly via DB helpers. Tests have been updated to validate audit visibility and RBAC gating end-to-end.
 - See tests under `src/__tests__` such as `invoice-audit-visibility.test.ts`, `invoice-void-audit-entityId.test.ts`, and `audit-api-extended.test.ts`.
 

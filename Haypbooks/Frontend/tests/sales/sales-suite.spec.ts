@@ -152,6 +152,55 @@ test.describe('Sales UI and workflow coverage', () => {
     await dismissModal(page)
   })
 
+  test('Invoice lifecycle: send invoice, open detail, receive payment and show paid status', async ({ page }) => {
+    const customerName = uniqueName('Invoice Lifecycle')
+    const customerEmail = `invoice-lifecycle-${Date.now()}@haypbooks.test`
+    const invoiceDescription = uniqueName('Invoice Item')
+    const invoiceAmount = '42.50'
+
+    await gotoSalesPage(page, '/sales/customers', companyId)
+    await waitForTableToLoad(page)
+    await createCustomer(page, customerName, customerEmail)
+
+    await gotoSalesPage(page, '/sales/billing/invoices', companyId)
+    await waitForTableToLoad(page)
+
+    await page.getByRole('button', { name: /new invoice/i }).first().click()
+    await page.waitForURL(/invoices\/new/, { timeout: 15000 })
+    await expect(page.getByText(/INVOICE #NEW/i)).toBeVisible({ timeout: 10000 })
+
+    const customerInput = page.getByPlaceholder(/search customers by name or email/i).first()
+    await expect(customerInput).toBeVisible({ timeout: 10000 })
+    await customerInput.click()
+    await customerInput.fill(customerName)
+    await page.getByRole('button', { name: new RegExp(customerName, 'i') }).first().click()
+
+    await page.getByPlaceholder(/Type or select a product \/ service/i).first().fill(invoiceDescription)
+    const numericInputs = page.locator('input[type="number"]')
+    await numericInputs.nth(0).fill('1')
+    await numericInputs.nth(1).fill(invoiceAmount)
+
+    await page.getByRole('button', { name: /Send Invoice/i }).first().click()
+    await page.waitForURL(/sales\/billing\/invoices/, { timeout: 20000 })
+    await expect(page.getByRole('heading', { name: /invoices/i })).toBeVisible({ timeout: 10000 })
+
+    const invoiceRow = page.locator('table tbody tr', { hasText: customerName }).first()
+    await expect(invoiceRow).toBeVisible({ timeout: 15000 })
+    await invoiceRow.locator('button').first().click()
+
+    await expect(page.getByRole('heading', { name: /invoice/i }).first()).toBeVisible({ timeout: 10000 })
+    await page.getByRole('button', { name: /Receive Payment/i }).first().click()
+
+    await expect(page.getByRole('heading', { name: /record payment/i })).toBeVisible({ timeout: 10000 })
+    await page.getByLabel(/Amount \*/i).fill(invoiceAmount)
+    await page.getByLabel(/Payment Method/i).selectOption('credit_card')
+    await page.getByLabel(/Reference #/i).fill('RCPT-001')
+    await page.getByRole('button', { name: /Record Payment/i }).click()
+
+    await expect(page.getByText(/Paid/i)).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/\$0\.00/)).toBeVisible({ timeout: 15000 })
+  })
+
   test('Journal API returns posted entries for Invoice and Payment workflows', async ({ page, request }) => {
     await gotoSalesPage(page, '/sales/billing/invoices', companyId)
     await waitForTableToLoad(page)

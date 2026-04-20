@@ -1000,6 +1000,10 @@ export class ArService {
         return this.normalizeInvoice(result)
     }
 
+    async issueInvoice(userId: string, companyId: string, invoiceId: string, opts?: { subject?: string; body?: string; scheduledAt?: string }) {
+        return this.sendInvoice(userId, companyId, invoiceId, opts)
+    }
+
     async sendInvoice(userId: string, companyId: string, invoiceId: string, opts?: { subject?: string; body?: string; scheduledAt?: string }) {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)

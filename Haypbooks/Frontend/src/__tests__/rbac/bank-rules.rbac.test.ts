@@ -1,4 +1,4 @@
-import { seedIfNeeded, db } from '@/mock/db'
+import { seedIfNeeded, db } from '@/mocks/db'
 import { mockServerRBAC } from './helpers'
 
 const makeReq = (url: string, init?: RequestInit) => new Request(url, init)

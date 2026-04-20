@@ -1,8 +1,8 @@
 import { http, HttpResponse } from 'msw'
 import { z } from 'zod'
-import '../mock/seed' // ensure seeding once
-import { listTransactions, createTransaction, updateTransaction, deleteTransaction, db, listInvoices, createInvoice, updateInvoice as dbUpdateInvoice, deleteInvoice as dbDeleteInvoice, findInvoice, applyPaymentToInvoice, listBills, createBill, updateBill as dbUpdateBill, deleteBill as dbDeleteBill, findBill, applyPaymentToBill, scheduleBill, cancelBillSchedule, billApprovalAction } from '../mock/db'
-import { computeProfitLoss, computeTrialBalance, computeBalanceSheet, computeARAging, computeAPAging, listUnpaidBills, computeAdjustedTrialBalance } from '../mock/aggregations'
+import './seed' // ensure seeding once
+import { listTransactions, createTransaction, updateTransaction, deleteTransaction, db, listInvoices, createInvoice, updateInvoice as dbUpdateInvoice, deleteInvoice as dbDeleteInvoice, findInvoice, applyPaymentToInvoice, listBills, createBill, updateBill as dbUpdateBill, deleteBill as dbDeleteBill, findBill, applyPaymentToBill, scheduleBill, cancelBillSchedule, billApprovalAction } from './db'
+import { computeProfitLoss, computeTrialBalance, computeBalanceSheet, computeARAging, computeAPAging, listUnpaidBills, computeAdjustedTrialBalance } from './aggregations'
 import { getRoleFromCookies, hasPermission } from '../lib/rbac'
 
 // MSW handlers: can progressively replace mock-api direct mapping.
@@ -376,7 +376,7 @@ export const handlers = [
   http.get('/api/apps/connectors', async () => {
     const role = getRoleFromCookies()
     if (!hasPermission(role, 'reports:read' as any)) return HttpResponse.json({ error: 'Forbidden' }, { status: 403 })
-    const { ensureAppSeeded } = await import('../mock/db')
+    const { ensureAppSeeded } = await import('./db')
     ensureAppSeeded()
     const connectors = (db.appConnectors || []).map(c => ({
       id: c.id, name: c.name, kind: c.kind, status: c.status, lastSyncAt: c.lastSyncAt || null, lastSyncStatus: c.lastSyncStatus || null,
@@ -390,7 +390,7 @@ export const handlers = [
     if (!hasPermission(role, 'journal:write' as any)) return HttpResponse.json({ error: 'Forbidden' }, { status: 403 })
     const { id } = params as { id: string }
     try {
-      const { triggerAppSync } = await import('../mock/db')
+      const { triggerAppSync } = await import('./db')
       const run = triggerAppSync(id)
       return HttpResponse.json({ run, newPostings: run.newPostings })
     } catch (e: any) {
@@ -407,7 +407,7 @@ export const handlers = [
     const status = url.searchParams.get('status') || undefined
     const start = url.searchParams.get('start') || undefined
     const end = url.searchParams.get('end') || undefined
-    const { listAppPostings, ensureAppSeeded } = await import('../mock/db')
+    const { listAppPostings, ensureAppSeeded } = await import('./db')
     ensureAppSeeded()
     const rows = listAppPostings({ connectorId, status: status as any, start, end })
     return HttpResponse.json({ postings: rows, total: rows.length })
@@ -419,7 +419,7 @@ export const handlers = [
     if (!hasPermission(role, 'reports:read' as any)) return HttpResponse.json({ error: 'Forbidden' }, { status: 403 })
     const { id } = params as { id: string }
     try {
-      const { previewAppPosting } = await import('../mock/db')
+      const { previewAppPosting } = await import('./db')
       const preview = previewAppPosting(id)
       return HttpResponse.json({ preview })
     } catch (e: any) {
@@ -433,7 +433,7 @@ export const handlers = [
     if (!hasPermission(role, 'journal:write' as any)) return HttpResponse.json({ error: 'Forbidden' }, { status: 403 })
     const { id } = params as { id: string }
     try {
-      const { postAppPosting } = await import('../mock/db')
+      const { postAppPosting } = await import('./db')
       const posting = postAppPosting(id)
       return HttpResponse.json({ posting })
     } catch (e: any) {
@@ -447,7 +447,7 @@ export const handlers = [
     if (!hasPermission(role, 'journal:write' as any)) return HttpResponse.json({ error: 'Forbidden' }, { status: 403 })
     const { id } = params as { id: string }
     try {
-      const { ignoreAppPosting } = await import('../mock/db')
+      const { ignoreAppPosting } = await import('./db')
       const posting = ignoreAppPosting(id)
       return HttpResponse.json({ posting })
     } catch (e: any) {

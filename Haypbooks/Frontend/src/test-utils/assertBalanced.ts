@@ -1,4 +1,4 @@
-import { db } from '@/mock/db'
+import { db } from '@/mocks/db'
 
 /**
  * assertBalanced

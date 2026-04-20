@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/mock/db'
+import { db } from '@/mocks/db'
 import { getRoleFromCookies, hasPermission } from '@/lib/rbac-server'
 
 export async function GET(req: Request, ctx: { params: { id: string } }) {

@@ -26,9 +26,6 @@
       "@/lib/*": [
         "src/lib/*"
       ],
-      "@/mock/*": [
-        "src/mock/*"
-      ],
       "@/mocks/*": [
         "src/mocks/*"
       ],
