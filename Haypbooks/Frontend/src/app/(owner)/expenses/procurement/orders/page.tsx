@@ -1,5 +1,7 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+'use client'
+
+import PurchaseOrdersPage from '@/components/expenses/PurchaseOrdersPage'
 
 export default function Page() {
-  return <TabComingSoon title="Orders" />
+  return <PurchaseOrdersPage />
 }

@@ -1,5 +1,7 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+'use client'
+
+import RfqPage from '@/components/expenses/RfqPage'
 
 export default function Page() {
-  return <TabComingSoon title="RFQ" />
+  return <RfqPage />
 }

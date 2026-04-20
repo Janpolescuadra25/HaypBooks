@@ -1,5 +1,7 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+'use client'
+
+import ExpensesPage from '@/components/expenses/ExpensesPage'
 
 export default function Page() {
-  return <TabComingSoon title="Expenses" description="Track and categorize business expenses" />
+  return <ExpensesPage />
 }

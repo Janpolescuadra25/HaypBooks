@@ -1,5 +1,7 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+'use client'
+
+import MileagePage from '@/components/expenses/MileagePage'
 
 export default function Page() {
-  return <TabComingSoon title="Mileage" description="Track business mileage for reimbursement" />
+  return <MileagePage />
 }

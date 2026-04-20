@@ -1,10 +1,7 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+'use client'
+
+import RecurringBillsPage from '@/components/expenses/RecurringBillsPage'
 
 export default function Page() {
-  return (
-    <ComingSoon
-      featureName="Recurring Bills"
-      estimatedTime="Q2 2026"
-    />
-  )
+  return <RecurringBillsPage />
 }

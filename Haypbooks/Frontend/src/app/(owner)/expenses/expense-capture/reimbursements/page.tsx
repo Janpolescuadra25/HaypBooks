@@ -1,5 +1,8 @@
-import TabComingSoon from '@/components/shared/TabComingSoon'
+'use client'
+
+import ReimbursementsPage from '@/components/expenses/ReimbursementsPage'
 
 export default function Page() {
-  return <TabComingSoon title="Reimbursements" description="Review and process employee reimbursement requests" />
+  return <ReimbursementsPage />
 }
+

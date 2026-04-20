@@ -1,10 +1,7 @@
-import ComingSoon from '@/components/ui/ComingSoonPage'
+'use client'
+
+import PaymentRunsPage from '@/components/expenses/PaymentRunsPage'
 
 export default function Page() {
-  return (
-    <ComingSoon
-      featureName="Payment Runs"
-      estimatedTime="Q2 2026"
-    />
-  )
+  return <PaymentRunsPage />
 }
