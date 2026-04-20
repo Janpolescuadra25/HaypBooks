@@ -243,7 +243,7 @@ export default function VendorsPage() {
           </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-2.5 border-r border-gray-200 w-10">
+              <th className="px-4 py-2.5 border-r border-gray-200 w-10">
                 <button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
                   {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
                 </button>
@@ -257,7 +257,7 @@ export default function VendorsPage() {
                   <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
                 </th>
               ))}
-              <th className="px-4 py-2.5 w-14" />
+              <th className="px-4 py-2.5 w-16" />
             </tr>
           </thead>
           <tbody>
@@ -265,7 +265,7 @@ export default function VendorsPage() {
               <tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No vendors found</td></tr>
             ) : paged.map(row => (
               <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-3 py-2.5 border-r border-gray-100">
+                <td className="px-4 py-2.5 border-r border-gray-100">
                   <button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
                     {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
                   </button>
@@ -275,7 +275,7 @@ export default function VendorsPage() {
                     {renderCell(row, c.key)}
                   </td>
                 ))}
-                <td className="px-3 py-2.5 text-right">
+                <td className="px-4 py-2.5 text-right">
                   <button
                     onClick={e => {
                       const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()

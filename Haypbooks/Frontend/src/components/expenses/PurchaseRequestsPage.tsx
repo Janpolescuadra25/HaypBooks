@@ -179,23 +179,23 @@ export default function PurchaseRequestsPage() {
           <colgroup><col style={{ width: 44 }} />{visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}<col style={{ width: 52 }} /></colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-2.5 border-r border-gray-200 w-10"><button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">{selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}</button></th>
+              <th className="px-4 py-2.5 border-r border-gray-200 w-10"><button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">{selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}</button></th>
               {visibleCols.map(c => (
                 <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
                   <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden"><span className="truncate text-xs">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} /></button>
                   <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
                 </th>
               ))}
-              <th className="px-4 py-2.5 w-14" />
+              <th className="px-4 py-2.5 w-16" />
             </tr>
           </thead>
           <tbody>
             {paged.length === 0 ? (<tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No purchase requests found</td></tr>)
               : paged.map(row => (
               <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-3 py-2.5 border-r border-gray-100"><button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">{selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}</button></td>
+                <td className="px-4 py-2.5 border-r border-gray-100"><button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">{selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}</button></td>
                 {visibleCols.map(c => (<td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(row, c.key)}</td>))}
-                <td className="px-3 py-2.5 text-right"><button onClick={e => { const r = e.currentTarget.getBoundingClientRect(); actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom })) }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"><MoreVertical size={14} /></button></td>
+                <td className="px-4 py-2.5 text-right"><button onClick={e => { const r = e.currentTarget.getBoundingClientRect(); actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom })) }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"><MoreVertical size={14} /></button></td>
               </tr>
             ))}
           </tbody>
