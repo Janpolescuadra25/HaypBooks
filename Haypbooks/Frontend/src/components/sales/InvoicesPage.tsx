@@ -141,11 +141,19 @@ export default function InvoicesPage() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  const fetchInvoices = useCallback(async () => {
+  const fetchInvoices = useCallback(async (pageNumber = 1) => {
     if (!companyId) return
     setLoading(true)
     try {
-      const response = await apiClient.get(`/api/companies/${companyId}/ar/invoices`)
+      const params: Record<string, string> = {
+        limit: '20',
+        offset: String((pageNumber - 1) * 20),
+      }
+      if (search) params.search = search
+      if (statusFilter && statusFilter !== 'ALL' && statusFilter !== 'DUE_SOON') {
+        params.status = statusFilter
+      }
+      const response = await apiClient.get(`/api/companies/${companyId}/ar/invoices`, { params })
       const list = Array.isArray(response.data) ? response.data : response.data.items ?? response.data.invoices ?? []
       setInvoices(list)
       setHasMore(list.length === 20)
@@ -156,9 +164,9 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, search, statusFilter])
 
-  useEffect(() => { fetchInvoices() }, [fetchInvoices])
+  useEffect(() => { fetchInvoices(page) }, [fetchInvoices, page])
 
   const filtered = useMemo(() => {
     let list = invoices

@@ -394,6 +394,17 @@ export class ArController {
         return this.svc.sendInvoice(req.user.userId, companyId, invoiceId, body)
     }
 
+    @Post('invoices/:invoiceId/issue')
+    @HttpCode(HttpStatus.OK)
+    issueInvoice(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('invoiceId') invoiceId: string,
+        @Body() body: { subject?: string; body?: string; scheduledAt?: string },
+    ) {
+        return this.svc.issueInvoice(req.user.userId, companyId, invoiceId, body)
+    }
+
     @Post('invoices/:invoiceId/void')
     @HttpCode(HttpStatus.OK)
     voidInvoice(
