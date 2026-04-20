@@ -145,18 +145,18 @@ export default function InvoicesPage() {
     if (!companyId) return
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      params.set('limit', '20')
-      params.set('offset', String((page - 1) * 20))
-      if (statusFilter !== 'ALL' && statusFilter !== 'DUE_SOON') params.set('status', statusFilter)
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices?${params}`)
-      const list = Array.isArray(data) ? data : data.items ?? data.invoices ?? []
+      const response = await apiClient.get(`/api/companies/${companyId}/ar/invoices`)
+      const list = Array.isArray(response.data) ? response.data : response.data.items ?? response.data.invoices ?? []
       setInvoices(list)
       setHasMore(list.length === 20)
       setError('')
-    } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed to load invoices') }
-    finally { setLoading(false) }
-  }, [companyId, page, statusFilter])
+    } catch (e: any) {
+      showToast('Failed to load invoices')
+      setError(e?.response?.data?.message ?? 'Failed to load invoices')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
 
   useEffect(() => { fetchInvoices() }, [fetchInvoices])
 

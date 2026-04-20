@@ -89,6 +89,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   // Activity log state
   const [activityLog, setActivityLog] = useState<ActivityLogItem[]>([])
   const [activityLoading, setActivityLoading] = useState(false)
+  const [loadingInvoice, setLoadingInvoice] = useState(false)
 
   useEffect(() => {
     setInvoice(initialInvoice)
@@ -101,6 +102,32 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     setActiveTab('edit')
     setError('')
   }, [initialInvoice.id])
+
+  useEffect(() => {
+    if (!companyId || !initialInvoice.id) return
+    setLoadingInvoice(true)
+    apiClient.get(`/companies/${companyId}/ar/invoices/${initialInvoice.id}`)
+      .then(({ data }) => {
+        if (data) setInvoice(data)
+      })
+      .catch((error) => {
+        console.error('Failed to refresh invoice details', error)
+      })
+      .finally(() => setLoadingInvoice(false))
+  }, [companyId, initialInvoice.id])
+
+  const refreshInvoice = useCallback(async () => {
+    if (!companyId || !invoice.id) return
+    setLoadingInvoice(true)
+    try {
+      const { data } = await apiClient.get(`/companies/${companyId}/ar/invoices/${invoice.id}`)
+      if (data) setInvoice(data)
+    } catch (error) {
+      console.error('Failed to refresh invoice details', error)
+    } finally {
+      setLoadingInvoice(false)
+    }
+  }, [companyId, invoice.id])
 
   const fmt = useCallback((n: number) => formatCurrency(n ?? 0, currency), [currency])
 
@@ -294,13 +321,14 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     if (!paymentForm.paymentDate) { setError('Payment date is required'); return }
     setPaymentSaving(true); setError('')
     try {
-      await apiClient.post(`/companies/${companyId}/ar/payments`, {
+      await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/payments`, {
         invoiceId: invoice.id,
         amount,
         paymentDate: paymentForm.paymentDate,
         method: paymentForm.method || undefined,
         referenceNumber: paymentForm.referenceNumber || undefined,
       })
+      await refreshInvoice()
       onRefresh()
       setShowPaymentModal(false)
       setPaymentForm({ amount: '', paymentDate: new Date().toISOString().slice(0, 10), method: '', referenceNumber: '' })

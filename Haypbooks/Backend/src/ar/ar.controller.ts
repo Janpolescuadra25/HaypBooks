@@ -404,6 +404,16 @@ export class ArController {
         return this.svc.voidInvoice(req.user.userId, companyId, invoiceId)
     }
 
+    @Post('invoices/:invoiceId/payments')
+    recordInvoicePayment(
+        @Req() req: any,
+        @Param('companyId') companyId: string,
+        @Param('invoiceId') invoiceId: string,
+        @Body() body: any,
+    ) {
+        return this.svc.recordPayment(req.user.userId, companyId, { invoiceId, ...body })
+    }
+
     // ─── Payments ─────────────────────────────────────────────────────────────
 
     @Get('payments')
