@@ -175,19 +175,19 @@ export default function InvoiceSettingsModal({ initial, onApply, onClose }: Prop
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         {/* Backdrop */}
         <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] bg-black/40"
+          onClick={onClose}
+        />
 
-      {/* Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97, y: 16 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-        className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-        onClick={e => e.stopPropagation()}>
+        {/* Modal */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 16 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+          className="relative z-[101] w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          onClick={e => e.stopPropagation()}>
 
         {/* ─── Modal Header ─── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex-shrink-0">
