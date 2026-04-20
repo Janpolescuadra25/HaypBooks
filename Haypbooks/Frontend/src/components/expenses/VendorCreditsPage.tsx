@@ -68,6 +68,12 @@ function loadVendorCreditWidths(): Record<string, number> {
   }
 }
 
+const SAMPLE_VENDOR_CREDITS: VendorCreditRow[] = [
+  { id: 'vc-001', creditNumber: 'CR-1001', vendor: 'Luzon Supplies', billNumber: 'BILL-001', date: '2026-04-06', amount: 4000, appliedAmount: 0, remainingCredit: 4000, reason: 'Overpayment', status: 'Open' },
+  { id: 'vc-002', creditNumber: 'CR-1002', vendor: 'MNL Office Solutions', billNumber: 'BILL-002', date: '2026-03-28', amount: 1200, appliedAmount: 600, remainingCredit: 600, reason: 'Price adjustment', status: 'Partially Applied' },
+  { id: 'vc-003', creditNumber: 'CR-1003', vendor: 'Cebu Transport Co.', billNumber: 'BILL-003', date: '2026-03-18', amount: 500, appliedAmount: 500, remainingCredit: 0, reason: 'Return credit', status: 'Applied' },
+]
+
 function compareVendorCredits(a: VendorCreditRow, b: VendorCreditRow, key: SortKey, dir: 'asc' | 'desc') {
   const left = a[key] ?? ''
   const right = b[key] ?? ''
@@ -84,7 +90,7 @@ export default function VendorCreditsPage() {
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const toast = useToast()
-  const [items, setItems] = useState<VendorCreditRow[]>([])
+  const [items, setItems] = useState<VendorCreditRow[]>(SAMPLE_VENDOR_CREDITS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -123,7 +129,10 @@ export default function VendorCreditsPage() {
   })
 
   const fetchData = useCallback(async () => {
-    if (!companyId) return
+    if (!companyId) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -286,7 +295,7 @@ export default function VendorCreditsPage() {
               </button>
             )}
             <button
-              onClick={() => router.push('/expenses/payables/vendor-credits/activity')}
+              onClick={() => router.push('/expenses/bills-payments/vendor-credits/activity')}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg shadow-sm"
             >
               <Clock size={15} /> Activity Log
@@ -349,11 +358,11 @@ export default function VendorCreditsPage() {
               title="Vendor Credits"
               subtitle={`${sorted.length} credits`}
               primaryActionLabel="New Vendor Credit"
-              onPrimaryAction={() => {}}
+              onPrimaryAction={() => toast.info('Coming soon')}
               secondaryActions={(
                 <button
                   type="button"
-                  onClick={() => router.push('/expenses/payables/vendor-credits/activity')}
+                  onClick={() => router.push('/expenses/bills-payments/vendor-credits/activity')}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <Clock size={15} /> Activity Log
@@ -400,7 +409,7 @@ export default function VendorCreditsPage() {
               emptyTitle="No vendor credits found"
               emptyDescription="Try a different search or apply a different filter."
               emptyPrimaryAction="New Vendor Credit"
-              onEmptyPrimaryAction={() => {}}
+              onEmptyPrimaryAction={() => toast.info('Coming soon')}
             />
           </div>
         </div>

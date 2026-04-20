@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function Page() {
-  redirect('/expenses/payables/bills')
+  redirect('/expenses/bills-payments/bills')
 }

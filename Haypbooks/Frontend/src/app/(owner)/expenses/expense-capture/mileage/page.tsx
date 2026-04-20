@@ -1,7 +1,5 @@
-'use client'
-
-import ExpenseCapturePage from '@/components/expenses/ExpenseCapturePage'
+import TabComingSoon from '@/components/shared/TabComingSoon'
 
 export default function Page() {
-  return <ExpenseCapturePage initialTab="mileage" />
+  return <TabComingSoon title="Mileage" description="Track business mileage for reimbursement" />
 }

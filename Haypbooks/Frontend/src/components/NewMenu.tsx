@@ -11,7 +11,7 @@ import Link from 'next/link'
 
 const QUICK_LINKS = [
   { label: 'New Invoice', href: '/sales/billing/invoices' },
-  { label: 'New Bill', href: '/expenses/payables/bills' },
+  { label: 'New Bill', href: '/expenses/bills-payments/bills' },
   { label: 'New Journal Entry', href: '/accounting/core-accounting/journal-entries' },
   { label: 'Bank Reconciliation', href: '/banking/bank-accounts/reconcile' },
   { label: 'Run Payroll', href: '/payroll-workforce/payroll-processing/payroll-runs' },

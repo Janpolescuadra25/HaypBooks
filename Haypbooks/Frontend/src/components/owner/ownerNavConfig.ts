@@ -179,12 +179,12 @@ export const navigationData: NavSection[] = [
         ],
       },
       {
-        title: 'Expenses',
+        title: 'Expense Management',
         icon: Receipt,
         items: [
           {
             title: 'Procurement',
-            path: '/expenses/purchasing',
+            path: '/expenses/procurement',
             tabs: [
               { label: 'Vendors',            value: 'vendors',            status: 'existing' },
               { label: 'Purchase Requests',  value: 'purchase-requests',  status: 'coming-soon' },
@@ -194,19 +194,19 @@ export const navigationData: NavSection[] = [
             ],
           },
           {
-            title: 'Payables',
+            title: 'Bills & Payments',
             path: '/expenses/bills-payments',
             tabs: [
               { label: 'Bills',             value: 'bills',             status: 'existing' },
               { label: 'Recurring Bills',   value: 'recurring-bills',   status: 'coming-soon' },
               { label: 'Bill Payments',     value: 'bill-payments',     status: 'existing' },
               { label: 'Payment Runs',      value: 'payment-runs',      status: 'coming-soon' },
-              { label: 'Vendor Credits',    value: 'vendor-credits',    status: 'coming-soon' },
-              { label: 'A/P Aging',         value: 'ap-aging',          status: 'coming-soon' },
+              { label: 'Vendor Credits',    value: 'vendor-credits',    status: 'existing' },
+              { label: 'A/P Aging',         value: 'ap-aging',          status: 'existing' },
             ],
           },
           {
-            title: 'Expense Management',
+            title: 'Expenses',
             path: '/expenses/expense-capture',
             tabs: [
               { label: 'Expenses',         value: 'expenses',         status: 'coming-soon' },

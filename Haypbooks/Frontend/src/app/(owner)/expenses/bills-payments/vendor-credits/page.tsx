@@ -2,6 +2,6 @@
 
 import VendorCreditsPage from '@/components/expenses/VendorCreditsPage'
 
-export default function Page() {
+export default function VendorCreditsPageRoute() {
   return <VendorCreditsPage />
 }

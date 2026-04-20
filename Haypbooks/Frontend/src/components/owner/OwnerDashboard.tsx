@@ -174,7 +174,7 @@ export default function OwnerDashboard() {
             isPositive={false}
             icon={ShoppingCart}
             subtitle={`${kpis?.overduePayables?.count ?? 0} bills`}
-            href="/expenses/payables/bills"
+            href="/expenses/bills-payments/bills"
           />
           <StatCard
             title="Cash Balance"
@@ -278,7 +278,7 @@ export default function OwnerDashboard() {
                 </Link>
               )}
               {(kpis?.overduePayables?.count ?? 0) > 0 && (
-                <Link href="/expenses/payables/ap-aging" className="block hover:opacity-90 transition-opacity">
+                <Link href="/expenses/bills-payments/ap-aging" className="block hover:opacity-90 transition-opacity">
                   <div className="flex items-center justify-between p-3 bg-rose-50 border border-rose-200 rounded-xl hover:border-rose-300">
                     <div className="flex items-center gap-3">
                       <ShoppingCart size={16} className="text-rose-600" />
@@ -309,7 +309,7 @@ export default function OwnerDashboard() {
           <div className="grid grid-cols-2 gap-3">
             <QuickActionButton icon={FileText} label="New Invoice" href="/sales/billing/invoices/new" />
             <QuickActionButton icon={DollarSign} label="Record Payment" href="/sales/collections/customer-payments" />
-            <QuickActionButton icon={Wallet} label="Add Bill" href="/expenses/payables/bills" />
+            <QuickActionButton icon={Wallet} label="Add Bill" href="/expenses/bills-payments/bills" />
             <QuickActionButton icon={ChevronRight} label="Run Report" href="/reporting/financial-statements" />
           </div>
         </div>

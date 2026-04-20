@@ -14,7 +14,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <div className="flex flex-col h-full">
-        <ModuleTabs tabs={TABS} basePath="/expenses/purchasing" />
+        <ModuleTabs tabs={TABS} basePath="/expenses/procurement" />
         <div className="flex-1 overflow-y-auto">
           {children}
         </div>

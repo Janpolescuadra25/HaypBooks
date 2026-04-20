@@ -134,17 +134,17 @@ export const OPERATIONS_NAV: OperationsSection[] = [
   // ───────────────────────────────────────────────────────────────────────────
   {
     id: 'expenses',
-    label: 'Expenses',
+    label: 'Expense Management',
     subsections: [
       {
-        id: 'purchasing',
-        label: 'Purchasing',
+        id: 'procurement',
+        label: 'Procurement',
         tabs: [
-          { id: 'vendors',              label: 'Vendors',              path: '/expenses/purchasing/vendors' },
-          { id: 'purchase-requests',    label: 'Purchase Requests',    path: '/expenses/purchasing/purchase-requests' },
-          { id: 'purchase-orders',      label: 'Purchase Orders',      path: '/expenses/purchasing/purchase-orders' },
-          { id: 'rfq',                  label: 'RFQ',                  path: '/expenses/purchasing/rfq' },
-          { id: 'approvals',            label: 'Approvals',            path: '/expenses/purchasing/approvals' },
+          { id: 'vendors',              label: 'Vendors',              path: '/expenses/procurement/vendors' },
+          { id: 'purchase-requests',    label: 'Purchase Requests',    path: '/expenses/procurement/purchase-requests' },
+          { id: 'purchase-orders',      label: 'Purchase Orders',      path: '/expenses/procurement/purchase-orders' },
+          { id: 'rfq',                  label: 'RFQ',                  path: '/expenses/procurement/rfq' },
+          { id: 'approvals',            label: 'Approvals',            path: '/expenses/procurement/approvals' },
         ],
       },
       {
@@ -161,7 +161,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
       },
       {
         id: 'expense-capture',
-        label: 'Expense Capture',
+        label: 'Expenses',
         tabs: [
           { id: 'expenses',             label: 'Expenses',             path: '/expenses/expense-capture/expenses' },
           { id: 'receipts',             label: 'Receipts',             path: '/expenses/expense-capture/receipts' },

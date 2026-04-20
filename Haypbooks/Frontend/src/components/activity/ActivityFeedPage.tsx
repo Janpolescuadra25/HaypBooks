@@ -97,8 +97,8 @@ function getEntryPath(entry: ActivityLogItem): string {
     if (table === 'PAYMENTRECEIVED' || table === 'CUSTOMERPAYMENT' || table === 'PAYMENT') return '/sales/collections/payments'
     if (table === 'ITEM' || table === 'INVENTORYITEM' || table === 'PRODUCT') return '/sales/sales/products-services'
     if (table === 'BANKACCOUNT') return '/banking/transactions'
-    if (table === 'BILL') return '/expenses/payables/bills'
-    if (table === 'VENDOR') return '/expenses/purchasing/vendors'
+    if (table === 'BILL') return '/expenses/bills-payments/bills'
+    if (table === 'VENDOR') return '/expenses/procurement/vendors'
     if (table === 'JOURNALENTRY') return '/accounting/core-accounting/journal-entries'
     return '/activity'
   })()

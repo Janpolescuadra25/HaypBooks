@@ -7,6 +7,7 @@ import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
+import { useToast } from '@/components/ui/Toast'
 import DataPage from '@/components/shared/DataPage'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 import ColumnResizer from '@/components/ColumnResizer'
@@ -58,6 +59,12 @@ function loadPOWidthMap(): Record<string, number> {
   }
 }
 
+const SAMPLE_PURCHASE_ORDERS: PurchaseOrderRow[] = [
+  { id: 'po-001', poNumber: 'PO-1001', vendor: 'Luzon Supplies', description: 'Office chairs and desks', orderDate: '2026-04-02', expectedDate: '2026-04-18', totalAmount: 45000, receivedAmount: 0, status: 'Sent' },
+  { id: 'po-002', poNumber: 'PO-1002', vendor: 'Cebu Parts Co.', description: 'IT equipment and accessories', orderDate: '2026-03-15', expectedDate: '2026-04-05', totalAmount: 72000, receivedAmount: 36000, status: 'Partially Received' },
+  { id: 'po-003', poNumber: 'PO-1003', vendor: 'MNL Office Solutions', description: 'Printer toner and supplies', orderDate: '2026-03-09', expectedDate: '2026-03-22', totalAmount: 12800, receivedAmount: 12800, status: 'Received' },
+]
+
 function comparePOs(a: PurchaseOrderRow, b: PurchaseOrderRow, key: SortKey, dir: 'asc' | 'desc') {
   const left = a[key] ?? ''
   const right = b[key] ?? ''
@@ -73,7 +80,8 @@ export default function PurchaseOrdersPage() {
   const router = useRouter()
   const { companyId, loading: companyLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [items, setItems] = useState<PurchaseOrderRow[]>([])
+  const toast = useToast()
+  const [items, setItems] = useState<PurchaseOrderRow[]>(SAMPLE_PURCHASE_ORDERS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -110,7 +118,10 @@ export default function PurchaseOrdersPage() {
   })
 
   const fetchData = useCallback(async () => {
-    if (!companyId) return
+    if (!companyId) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -240,12 +251,12 @@ export default function PurchaseOrdersPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => router.push('/expenses/purchasing/orders/activity')}
+              onClick={() => router.push('/expenses/procurement/orders/activity')}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg shadow-sm"
             >
               <Clock size={15} /> Activity Log
             </button>
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">
+            <button onClick={() => toast.info('Coming soon')} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">
               New PO
             </button>
           </div>
@@ -302,11 +313,11 @@ export default function PurchaseOrdersPage() {
             title="Purchase Orders"
             subtitle={`${sorted.length} purchase orders`}
             primaryActionLabel="New PO"
-            onPrimaryAction={() => {}}
+            onPrimaryAction={() => toast.info('Coming soon')}
             secondaryActions={
               <button
                 type="button"
-                onClick={() => router.push('/expenses/purchasing/orders/activity')}
+                onClick={() => router.push('/expenses/procurement/orders/activity')}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <Clock size={15} /> Activity Log
