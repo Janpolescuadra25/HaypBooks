@@ -2,23 +2,24 @@
 
 import { Badge } from '@/components/ui/badge'
 
-type StatusDomain = 'invoice' | 'journal-entry' | 'payment' | 'customer'
+export type StatusDomain = 'invoice' | 'journal-entry' | 'payment' | 'customer' | 'generic'
+export type StatusVariant = 'draft' | 'pending' | 'approved' | 'partial' | 'rejected' | 'overdue'
 
 interface StatusProps {
   label: string
   className: string
 }
 
-const STATUS_CLASSES = {
-  slate: 'bg-slate-100 text-slate-800',
-  blue: 'bg-blue-100 text-blue-800',
-  emerald: 'bg-emerald-100 text-emerald-800',
-  red: 'bg-red-100 text-red-800',
-  amber: 'bg-amber-100 text-amber-800',
-  destructive: 'bg-red-100 text-red-800',
+const STATUS_VARIANT_CLASSES: Record<StatusVariant, string> = {
+  draft: 'border-slate-200 bg-slate-50 text-slate-700',
+  pending: 'border-amber-200 bg-amber-50 text-amber-700',
+  approved: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  partial: 'border-blue-200 bg-blue-50 text-blue-700',
+  rejected: 'border-red-200 bg-red-50 text-red-700',
+  overdue: 'border-red-300 bg-red-100 text-red-800 font-semibold',
 } as const
 
-const BASE_CLASSES = 'px-2.5 py-0.5 rounded-full text-xs font-medium'
+const BASE_CLASSES = 'px-2.5 py-0.5 rounded-full text-xs font-medium border'
 
 function normalizeStatus(value?: string): string {
   return String(value ?? '').trim().toUpperCase()
@@ -35,87 +36,59 @@ function formatLabel(status: string): string {
     .join(' ')
 }
 
-export function getInvoiceStatusProps(status: string): StatusProps {
-  const normalized = normalizeStatus(status)
-
-  switch (normalized) {
-    case 'DRAFT':
-      return { label: 'Draft', className: STATUS_CLASSES.slate }
-    case 'SENT':
-      return { label: 'Sent', className: STATUS_CLASSES.blue }
-    case 'PAID':
-      return { label: 'Paid', className: STATUS_CLASSES.emerald }
-    case 'OVERDUE':
-      return { label: 'Overdue', className: STATUS_CLASSES.red }
-    case 'VOID':
-      return { label: 'Void', className: STATUS_CLASSES.destructive }
-    case 'PARTIAL':
-      return { label: 'Partial', className: STATUS_CLASSES.amber }
-    default:
-      return { label: formatLabel(normalized), className: STATUS_CLASSES.slate }
+function fromVariant(status: string, variant: StatusVariant): StatusProps {
+  return {
+    label: formatLabel(normalizeStatus(status)),
+    className: STATUS_VARIANT_CLASSES[variant],
   }
+}
+
+export function getStatusVariant(status: string): StatusVariant {
+  const normalized = normalizeStatus(status)
+  const compact = normalized.replace(/[\s_]+/g, '')
+
+  if (compact.includes('OVERDUE')) return 'overdue'
+  if (compact.includes('PARTIAL') || compact.includes('INPROGRESS')) return 'partial'
+  if (compact.includes('PENDING') || compact.includes('SUBMITTED') || compact.includes('OPEN') || compact.includes('SENT') || compact.includes('ONHOLD')) return 'pending'
+  if (compact.includes('APPROVED') || compact.includes('ACTIVE') || compact.includes('PAID') || compact.includes('CONFIRMED') || compact.includes('COMPLETED')) return 'approved'
+  if (compact.includes('REJECTED') || compact.includes('VOID') || compact.includes('CLOSED') || compact.includes('ENDED') || compact.includes('FAILED') || compact.includes('CANCELLED')) return 'rejected'
+  if (compact.includes('DRAFT') || compact.includes('NEW') || compact.includes('INACTIVE')) return 'draft'
+  return 'draft'
+}
+
+export function getInvoiceStatusProps(status: string): StatusProps {
+  return fromVariant(status, getStatusVariant(status))
 }
 
 export function getJournalEntryStatusProps(status: string): StatusProps {
-  const normalized = normalizeStatus(status)
-
-  switch (normalized) {
-    case 'DRAFT':
-      return { label: 'Draft', className: STATUS_CLASSES.slate }
-    case 'POSTED':
-      return { label: 'Posted', className: STATUS_CLASSES.emerald }
-    case 'VOID':
-      return { label: 'Void', className: STATUS_CLASSES.red }
-    default:
-      return { label: formatLabel(normalized), className: STATUS_CLASSES.slate }
-  }
+  return fromVariant(status, getStatusVariant(status))
 }
 
 export function getPaymentStatusProps(status: string): StatusProps {
-  const normalized = normalizeStatus(status)
-
-  switch (normalized) {
-    case 'PENDING':
-      return { label: 'Pending', className: STATUS_CLASSES.amber }
-    case 'COMPLETED':
-      return { label: 'Completed', className: STATUS_CLASSES.emerald }
-    case 'FAILED':
-      return { label: 'Failed', className: STATUS_CLASSES.red }
-    case 'REFUNDED':
-      return { label: 'Refunded', className: STATUS_CLASSES.slate }
-    default:
-      return { label: formatLabel(normalized), className: STATUS_CLASSES.slate }
-  }
+  return fromVariant(status, getStatusVariant(status))
 }
 
 export function getCustomerStatusProps(status: string): StatusProps {
-  const normalized = normalizeStatus(status)
-
-  switch (normalized) {
-    case 'ACTIVE':
-      return { label: 'Active', className: STATUS_CLASSES.emerald }
-    case 'INACTIVE':
-      return { label: 'Inactive', className: STATUS_CLASSES.slate }
-    default:
-      return { label: formatLabel(normalized), className: STATUS_CLASSES.slate }
-  }
+  return fromVariant(status, getStatusVariant(status))
 }
 
 interface StatusBadgeProps {
   status: string
-  domain: StatusDomain
+  domain?: StatusDomain
+  variant?: StatusVariant
   className?: string
 }
 
-export function StatusBadge({ status, domain, className = '' }: StatusBadgeProps) {
-  const props =
-    domain === 'journal-entry'
+export function StatusBadge({ status, domain = 'generic', variant, className = '' }: StatusBadgeProps) {
+  const props = variant
+    ? fromVariant(status || variant, variant)
+    : domain === 'journal-entry'
       ? getJournalEntryStatusProps(status)
       : domain === 'payment'
-      ? getPaymentStatusProps(status)
-      : domain === 'customer'
-      ? getCustomerStatusProps(status)
-      : getInvoiceStatusProps(status)
+        ? getPaymentStatusProps(status)
+        : domain === 'customer'
+          ? getCustomerStatusProps(status)
+          : getInvoiceStatusProps(status)
 
   return (
     <Badge className={`${BASE_CLASSES} ${props.className} ${className}`.trim()}>
