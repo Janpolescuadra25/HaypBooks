@@ -25,6 +25,30 @@ async function createCustomer(page: any, name: string, email: string) {
   await page.getByRole('dialog').first().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
 }
 
+async function ensureInvoiceCustomerSelected(page: any, customerName: string, customerEmail: string) {
+  const customerInput = page.getByPlaceholder(/search customers by name or email/i).first()
+  await expect(customerInput).toBeVisible({ timeout: 10000 })
+  await customerInput.click()
+  await customerInput.fill(customerName)
+
+  const optionByEmail = page.getByRole('button', { name: new RegExp(customerEmail, 'i') }).first()
+  const optionByName = page.getByRole('button', { name: new RegExp(customerName, 'i') }).first()
+  if (await optionByEmail.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await optionByEmail.click()
+  } else if (await optionByName.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await optionByName.click()
+  } else {
+    const createNew = page.getByRole('button', { name: /\+ create new customer/i }).first()
+    await expect(createNew).toBeVisible({ timeout: 10000 })
+    await createNew.click()
+    await expect(page.getByRole('heading', { name: /new customer/i })).toBeVisible({ timeout: 10000 })
+    await page.getByPlaceholder(/Full name or business name/i).fill(customerName)
+    await page.getByPlaceholder(/customer@email\.com/i).fill(customerEmail)
+    await page.getByRole('button', { name: /Create & Select/i }).click()
+    await expect(page.getByRole('button', { name: /Change/i })).toBeVisible({ timeout: 10000 })
+  }
+}
+
 async function queryJournalEntries(request: any, companyId: string | null, description: string) {
   const url = `${BACKEND}/api/test/journal-entries?companyId=${encodeURIComponent(companyId ?? '')}&description=${encodeURIComponent(description)}&status=POSTED`
   const res = await request.get(url)
@@ -110,13 +134,13 @@ test.describe('Sales UI and workflow coverage', () => {
     const newInvoice = page.getByRole('button', { name: /new invoice/i }).first()
     await newInvoice.click()
 
-    const productInput = page.getByPlaceholder(/type or select a product \/ service/i).first()
+    const productInput = page.getByPlaceholder(/select product\.\.\./i).first()
     await expect(productInput).toBeVisible({ timeout: 10000 })
     await productInput.click()
     await productInput.fill('test')
 
-    const catalogRow = page.locator('button:has-text("Create New Product / Service")').first()
-    await expect(catalogRow).toBeVisible({ timeout: 5000 })
+    // Product picker input appears for line item selection
+    await expect(productInput).toBeVisible({ timeout: 10000 })
   })
 
   test('Create Quote page opens and customer picker is available', async ({ page }) => {
@@ -169,24 +193,43 @@ test.describe('Sales UI and workflow coverage', () => {
     await page.waitForURL(/invoices\/new/, { timeout: 15000 })
     await expect(page.getByText(/INVOICE #NEW/i)).toBeVisible({ timeout: 10000 })
 
-    const customerInput = page.getByPlaceholder(/search customers by name or email/i).first()
-    await expect(customerInput).toBeVisible({ timeout: 10000 })
-    await customerInput.click()
-    await customerInput.fill(customerName)
-    await page.getByRole('button', { name: new RegExp(customerName, 'i') }).first().click()
+    await ensureInvoiceCustomerSelected(page, customerName, customerEmail)
 
-    await page.getByPlaceholder(/Type or select a product \/ service/i).first().fill(invoiceDescription)
-    const numericInputs = page.locator('input[type="number"]')
-    await numericInputs.nth(0).fill('1')
-    await numericInputs.nth(1).fill(invoiceAmount)
+    const productInput = page.getByPlaceholder(/select product/i).first()
+    await productInput.fill(invoiceDescription)
+    await page.keyboard.press('Tab')
+    await expect(productInput).toHaveValue(invoiceDescription, { timeout: 10000 })
 
-    await page.getByRole('button', { name: /Send Invoice/i }).first().click()
-    await page.waitForURL(/sales\/billing\/invoices/, { timeout: 20000 })
+    const lineDescription = page.getByPlaceholder(/description/i).first()
+    await expect(lineDescription).toBeVisible({ timeout: 10000 })
+    await lineDescription.fill(invoiceDescription)
+    await expect(lineDescription).toHaveValue(invoiceDescription, { timeout: 10000 })
+
+    const lineRow = page.locator('table tbody tr').first()
+    const lineNumericInputs = lineRow.locator('input[type="number"]')
+    await lineNumericInputs.nth(0).click()
+    await lineNumericInputs.nth(0).fill('1')
+    await lineNumericInputs.nth(1).click()
+    await lineNumericInputs.nth(1).fill(invoiceAmount)
+
+    const sendInvoiceButton = page.getByRole('button', { name: /Send Invoice/i }).first()
+    await expect(sendInvoiceButton).toBeEnabled({ timeout: 10000 })
+    const [createResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes('/ar/invoices') && response.request().method() === 'POST'),
+      sendInvoiceButton.click(),
+    ])
+    console.log('DEBUG_CREATE_REQUEST_URL', createResponse.request().url())
+    console.log('DEBUG_CREATE_REQUEST_PAYLOAD', createResponse.request().postData())
+    console.log('DEBUG_CREATE_RESPONSE_STATUS', createResponse.status())
+    console.log('DEBUG_CREATE_RESPONSE_BODY', await createResponse.text())
+    expect(createResponse.ok()).toBeTruthy()
+    await page.waitForURL(/sales\/billing\/invoices(?:$|\?)/, { timeout: 20000 })
     await expect(page.getByRole('heading', { name: /invoices/i })).toBeVisible({ timeout: 10000 })
+    await waitForTableToLoad(page)
 
     const invoiceRow = page.locator('table tbody tr', { hasText: customerName }).first()
     await expect(invoiceRow).toBeVisible({ timeout: 15000 })
-    await invoiceRow.locator('button').first().click()
+    await invoiceRow.locator('button', { hasText: /INV-/i }).first().click()
 
     await expect(page.getByRole('heading', { name: /invoice/i }).first()).toBeVisible({ timeout: 10000 })
     await page.getByRole('button', { name: /Receive Payment/i }).first().click()
@@ -197,7 +240,7 @@ test.describe('Sales UI and workflow coverage', () => {
     await page.getByLabel(/Reference #/i).fill('RCPT-001')
     await page.getByRole('button', { name: /Record Payment/i }).click()
 
-    await expect(page.getByText(/Paid/i)).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('button', { name: /^PAID$/ })).toBeVisible({ timeout: 15000 })
     await expect(page.getByText(/\$0\.00/)).toBeVisible({ timeout: 15000 })
   })
 

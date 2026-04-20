@@ -748,10 +748,12 @@ export class ArRepository {
                     create: data.lines.map((l: any) => ({
                         companyId: data.companyId,
                         workspaceId: data.workspaceId,
-                        description: l.description,
-                        quantity: l.quantity ?? 1,
-                        unitPrice: l.unitPrice ?? 0,
-                        totalPrice: l.amount ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0),
+                        description: String(l.description ?? ''),
+                        quantity: Number.isFinite(Number(l.quantity ?? 1)) ? Number(l.quantity ?? 1) : 1,
+                        unitPrice: Number.isFinite(Number(l.unitPrice ?? 0)) ? Number(l.unitPrice ?? 0) : 0,
+                        totalPrice: Number.isFinite(Number(l.amount ?? l.totalPrice ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0)))
+                            ? Number(l.amount ?? l.totalPrice ?? Number(l.quantity ?? 1) * Number(l.unitPrice ?? 0))
+                            : 0,
                         itemId: l.itemId ?? undefined,
                         discountPercent: l.discountPercent ?? null,
                         discountAmount: l.discountAmount ?? null,

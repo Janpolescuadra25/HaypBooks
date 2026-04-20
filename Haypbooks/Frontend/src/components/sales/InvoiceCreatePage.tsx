@@ -310,6 +310,14 @@ export default function InvoiceCreatePage() {
     if (validItems.length === 0) { setError('Add at least one line item.'); return }
     setSaving(true); setSaveAction(action); setError('')
     try {
+      const invoiceLines = validItems.map(it => ({
+        description: it.description,
+        quantity: Number(it.quantity),
+        unitPrice: Number(it.unitPrice),
+        amount: Number(it.quantity) * Number(it.unitPrice),
+        taxRate: Number(it.taxRate),
+        itemId: it.itemId,
+      }))
       const { data: inv } = await apiClient.post(`/companies/${companyId}/ar/invoices`, {
         customerId,
         date,
@@ -322,13 +330,8 @@ export default function InvoiceCreatePage() {
         discountValue: Number(discountValue),
         billAddress: { contactName: billContact, company: billCompany, ...billAddress },
         shipAddress: shipSameAsBill ? undefined : shipAddress,
-        items: validItems.map(it => ({
-          description: it.description,
-          quantity: Number(it.quantity),
-          unitPrice: Number(it.unitPrice),
-          amount: Number(it.quantity) * Number(it.unitPrice),
-          taxRate: Number(it.taxRate),
-        })),
+        items: invoiceLines,
+        lines: invoiceLines,
       })
 
       if (action === 'send' && inv?.id) {

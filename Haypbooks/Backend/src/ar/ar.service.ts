@@ -943,6 +943,20 @@ export class ArService {
         if (!data.customerId) throw new BadRequestException('customerId is required')
         const lines = data.lines ?? data.items
         if (!lines?.length) throw new BadRequestException('At least one line item is required')
+        const normalizedLines = (Array.isArray(lines) ? lines : []).map((l: any) => {
+            const quantity = Number(l.quantity ?? 1)
+            const unitPrice = Number(l.unitPrice ?? l.rate ?? 0)
+            const amount = Number(l.amount ?? l.totalPrice ?? (quantity * unitPrice))
+            return {
+                description: String(l.description ?? '').trim(),
+                quantity: Number.isFinite(quantity) ? quantity : 1,
+                unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+                amount: Number.isFinite(amount) ? amount : 0,
+                itemId: l.itemId ?? undefined,
+                accountId: l.accountId ?? null,
+            }
+        }).filter((line) => line.description.length > 0)
+        if (!normalizedLines.length) throw new BadRequestException('At least one invoice line with a description is required')
         const result = await this.repo.createInvoice({
             workspaceId,
             companyId,
@@ -951,14 +965,7 @@ export class ArService {
             paymentTermId: data.paymentTermId,
             currency: data.currency,
             createdById: userId,
-            lines: lines.map((l: any) => ({
-                description: l.description,
-                quantity: l.quantity ?? 1,
-                unitPrice: l.unitPrice ?? l.rate ?? 0,
-                amount: l.amount ?? l.totalPrice ?? (Number(l.quantity ?? 1) * Number(l.unitPrice ?? l.rate ?? 0)),
-                itemId: l.itemId ?? null,
-                accountId: l.accountId ?? null,
-            })),
+            lines: normalizedLines,
         })
         this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Invoice', recordId: result.id, changes: { invoiceNumber: (result as any).invoiceNumber, customerId: data.customerId, total: (result as any).totalAmount } },

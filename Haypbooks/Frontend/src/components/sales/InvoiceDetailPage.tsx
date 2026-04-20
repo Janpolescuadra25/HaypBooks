@@ -981,23 +981,23 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
               {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Amount *</label>
-                  <input type="number" min="0.01" step="0.01"
+                  <label htmlFor="payment-amount" className="block text-xs font-semibold text-gray-600 mb-1">Amount *</label>
+                  <input id="payment-amount" type="number" min="0.01" step="0.01"
                     value={paymentForm.amount}
                     onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Date *</label>
-                  <input type="date"
+                  <label htmlFor="payment-date" className="block text-xs font-semibold text-gray-600 mb-1">Payment Date *</label>
+                  <input id="payment-date" type="date"
                     value={paymentForm.paymentDate}
                     onChange={e => setPaymentForm(p => ({ ...p, paymentDate: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
-                  <select
+                  <label htmlFor="payment-method" className="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
+                  <select id="payment-method"
                     value={paymentForm.method}
                     onChange={e => setPaymentForm(p => ({ ...p, method: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
@@ -1010,8 +1010,8 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Reference #</label>
-                  <input type="text"
+                  <label htmlFor="payment-reference" className="block text-xs font-semibold text-gray-600 mb-1">Reference #</label>
+                  <input id="payment-reference" type="text"
                     value={paymentForm.referenceNumber}
                     onChange={e => setPaymentForm(p => ({ ...p, referenceNumber: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"

@@ -139,13 +139,25 @@ test('end-to-end sales flow: invoice → payment → credit note → bank deposi
 
   await ensureCustomerSelected(page, customerName, customerEmail)
 
-  await page.getByPlaceholder(/Type or select a product \/ service/i).first().fill(invoiceDescription)
-  const numericInputs = page.locator('input[type="number"]')
-  await numericInputs.nth(0).fill('1')
-  await numericInputs.nth(1).fill(invoiceAmount)
+  const productInput = page.getByPlaceholder(/Type or select a product \/ service/i).first()
+  await productInput.fill(invoiceDescription)
+  await page.keyboard.press('Tab')
+  await expect(productInput).toHaveValue(invoiceDescription, { timeout: 10000 })
+
+  const lineDescription = page.getByPlaceholder(/description/i).first()
+  if (await lineDescription.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await lineDescription.fill(invoiceDescription)
+  }
+
+  const lineRow = page.locator('table tbody tr').first()
+  const lineNumericInputs = lineRow.locator('input[type="number"]')
+  await lineNumericInputs.nth(0).click()
+  await lineNumericInputs.nth(0).fill('1')
+  await lineNumericInputs.nth(1).click()
+  await lineNumericInputs.nth(1).fill(invoiceAmount)
 
   await page.getByRole('button', { name: /Send Invoice/i }).first().click()
-  await page.waitForURL(/sales\/billing\/invoices/, { timeout: 20000 })
+  await page.waitForURL(/sales\/billing\/invoices(?:$|\?)/, { timeout: 20000 })
   await expect(page.getByRole('heading', { name: /invoices/i })).toBeVisible({ timeout: 10000 })
 
   const invoiceRow = page.locator('table tbody tr', { hasText: customerName }).first()
