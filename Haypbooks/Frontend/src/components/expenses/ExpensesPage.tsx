@@ -1,348 +1,128 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Eye, Check, Ban, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import React, { useMemo, useRef, useState, useEffect } from 'react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Send, Check } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
-import ColumnResizer from '@/components/ColumnResizer'
-import DataPage from '@/components/shared/DataPage'
-import { StatusBadge } from '@/components/shared/StatusBadgeSet'
-import { useToast } from '@/components/ui/Toast'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
-interface ExpenseRow {
-  id: string
-  expenseNumber: string
-  submittedBy: string
-  category: string
-  date: string
-  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REIMBURSED'
-  amount: number
-}
-
+interface Expense { id: string; expenseNumber?: string; submittedBy?: string; category?: string; date: string; status?: string; amount: number }
 type SortKey = 'expenseNumber' | 'submittedBy' | 'category' | 'date' | 'status' | 'amount'
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
 
-const EXPENSE_TABLE_ORDER: SortKey[] = ['expenseNumber', 'submittedBy', 'category', 'date', 'status', 'amount']
-const DEFAULT_EXPENSE_WIDTHS: Record<SortKey, number> = {
-  expenseNumber: 140,
-  submittedBy: 180,
-  category: 170,
-  date: 120,
-  status: 135,
-  amount: 140,
-}
-const EXPENSE_COLUMNS_STORAGE_KEY = 'expense-capture-expenses-column-widths-v1'
+const DEFAULT_COLS: ColDef[] = [
+  { key: 'expenseNumber', label: 'Expense #',    visible: true, width: 140 },
+  { key: 'submittedBy',   label: 'Submitted By', visible: true, width: 180 },
+  { key: 'category',      label: 'Category',     visible: true, width: 160 },
+  { key: 'date',          label: 'Date',         visible: true, width: 115 },
+  { key: 'status',        label: 'Status',       visible: true, width: 130 },
+  { key: 'amount',        label: 'Amount',       visible: true, width: 130, align: 'right' },
+]
+const STORAGE_KEY = 'expense-capture-cols-v4'
+function loadCols(): ColDef[] { try { const s = localStorage.getItem(STORAGE_KEY); if (s) { const saved = JSON.parse(s) as ColDef[]; return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width, visible: sc.visible } : d }) } } catch {} return DEFAULT_COLS }
 
-const SAMPLE_ROWS: ExpenseRow[] = [
-  {
-    id: 'exp-001',
-    expenseNumber: 'EXP-2026-001',
-    submittedBy: 'Patricia Mendoza',
-    category: 'Transportation',
-    date: '2026-04-05',
-    status: 'SUBMITTED',
-    amount: 2850,
-  },
-  {
-    id: 'exp-002',
-    expenseNumber: 'EXP-2026-002',
-    submittedBy: 'Jerome Villanueva',
-    category: 'Meals',
-    date: '2026-04-08',
-    status: 'DRAFT',
-    amount: 1360,
-  },
-  {
-    id: 'exp-003',
-    expenseNumber: 'EXP-2026-003',
-    submittedBy: 'Aira Cruz',
-    category: 'Office Supplies',
-    date: '2026-04-10',
-    status: 'APPROVED',
-    amount: 4780,
-  },
-  {
-    id: 'exp-004',
-    expenseNumber: 'EXP-2026-004',
-    submittedBy: 'Miguel Aquino',
-    category: 'Client Meeting',
-    date: '2026-04-12',
-    status: 'REIMBURSED',
-    amount: 5290,
-  },
+const SAMPLE: Expense[] = [
+  { id: 'exp-001', expenseNumber: 'EXP-2026-001', submittedBy: 'Patricia Mendoza', category: 'Transportation',  date: '2026-04-08', status: 'SUBMITTED', amount: 2850 },
+  { id: 'exp-002', expenseNumber: 'EXP-2026-002', submittedBy: 'Jerome Villanueva',category: 'Meals',           date: '2026-04-07', status: 'DRAFT',     amount: 1360 },
+  { id: 'exp-003', expenseNumber: 'EXP-2026-003', submittedBy: 'Aira Cruz',        category: 'Office Supplies', date: '2026-04-05', status: 'APPROVED',  amount: 1890 },
+  { id: 'exp-004', expenseNumber: 'EXP-2026-004', submittedBy: 'Marco Reyes',      category: 'Transportation',  date: '2026-04-01', status: 'REIMBURSED',amount: 3200 },
 ]
 
-function loadExpenseWidthMap(): Record<string, number> {
-  try {
-    const saved = localStorage.getItem(EXPENSE_COLUMNS_STORAGE_KEY)
-    if (!saved) return DEFAULT_EXPENSE_WIDTHS
-    const parsed = JSON.parse(saved) as Record<string, number>
-    return {
-      ...DEFAULT_EXPENSE_WIDTHS,
-      ...Object.fromEntries(Object.entries(parsed).filter(([key]) => EXPENSE_TABLE_ORDER.includes(key as SortKey))),
-    }
-  } catch {
-    return DEFAULT_EXPENSE_WIDTHS
-  }
+function compare(a: Expense, b: Expense, key: SortKey, dir: 'asc' | 'desc'): number {
+  if (key === 'amount') { const d = a.amount - b.amount; return dir === 'asc' ? d : -d }
+  const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
+  return dir === 'asc' ? al.localeCompare(bl) : bl.localeCompare(al)
 }
-
-function compareRows(a: ExpenseRow, b: ExpenseRow, key: SortKey, dir: 'asc' | 'desc') {
-  const left = a[key] ?? ''
-  const right = b[key] ?? ''
-
-  if (key === 'amount') {
-    return dir === 'asc' ? Number(left) - Number(right) : Number(right) - Number(left)
-  }
-
-  return dir === 'asc'
-    ? String(left).toLowerCase().localeCompare(String(right).toLowerCase())
-    : String(right).toLowerCase().localeCompare(String(left).toLowerCase())
-}
+const STATUSES = ['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REIMBURSED']
 
 export default function ExpensesPage() {
-  const toast = useToast()
   const { currency } = useCompanyCurrency()
-
-  const [rows, setRows] = useState<ExpenseRow[]>(SAMPLE_ROWS)
-  const [search, setSearch] = useState('')
+  const [rows]                          = useState<Expense[]>(SAMPLE)
+  const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [sortKey, setSortKey] = useState<SortKey>('date')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const [widths, setWidths] = useState<Record<string, number>>(() => loadExpenseWidthMap())
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(25)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [sortKey, setSortKey]           = useState<SortKey>('date')
+  const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage]   = useState(1); const pageSize = 25
+  const [selected, setSelected]         = useState<Set<string>>(new Set())
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+  const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
+  const [showExport, setShowExport]     = useState(false)
+  const [showAdvFilters, setShowAdvFilters] = useState(false)
+  const [showColToggle, setShowColToggle]   = useState(false)
+  const [dateFrom, setDateFrom]         = useState('')
+  const [dateTo, setDateTo]             = useState('')
+  const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
+  const colsRef                         = useRef(cols)
+  const [toast, setToast]               = useState('')
 
-  const saveWidths = useCallback((next: Record<string, number>) => {
-    setWidths(next)
-    try {
-      localStorage.setItem(EXPENSE_COLUMNS_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-    }
-  }, [])
+  useEffect(() => { colsRef.current = cols }, [cols])
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
+  const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({ columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96 })
+  const fmt = (n: number) => formatCurrency(n, currency)
 
   const filtered = useMemo(() => {
     let list = rows
-
-    if (statusFilter !== 'ALL') {
-      list = list.filter((row) => row.status === statusFilter)
-    }
-
-    if (search) {
-      const q = search.toLowerCase()
-      list = list.filter((row) =>
-        row.expenseNumber.toLowerCase().includes(q) ||
-        row.submittedBy.toLowerCase().includes(q) ||
-        row.category.toLowerCase().includes(q),
-      )
-    }
-
+    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
+    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.expenseNumber ?? '').toLowerCase().includes(q) || (r.submittedBy ?? '').toLowerCase().includes(q) || (r.category ?? '').toLowerCase().includes(q)) }
+    if (dateFrom) list = list.filter(r => r.date >= dateFrom)
+    if (dateTo)   list = list.filter(r => r.date <= dateTo)
     return list
-  }, [rows, search, statusFilter])
+  }, [rows, statusFilter, search, dateFrom, dateTo])
 
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir))
-  }, [filtered, sortDir, sortKey])
+  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
+  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
+  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+  const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
+  const handleExportCSV = () => { setShowExport(false); csvDownload(`expenses-${new Date().toISOString().slice(0,10)}.csv`,['Expense #','Submitted By','Category','Date','Status','Amount'],sorted.map(r=>[r.expenseNumber??'',r.submittedBy??'',r.category??'',r.date,r.status??'',String(r.amount)]));showToast('CSV exported') }
+  const visibleCols = cols.filter(c => c.visible)
 
-  useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
+  const renderCell = (row: Expense, key: string) => {
+    switch (key) {
+      case 'expenseNumber': return <span className="font-semibold text-gray-800">{row.expenseNumber ?? '—'}</span>
+      case 'submittedBy':   return <span className="text-gray-700">{row.submittedBy ?? '—'}</span>
+      case 'category':      return <span className="text-gray-600 text-xs">{row.category ?? '—'}</span>
+      case 'date':          return <span className="text-gray-500">{fmtDate(row.date)}</span>
+      case 'status':        return <StatusPill status={row.status ?? 'DRAFT'} />
+      case 'amount':        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.amount)}</span>
+      default: return null
     }
-  }, [currentPage, pageSize, sorted.length])
-
-  const paged = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return sorted.slice(start, start + pageSize)
-  }, [currentPage, pageSize, sorted])
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey !== key) {
-      setSortKey(key)
-      setSortDir('asc')
-      return
-    }
-    setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
   }
 
-  const handleSubmit = useCallback((id: string) => {
-    setRows((prev) => prev.map((row) => row.id === id ? { ...row, status: 'SUBMITTED' } : row))
-    toast.success('Expense submitted')
-  }, [toast])
-
-  const handleApprove = useCallback((id: string) => {
-    setRows((prev) => prev.map((row) => row.id === id ? { ...row, status: 'APPROVED' } : row))
-    toast.success('Expense approved')
-  }, [toast])
-
-  const handleReject = useCallback((id: string) => {
-    setRows((prev) => prev.map((row) => row.id === id ? { ...row, status: 'REJECTED' } : row))
-    toast.success('Expense rejected')
-  }, [toast])
-
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-
-  const columns = useMemo(() => {
-    const makeHeader = (label: string, key: SortKey, width: number) => (
-      <div className="relative flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => toggleSort(key)}
-          className="inline-flex items-center gap-2 text-left font-medium text-slate-800 hover:text-slate-900"
-        >
-          {label}
-          {sortKey === key
-            ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)
-            : <ArrowUpDown size={12} className="opacity-40" />}
-        </button>
-        <ColumnResizer colKey={key} width={width} onChange={(_, next) => saveWidths({ ...widths, [key]: next })} min={80} />
-      </div>
-    )
-
-    return [
-      {
-        accessorKey: 'expenseNumber',
-        header: makeHeader('Expense #', 'expenseNumber', widths.expenseNumber),
-        meta: { align: 'left', style: { width: widths.expenseNumber, minWidth: widths.expenseNumber, maxWidth: widths.expenseNumber } },
-      },
-      {
-        accessorKey: 'submittedBy',
-        header: makeHeader('Employee / Submitted By', 'submittedBy', widths.submittedBy),
-        meta: { align: 'left', style: { width: widths.submittedBy, minWidth: widths.submittedBy, maxWidth: widths.submittedBy } },
-      },
-      {
-        accessorKey: 'category',
-        header: makeHeader('Category', 'category', widths.category),
-        meta: { align: 'left', style: { width: widths.category, minWidth: widths.category, maxWidth: widths.category } },
-      },
-      {
-        accessorKey: 'date',
-        header: makeHeader('Date', 'date', widths.date),
-        meta: { align: 'left', style: { width: widths.date, minWidth: widths.date, maxWidth: widths.date } },
-      },
-      {
-        accessorKey: 'status',
-        header: makeHeader('Status', 'status', widths.status),
-        meta: { align: 'left', style: { width: widths.status, minWidth: widths.status, maxWidth: widths.status } },
-        cell: ({ getValue }) => <StatusBadge status={String(getValue() ?? 'DRAFT')} domain="generic" />,
-      },
-      {
-        accessorKey: 'amount',
-        header: makeHeader('Amount', 'amount', widths.amount),
-        meta: { align: 'right', style: { width: widths.amount, minWidth: widths.amount, maxWidth: widths.amount } },
-        cell: ({ getValue }) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
-      },
-      {
-        accessorKey: 'id',
-        header: 'Actions',
-        meta: { align: 'right', style: { width: 140, minWidth: 140, maxWidth: 140 } },
-        cell: ({ row }) => {
-          const item = row.original as ExpenseRow
-          const canSubmit = item.status === 'DRAFT'
-          const canApprove = item.status === 'SUBMITTED'
-          const canReject = item.status === 'DRAFT' || item.status === 'SUBMITTED'
-
-          return (
-            <div className="flex items-center justify-end gap-1">
-              <button
-                type="button"
-                onClick={() => toast.info('Coming soon')}
-                className="p-1 rounded hover:bg-slate-100 text-slate-600"
-                data-no-row-toggle
-                title="View expense"
-              >
-                <Eye size={14} />
-              </button>
-              {canSubmit && (
-                <button
-                  type="button"
-                  onClick={() => handleSubmit(item.id)}
-                  className="p-1 rounded hover:bg-blue-100 text-blue-600"
-                  data-no-row-toggle
-                  title="Submit expense"
-                >
-                  <Check size={14} />
-                </button>
-              )}
-              {canApprove && (
-                <button
-                  type="button"
-                  onClick={() => handleApprove(item.id)}
-                  className="p-1 rounded hover:bg-emerald-100 text-emerald-600"
-                  data-no-row-toggle
-                  title="Approve expense"
-                >
-                  <Check size={14} />
-                </button>
-              )}
-              {canReject && (
-                <button
-                  type="button"
-                  onClick={() => handleReject(item.id)}
-                  className="p-1 rounded hover:bg-red-100 text-red-500"
-                  data-no-row-toggle
-                  title="Reject expense"
-                >
-                  <Ban size={14} />
-                </button>
-              )}
-            </div>
-          )
-        },
-      },
-    ]
-  }, [fmt, handleApprove, handleReject, handleSubmit, saveWidths, sortDir, sortKey, toast, widths])
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-
   return (
-    <DataPage
-      title="Expenses"
-      subtitle={`${sorted.length} expenses`}
-      primaryActionLabel="New Expense"
-      onPrimaryAction={() => toast.info('Coming soon')}
-      filters={(
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => { setSearch(event.target.value); setCurrentPage(1) }}
-              placeholder="Search expenses..."
-              className="w-full pl-9 pr-3 py-2 border border-emerald-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}
-            aria-label="Filter expenses by status"
-            className="w-full max-w-xs px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-          >
-            <option value="ALL">All Status</option>
-            <option value="DRAFT">Draft</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="REIMBURSED">Reimbursed</option>
-          </select>
+    <div className="p-4 sm:p-6 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div><h1 className="text-2xl font-bold text-emerald-900">Expenses</h1><p className="text-sm text-emerald-600/70 mt-0.5">{`${sorted.length} expenses`}</p></div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
+          <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}</div>
+          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Expense</button>
         </div>
-      )}
-      columns={columns}
-      data={paged}
-      isLoading={false}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      totalCount={sorted.length}
-      pageSize={pageSize}
-      onPageChange={setCurrentPage}
-      onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      selectedIds={selectedIds}
-      onSelectionChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      emptyTitle="No expenses found"
-      emptyDescription="Try a different search or create a new expense."
-      emptyPrimaryAction="New Expense"
-      onEmptyPrimaryAction={() => toast.info('Coming soon')}
-    />
+      </div>
+      <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[180px]"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" /><input type="text" placeholder="Search expenses..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }} className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
+        <div className="flex items-center gap-1.5 flex-wrap">{STATUSES.map(s => (<button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>{s === 'ALL' ? 'All' : s}</button>))}</div>
+        <button onClick={() => setShowAdvFilters(p => !p)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}><Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}</button>
+      </div>
+      {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
+      {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`exp-sel.csv`,['Expense #','Submitted By','Category','Date','Status','Amount'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.expenseNumber??'',r.submittedBy??'',r.category??'',r.date,r.status??'',String(r.amount)]));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
+      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
+        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
+          <colgroup><col style={{ width: 44 }} />{visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}<col style={{ width: 52 }} /></colgroup>
+          <thead><tr className="bg-gray-50 border-b border-gray-200"><th className="px-3 py-2.5 border-r border-gray-200 w-10"><button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">{selected.size===paged.length&&paged.length>0?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></th>{visibleCols.map(c=>(<th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{width:c.width}}><button onClick={()=>toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden"><span className="truncate text-xs">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey===c.key?'text-emerald-600':'text-gray-300'}`}/></button><div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e=>startResize(e,c.key)}/></th>))}<th className="px-4 py-2.5 w-14"/></tr></thead>
+          <tbody>{paged.length===0?(<tr><td colSpan={visibleCols.length+2} className="px-4 py-16 text-center text-sm text-gray-400">No expenses found</td></tr>):paged.map(row=>(<tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id)?'bg-blue-50/20':''}`}><td className="px-3 py-2.5 border-r border-gray-100"><button onClick={()=>toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">{selected.has(row.id)?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></td>{visibleCols.map(c=>(<td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{textAlign:c.align==='right'?'right':'left'}}>{renderCell(row,c.key)}</td>))}<td className="px-3 py-2.5 text-right"><button onClick={e=>{const r=e.currentTarget.getBoundingClientRect();actionMenuId===row.id?(setActionMenuId(null),setMenuPos(null)):(setActionMenuId(row.id),setMenuPos({x:r.right,y:r.bottom}))}} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"><MoreVertical size={14}/></button></td></tr>))}</tbody>
+        </table>
+      </div>
+      {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
+      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.expenseNumber??'Expense'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Expense" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Send size={13}/>} label="Submit" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}{row.status==='SUBMITTED'&&<MenuBtn icon={<Check size={13}/>} label="Approve" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
+      {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
+      {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
+    </div>
   )
 }

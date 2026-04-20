@@ -1,16 +1,18 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Edit2, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
+  CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw,
+} from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ColumnResizer from '@/components/ColumnResizer'
-import DataPage from '@/components/shared/DataPage'
-import { StatusBadge } from '@/components/shared/StatusBadgeSet'
-import { useToast } from '@/components/ui/Toast'
+import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Vendor {
   id: string
   name: string
@@ -19,247 +21,306 @@ interface Vendor {
   balance?: number
   status?: string
 }
-
 type SortKey = 'name' | 'email' | 'phone' | 'status' | 'balance'
-type SortDir = 'asc' | 'desc'
 
-const VENDOR_TABLE_ORDER: SortKey[] = ['name', 'email', 'phone', 'status', 'balance']
-const DEFAULT_COLUMN_WIDTHS: Record<SortKey, number> = {
-  name: 240,
-  email: 240,
-  phone: 160,
-  status: 130,
-  balance: 140,
-}
-const VENDOR_COLUMNS_STORAGE_KEY = 'vendors-page-column-widths-v2'
+// ─── Columns ──────────────────────────────────────────────────────────────────
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+const DEFAULT_COLS: ColDef[] = [
+  { key: 'name',    label: 'Name',    visible: true, width: 240 },
+  { key: 'email',   label: 'Email',   visible: true, width: 220 },
+  { key: 'phone',   label: 'Phone',   visible: true, width: 150 },
+  { key: 'status',  label: 'Status',  visible: true, width: 130 },
+  { key: 'balance', label: 'Balance', visible: true, width: 130, align: 'right' },
+]
+const STORAGE_KEY = 'vendors-cols-v3'
 
-function loadVendorWidthMap(): Record<string, number> {
+function loadCols(): ColDef[] {
   try {
-    const saved = localStorage.getItem(VENDOR_COLUMNS_STORAGE_KEY)
-    if (!saved) return DEFAULT_COLUMN_WIDTHS
-    const parsed = JSON.parse(saved) as Record<string, number>
-    return {
-      ...DEFAULT_COLUMN_WIDTHS,
-      ...Object.fromEntries(Object.entries(parsed).filter(([key]) => VENDOR_TABLE_ORDER.includes(key as SortKey))),
+    const s = localStorage.getItem(STORAGE_KEY)
+    if (s) {
+      const saved = JSON.parse(s) as ColDef[]
+      return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width, visible: sc.visible } : d })
     }
-  } catch {
-    return DEFAULT_COLUMN_WIDTHS
-  }
+  } catch {}
+  return DEFAULT_COLS
 }
 
-function compareVendors(a: Vendor, b: Vendor, key: SortKey, dir: SortDir): number {
-  const left = a[key] ?? ''
-  const right = b[key] ?? ''
-  if (key === 'balance') {
-    const na = Number(left)
-    const nb = Number(right)
-    return dir === 'asc' ? na - nb : nb - na
-  }
-  const al = String(left).toLowerCase()
-  const bl = String(right).toLowerCase()
+function compare(a: Vendor, b: Vendor, key: SortKey, dir: 'asc' | 'desc'): number {
+  if (key === 'balance') { const d = (a.balance ?? 0) - (b.balance ?? 0); return dir === 'asc' ? d : -d }
+  const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
   return dir === 'asc' ? al.localeCompare(bl) : bl.localeCompare(al)
 }
+
+const STATUSES = ['ALL', 'ACTIVE', 'INACTIVE']
 
 export default function VendorsPage() {
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const toast = useToast()
-
-  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [rows, setRows]       = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [sortKey, setSortKey] = useState<SortKey>('name')
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
-  const [widths, setWidths] = useState<Record<string, number>>(() => loadVendorWidthMap())
-  const [pageSize, setPageSize] = useState(25)
+  const [search, setSearch]   = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [sortKey, setSortKey]   = useState<SortKey>('name')
+  const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 25
+  const [selected, setSelected]       = useState<Set<string>>(new Set())
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+  const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
+  const [showExport, setShowExport]     = useState(false)
+  const [showAdvFilters, setShowAdvFilters] = useState(false)
+  const [showColToggle, setShowColToggle]   = useState(false)
+  const [cols, setCols]   = useState<ColDef[]>(() => loadCols())
+  const colsRef           = useRef(cols)
+  const [toast, setToast] = useState('')
 
-  const saveWidths = useCallback((next: Record<string, number>) => {
-    setWidths(next)
-    try {
-      localStorage.setItem(VENDOR_COLUMNS_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-    }
-  }, [])
+  useEffect(() => { colsRef.current = cols }, [cols])
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
+  const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+
+  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({
+    columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96,
+  })
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchVendors = useCallback(async () => {
-    if (!companyId) {
-      setLoading(false)
-      return
-    }
+    if (!companyId) { setLoading(false); return }
     setLoading(true)
     try {
       const { data } = await apiClient.get(`/companies/${companyId}/vendors`)
-      setVendors(Array.isArray(data) ? data : data.vendors ?? [])
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? 'Failed to load vendors')
-    } finally {
-      setLoading(false)
-    }
-  }, [companyId, toast])
+      setRows(Array.isArray(data) ? data : data.vendors ?? [])
+    } catch { showToast('Failed to load vendors') }
+    finally { setLoading(false) }
+  }, [companyId])
 
   useEffect(() => { fetchVendors() }, [fetchVendors])
 
   const filtered = useMemo(() => {
-    if (!search) return vendors
-    const q = search.toLowerCase()
-    return vendors.filter((vendor) =>
-      vendor.name.toLowerCase().includes(q) ||
-      (vendor.email ?? '').toLowerCase().includes(q) ||
-      (vendor.phone ?? '').toLowerCase().includes(q),
-    )
-  }, [vendors, search])
+    let list = rows
+    if (statusFilter !== 'ALL') list = list.filter(r => (r.status ?? 'ACTIVE') === statusFilter)
+    if (search) { const q = search.toLowerCase(); list = list.filter(r => r.name.toLowerCase().includes(q) || (r.email ?? '').toLowerCase().includes(q) || (r.phone ?? '').toLowerCase().includes(q)) }
+    return list
+  }, [rows, statusFilter, search])
 
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => compareVendors(a, b, sortKey, sortDir))
-  }, [filtered, sortKey, sortDir])
+  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
+  const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
 
-  useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, pageSize, sorted.length])
-
-  const pagedVendors = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return sorted.slice(start, start + pageSize)
-  }, [sorted, currentPage, pageSize])
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey !== key) {
-      setSortKey(key)
-      setSortDir('asc')
-      return
-    }
-    setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
-  }
-
-  const handleDeleteSelected = useCallback(async () => {
-    if (!companyId || selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => apiClient.delete(`/companies/${companyId}/vendors/${id}`)))
-      setVendors((prev) => prev.filter((vendor) => !selectedIds.includes(vendor.id)))
-      setSelectedIds([])
-      toast.success(`${selectedIds.length} selected vendor${selectedIds.length === 1 ? '' : 's'} deleted`)
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? 'Failed to delete selected vendors')
-    }
-  }, [companyId, selectedIds, toast])
+  const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
+  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+  const activeFilterCount = [statusFilter !== 'ALL'].filter(Boolean).length
 
   const handleDelete = useCallback(async (id: string) => {
     if (!companyId) return
     try {
       await apiClient.delete(`/companies/${companyId}/vendors/${id}`)
-      setVendors((prev) => prev.filter((vendor) => vendor.id !== id))
-      setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id))
-      toast.success('Vendor deleted')
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? 'Failed to delete vendor')
+      setRows(p => p.filter(r => r.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n })
+      showToast('Vendor deleted'); setActionMenuId(null); setMenuPos(null)
+    } catch { showToast('Failed to delete vendor') }
+  }, [companyId])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || selected.size === 0) return
+    const ids = [...selected]
+    try {
+      await Promise.all(ids.map(id => apiClient.delete(`/companies/${companyId}/vendors/${id}`)))
+      setRows(p => p.filter(r => !ids.includes(r.id))); setSelected(new Set())
+      showToast(`${ids.length} vendor${ids.length > 1 ? 's' : ''} deleted`)
+    } catch { showToast('Failed to delete selected vendors') }
+  }, [companyId, selected])
+
+  const handleExportCSV = () => {
+    setShowExport(false)
+    csvDownload(`vendors-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Name', 'Email', 'Phone', 'Status', 'Balance'],
+      sorted.map(r => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)]))
+    showToast('CSV exported')
+  }
+
+  const visibleCols = cols.filter(c => c.visible)
+
+  const renderCell = (row: Vendor, key: string) => {
+    switch (key) {
+      case 'name':    return <span className="font-semibold text-gray-800 truncate">{row.name}</span>
+      case 'email':   return <span className="text-gray-500 truncate">{row.email ?? 'u2014'}</span>
+      case 'phone':   return <span className="text-gray-500 truncate">{row.phone ?? 'u2014'}</span>
+      case 'status':  return <StatusPill status={row.status ?? 'ACTIVE'} />
+      case 'balance': return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.balance ?? 0)}</span>
+      default: return null
     }
-  }, [companyId, toast])
-
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
-
-  const columns = useMemo(() => {
-    const makeHeader = (label: string, key: SortKey, width: number) => (
-      <div className="relative flex items-center gap-2">
-        <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-2 text-left font-medium text-slate-800 hover:text-slate-900">
-          {label}
-          {sortKey === key ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
-        </button>
-        <ColumnResizer colKey={key} width={width} onChange={(_, next) => saveWidths({ ...widths, [key]: next })} min={80} />
-      </div>
-    )
-
-    return [
-      {
-        accessorKey: 'name',
-        header: makeHeader('Name', 'name', widths.name),
-        meta: { align: 'left', style: { width: widths.name, minWidth: widths.name, maxWidth: widths.name } },
-      },
-      {
-        accessorKey: 'email',
-        header: makeHeader('Email', 'email', widths.email),
-        meta: { align: 'left', hideBelow: 'md', style: { width: widths.email, minWidth: widths.email, maxWidth: widths.email } },
-      },
-      {
-        accessorKey: 'phone',
-        header: makeHeader('Phone', 'phone', widths.phone),
-        meta: { align: 'left', hideBelow: 'lg', style: { width: widths.phone, minWidth: widths.phone, maxWidth: widths.phone } },
-      },
-      {
-        accessorKey: 'status',
-        header: makeHeader('Status', 'status', widths.status),
-        meta: { align: 'left', style: { width: widths.status, minWidth: widths.status, maxWidth: widths.status } },
-        cell: ({ getValue }) => <StatusBadge status={String(getValue() ?? 'Draft')} domain="generic" />,
-      },
-      {
-        accessorKey: 'balance',
-        header: makeHeader('Balance', 'balance', widths.balance),
-        meta: { align: 'right', style: { width: widths.balance, minWidth: widths.balance, maxWidth: widths.balance } },
-        cell: ({ getValue }) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(Number(getValue() ?? 0))}</span>,
-      },
-      {
-        accessorKey: 'id',
-        header: 'Actions',
-        meta: { align: 'right', style: { width: 120, minWidth: 120, maxWidth: 120 } },
-        cell: ({ row }) => {
-          const vendor = row.original as Vendor
-          return (
-            <div className="flex items-center justify-end gap-1">
-              <button onClick={() => toast.info('Coming soon')} className="p-1 rounded hover:bg-slate-100 text-slate-600" data-no-row-toggle title="Edit vendor"><Edit2 size={14} /></button>
-              <button onClick={() => handleDelete(vendor.id)} className="p-1 rounded hover:bg-red-100 text-red-500" data-no-row-toggle title="Delete vendor"><Trash2 size={14} /></button>
-            </div>
-          )
-        },
-      },
-    ]
-  }, [fmt, handleDelete, saveWidths, sortDir, sortKey, toast, widths])
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  }
 
   return (
-    <DataPage
-      title="Vendors"
-      subtitle={`${sorted.length} visible vendors`}
-      primaryActionLabel="Add Vendor"
-      onPrimaryAction={() => toast.info('Coming soon')}
-      secondaryActions={
-        <button onClick={handleDeleteSelected} disabled={selectedIds.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">
-          Delete Selected ({selectedIds.length})
+    <div className="p-4 sm:p-6 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-emerald-900">Vendors</h1>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} vendors`}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={fetchVendors} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+          <div className="relative">
+            <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
+            {showColToggle && (
+              <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">
+                {cols.map(c => (
+                  <label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none">
+                    <input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
+            {showExport && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
+                <button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
+                <button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button>
+              </div>
+            )}
+          </div>
+          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+          <input type="text" placeholder="Search vendors..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
+            className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+        </div>
+        <div className="flex items-center gap-1.5">
+          {STATUSES.map(s => (
+            <button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
+              {s === 'ALL' ? 'All' : s}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setShowAdvFilters(p => !p)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+          <Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}
         </button>
-      }
-      filters={(
-        <div className="relative w-full max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
-            placeholder="Search vendors..."
-            className="w-full pl-9 pr-3 py-2 border border-emerald-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-          />
+      </div>
+
+      {showAdvFilters && (
+        <div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+              {STATUSES.map(s => <option key={s} value={s}>{s === 'ALL' ? 'All Statuses' : s}</option>)}
+            </select>
+          </div>
+          <button onClick={() => setStatusFilter('ALL')} className="text-xs text-emerald-600 hover:underline">Clear filters</button>
         </div>
       )}
-      columns={columns}
-      data={pagedVendors}
-      isLoading={cidLoading || loading}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      totalCount={sorted.length}
-      pageSize={pageSize}
-      onPageChange={setCurrentPage}
-      onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-      selectedIds={selectedIds}
-      onSelectionChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      bulkActions={[{ label: 'Delete Selected', icon: <Trash2 size={14} />, onClick: handleDeleteSelected, variant: 'destructive' }]}
-      emptyTitle="No vendors found"
-      emptyDescription="Try a different search or add your first vendor."
-      emptyPrimaryAction="Add Vendor"
-      onEmptyPrimaryAction={() => toast.info('Coming soon')}
-    />
+
+      {selected.size > 0 && (
+        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
+          <CheckSquare size={16} />
+          <span className="text-sm font-semibold">{selected.size} selected</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={() => { csvDownload(`vendors-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Name','Email','Phone','Status','Balance'], sorted.filter(r => selected.has(r.id)).map(r => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)])); showToast('CSV exported') }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
+            <button onClick={handleDeleteSelected} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-xs font-semibold"><Trash2 size={12} /> Delete</button>
+            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
+          </div>
+        </div>
+      )}
+
+      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
+        {(loading || cidLoading) && <div className="px-4 py-2 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">Loading vendors...</div>}
+        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
+          <colgroup>
+            <col style={{ width: 44 }} />
+            {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
+            <col style={{ width: 52 }} />
+          </colgroup>
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="px-3 py-2.5 border-r border-gray-200 w-10">
+                <button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
+                  {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+                </button>
+              </th>
+              {visibleCols.map(c => (
+                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
+                  <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden">
+                    <span className="truncate text-xs">{c.label}</span>
+                    <ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
+                  </button>
+                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
+                </th>
+              ))}
+              <th className="px-4 py-2.5 w-14" />
+            </tr>
+          </thead>
+          <tbody>
+            {paged.length === 0 ? (
+              <tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No vendors found</td></tr>
+            ) : paged.map(row => (
+              <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
+                <td className="px-3 py-2.5 border-r border-gray-100">
+                  <button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
+                    {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+                  </button>
+                </td>
+                {visibleCols.map(c => (
+                  <td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                    {renderCell(row, c.key)}
+                  </td>
+                ))}
+                <td className="px-3 py-2.5 text-right">
+                  <button
+                    onClick={e => {
+                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                      if (actionMenuId === row.id) { setActionMenuId(null); setMenuPos(null) }
+                      else { setActionMenuId(row.id); setMenuPos({ x: rect.right, y: rect.bottom }) }
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                    <MoreVertical size={14} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-gray-400">{sorted.length} total</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button>
+            <span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button>
+          </div>
+        </div>
+      )}
+
+      {actionMenuId && menuPos && (() => {
+        const row = rows.find(r => r.id === actionMenuId)
+        if (!row) return null
+        const ml = Math.min(Math.max(4, menuPos.x - 208), (typeof window !== 'undefined' ? window.innerWidth : 800) - 212)
+        const mt = Math.min(menuPos.y + 4, (typeof window !== 'undefined' ? window.innerHeight : 600) - 160)
+        return (
+          <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
+            <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.name}</p></div>
+            <MenuBtn icon={<Eye size={13} />} label="View Vendor" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
+            <MenuBtn icon={<Edit2 size={13} />} label="Edit Vendor" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
+            <div className="my-1 border-t border-gray-100" />
+            <MenuBtn icon={<Trash2 size={13} />} label="Delete Vendor" danger onClick={() => handleDelete(row.id)} />
+          </div>
+        )
+      })()}
+      {actionMenuId && <div className="fixed inset-0 z-[9998]" onClick={() => { setActionMenuId(null); setMenuPos(null) }} />}
+
+      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
+    </div>
   )
 }
