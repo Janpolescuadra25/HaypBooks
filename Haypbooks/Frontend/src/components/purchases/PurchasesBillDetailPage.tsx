@@ -13,6 +13,7 @@ type Props = { billId: string }
 type BillData = {
   id: string
   status: string
+  paymentStatus?: string
   total: number
   balance: number
   vendorName: string
@@ -36,12 +37,33 @@ export default function PurchasesBillDetailPage({ billId }: Props) {
   const [bill, setBill] = useState<BillData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [paymentSaving, setPaymentSaving] = useState(false)
   const [error, setError] = useState('')
+  const [paymentError, setPaymentError] = useState('')
   const [toast, setToast] = useState('')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentDate, setPaymentDate] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('CASH')
+  const [paymentReference, setPaymentReference] = useState('')
 
   const showToast = useCallback((message: string) => {
     setToast(message)
     window.setTimeout(() => setToast(''), 3000)
+  }, [])
+
+  const openPaymentModal = useCallback(() => {
+    setPaymentAmount(bill ? String(bill.balance ?? bill.total ?? '') : '')
+    setPaymentDate(new Date().toISOString().slice(0, 10))
+    setPaymentMethod('CASH')
+    setPaymentReference('')
+    setPaymentError('')
+    setShowPaymentModal(true)
+  }, [bill])
+
+  const closePaymentModal = useCallback(() => {
+    setShowPaymentModal(false)
+    setPaymentError('')
   }, [])
 
   const fetchBill = useCallback(async () => {
@@ -86,8 +108,38 @@ export default function PurchasesBillDetailPage({ billId }: Props) {
     }
   }
 
-  const statusLabel = bill?.status === 'APPROVED' ? 'Approved' : bill?.status === 'DRAFT' ? 'Draft' : bill?.status ?? 'Unknown'
+  const handleRecordPayment = async () => {
+    if (!companyId) return
+    setPaymentSaving(true)
+    setPaymentError('')
+    try {
+      await apiClient.post(`/companies/${companyId}/ap/bills/${billId}/payments`, {
+        amount: Number(paymentAmount),
+        paymentDate,
+        method: paymentMethod,
+        reference: paymentReference,
+      })
+      setShowPaymentModal(false)
+      showToast('Payment recorded successfully')
+      await fetchBill()
+    } catch (err: any) {
+      setPaymentError(err?.response?.data?.message ?? 'Failed to record payment')
+    } finally {
+      setPaymentSaving(false)
+    }
+  }
+
+  const statusLabel = bill?.status === 'PAID'
+    ? 'Paid'
+    : bill?.paymentStatus === 'PARTIAL'
+      ? 'Partially paid'
+      : bill?.status === 'APPROVED'
+        ? 'Approved'
+        : bill?.status === 'DRAFT'
+          ? 'Draft'
+          : bill?.status ?? 'Unknown'
   const isDraft = bill?.status === 'DRAFT'
+  const canRecordPayment = !!bill && bill.balance > 0 && (bill.status === 'APPROVED' || bill.paymentStatus === 'PARTIAL')
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -197,6 +249,25 @@ export default function PurchasesBillDetailPage({ billId }: Props) {
             </div>
           )}
 
+          {bill && canRecordPayment && (
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Payment</p>
+                  <p className="text-xs text-slate-500">Record a payment for the approved bill and settle the outstanding balance.</p>
+                </div>
+                <button
+                  onClick={openPaymentModal}
+                  disabled={paymentSaving}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                >
+                  Record Payment
+                </button>
+              </div>
+              {paymentError && <p className="mt-4 text-sm text-rose-600">{paymentError}</p>}
+            </div>
+          )}
+
           {!bill?.status && !loading && !error && (
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-500">
               <Clock size={16} className="inline-block mr-2" /> Waiting for bill details.
@@ -213,6 +284,98 @@ export default function PurchasesBillDetailPage({ billId }: Props) {
           </div>
         </aside>
       </div>
+
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 px-4 py-6">
+          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl ring-1 ring-slate-900/5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Record Bill Payment</h2>
+                <p className="mt-1 text-sm text-slate-500">Apply a payment against the outstanding balance for this bill.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closePaymentModal}
+                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-600 hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label htmlFor="payment-amount" className="block text-sm font-semibold text-slate-700">Amount</label>
+                <input
+                  id="payment-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="payment-date" className="block text-sm font-semibold text-slate-700">Payment Date</label>
+                  <input
+                    id="payment-date"
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="payment-method" className="block text-sm font-semibold text-slate-700">Method</label>
+                  <input
+                    id="payment-method"
+                    type="text"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    placeholder="CASH, CHECK, BANK TRANSFER"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="payment-reference" className="block text-sm font-semibold text-slate-700">Reference</label>
+                <input
+                  id="payment-reference"
+                  type="text"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="Check number or reference"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+
+              {paymentError && <p className="text-sm text-rose-600">{paymentError}</p>}
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closePaymentModal}
+                  className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRecordPayment}
+                  disabled={paymentSaving}
+                  className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {paymentSaving ? 'Recording…' : 'Record Payment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 right-6 rounded-2xl bg-slate-900 text-white px-4 py-3 shadow-xl">{toast}</div>

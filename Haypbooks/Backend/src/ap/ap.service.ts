@@ -285,6 +285,44 @@ export class ApService {
         return this.normalizeBillPayment(result)
     }
 
+    async recordPayment(userId: string, companyId: string, billId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const bill = await this.repo.findBillById(companyId, billId)
+        if (!bill) throw new NotFoundException('Bill not found')
+        if (bill.status !== 'APPROVED') throw new BadRequestException('Only approved bills can be paid')
+
+        const amount = Number(data.amount ?? 0)
+        if (!amount || amount <= 0) throw new BadRequestException('amount must be greater than 0')
+
+        const balance = Number(bill.balance ?? bill.amountDue ?? bill.total ?? 0)
+        if (amount > balance + 0.01) throw new BadRequestException('Payment amount cannot exceed outstanding balance')
+
+        const workspaceId = await this.getWorkspaceId(companyId)
+        const paymentDate = data.paymentDate ? new Date(data.paymentDate) : new Date()
+        const method = data.method ?? 'CASH'
+        const result = await this.repo.recordBillPayment({
+            workspaceId, companyId, billId,
+            amount, paymentDate,
+            method,
+            referenceNumber: data.referenceNumber ?? data.reference,
+            bankAccountId: data.bankAccountId,
+            currency: data.currency,
+            createdById: userId,
+            applications: [{ billId, amount }],
+        })
+        await this.subLedger.postBillPaymentToGL(result.id, userId)
+
+        await this.prisma.auditLog.create({
+            data: {
+                workspaceId, companyId, userId,
+                action: 'PAY', tableName: 'Bill', recordId: billId,
+                changes: { amount, method: method ?? 'CASH' },
+            },
+        }).catch(() => { /* non-critical */ })
+
+        return this.normalizeBillPayment(result)
+    }
+
     async voidBillPayment(userId: string, companyId: string, paymentId: string) {
         await this.assertAccess(userId, companyId)
         const result = await this.repo.voidBillPayment(companyId, paymentId)

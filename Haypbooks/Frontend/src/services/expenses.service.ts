@@ -42,6 +42,9 @@ export const expensesService = {
   recordBillPayment: (companyId: string, body: any) =>
     apiClient.post(`/companies/${companyId}/bill-payments`, body),
 
+  recordBillPaymentForBill: (companyId: string, billId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ap/bills/${billId}/payments`, body),
+
   voidBillPayment: (companyId: string, paymentId: string) =>
     apiClient.post(`/companies/${companyId}/bill-payments/${paymentId}/void`),
 }

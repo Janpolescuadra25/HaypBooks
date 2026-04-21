@@ -73,6 +73,22 @@ test.describe('Purchases / Accounts Payable stubs', () => {
     expect(approvedRes.ok()).toBeTruthy()
     const approvedBill = await approvedRes.json()
     expect(approvedBill.status).toBe('APPROVED')
+
+    const paymentRes = await page.request.post(`/api/companies/${companyId}/ap/bills/${bill.id}/payments`, {
+      data: {
+        amount: Number(approvedBill.balance ?? approvedBill.total),
+        paymentDate: new Date().toISOString().slice(0, 10),
+        method: 'CHECK',
+        reference: 'E2E full payment',
+      },
+    })
+    expect(paymentRes.ok()).toBeTruthy()
+
+    const paidRes = await page.request.get(`/api/companies/${companyId}/ap/bills/${bill.id}`)
+    expect(paidRes.ok()).toBeTruthy()
+    const paidBill = await paidRes.json()
+    expect(paidBill.status).toBe('PAID')
+    expect(Number(paidBill.balance)).toBe(0)
   })
 
   test('bill detail page route loads', async ({ page }) => {

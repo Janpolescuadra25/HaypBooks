@@ -76,6 +76,12 @@ export class ApController {
         return this.svc.approveBill(req.user.userId, cid, bid)
     }
 
+    @Post('bills/:billId/payments')
+    @HttpCode(HttpStatus.OK)
+    recordBillPaymentForBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string, @Body() body: any) {
+        return this.svc.recordPayment(req.user.userId, cid, bid, body)
+    }
+
     @Post('bills/:billId/void')
     @HttpCode(HttpStatus.OK)
     voidBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string) {
