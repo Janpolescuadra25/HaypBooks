@@ -8997,6 +8997,7 @@ model Bill {
   vendorId              String
   billNumber            String?
   status                BillStatus       @default(DRAFT)
+  approvedAt            DateTime?
   paymentStatus         PaymentStatus    @default(DRAFT)
   total                 Decimal          @db.Decimal(19, 4)
   balance               Decimal          @db.Decimal(19, 4)

@@ -26,17 +26,18 @@ export class SubLedgerService {
 
   // ─── Account Lookup Helpers ───────────────────────────────────────────────
 
-  private async findAccountByCode(companyId: string, code: string): Promise<string | null> {
-    const account = await this.prisma.account.findFirst({
+  private async findAccountByCode(companyId: string, code: string, tx?: any): Promise<string | null> {
+    const db = tx ?? this.prisma
+    const account = await db.account.findFirst({
       where: { companyId, code, deletedAt: null },
       select: { id: true },
     })
     return account?.id ?? null
   }
 
-  private async resolveAccount(companyId: string, preferredId: string | null | undefined, fallbackCode: string): Promise<string | null> {
+  private async resolveAccount(companyId: string, preferredId: string | null | undefined, fallbackCode: string, tx?: any): Promise<string | null> {
     if (preferredId) return preferredId
-    return this.findAccountByCode(companyId, fallbackCode)
+    return this.findAccountByCode(companyId, fallbackCode, tx)
   }
 
   private roundMoney(value: number): number {
@@ -418,22 +419,25 @@ export class SubLedgerService {
    * ₱1,000 + 12% VAT = ₱1,120 gross, less 1% EWT = ₱10.
    * DR Expense 1,000 | DR Input VAT 120 | CR AP 1,110 | CR EWT Payable 10
    */
-  async postBillToGL(billId: string, postedById?: string): Promise<void> {
+  async postBillToGL(billId: string, postedById?: string, tx?: any): Promise<void> {
     try {
-      const bill = await this.prisma.bill.findUnique({
+      const db = tx ?? this.prisma
+      const bill = await db.bill.findUnique({
         where: { id: billId },
         include: { lines: true },
       })
       if (!bill) return
       if (bill.journalEntryId) return // already posted
 
-      const apAccountId = await this.findAccountByCode(bill.companyId, '2010')
-      const vatInputAccountId = await this.findAccountByCode(bill.companyId, '1200')
-      const ewtPayableAccountId = await this.findAccountByCode(bill.companyId, '2060')
-      const expenseFallbackId = await this.findAccountByCode(bill.companyId, '5010')
+      const apAccountId = await this.findAccountByCode(bill.companyId, '2000', tx)
+      const vatInputAccountId = await this.findAccountByCode(bill.companyId, '1200', tx)
+      const ewtPayableAccountId = await this.findAccountByCode(bill.companyId, '2060', tx)
+      const expenseFallbackId = await this.findAccountByCode(bill.companyId, '5010', tx)
 
       if (!apAccountId || !expenseFallbackId) {
-        this.logger.warn(`[SubLedger] Cannot post bill ${billId}: AP or Expense account not found`)
+        const message = `[SubLedger] Cannot post bill ${billId}: AP or Expense account not found`
+        if (tx) throw new Error(message)
+        this.logger.warn(message)
         return
       }
 
@@ -448,7 +452,7 @@ export class SubLedgerService {
         const vatAmount = vatRate > 0 ? Math.round(amount * vatRate / (1 + vatRate) * 100) / 100 : 0
         const netExpense = amount - vatAmount
 
-        const expenseAccountId = await this.resolveAccount(bill.companyId, line.accountId, '5010')
+        const expenseAccountId = await this.resolveAccount(bill.companyId, line.accountId, '5010', tx)
         if (!expenseAccountId) continue
 
         debitLines.push({ accountId: expenseAccountId, debit: netExpense, credit: 0, memo: line.description })

@@ -189,12 +189,23 @@ export class ApService {
 
     async approveBill(userId: string, companyId: string, billId: string) {
         await this.assertAccess(userId, companyId)
-        const b = await this.repo.findBillById(companyId, billId)
-        if (!b) throw new NotFoundException('Bill not found')
-        if (b.status === 'APPROVED' || b.status === 'PAID') throw new BadRequestException(`Bill is already ${b.status}`)
-        const result = await this.repo.approveBill(companyId, billId)
-        // Post bill to the General Ledger (DR: Expense + Input VAT, CR: Accounts Payable)
-        await this.subLedger.postBillToGL(billId, userId)
+        const bill = await this.repo.findBillById(companyId, billId)
+        if (!bill) throw new NotFoundException('Bill not found')
+        if (bill.status !== 'DRAFT') throw new BadRequestException('Only draft bills can be approved')
+
+        const result = await this.prisma.$transaction(async (tx) => {
+            await this.subLedger.postBillToGL(billId, userId, tx)
+            return tx.bill.update({
+                where: { id: billId },
+                data: {
+                    status: 'APPROVED',
+                    postingStatus: 'POSTED',
+                    approvedAt: new Date(),
+                    billNumber: bill.billNumber ?? `BILL-${Date.now()}`,
+                },
+            })
+        })
+
         const workspaceId = await this.getWorkspaceId(companyId)
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'APPROVE', tableName: 'Bill', recordId: billId, changes: { status: 'APPROVED' } },

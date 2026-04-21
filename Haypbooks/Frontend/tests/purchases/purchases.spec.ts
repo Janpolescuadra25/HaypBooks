@@ -36,6 +36,45 @@ test.describe('Purchases / Accounts Payable stubs', () => {
     await expectPageTitle(page, 'Create New Bill')
   })
 
+  test('can approve a draft bill and post status updates', async ({ page }) => {
+    const vendorRes = await page.request.post(`/api/companies/${companyId}/ap/vendors`, {
+      data: {
+        displayName: `E2E Vendor ${Date.now()}`,
+        email: 'e2e-vendor@haypbooks.test',
+        phone: '09171234567',
+        status: 'ACTIVE',
+      },
+    })
+    expect(vendorRes.ok()).toBeTruthy()
+    const vendor = await vendorRes.json()
+
+    const billRes = await page.request.post(`/api/companies/${companyId}/ap/bills`, {
+      data: {
+        vendorId: vendor.id,
+        description: 'E2E approval bill',
+        dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        lines: [
+          { description: 'Consulting services', quantity: 1, rate: 2500, amount: 2500 },
+        ],
+      },
+    })
+    expect(billRes.ok()).toBeTruthy()
+    const bill = await billRes.json()
+
+    await gotoSalesPage(page, `/purchases/bills/${bill.id}`, companyId)
+    await expectPageTitle(page, 'Bill Detail')
+    await expect(page.getByRole('button', { name: /Approve Bill/i })).toBeVisible()
+
+    await page.getByRole('button', { name: /Approve Bill/i }).click()
+    await expect(page.getByText(/Bill approved successfully/i)).toBeVisible()
+    await expect(page.getByText(/Approved/i)).toBeVisible()
+
+    const approvedRes = await page.request.get(`/api/companies/${companyId}/ap/bills/${bill.id}`)
+    expect(approvedRes.ok()).toBeTruthy()
+    const approvedBill = await approvedRes.json()
+    expect(approvedBill.status).toBe('APPROVED')
+  })
+
   test('bill detail page route loads', async ({ page }) => {
     await gotoSalesPage(page, BILL_DETAIL_PATH, companyId)
     await expectPageTitle(page, 'Bill Detail')
