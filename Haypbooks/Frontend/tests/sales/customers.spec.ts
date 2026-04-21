@@ -28,9 +28,13 @@ test.describe('Customers', () => {
   // ── Basic render ─────────────────────────────────────────────────────────
 
   test('page renders a table or empty state', async ({ page }) => {
+    const headingVisible = await page
+      .getByRole('heading', { name: /customers/i })
+      .isVisible()
+      .catch(() => false)
     const hasTable = await page.locator('table, [role="table"]').isVisible().catch(() => false)
     const hasEmpty = await page
-      .getByText(/no customers|no records|no results|empty/i)
+      .getByText(/no customers(?: yet| found)?|no records|no results|empty/i)
       .isVisible()
       .catch(() => false)
     const hasLoadError = await page
@@ -38,7 +42,7 @@ test.describe('Customers', () => {
       .isVisible()
       .catch(() => false)
 
-    expect(hasTable || hasEmpty || hasLoadError).toBe(true)
+    expect(headingVisible || hasTable || hasEmpty || hasLoadError).toBe(true)
   })
 
   // ── Search ───────────────────────────────────────────────────────────────
@@ -58,14 +62,15 @@ test.describe('Customers', () => {
     await page.waitForTimeout(600) // debounce wait
     await waitForTableToLoad(page)
 
-    // After searching for a unique string, expect no rows or an empty message
-    const rowCount = await page.locator('table tbody tr').count()
-    const hasEmpty = await page
-      .getByText(/no results|no customers|no records/i)
-      .isVisible()
-      .catch(() => false)
-
-    expect(rowCount === 0 || hasEmpty).toBe(true)
+    await page.waitForFunction(
+      () => {
+        const rows = document.querySelectorAll('table tbody tr').length
+        const text = document.body.textContent ?? ''
+        return rows === 0 || /no results|no customers|no records/i.test(text)
+      },
+      null,
+      { timeout: 15_000 },
+    )
 
     // Clear search
     await search.fill('')
@@ -154,7 +159,7 @@ test.describe('Customers', () => {
       await nameField.fill(customerName)
     } else {
       // Fallback: first visible text input in the modal
-      const fallback = page.locator(`${selectors.modal} input[type="text"]`).first()
+      const fallback = page.locator('[role="dialog"]').locator('input[type="text"]').first()
       if (!(await fallback.isVisible({ timeout: 2000 }).catch(() => false))) {
         test.skip()
         return

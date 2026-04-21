@@ -43,10 +43,12 @@ function mapInvoiceToOption(invoice: any): PickerOption {
 }
 
 export default function InvoicePickerField({ customerId, statuses, filters, ...props }: InvoicePickerFieldProps) {
+  const statusFilter = statuses?.includes(',') ? undefined : statuses
   const mergedFilters = {
     ...(filters ?? {}),
     ...(customerId ? { customerId } : {}),
-    ...(statuses ? { status: statuses } : {}),
+    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(statuses?.includes(',') ? { openOnly: 'true' } : {}),
   }
 
   return (

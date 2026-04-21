@@ -45,7 +45,7 @@ export const selectors = {
 
   // ── Modals & drawers ──────────────────────────────────────────────────────
   /** Modal overlay / dialog */
-  modal: '[role="dialog"], div.fixed.inset-0.z-50',
+  modal: 'dialog, [role="dialog"], [role="dialog"][aria-modal="true"], div[class*="modal"], div[class*="drawer"], div.fixed.inset-0',
 
   /** Close / Cancel button inside a modal */
   modalCancel: 'button:has-text("Cancel"), button:has-text("Close"), button[aria-label="Close"]',

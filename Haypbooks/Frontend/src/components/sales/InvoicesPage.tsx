@@ -442,7 +442,7 @@ export default function InvoicesPage() {
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium">
             <LayoutTemplate size={15} /> Templates
           </button>
-          <button onClick={fetchInvoices} disabled={loading}
+          <button onClick={() => fetchInvoices()} disabled={loading}
             className="p-2 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors" title="Refresh">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -660,7 +660,7 @@ export default function InvoicesPage() {
             invoice={viewInvoice}
             companyId={companyId}
             onClose={() => setViewInvoice(null)}
-            onRefresh={fetchInvoices}
+            onRefresh={() => fetchInvoices()}
             onDuplicate={handleDuplicateFromDetail}
           />
         )}

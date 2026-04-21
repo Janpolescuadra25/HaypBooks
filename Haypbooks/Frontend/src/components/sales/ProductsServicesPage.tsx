@@ -382,7 +382,7 @@ export default function ProductsServicesPage() {
                         <button
                           onClick={(event) => { event.stopPropagation(); setOpenMenuId(p => p === row.id ? null : row.id) }}
                           aria-label="Row actions"
-                          className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-opacity duration-150 opacity-40 group-hover:opacity-100"
                         >
                           <MoreHorizontal size={14} />
                         </button>

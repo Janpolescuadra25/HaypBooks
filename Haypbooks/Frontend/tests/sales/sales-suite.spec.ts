@@ -82,6 +82,7 @@ test.describe('Sales UI and workflow coverage', () => {
     const newInvoice = page.getByRole('button', { name: /new invoice/i }).first()
     await expect(newInvoice).toBeVisible({ timeout: 6000 })
     await newInvoice.click()
+    await page.waitForURL(/\/(?:sales\/billing\/)?invoices\/new/, { timeout: 15_000 }).catch(() => {})
 
     const customerInput = page.getByPlaceholder(/search customers by name or email/i).first()
     await expect(customerInput).toBeVisible({ timeout: 10000 })

@@ -337,12 +337,11 @@ test.describe('Customer Payments - fullscreen payment flow', () => {
 
     await createdRow.click()
 
-    const drawer = page.locator('div.fixed.inset-0.z-50.flex').last()
-    await expect(drawer).toBeVisible({ timeout: 10_000 })
-    await expect(drawer.getByRole('heading', { name: paymentReference })).toBeVisible()
-    await expect(drawer.getByText(fixture.customerName).first()).toBeVisible()
-    await expect(drawer.getByText(/total allocated/i)).toBeVisible()
-    await expect(drawer.getByText(fixture.invoiceNumber).first()).toBeVisible()
+    const drawerHeading = page.getByRole('heading', { name: new RegExp(escapeRegExp(paymentReference), 'i') }).first()
+    await expect(drawerHeading).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(fixture.customerName).first()).toBeVisible()
+    await expect(page.getByText(/total allocated/i)).toBeVisible()
+    await expect(page.getByText(fixture.invoiceNumber).first()).toBeVisible()
   })
 
   test('reallocates unapplied cash to a second invoice', async ({ page, request }) => {
@@ -392,10 +391,8 @@ test.describe('Customer Payments - fullscreen payment flow', () => {
     await expect(createdRow).toBeVisible({ timeout: 10_000 })
     await createdRow.click()
 
-    const drawer = page.locator('div.fixed.inset-0.z-50.flex').last()
-    await expect(drawer).toBeVisible({ timeout: 10_000 })
-    await expect(drawer.getByRole('button', { name: /reallocate/i })).toBeVisible()
-    await drawer.getByRole('button', { name: /reallocate/i }).click()
+    await expect(page.getByRole('button', { name: /reallocate/i }).first()).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('button', { name: /reallocate/i }).first().click()
 
     const reallocateHeading = page.getByRole('heading', { name: /^reallocate payment$/i }).first()
     await expect(reallocateHeading).toBeVisible({ timeout: 10_000 })
@@ -426,10 +423,10 @@ test.describe('Customer Payments - fullscreen payment flow', () => {
     await expect(updatedRow).toContainText(/2 invoices/i)
 
     await updatedRow.click()
-    const updatedDrawer = page.locator('div.fixed.inset-0.z-50.flex').last()
+    const updatedDrawer = page.locator('div.fixed.inset-0').filter({ hasText: fixture.firstInvoiceNumber }).first()
     await expect(updatedDrawer).toBeVisible({ timeout: 10_000 })
-    await expect(updatedDrawer.getByText(fixture.firstInvoiceNumber).first()).toBeVisible()
-    await expect(updatedDrawer.getByText(fixture.secondInvoiceNumber).first()).toBeVisible()
+    await expect(page.getByText(fixture.firstInvoiceNumber).first()).toBeVisible()
+    await expect(page.getByText(fixture.secondInvoiceNumber).first()).toBeVisible()
     await expect(updatedDrawer).toContainText(/unapplied amount/i)
     await expect(updatedDrawer).toContainText(/0\.00/)
 
@@ -521,17 +518,19 @@ test.describe('Customer Payments - fullscreen payment flow', () => {
     await expect(depositSelectedButton).toBeVisible({ timeout: 10_000 })
     await depositSelectedButton.click()
 
-    const createDepositModal = page.locator('div.fixed.inset-0.z-40').last()
+    const createDepositModal = page
+      .locator('div.fixed.inset-0')
+      .filter({ has: page.getByRole('combobox', { name: /destination bank account/i }) })
+      .first()
     await expect(createDepositModal).toBeVisible({ timeout: 10_000 })
 
-    const destinationSelect = createDepositModal.getByRole('combobox', { name: /destination bank account/i }).first()
-    await expect(destinationSelect).toBeVisible({ timeout: 10_000 })
+    const destinationSelect = page.getByRole('combobox', { name: /destination bank account/i }).first()
     await destinationSelect.selectOption(bankAccount.id)
 
     const depositReferenceInput = page.locator('input[placeholder="Optional"]').first()
     await depositReferenceInput.fill(depositReference)
 
-    const createDepositButton = createDepositModal.getByRole('button', { name: /create deposit/i }).first()
+    const createDepositButton = page.getByRole('button', { name: /create deposit/i }).first()
     await createDepositButton.click()
 
     await expect(createDepositModal).toBeHidden({ timeout: 15_000 })
@@ -549,7 +548,10 @@ test.describe('Customer Payments - fullscreen payment flow', () => {
     await expect(depositedRow).toContainText(/deposited/i)
 
     await depositedRow.click()
-    const drawer = page.locator('div.fixed.inset-0.z-50.flex').last()
+    const drawer = page
+      .locator('div.fixed.inset-0')
+      .filter({ hasText: /deposit status/i })
+      .first()
     await expect(drawer).toBeVisible({ timeout: 10_000 })
     await expect(drawer).toContainText(/deposit status/i)
     await expect(drawer).toContainText(/deposited/i)

@@ -507,12 +507,14 @@ export default function CreditNotesPage() {
       customerId: nc.customerId,
       invoiceId: nc.invoiceId || undefined,
       totalAmount: newAmount,
-      reasonCode: nc.reasonCode,
-      reasonDetails: nc.reasonCode === 'Other' ? nc.reasonDetails.trim() : undefined,
+      reason: nc.reasonCode === 'Other' ? nc.reasonDetails.trim() : nc.reasonCode,
       type: nc.creditType,
       appliedInvoices: appliedInvoices
         .filter(row => parseApplyAmount(row.amountToApply) > 0)
         .map(row => ({ invoiceId: row.invoiceId, amount: parseApplyAmount(row.amountToApply) })),
+    }
+    if (nc.reasonCode === 'Other') {
+      payload.memo = nc.reasonDetails.trim()
     }
     if (nc.creditType === 'refund') {
       payload.refundMethod = nc.refundMethod

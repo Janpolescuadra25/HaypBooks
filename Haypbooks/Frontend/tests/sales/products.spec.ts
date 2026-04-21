@@ -84,8 +84,8 @@ test.describe('Products & Services', () => {
     await nameField.fill(productName)
 
     // Fill sales price — the label "Sales Price" does not have htmlFor so we use
-    // the first number input in the modal (Sales Price is the first numeric field)
-    const priceInput = page.locator('div.fixed.inset-0.z-50 input[type="number"]').first()
+    // the first number input in the open modal.
+    const priceInput = page.locator(selectors.modal).locator('input[type="number"]').first()
     if (await priceInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await priceInput.fill('9.99')
     }

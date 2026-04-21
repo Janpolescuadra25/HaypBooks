@@ -103,6 +103,17 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
     setError('')
   }, [initialInvoice.id])
 
+  const outstandingBalance = Number(invoice.amountDue ?? invoice.total ?? 0)
+  const canEditInvoice = invoice.status === 'DRAFT'
+  const canVoidInvoice = invoice.status === 'SENT' || invoice.status === 'ISSUED' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'PARTIAL'
+  const canReceivePayment = invoice.status !== 'VOID' && outstandingBalance > 0 && ['SENT', 'ISSUED', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(invoice.status as string)
+
+  useEffect(() => {
+    if (invoice.status === 'VOID' && activeTab === 'edit') {
+      setActiveTab('email')
+    }
+  }, [invoice.status, activeTab])
+
   useEffect(() => {
     if (!companyId || !initialInvoice.id) return
     setLoadingInvoice(true)
@@ -302,6 +313,10 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   }
 
   const handleVoid = async () => {
+    if (!canVoidInvoice) {
+      setError('Invoice cannot be voided')
+      return
+    }
     setVoiding(true); setError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/void`)
@@ -317,8 +332,26 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
 
   const handleReceivePayment = async () => {
     const amount = Number(paymentForm.amount)
-    if (!amount || amount <= 0) { setError('Enter a valid payment amount'); return }
-    if (!paymentForm.paymentDate) { setError('Payment date is required'); return }
+    if (!amount || amount <= 0) {
+      setError('Enter a valid payment amount')
+      return
+    }
+    if (outstandingBalance <= 0) {
+      setError('Invoice has no outstanding balance')
+      return
+    }
+    if (amount > outstandingBalance + 0.001) {
+      setError('Payment amount cannot exceed the invoice balance')
+      return
+    }
+    if (!paymentForm.paymentDate) {
+      setError('Payment date is required')
+      return
+    }
+    if (invoice.status === 'VOID') {
+      setError('Cannot record payment for a void invoice')
+      return
+    }
     setPaymentSaving(true); setError('')
     try {
       await apiClient.post(`/companies/${companyId}/ar/invoices/${invoice.id}/payments`, {
@@ -898,14 +931,14 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
                     Credit Note
                   </button>
                 )}
-                {(invoice.status as string) !== 'VOID' && (
+                {canVoidInvoice && (
                   <button onClick={() => setConfirmVoid(true)}
                     className="flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors">
                     <Ban size={13} /> Void
                   </button>
                 )}
-                {(invoice.status === 'SENT' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE') && (
-                  <button onClick={() => { setPaymentForm(p => ({ ...p, amount: String(invoice.amountDue ?? invoice.total ?? '') })); setShowPaymentModal(true) }}
+                {canReceivePayment && (
+                  <button onClick={() => { setPaymentForm(p => ({ ...p, amount: String(outstandingBalance) })); setShowPaymentModal(true) }}
                     className="flex items-center gap-1.5 px-4 py-2 border border-emerald-300 text-emerald-700 rounded-lg text-sm font-semibold hover:bg-emerald-50 transition-colors">
                     <CreditCard size={13} /> Receive Payment
                   </button>

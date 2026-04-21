@@ -758,7 +758,7 @@ export default function QuotesEstimatesPage() {
                 <X size={18} />
               </button>
             </div>
-            <div className="flex border-b border-slate-200 bg-white px-4">
+            <div className="relative z-10 flex border-b border-slate-200 bg-white px-4">
               {(['details', 'activity'] as const).map(tab => (
                 <button key={tab} onClick={() => setDrawerTab(tab)}
                   className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${drawerTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>

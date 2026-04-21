@@ -45,9 +45,15 @@ test.describe('Customer Payments', () => {
     await page.waitForTimeout(600)
     await waitForTableToLoad(page)
 
-    const rows = await page.locator('table tbody tr').count()
-    const empty = await page.getByText(/no results|no records|no payments/i).isVisible().catch(() => false)
-    expect(rows === 0 || empty).toBe(true)
+    await page.waitForFunction(
+      () => {
+        const rows = document.querySelectorAll('table tbody tr').length
+        const text = document.body.textContent ?? ''
+        return rows === 0 || /no results|no records|no payments/i.test(text)
+      },
+      null,
+      { timeout: 15_000 },
+    )
 
     await search.fill('')
   })

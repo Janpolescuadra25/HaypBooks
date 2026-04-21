@@ -54,7 +54,14 @@ export function DataTable<T extends Record<string, any>>({ columns, rows, keyFie
             {columns.map((c) => {
               const alignClass = c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : 'text-left'
               return (
-                <th key={String(c.key)} scope="col" style={c.style} className={`px-3 py-2 ${alignClass} ${c.hideBelow ? `hidden ${c.hideBelow}:table-cell` : ''} ${c.headerClassName || ''}`}>{c.header}</th>
+                <th
+                  key={String(c.key)}
+                  scope="col"
+                  style={c.style}
+                  className={`px-3 py-2 border-r border-slate-200 ${alignClass} ${c.hideBelow ? `hidden ${c.hideBelow}:table-cell` : ''} ${c.headerClassName || ''}`}
+                >
+                  {c.header}
+                </th>
               )
             })}
           </tr>

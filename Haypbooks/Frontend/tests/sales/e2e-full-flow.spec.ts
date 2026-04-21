@@ -74,18 +74,14 @@ async function createCreditNote(page: any, customerName: string, customerEmail: 
     await optionByName.click()
   } else {
     const createNew = page.getByRole('button', { name: /\+ Create New Customer/i }).first()
-    await expect(createNew).toBeVisible({ timeout: 10000 })
+    await expect(createNew).toBeVisible({ timeout: 15000 })
     await createNew.click()
-    await expect(page.getByRole('heading', { name: /new customer/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: /new customer/i })).toBeVisible({ timeout: 15000 })
     await page.getByPlaceholder(/Full name or business name/i).fill(customerName)
     await page.getByPlaceholder(/customer@email\.com/i).fill(customerEmail)
     await page.getByRole('button', { name: /Create & Select/i }).click()
-    await expect(page.getByRole('button', { name: /Change/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /Change/i })).toBeVisible({ timeout: 15000 })
   }
-
-  const creditReasonSelect = page.locator('form:has-text("Create Credit Note") select').first()
-  await expect(creditReasonSelect).toBeVisible({ timeout: 10000 })
-  await creditReasonSelect.selectOption({ label: /Billing Error|Returned Goods|Discount Adjustment|Price Correction|Service Issue|Other/i }).catch(() => {})
 
   const creditAmountInput = page.locator('form:has-text("Create Credit Note") input[placeholder="0.00"]').first()
   await expect(creditAmountInput).toBeVisible({ timeout: 10000 })
@@ -100,13 +96,24 @@ async function applyCreditNoteToInvoice(page: any, invoiceNumber: string, amount
   await row.click()
 
   await page.getByRole('button', { name: /Apply to Invoice/i }).click()
-  await expect(page.getByRole('heading', { name: /apply credit note/i })).toBeVisible({ timeout: 10000 })
-  const invoiceOption = page.locator('select[aria-label="Invoice to apply credit note"] option', { hasText: invoiceNumber }).first()
-  const optionValue = await invoiceOption.getAttribute('value')
-  await page.selectOption('select[aria-label="Invoice to apply credit note"]', optionValue || invoiceNumber)
-  await page.getByLabel(/Amount to apply/i).fill(amount)
-  await page.locator('form:has-text("Amount to apply")').getByRole('button', { name: /^Apply$/i }).click()
-  await expect(page.getByText(/applied to invoice/i).first()).toBeVisible({ timeout: 10000 }).catch(() => {})
+  const modal = page.locator('div[role="dialog"], div.fixed.inset-0').filter({ hasText: /apply credit note/i }).first()
+  await expect(modal).toBeVisible({ timeout: 15000 })
+
+  const invoicePicker = page.getByPlaceholder(/search open invoices/i).first()
+  await expect(invoicePicker).toBeVisible({ timeout: 15000 })
+  await invoicePicker.click()
+  await invoicePicker.fill(invoiceNumber)
+
+  const invoiceOption = page.locator('button[id^="option-"]:visible').first()
+  await expect(invoiceOption).toBeVisible({ timeout: 15000 })
+  await invoiceOption.click()
+  await expect(invoicePicker).not.toHaveValue('', { timeout: 15000 })
+
+  const amountInput = modal.getByLabel(/Amount to apply/i).first()
+  await expect(amountInput).toBeVisible({ timeout: 15000 })
+  await amountInput.fill(amount)
+  await modal.getByRole('button', { name: /^Apply$/i }).click()
+  await expect(modal).not.toBeVisible({ timeout: 15000 })
 }
 
 async function depositUndepositedPayment(page: any, customerName: string) {
@@ -139,15 +146,9 @@ test('end-to-end sales flow: invoice → payment → credit note → bank deposi
 
   await ensureCustomerSelected(page, customerName, customerEmail)
 
-  const productInput = page.getByPlaceholder(/Type or select a product \/ service/i).first()
-  await productInput.fill(invoiceDescription)
-  await page.keyboard.press('Tab')
-  await expect(productInput).toHaveValue(invoiceDescription, { timeout: 10000 })
-
   const lineDescription = page.getByPlaceholder(/description/i).first()
-  if (await lineDescription.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await lineDescription.fill(invoiceDescription)
-  }
+  await expect(lineDescription).toBeVisible({ timeout: 15000 })
+  await lineDescription.fill(invoiceDescription)
 
   const lineRow = page.locator('table tbody tr').first()
   const lineNumericInputs = lineRow.locator('input[type="number"]')

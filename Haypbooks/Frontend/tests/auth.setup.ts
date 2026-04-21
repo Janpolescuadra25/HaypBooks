@@ -66,6 +66,18 @@ setup('authenticate and create company', async ({ page, request }) => {
       // If we're still on login, there may be a verification wall — continue anyway
     })
 
+  console.log(`[auth.setup] post-login url=${page.url()}`)
+  const postLoginCheck = await page.evaluate(async () => {
+    try {
+      const res = await fetch('/api/companies/current', { cache: 'no-store' })
+      const text = await res.text()
+      return { status: res.status, body: text }
+    } catch (error) {
+      return { error: String(error) }
+    }
+  })
+  console.log(`[auth.setup] post-login /api/companies/current=${JSON.stringify(postLoginCheck)}`)
+
   // ── 4. Set mandatory onboarding cookies ───────────────────────────────────
   // Next.js middleware requires these to allow access to protected app routes.
   await page.context().addCookies([
@@ -110,6 +122,31 @@ setup('authenticate and create company', async ({ page, request }) => {
         return null
       })
       .catch(() => null)
+  }
+
+  // If no company is available, create one through the authenticated frontend API.
+  if (!companyId) {
+    const companyName = `E2E Sales Company ${Date.now()}`
+    const created = await page
+      .evaluate(async (name) => {
+        try {
+          const res = await fetch('/api/companies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, currency: 'USD' }),
+          })
+          const text = await res.text()
+          let body: any = text
+          try { body = JSON.parse(text) } catch { /* not JSON */ }
+          return { status: res.status, ok: res.ok, body }
+        } catch (error) {
+          return { error: String(error) }
+        }
+      }, companyName)
+      .catch(() => null)
+
+    console.log(`[auth.setup] create-company response=${JSON.stringify(created)}`)
+    companyId = created?.body?.id ?? created?.body?.company?.id ?? null
   }
 
   // ── 6. Save storage state ──────────────────────────────────────────────────
