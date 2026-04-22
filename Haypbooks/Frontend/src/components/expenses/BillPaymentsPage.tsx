@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
   CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Ban,
@@ -59,6 +60,7 @@ function compare(a: BillPayment, b: BillPayment, key: SortKey, dir: 'asc' | 'des
 const STATUSES = ['ALL', 'PENDING', 'COMPLETED', 'FAILED', 'VOIDED']
 
 export default function BillPaymentsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<BillPayment[]>(SAMPLE)
@@ -183,7 +185,7 @@ export default function BillPaymentsPage() {
               </div>
             )}
           </div>
-          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Payment</button>
+          <button onClick={() => router.push('/expenses/bills-payments/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Payment</button>
         </div>
       </div>
 
@@ -299,7 +301,7 @@ export default function BillPaymentsPage() {
         return (
           <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
             <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.paymentNumber ?? 'Payment'}</p></div>
-            <MenuBtn icon={<Eye size={13} />} label="View Payment" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
+            <MenuBtn icon={<Eye size={13} />} label="View Payment" onClick={() => { router.push(`/expenses/bills-payments/${row.id}/edit`); setActionMenuId(null); setMenuPos(null) }} />
             {row.status === 'PENDING' && (
               <>
                 <div className="my-1 border-t border-gray-100" />
