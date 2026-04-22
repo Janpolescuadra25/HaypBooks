@@ -8,7 +8,7 @@ export const accountingService = {
   listAccountTypes: () => apiClient.get('/companies/default/accounting/account-types'),
 
   // ─── Chart of Accounts ────────────────────────────────────────────────
-  listAccounts: (companyId: string, opts?: { includeInactive?: boolean }) =>
+  listAccounts: (companyId: string, opts?: any) =>
     apiClient.get(`/companies/${companyId}/accounting/accounts`, { params: opts }),
 
   getAccount: (companyId: string, accountId: string) =>
