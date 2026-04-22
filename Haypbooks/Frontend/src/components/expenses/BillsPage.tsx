@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
   CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check, Ban,
@@ -59,6 +60,7 @@ function compare(a: Bill, b: Bill, key: SortKey, dir: 'asc' | 'desc'): number {
 const STATUSES = ['ALL', 'DRAFT', 'PENDING', 'APPROVED', 'PARTIALLY_PAID', 'PAID', 'VOIDED']
 
 export default function BillsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<Bill[]>(SAMPLE_BILLS)
@@ -192,7 +194,7 @@ export default function BillsPage() {
               </div>
             )}
           </div>
-          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Bill</button>
+          <button onClick={() => router.push('/expenses/bills/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Bill</button>
         </div>
       </div>
 
@@ -317,7 +319,8 @@ export default function BillsPage() {
         return (
           <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
             <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.billNumber ?? 'Bill'}</p></div>
-            <MenuBtn icon={<Eye size={13} />}   label="View Bill"    onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
+            <MenuBtn icon={<Eye size={13} />} label="View Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
+            <MenuBtn icon={<Check size={13} />} label="Edit Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
             {(row.status === 'DRAFT' || row.status === 'PENDING') && <MenuBtn icon={<Check size={13} />} label="Approve Bill" onClick={() => handleApprove(row.id)} />}
             {(row.status === 'APPROVED' || row.status === 'PARTIALLY_PAID') && <MenuBtn icon={<Check size={13} />} label="Record Payment" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />}
             {row.status !== 'PAID' && row.status !== 'VOIDED' && (
