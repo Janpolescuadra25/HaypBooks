@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
   CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw,
@@ -54,6 +55,7 @@ function compare(a: Vendor, b: Vendor, key: SortKey, dir: 'asc' | 'desc'): numbe
 const STATUSES = ['ALL', 'ACTIVE', 'INACTIVE']
 
 export default function VendorsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<Vendor[]>([])
@@ -183,7 +185,7 @@ export default function VendorsPage() {
               </div>
             )}
           </div>
-          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
+          <button onClick={() => router.push('/expenses/vendors/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
         </div>
       </div>
 
@@ -311,8 +313,8 @@ export default function VendorsPage() {
         return (
           <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
             <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.name}</p></div>
-            <MenuBtn icon={<Eye size={13} />} label="View Vendor" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
-            <MenuBtn icon={<Edit2 size={13} />} label="Edit Vendor" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
+            <MenuBtn icon={<Eye size={13} />} label="View Vendor" onClick={() => { router.push(`/expenses/vendors/${row.id}/edit`); setActionMenuId(null) }} />
+            <MenuBtn icon={<Edit2 size={13} />} label="Edit Vendor" onClick={() => { router.push(`/expenses/vendors/${row.id}/edit`); setActionMenuId(null) }} />
             <div className="my-1 border-t border-gray-100" />
             <MenuBtn icon={<Trash2 size={13} />} label="Delete Vendor" danger onClick={() => handleDelete(row.id)} />
           </div>
