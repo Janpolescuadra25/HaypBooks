@@ -139,6 +139,114 @@ export class ApController {
         return this.svc.convertPoToBill(req.user.userId, cid, poId)
     }
 
+    // ─── Purchase Requests ─────────────────────────────────────────────────────
+
+    @Get('purchase-requests')
+    listPurchaseRequests(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listPurchaseRequests(req.user.userId, cid, q)
+    }
+
+    @Post('purchase-requests')
+    createPurchaseRequest(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createPurchaseRequest(req.user.userId, cid, body)
+    }
+
+    @Get('purchase-requests/:requestId')
+    getPurchaseRequest(@Req() req: any, @Param('companyId') cid: string, @Param('requestId') requestId: string) {
+        return this.svc.getPurchaseRequest(req.user.userId, cid, requestId)
+    }
+
+    @Put('purchase-requests/:requestId')
+    updatePurchaseRequest(@Req() req: any, @Param('companyId') cid: string, @Param('requestId') requestId: string, @Body() body: any) {
+        return this.svc.updatePurchaseRequest(req.user.userId, cid, requestId, body)
+    }
+
+    @Delete('purchase-requests/:requestId')
+    deletePurchaseRequest(@Req() req: any, @Param('companyId') cid: string, @Param('requestId') requestId: string) {
+        return this.svc.deletePurchaseRequest(req.user.userId, cid, requestId)
+    }
+
+    // ─── Vendor Credits ──────────────────────────────────────────────────────
+
+    @Get('vendor-credits')
+    listVendorCredits(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listVendorCredits(req.user.userId, cid, q)
+    }
+
+    @Post('vendor-credits')
+    createVendorCredit(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createVendorCredit(req.user.userId, cid, body)
+    }
+
+    @Get('vendor-credits/:creditId')
+    getVendorCredit(@Req() req: any, @Param('companyId') cid: string, @Param('creditId') creditId: string) {
+        return this.svc.getVendorCredit(req.user.userId, cid, creditId)
+    }
+
+    @Put('vendor-credits/:creditId')
+    updateVendorCredit(@Req() req: any, @Param('companyId') cid: string, @Param('creditId') creditId: string, @Body() body: any) {
+        return this.svc.updateVendorCredit(req.user.userId, cid, creditId, body)
+    }
+
+    @Delete('vendor-credits/:creditId')
+    deleteVendorCredit(@Req() req: any, @Param('companyId') cid: string, @Param('creditId') creditId: string) {
+        return this.svc.deleteVendorCredit(req.user.userId, cid, creditId)
+    }
+
+    // ─── Receipts ────────────────────────────────────────────────────────────
+
+    @Get('receipts')
+    listReceipts(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listReceipts(req.user.userId, cid, q)
+    }
+
+    @Post('receipts')
+    createReceipt(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createReceipt(req.user.userId, cid, body)
+    }
+
+    @Get('receipts/:receiptId')
+    getReceipt(@Req() req: any, @Param('companyId') cid: string, @Param('receiptId') receiptId: string) {
+        return this.svc.getReceipt(req.user.userId, cid, receiptId)
+    }
+
+    @Put('receipts/:receiptId')
+    updateReceipt(@Req() req: any, @Param('companyId') cid: string, @Param('receiptId') receiptId: string, @Body() body: any) {
+        return this.svc.updateReceipt(req.user.userId, cid, receiptId, body)
+    }
+
+    @Delete('receipts/:receiptId')
+    deleteReceipt(@Req() req: any, @Param('companyId') cid: string, @Param('receiptId') receiptId: string) {
+        return this.svc.deleteReceipt(req.user.userId, cid, receiptId)
+    }
+
+    // ─── Mileage Logs ─────────────────────────────────────────────────────────
+
+    @Get('mileage')
+    listMileageLogs(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listMileageLogs(req.user.userId, cid, q)
+    }
+
+    @Post('mileage')
+    createMileageLog(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createMileageLog(req.user.userId, cid, body)
+    }
+
+    @Get('mileage/:logId')
+    getMileageLog(@Req() req: any, @Param('companyId') cid: string, @Param('logId') logId: string) {
+        return this.svc.getMileageLog(req.user.userId, cid, logId)
+    }
+
+    @Put('mileage/:logId')
+    updateMileageLog(@Req() req: any, @Param('companyId') cid: string, @Param('logId') logId: string, @Body() body: any) {
+        return this.svc.updateMileageLog(req.user.userId, cid, logId, body)
+    }
+
+    @Delete('mileage/:logId')
+    deleteMileageLog(@Req() req: any, @Param('companyId') cid: string, @Param('logId') logId: string) {
+        return this.svc.deleteMileageLog(req.user.userId, cid, logId)
+    }
+
     // ─── AP Aging Report ──────────────────────────────────────────────────────
 
     @Get('reports/aging')

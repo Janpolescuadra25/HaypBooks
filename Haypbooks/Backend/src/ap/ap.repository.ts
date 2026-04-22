@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
 
@@ -288,7 +289,189 @@ export class ApRepository {
         })
     }
 
-    // ─── Purchase Orders ──────────────────────────────────────────────────────
+    // ─── Purchase Requests ────────────────────────────────────────────────────
+
+    async findPurchaseRequests(companyId: string, opts: { requesterId?: string; status?: string; limit?: number; offset?: number } = {}) {
+        return this.prisma.purchaseRequest.findMany({
+            where: {
+                companyId,
+                ...(opts.requesterId ? { requesterId: opts.requesterId } : {}),
+                ...(opts.status ? { status: opts.status as any } : {}),
+            },
+            include: {
+                lines: { include: { item: true } },
+            },
+            orderBy: { requestDate: 'desc' },
+            take: opts.limit ?? 50,
+            skip: opts.offset ?? 0,
+        })
+    }
+
+    async findPurchaseRequestById(companyId: string, id: string) {
+        return this.prisma.purchaseRequest.findFirst({
+            where: { id, companyId },
+            include: { lines: { include: { item: true } } },
+        })
+    }
+
+    async createPurchaseRequest(data: Prisma.PurchaseRequestCreateInput) {
+        return this.prisma.purchaseRequest.create({ data })
+    }
+
+    async updatePurchaseRequest(companyId: string, id: string, data: Prisma.PurchaseRequestUpdateInput) {
+        const pr = await this.prisma.purchaseRequest.findFirst({ where: { id, companyId } })
+        if (!pr) return null
+        const payload = { ...data } as any
+        if ((data as any).lines) {
+            payload.lines = { create: (data as any).lines.map((l: any) => ({
+                purchaseRequestId: id,
+                itemId: l.itemId ?? null,
+                description: l.description ?? '',
+                quantity: l.quantity ?? 1,
+                estimatedUnitPrice: l.estimatedUnitPrice ?? null,
+                workspaceId: pr.workspaceId,
+                companyId,
+            })) }
+        }
+        return this.prisma.$transaction(async (tx) => {
+            if ((data as any).lines) {
+                await tx.purchaseRequestLine.deleteMany({ where: { purchaseRequestId: id } })
+            }
+            return tx.purchaseRequest.update({ where: { id }, data: payload })
+        })
+    }
+
+    async deletePurchaseRequest(companyId: string, id: string) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.purchaseRequestLine.deleteMany({ where: { purchaseRequestId: id } })
+            return tx.purchaseRequest.delete({ where: { id } })
+        })
+    }
+
+    // ─── Vendor Credits ──────────────────────────────────────────────────────
+
+    async findVendorCredits(companyId: string, opts: { vendorId?: string; status?: string; limit?: number; offset?: number } = {}) {
+        return this.prisma.vendorCredit.findMany({
+            where: {
+                companyId,
+                ...(opts.vendorId ? { vendorId: opts.vendorId } : {}),
+                ...(opts.status ? { status: opts.status as any } : {}),
+            },
+            include: {
+                vendor: { include: { contact: { select: { displayName: true } } } },
+                lines: true,
+            },
+            orderBy: { issuedAt: 'desc' },
+            take: opts.limit ?? 50,
+            skip: opts.offset ?? 0,
+        })
+    }
+
+    async findVendorCreditById(companyId: string, id: string) {
+        return this.prisma.vendorCredit.findFirst({
+            where: { id, companyId },
+            include: { vendor: { include: { contact: true } }, lines: true },
+        })
+    }
+
+    async createVendorCredit(data: Prisma.VendorCreditCreateInput) {
+        return this.prisma.vendorCredit.create({ data })
+    }
+
+    async updateVendorCredit(companyId: string, id: string, data: Prisma.VendorCreditUpdateInput) {
+        const vc = await this.prisma.vendorCredit.findFirst({ where: { id, companyId } })
+        if (!vc) return null
+        const payload = { ...data } as any
+        if ((data as any).lines) {
+            payload.lines = { create: (data as any).lines.map((l: any) => ({
+                vendorCreditId: id,
+                accountId: l.accountId ?? null,
+                description: l.description ?? '',
+                amount: l.amount ?? 0,
+                workspaceId: vc.workspaceId,
+                companyId,
+            })) }
+        }
+        return this.prisma.$transaction(async (tx) => {
+            if ((data as any).lines) {
+                await tx.vendorCreditLine.deleteMany({ where: { vendorCreditId: id } })
+            }
+            return tx.vendorCredit.update({ where: { id }, data: payload })
+        })
+    }
+
+    async deleteVendorCredit(companyId: string, id: string) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.vendorCreditLine.deleteMany({ where: { vendorCreditId: id } })
+            return tx.vendorCredit.delete({ where: { id } })
+        })
+    }
+
+    // ─── Receipts ────────────────────────────────────────────────────────────
+
+    async findReceipts(companyId: string, opts: { from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+        return this.prisma.receipt.findMany({
+            where: {
+                companyId,
+                ...(opts.from || opts.to ? { receiptDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
+            },
+            orderBy: { receiptDate: 'desc' },
+            take: opts.limit ?? 50,
+            skip: opts.offset ?? 0,
+        })
+    }
+
+    async findReceiptById(companyId: string, id: string) {
+        return this.prisma.receipt.findFirst({ where: { id, companyId } })
+    }
+
+    async createReceipt(data: Prisma.ReceiptCreateInput) {
+        return this.prisma.receipt.create({ data })
+    }
+
+    async updateReceipt(companyId: string, id: string, data: Prisma.ReceiptUpdateInput) {
+        const receipt = await this.prisma.receipt.findFirst({ where: { id, companyId } })
+        if (!receipt) return null
+        return this.prisma.receipt.update({ where: { id }, data })
+    }
+
+    async deleteReceipt(companyId: string, id: string) {
+        return this.prisma.receipt.delete({ where: { id } })
+    }
+
+    // ─── Mileage Logs ────────────────────────────────────────────────────────
+
+    async findMileageLogs(companyId: string, opts: { from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+        return this.prisma.mileageLog.findMany({
+            where: {
+                companyId,
+                ...(opts.from || opts.to ? { logDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
+            },
+            orderBy: { logDate: 'desc' },
+            take: opts.limit ?? 50,
+            skip: opts.offset ?? 0,
+        })
+    }
+
+    async findMileageLogById(companyId: string, id: string) {
+        return this.prisma.mileageLog.findFirst({ where: { id, companyId } })
+    }
+
+    async createMileageLog(data: Prisma.MileageLogCreateInput) {
+        return this.prisma.mileageLog.create({ data })
+    }
+
+    async updateMileageLog(companyId: string, id: string, data: Prisma.MileageLogUpdateInput) {
+        const log = await this.prisma.mileageLog.findFirst({ where: { id, companyId } })
+        if (!log) return null
+        return this.prisma.mileageLog.update({ where: { id }, data })
+    }
+
+    async deleteMileageLog(companyId: string, id: string) {
+        return this.prisma.mileageLog.delete({ where: { id } })
+    }
+
+    // ─── Purchase Orders ──────────────────────────────────────────────────────────────
 
     async findPurchaseOrders(companyId: string, opts: { vendorId?: string; status?: string; limit?: number; offset?: number } = {}) {
         return this.prisma.purchaseOrder.findMany({
