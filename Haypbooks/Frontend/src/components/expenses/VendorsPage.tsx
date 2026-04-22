@@ -6,7 +6,7 @@ import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
   CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -60,6 +60,7 @@ export default function VendorsPage() {
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]   = useState<SortKey>('name')
@@ -89,11 +90,15 @@ export default function VendorsPage() {
   const fetchVendors = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
     setLoading(true)
+    setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/vendors`)
+      const res = await expensesService.listVendors(companyId)
+      const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.vendors ?? [])
-    } catch { showToast('Failed to load vendors') }
-    finally { setLoading(false) }
+    } catch {
+      setError('Failed to load vendors')
+      showToast('Failed to load vendors')
+    } finally { setLoading(false) }
   }, [companyId])
 
   useEffect(() => { fetchVendors() }, [fetchVendors])
@@ -118,7 +123,7 @@ export default function VendorsPage() {
   const handleDelete = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.delete(`/companies/${companyId}/vendors/${id}`)
+      await expensesService.deleteVendor(companyId, id)
       setRows(p => p.filter(r => r.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n })
       showToast('Vendor deleted'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to delete vendor') }
@@ -128,7 +133,7 @@ export default function VendorsPage() {
     if (!companyId || selected.size === 0) return
     const ids = [...selected]
     try {
-      await Promise.all(ids.map(id => apiClient.delete(`/companies/${companyId}/vendors/${id}`)))
+      await Promise.all(ids.map(id => expensesService.deleteVendor(companyId, id)))
       setRows(p => p.filter(r => !ids.includes(r.id))); setSelected(new Set())
       showToast(`${ids.length} vendor${ids.length > 1 ? 's' : ''} deleted`)
     } catch { showToast('Failed to delete selected vendors') }
@@ -162,8 +167,11 @@ export default function VendorsPage() {
           <h1 className="text-2xl font-bold text-emerald-900">Vendors</h1>
           <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} vendors`}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={fetchVendors} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+        <div className="flex flex-col gap-2">
+          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={fetchVendors} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+          </div>
           <div className="relative">
             <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
             {showColToggle && (
@@ -181,7 +189,6 @@ export default function VendorsPage() {
             {showExport && (
               <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
                 <button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
-                <button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button>
               </div>
             )}
           </div>
