@@ -147,15 +147,6 @@ export const navigationData: NavSection[] = [
             ],
           },
           {
-            title: 'Purchases',
-            path: '/purchases',
-            tabs: [
-              { label: 'Vendors', value: 'vendors', status: 'existing' },
-              { label: 'Bills', value: 'bills', status: 'existing' },
-              { label: 'A/P Aging', value: 'aging', status: 'coming-soon' },
-            ],
-          },
-          {
             title: 'Billing',
             path: '/sales/billing',
             tabs: [

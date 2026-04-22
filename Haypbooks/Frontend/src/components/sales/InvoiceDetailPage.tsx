@@ -105,7 +105,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
 
   const outstandingBalance = Number(invoice.amountDue ?? invoice.total ?? 0)
   const canEditInvoice = invoice.status === 'DRAFT'
-  const canVoidInvoice = invoice.status === 'SENT' || invoice.status === 'ISSUED' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'PARTIAL'
+  const canVoidInvoice = ['SENT', 'ISSUED', 'PARTIALLY_PAID', 'PARTIAL'].includes(invoice.status as string)
   const canReceivePayment = invoice.status !== 'VOID' && outstandingBalance > 0 && ['SENT', 'ISSUED', 'PARTIALLY_PAID', 'PARTIAL', 'OVERDUE'].includes(invoice.status as string)
 
   useEffect(() => {
