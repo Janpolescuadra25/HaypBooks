@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -40,13 +40,6 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE: VendorCredit[] = [
-  { id: 'vc-001', creditNumber: 'VC-1001', vendorName: 'Luzon Supplies', issueDate: '2026-04-02', status: 'OPEN', amount: 5000, availableAmount: 5000 },
-  { id: 'vc-002', creditNumber: 'VC-1002', vendorName: 'MNL Office Solutions', issueDate: '2026-03-28', status: 'PARTIALLY_USED', amount: 7000, availableAmount: 2300 },
-  { id: 'vc-003', creditNumber: 'VC-1003', vendorName: 'Cebu Transport Co.', issueDate: '2026-03-01', status: 'APPLIED', amount: 1800, availableAmount: 0 },
-  { id: 'vc-004', creditNumber: 'VC-1004', vendorName: 'Davao Hardware Depot', issueDate: '2026-04-10', status: 'OPEN', amount: 3200, availableAmount: 3200 },
-]
-
 function compare(a: VendorCredit, b: VendorCredit, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'amount' || key === 'availableAmount') { const d = (a[key] ?? 0) - (b[key] ?? 0); return dir === 'asc' ? d : -d }
   const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
@@ -59,8 +52,9 @@ export default function VendorCreditsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]       = useState<VendorCredit[]>(SAMPLE)
+  const [rows, setRows]       = useState<VendorCredit[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]   = useState<SortKey>('issueDate')
@@ -92,11 +86,15 @@ export default function VendorCreditsPage() {
   const fetchCredits = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
     setLoading(true)
+    setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/vendor-credits`)
-      setRows(Array.isArray(data) ? data : data.credits ?? [])
-    } catch { showToast('Failed to load vendor credits') }
-    finally { setLoading(false) }
+      const res = await expensesService.listVendorCredits(companyId)
+      const data = res.data ?? res
+      setRows(Array.isArray(data) ? data : data.vendorCredits ?? [])
+    } catch {
+      setError('Failed to load vendor credits')
+      showToast('Failed to load vendor credits')
+    } finally { setLoading(false) }
   }, [companyId])
 
   useEffect(() => { fetchCredits() }, [fetchCredits])
@@ -104,7 +102,7 @@ export default function VendorCreditsPage() {
   const handleApply = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/vendor-credits/${id}/apply`)
+      await expensesService.applyVendorCredit(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'APPLIED', availableAmount: 0 } : r))
       showToast('Credit applied'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to apply credit') }
@@ -177,7 +175,6 @@ export default function VendorCreditsPage() {
             {showExport && (
               <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
                 <button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
-                <button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button>
               </div>
             )}
           </div>
@@ -186,6 +183,7 @@ export default function VendorCreditsPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
+        {error && <div className="w-full rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         <div className="relative flex-1 min-w-[180px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
           <input type="text" placeholder="Search credits..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}

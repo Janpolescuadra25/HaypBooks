@@ -34,6 +34,7 @@ export default function ExpensesPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [toast, setToast] = useState('')
 
   const pageSize = 25
@@ -41,6 +42,7 @@ export default function ExpensesPage() {
   useEffect(() => {
     if (!companyId) return
     setLoading(true)
+    setError('')
     expensesService.listExpenseReports(companyId, { limit: 100 })
       .then((res) => {
         setReports((res.data || []).map((item: any) => ({
@@ -53,7 +55,7 @@ export default function ExpensesPage() {
           submittedAt: item.submittedAt,
         })))
       })
-      .catch(() => setToast('Failed to load expense reports'))
+      .catch(() => { setError('Failed to load expense reports'); setToast('Failed to load expense reports') })
       .finally(() => setLoading(false))
   }, [companyId])
 
@@ -116,6 +118,7 @@ export default function ExpensesPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
+        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         <div className="relative">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" placeholder="Search expense reports" />

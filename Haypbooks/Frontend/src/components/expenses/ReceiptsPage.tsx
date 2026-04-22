@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useMemo, useRef, useState, useEffect } from 'react'
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Link } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import { expensesService } from '@/services/expenses.service'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Receipt { id: string; receiptNumber?: string; merchant?: string; date: string; category?: string; amount: number; status?: string }
@@ -23,13 +25,6 @@ const DEFAULT_COLS: ColDef[] = [
 const STORAGE_KEY = 'receipts-cols-v4'
 function loadCols(): ColDef[] { try { const s = localStorage.getItem(STORAGE_KEY); if (s) { const saved = JSON.parse(s) as ColDef[]; return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width, visible: sc.visible } : d }) } } catch {} return DEFAULT_COLS }
 
-const SAMPLE: Receipt[] = [
-  { id: 'rct-001', receiptNumber: 'RCT-2026-001', merchant: 'Petron C-5',              date: '2026-04-08', category: 'Fuel',           amount: 2450, status: 'UNMATCHED' },
-  { id: 'rct-002', receiptNumber: 'RCT-2026-002', merchant: 'SM Business Center',      date: '2026-04-07', category: 'Office Supplies', amount: 1675, status: 'MATCHED'   },
-  { id: 'rct-003', receiptNumber: 'RCT-2026-003', merchant: 'Jollibee Valero',         date: '2026-04-06', category: 'Meals',           amount: 980,  status: 'DRAFT'     },
-  { id: 'rct-004', receiptNumber: 'RCT-2026-004', merchant: 'Mercury Drug Mega Manila', date: '2026-04-05', category: 'Medical',        amount: 1250, status: 'ATTACHED'  },
-]
-
 function compare(a: Receipt, b: Receipt, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'amount') { const d = a.amount - b.amount; return dir === 'asc' ? d : -d }
   const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
@@ -39,8 +34,11 @@ const STATUSES = ['ALL', 'DRAFT', 'UNMATCHED', 'MATCHED', 'ATTACHED']
 
 export default function ReceiptsPage() {
   const router = useRouter()
+  const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows]                          = useState<Receipt[]>(SAMPLE)
+  const [rows, setRows]                 = useState<Receipt[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState('')
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]           = useState<SortKey>('date')
@@ -62,6 +60,22 @@ export default function ReceiptsPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+
+  const fetchReceipts = useCallback(async () => {
+    if (!companyId) { setLoading(false); return }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await expensesService.listReceipts(companyId)
+      const data = res.data ?? res
+      setRows(Array.isArray(data) ? data : data.receipts ?? [])
+    } catch {
+      setError('Failed to load receipts')
+      showToast('Failed to load receipts')
+    } finally { setLoading(false) }
+  }, [companyId])
+
+  useEffect(() => { fetchReceipts() }, [fetchReceipts])
   const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({ columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96 })
   const fmt = (n: number) => formatCurrency(n, currency)
 
@@ -103,7 +117,7 @@ export default function ReceiptsPage() {
         <div><h1 className="text-2xl font-bold text-emerald-900">Receipts</h1><p className="text-sm text-emerald-600/70 mt-0.5">{`${sorted.length} receipts`}</p></div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
-          <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}</div>
+          <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button></div>)}</div>
           <button onClick={() => router.push('/expenses/expense-capture/receipts/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Receipt</button>
         </div>
       </div>
@@ -112,6 +126,7 @@ export default function ReceiptsPage() {
         <div className="flex items-center gap-1.5 flex-wrap">{STATUSES.map(s => (<button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>{s === 'ALL' ? 'All' : s}</button>))}</div>
         <button onClick={() => setShowAdvFilters(p => !p)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}><Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}</button>
       </div>
+      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`rct-sel.csv`,['Receipt #','Merchant','Date','Category','Amount','Status'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.receiptNumber??'',r.merchant??'',r.date,r.category??'',String(r.amount),r.status??'']));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
       <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
@@ -122,7 +137,7 @@ export default function ReceiptsPage() {
         </table>
       </div>
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
-      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.receiptNumber??'Receipt'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Receipt" onClick={()=>{router.push(`/expenses/expense-capture/receipts/${row.id}/edit`);setActionMenuId(null)}}/>{row.status==='UNMATCHED'&&<MenuBtn icon={<Link size={13}/>} label="Match to Expense" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
+      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.receiptNumber??'Receipt'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Receipt" onClick={()=>{router.push(`/expenses/expense-capture/receipts/${row.id}/edit`);setActionMenuId(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>

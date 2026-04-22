@@ -109,6 +109,9 @@ export const expensesService = {
   deleteVendorCredit: (companyId: string, creditId: string) =>
     apiClient.delete(`/companies/${companyId}/ap/vendor-credits/${creditId}`),
 
+  applyVendorCredit: (companyId: string, creditId: string) =>
+    apiClient.post(`/companies/${companyId}/ap/vendor-credits/${creditId}/apply`),
+
   listReceipts: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/ap/receipts`, { params: query }),
 

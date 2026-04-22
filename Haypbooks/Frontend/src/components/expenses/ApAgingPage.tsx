@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -41,13 +41,6 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE: ApAgingRow[] = [
-  { id: 'ag-001', vendorName: 'Luzon Supplies',       current: 12500, days1To30: 4000,  days31To60: 1500, days61To90: 0,    over90: 0,    total: 18000 },
-  { id: 'ag-002', vendorName: 'MNL Office Solutions', current: 8750,  days1To30: 2200,  days31To60: 0,    days61To90: 0,    over90: 0,    total: 10950 },
-  { id: 'ag-003', vendorName: 'Cebu Transport Co.',   current: 0,     days1To30: 0,     days31To60: 3600, days61To90: 1800, over90: 0,    total: 5400  },
-  { id: 'ag-004', vendorName: 'Davao Hardware Depot', current: 6750,  days1To30: 0,     days31To60: 0,    days61To90: 0,    over90: 2500, total: 9250  },
-]
-
 function compare(a: ApAgingRow, b: ApAgingRow, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key !== 'vendorName') { const d = (a[key] ?? 0) - (b[key] ?? 0); return dir === 'asc' ? d : -d }
   const al = (a.vendorName ?? '').toLowerCase(); const bl = (b.vendorName ?? '').toLowerCase()
@@ -57,8 +50,9 @@ function compare(a: ApAgingRow, b: ApAgingRow, key: SortKey, dir: 'asc' | 'desc'
 export default function ApAgingPage() {
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]       = useState<ApAgingRow[]>(SAMPLE)
+  const [rows, setRows]       = useState<ApAgingRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
   const [search, setSearch]   = useState('')
   const [sortKey, setSortKey]   = useState<SortKey>('total')
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
@@ -86,11 +80,15 @@ export default function ApAgingPage() {
   const fetchAging = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
     setLoading(true)
+    setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ap-aging`)
+      const res = await apService.listApAging(companyId)
+      const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.rows ?? [])
-    } catch { showToast('Failed to load AP aging') }
-    finally { setLoading(false) }
+    } catch {
+      setError('Failed to load AP aging')
+      showToast('Failed to load AP aging')
+    } finally { setLoading(false) }
   }, [companyId])
 
   useEffect(() => { fetchAging() }, [fetchAging])
@@ -159,14 +157,14 @@ export default function ApAgingPage() {
             {showExport && (
               <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
                 <button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
-                <button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button>
-              </div>
-            )}
+          </div>
+        )}
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
+        {error && <div className="w-full rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         <div className="relative flex-1 min-w-[180px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
           <input type="text" placeholder="Search vendors..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
@@ -258,7 +256,6 @@ export default function ApAgingPage() {
         return (
           <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
             <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.vendorName ?? 'Vendor'}</p></div>
-            <MenuBtn icon={<Eye size={13} />} label="View Vendor Bills" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
           </div>
         )
       })()}
