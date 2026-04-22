@@ -174,48 +174,6 @@ export class ApRepository {
         })
     }
 
-    async approveBill(companyId: string, billId: string) {
-        const bill = await this.prisma.bill.findFirst({
-            where: { id: billId, companyId },
-            include: { lines: true },
-        })
-        if (!bill) return null
-        const billNumber = bill.billNumber ?? `BILL-${Date.now()}`
-
-        return this.prisma.$transaction(async (tx) => {
-            // Resolve system accounts
-            const apAcct  = await resolveAccount(tx, companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
-            const expAcct = await resolveAccount(tx, companyId, SYSTEM_ACCOUNTS.OPERATING_EXPENSES)
-
-            const total = Number(bill.total)
-
-            // Build debit lines – use each line's accountId if set, else default expense
-            const debitLines = bill.lines.map((l: any) => ({
-                accountId: l.accountId ?? expAcct.id,
-                debit: Number(l.amount),
-                credit: 0,
-                description: l.description ?? `Expense – ${billNumber}`,
-            }))
-
-            // Credit line: AP for total
-            const creditLine = { accountId: apAcct.id, debit: 0, credit: total, description: `AP – ${billNumber}` }
-
-            const jeId = await createAndPostJE(tx, {
-                workspaceId: bill.workspaceId,
-                companyId,
-                date: bill.issuedAt ?? new Date(),
-                description: `Bill ${billNumber}`,
-                createdById: bill.createdById ?? 'system',
-                lines: [...debitLines, creditLine],
-            })
-
-            return tx.bill.update({
-                where: { id: billId },
-                data: { status: 'APPROVED', billNumber, journalEntryId: jeId, postingStatus: 'POSTED' },
-            })
-        })
-    }
-
     async voidBill(companyId: string, billId: string) {
         const bill = await this.prisma.bill.findFirst({ where: { id: billId, companyId } })
         if (!bill) return null
