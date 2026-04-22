@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useRef, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Send } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -55,6 +56,7 @@ function compare(a: PurchaseRequest, b: PurchaseRequest, key: SortKey, dir: 'asc
 const STATUSES = ['ALL', 'DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'ORDERED']
 
 export default function PurchaseRequestsPage() {
+  const router = useRouter()
   const { currency } = useCompanyCurrency()
   const [rows]                          = useState<PurchaseRequest[]>(SAMPLE)
   const [search, setSearch]             = useState('')
@@ -141,7 +143,7 @@ export default function PurchaseRequestsPage() {
             <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
             {showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}
           </div>
-          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New PR</button>
+          <button onClick={() => router.push('/expenses/procurement/purchase-requests/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New PR</button>
         </div>
       </div>
 
@@ -210,7 +212,7 @@ export default function PurchaseRequestsPage() {
         const mt = Math.min(menuPos.y + 4, (typeof window !== 'undefined' ? window.innerHeight : 600) - 160)
         return (<div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
           <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.prNumber ?? 'PR'}</p></div>
-          <MenuBtn icon={<Eye size={13} />} label="View Request" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
+          <MenuBtn icon={<Eye size={13} />} label="Edit Request" onClick={() => { router.push(`/expenses/procurement/purchase-requests/${row.id}/edit`); setActionMenuId(null) }} />
           {row.status === 'DRAFT' && <MenuBtn icon={<Send size={13} />} label="Submit for Approval" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />}
         </div>)
       })()}

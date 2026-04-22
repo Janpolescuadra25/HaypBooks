@@ -79,6 +79,66 @@ export const expensesService = {
   convertPurchaseOrderToBill: (companyId: string, poId: string) =>
     apiClient.post(`/companies/${companyId}/ap/purchase-orders/${poId}/convert`),
 
+  listPurchaseRequests: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ap/purchase-requests`, { params: query }),
+
+  getPurchaseRequest: (companyId: string, requestId: string) =>
+    apiClient.get(`/companies/${companyId}/ap/purchase-requests/${requestId}`),
+
+  createPurchaseRequest: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ap/purchase-requests`, body),
+
+  updatePurchaseRequest: (companyId: string, requestId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ap/purchase-requests/${requestId}`, body),
+
+  deletePurchaseRequest: (companyId: string, requestId: string) =>
+    apiClient.delete(`/companies/${companyId}/ap/purchase-requests/${requestId}`),
+
+  listVendorCredits: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ap/vendor-credits`, { params: query }),
+
+  getVendorCredit: (companyId: string, creditId: string) =>
+    apiClient.get(`/companies/${companyId}/ap/vendor-credits/${creditId}`),
+
+  createVendorCredit: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ap/vendor-credits`, body),
+
+  updateVendorCredit: (companyId: string, creditId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ap/vendor-credits/${creditId}`, body),
+
+  deleteVendorCredit: (companyId: string, creditId: string) =>
+    apiClient.delete(`/companies/${companyId}/ap/vendor-credits/${creditId}`),
+
+  listReceipts: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ap/receipts`, { params: query }),
+
+  getReceipt: (companyId: string, receiptId: string) =>
+    apiClient.get(`/companies/${companyId}/ap/receipts/${receiptId}`),
+
+  createReceipt: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ap/receipts`, body),
+
+  updateReceipt: (companyId: string, receiptId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ap/receipts/${receiptId}`, body),
+
+  deleteReceipt: (companyId: string, receiptId: string) =>
+    apiClient.delete(`/companies/${companyId}/ap/receipts/${receiptId}`),
+
+  listMileageLogs: (companyId: string, query?: any) =>
+    apiClient.get(`/companies/${companyId}/ap/mileage`, { params: query }),
+
+  getMileageLog: (companyId: string, logId: string) =>
+    apiClient.get(`/companies/${companyId}/ap/mileage/${logId}`),
+
+  createMileageLog: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/ap/mileage`, body),
+
+  updateMileageLog: (companyId: string, logId: string, body: any) =>
+    apiClient.put(`/companies/${companyId}/ap/mileage/${logId}`, body),
+
+  deleteMileageLog: (companyId: string, logId: string) =>
+    apiClient.delete(`/companies/${companyId}/ap/mileage/${logId}`),
+
   listExpenseReports: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/expenses`, { params: query }),
 

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check } from 'lucide-react'
 import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
@@ -55,6 +56,7 @@ function compare(a: VendorCredit, b: VendorCredit, key: SortKey, dir: 'asc' | 'd
 const STATUSES = ['ALL', 'OPEN', 'PARTIALLY_USED', 'APPLIED', 'VOID']
 
 export default function VendorCreditsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<VendorCredit[]>(SAMPLE)
@@ -179,7 +181,7 @@ export default function VendorCreditsPage() {
               </div>
             )}
           </div>
-          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Credit</button>
+          <button onClick={() => router.push('/expenses/bills-payments/vendor-credits/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Credit</button>
         </div>
       </div>
 
@@ -295,7 +297,7 @@ export default function VendorCreditsPage() {
         return (
           <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
             <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.creditNumber ?? 'Credit'}</p></div>
-            <MenuBtn icon={<Eye size={13} />} label="View Credit" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />
+            <MenuBtn icon={<Eye size={13} />} label="Edit Credit" onClick={() => { router.push(`/expenses/bills-payments/vendor-credits/${row.id}/edit`); setActionMenuId(null) }} />
             {(row.status === 'OPEN' || row.status === 'PARTIALLY_USED') && (
               <MenuBtn icon={<Check size={13} />} label="Apply Credit" onClick={() => handleApply(row.id)} />
             )}
