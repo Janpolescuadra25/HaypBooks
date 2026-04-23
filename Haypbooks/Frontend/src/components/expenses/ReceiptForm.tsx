@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Loader2, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -21,6 +21,10 @@ interface Account {
   name?: string
 }
 
+export type ReceiptFormHandle = {
+  save: () => Promise<void>
+}
+
 interface ReceiptFormProps {
   mode: 'new' | 'edit'
   receiptId?: string
@@ -28,7 +32,7 @@ interface ReceiptFormProps {
   onSaved?: () => void
 }
 
-export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: ReceiptFormProps) {
+const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function ReceiptForm({ mode, receiptId, onClose, onSaved }, ref) {
   const router = useRouter()
   const toast = useToast()
   const { companyId } = useCompanyId()
@@ -133,6 +137,8 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
       }
       if (onSaved) {
         onSaved()
+      } else if (onClose) {
+        onClose()
       } else {
         router.push('/expenses/expense-capture/receipts')
       }
@@ -144,6 +150,8 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
       setSubmitting(false)
     }
   }
+
+  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
   return (
     <div className="space-y-6 bg-slate-50 text-slate-900">
@@ -228,18 +236,6 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
         </div>
       </div>
 
-      <div className="bg-white border-t border-slate-200 px-4 py-4">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Save the receipt when you are ready.</p>}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => onClose ? onClose() : router.push('/expenses/expense-capture/receipts')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   )

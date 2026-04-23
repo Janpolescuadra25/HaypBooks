@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -27,7 +27,12 @@ interface MileageFormProps {
   onSaved?: () => void
 }
 
-export default function MileageForm({ mode, logId, onClose, onSaved }: MileageFormProps) {
+export interface MileageFormHandle {
+  save: () => Promise<void>
+}
+
+const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
+  ({ mode, logId, onClose, onSaved }, ref) => {
   const router = useRouter()
   const toast = useToast()
   const { companyId } = useCompanyId()
@@ -159,11 +164,20 @@ export default function MileageForm({ mode, logId, onClose, onSaved }: MileageFo
     }
   }
 
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+  }))
+
   return (
     <div className="space-y-6 bg-slate-50 text-slate-900">
       <div className="overflow-y-auto">
         <div className="px-4 py-6 pb-6">
-        <div className="space-y-6">
+          {error ? (
+            <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+              {error}
+            </div>
+          ) : null}
+          <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div>
@@ -257,19 +271,8 @@ export default function MileageForm({ mode, logId, onClose, onSaved }: MileageFo
         </div>
       </div>
 
-      <div className="bg-white border-t border-slate-200 px-4 py-4">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Save the mileage log when you are ready.</p>}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => onClose ? onClose() : router.push('/expenses/expense-capture/mileage')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   )
-}
+})
+
+export default MileageForm

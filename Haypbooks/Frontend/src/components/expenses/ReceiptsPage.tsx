@@ -8,7 +8,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { expensesService } from '@/services/expenses.service'
 import CenteredModal from '@/components/shared/CenteredModal'
-import ReceiptForm from './ReceiptForm'
+import ReceiptForm, { type ReceiptFormHandle } from './ReceiptForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Receipt { id: string; receiptNumber?: string; merchant?: string; date: string; category?: string; amount: number; status?: string }
@@ -57,6 +57,7 @@ export default function ReceiptsPage() {
   const [receiptPanelOpen, setReceiptPanelOpen] = useState(false)
   const [openReceiptId, setOpenReceiptId] = useState<string | null>(null)
   const [openReceiptMode, setOpenReceiptMode] = useState<'new' | 'edit'>('new')
+  const receiptFormRef = useRef<ReceiptFormHandle | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
@@ -64,6 +65,7 @@ export default function ReceiptsPage() {
   const closeReceiptPanel = () => { setReceiptPanelOpen(false); setOpenReceiptId(null); setOpenReceiptMode('new') }
   const openNewReceipt = () => { setReceiptPanelOpen(true); setOpenReceiptMode('new'); setOpenReceiptId(null) }
   const openEditReceipt = (id: string) => { setReceiptPanelOpen(true); setOpenReceiptMode('edit'); setOpenReceiptId(id) }
+  const saveReceipt = () => { receiptFormRef.current?.save() }
 
   const fetchReceipts = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -207,8 +209,31 @@ export default function ReceiptsPage() {
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;return(<div className="fixed right-4 top-24 z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.receiptNumber??'Receipt'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Receipt" onClick={()=>{openEditReceipt(row.id);setActionMenuId(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <CenteredModal open={receiptPanelOpen} onClose={closeReceiptPanel} title={openReceiptMode === 'new' ? 'New Receipt' : 'Edit Receipt'}>
+      <CenteredModal
+        open={receiptPanelOpen}
+        onClose={closeReceiptPanel}
+        title={openReceiptMode === 'new' ? 'New Receipt' : 'Edit Receipt'}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={closeReceiptPanel}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={saveReceipt}
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Save
+            </button>
+          </div>
+        }
+      >
         <ReceiptForm
+          ref={receiptFormRef}
           mode={openReceiptMode}
           receiptId={openReceiptId ?? undefined}
           onClose={closeReceiptPanel}

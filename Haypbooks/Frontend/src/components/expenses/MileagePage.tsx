@@ -8,7 +8,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { expensesService } from '@/services/expenses.service'
 import CenteredModal from '@/components/shared/CenteredModal'
-import MileageForm from './MileageForm'
+import MileageForm, { type MileageFormHandle } from './MileageForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface MileageLog { id: string; date: string; employee?: string; purpose?: string; route?: string; distanceKm?: number; rate?: number; amount: number; status?: string }
@@ -61,6 +61,7 @@ export default function MileagePage() {
   const [mileagePanelOpen, setMileagePanelOpen] = useState(false)
   const [openMileageId, setOpenMileageId] = useState<string | null>(null)
   const [openMileageMode, setOpenMileageMode] = useState<'new' | 'edit'>('new')
+  const mileageFormRef = useRef<MileageFormHandle | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
@@ -85,6 +86,7 @@ export default function MileagePage() {
 
   useEffect(() => { fetchMileage() }, [fetchMileage])
   const onMileageSaved = async () => { await fetchMileage(); closeMileagePanel() }
+  const saveMileageLog = async () => { await mileageFormRef.current?.save() }
   const fmt = (n: number) => formatCurrency(n, currency)
 
   const filtered = useMemo(() => {
@@ -213,8 +215,31 @@ export default function MileagePage() {
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;return(<div className="fixed right-4 top-24 z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.employee??'Log'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Log" onClick={()=>{openEditMileage(row.id);setActionMenuId(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <CenteredModal open={mileagePanelOpen} onClose={closeMileagePanel} title={openMileageMode === 'new' ? 'New Mileage Log' : 'Edit Mileage Log'}>
+      <CenteredModal
+        open={mileagePanelOpen}
+        onClose={closeMileagePanel}
+        title={openMileageMode === 'new' ? 'New Mileage Log' : 'Edit Mileage Log'}
+        footer={
+          <div className="flex flex-wrap gap-3 justify-end">
+            <button
+              type="button"
+              onClick={closeMileagePanel}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={saveMileageLog}
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Save
+            </button>
+          </div>
+        }
+      >
         <MileageForm
+          ref={mileageFormRef}
           mode={openMileageMode}
           logId={openMileageId ?? undefined}
           onClose={closeMileagePanel}
