@@ -217,60 +217,38 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
   }
 
   return (
-    <div className="min-h-full flex min-h-[100vh] flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              {!onClose && (
-                <button type="button" onClick={() => router.push('/expenses/procurement/vendors')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                  <ArrowLeft size={16} /> Back to vendors
-                </button>
-              )}
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Vendor' : 'Edit Vendor'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Manage vendor details and payment information.</p>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <div className="font-semibold">Status</div>
-              <div>{status === 'ACTIVE' ? 'Active' : 'Inactive'}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+    <div className="space-y-6 bg-slate-50 text-slate-900">
+      <div className="overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-6">
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Company Name</label>
-                  <input value={companyName} onChange={e => setCompanyName(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Vendor name" />
+                  <label htmlFor="companyName" className="block text-sm font-semibold text-slate-900">Company Name</label>
+                  <input id="companyName" value={companyName} onChange={e => setCompanyName(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Vendor name" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Vendor ID</label>
-                  <input value={vendorCode || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+                  <label htmlFor="vendorCode" className="block text-sm font-semibold text-slate-900">Vendor ID</label>
+                  <input id="vendorCode" value={vendorCode || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Vendor Type</label>
-                  <select value={vendorType} onChange={e => setVendorType(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                  <label htmlFor="vendorType" className="block text-sm font-semibold text-slate-900">Vendor Type</label>
+                  <select id="vendorType" value={vendorType} onChange={e => setVendorType(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
                     {VENDOR_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Tax ID / EIN</label>
-                  <input value={taxId} onChange={e => setTaxId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Tax ID" />
+                  <label htmlFor="taxId" className="block text-sm font-semibold text-slate-900">Tax ID / EIN</label>
+                  <input id="taxId" value={taxId} onChange={e => setTaxId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Tax ID" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Website</label>
-                  <input value={website} onChange={e => setWebsite(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="https://" />
+                  <label htmlFor="website" className="block text-sm font-semibold text-slate-900">Website</label>
+                  <input id="website" value={website} onChange={e => setWebsite(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="https://" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Currency</label>
-                  <select value={currency} onChange={e => setCurrency(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                  <label htmlFor="currency" className="block text-sm font-semibold text-slate-900">Currency</label>
+                  <select id="currency" value={currency} onChange={e => setCurrency(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
                     {CURRENCIES.map(cur => <option key={cur} value={cur}>{cur}</option>)}
                   </select>
                 </div>
@@ -280,24 +258,24 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Primary Contact Name</label>
-                  <input value={contactName} onChange={e => setContactName(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Name" />
+                  <label htmlFor="contactName" className="block text-sm font-semibold text-slate-900">Primary Contact Name</label>
+                  <input id="contactName" value={contactName} onChange={e => setContactName(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Name" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Email</label>
-                  <input value={email} onChange={e => setEmail(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="name@example.com" />
+                  <label htmlFor="email" className="block text-sm font-semibold text-slate-900">Email</label>
+                  <input id="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="name@example.com" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Phone</label>
-                  <input value={phone} onChange={e => setPhone(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="(123) 456-7890" />
+                  <label htmlFor="phone" className="block text-sm font-semibold text-slate-900">Phone</label>
+                  <input id="phone" value={phone} onChange={e => setPhone(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="(123) 456-7890" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Mobile</label>
-                  <input value={mobile} onChange={e => setMobile(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="(123) 456-7890" />
+                  <label htmlFor="mobile" className="block text-sm font-semibold text-slate-900">Mobile</label>
+                  <input id="mobile" value={mobile} onChange={e => setMobile(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="(123) 456-7890" />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-slate-900">Fax</label>
-                  <input value={fax} onChange={e => setFax(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Fax number" />
+                  <label htmlFor="fax" className="block text-sm font-semibold text-slate-900">Fax</label>
+                  <input id="fax" value={fax} onChange={e => setFax(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Fax number" />
                 </div>
               </div>
             </section>
@@ -315,24 +293,24 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Street</label>
-                  <input value={billingAddress.line1} onChange={e => setBillingAddress(p => ({ ...p, line1: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Street address" />
+                  <label htmlFor="billingStreet" className="block text-sm font-semibold text-slate-900">Street</label>
+                  <input id="billingStreet" value={billingAddress.line1} onChange={e => setBillingAddress(p => ({ ...p, line1: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Street address" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">City</label>
-                  <input value={billingAddress.city} onChange={e => setBillingAddress(p => ({ ...p, city: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="City" />
+                  <label htmlFor="billingCity" className="block text-sm font-semibold text-slate-900">City</label>
+                  <input id="billingCity" value={billingAddress.city} onChange={e => setBillingAddress(p => ({ ...p, city: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="City" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">State</label>
-                  <input value={billingAddress.state} onChange={e => setBillingAddress(p => ({ ...p, state: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="State" />
+                  <label htmlFor="billingState" className="block text-sm font-semibold text-slate-900">State</label>
+                  <input id="billingState" value={billingAddress.state} onChange={e => setBillingAddress(p => ({ ...p, state: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="State" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Zip</label>
-                  <input value={billingAddress.zip} onChange={e => setBillingAddress(p => ({ ...p, zip: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Postal code" />
+                  <label htmlFor="billingZip" className="block text-sm font-semibold text-slate-900">Zip</label>
+                  <input id="billingZip" value={billingAddress.zip} onChange={e => setBillingAddress(p => ({ ...p, zip: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Postal code" />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-slate-900">Country</label>
-                  <input value={billingAddress.country} onChange={e => setBillingAddress(p => ({ ...p, country: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Country" />
+                  <label htmlFor="billingCountry" className="block text-sm font-semibold text-slate-900">Country</label>
+                  <input id="billingCountry" value={billingAddress.country} onChange={e => setBillingAddress(p => ({ ...p, country: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Country" />
                 </div>
               </div>
               {!sameAsBilling && (
@@ -340,24 +318,24 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
                   <h3 className="text-sm font-semibold text-slate-900">Shipping Address</h3>
                   <div className="grid gap-4 sm:grid-cols-2 mt-4">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-900">Street</label>
-                      <input value={shippingAddress.line1} onChange={e => setShippingAddress(p => ({ ...p, line1: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      <label htmlFor="shippingStreet" className="block text-sm font-semibold text-slate-900">Street</label>
+                      <input id="shippingStreet" value={shippingAddress.line1} onChange={e => setShippingAddress(p => ({ ...p, line1: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Street address" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-slate-900">City</label>
-                      <input value={shippingAddress.city} onChange={e => setShippingAddress(p => ({ ...p, city: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      <label htmlFor="shippingCity" className="block text-sm font-semibold text-slate-900">City</label>
+                      <input id="shippingCity" value={shippingAddress.city} onChange={e => setShippingAddress(p => ({ ...p, city: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="City" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-slate-900">State</label>
-                      <input value={shippingAddress.state} onChange={e => setShippingAddress(p => ({ ...p, state: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      <label htmlFor="shippingState" className="block text-sm font-semibold text-slate-900">State</label>
+                      <input id="shippingState" value={shippingAddress.state} onChange={e => setShippingAddress(p => ({ ...p, state: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="State" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-slate-900">Zip</label>
-                      <input value={shippingAddress.zip} onChange={e => setShippingAddress(p => ({ ...p, zip: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      <label htmlFor="shippingZip" className="block text-sm font-semibold text-slate-900">Zip</label>
+                      <input id="shippingZip" value={shippingAddress.zip} onChange={e => setShippingAddress(p => ({ ...p, zip: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Postal code" />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-semibold text-slate-900">Country</label>
-                      <input value={shippingAddress.country} onChange={e => setShippingAddress(p => ({ ...p, country: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      <label htmlFor="shippingCountry" className="block text-sm font-semibold text-slate-900">Country</label>
+                      <input id="shippingCountry" value={shippingAddress.country} onChange={e => setShippingAddress(p => ({ ...p, country: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Country" />
                     </div>
                   </div>
                 </div>
@@ -370,34 +348,34 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
               <h2 className="text-lg font-semibold text-slate-900">Financial Information</h2>
               <div className="grid gap-4 mt-5">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Payment Terms</label>
-                  <select value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                  <label htmlFor="paymentTerms" className="block text-sm font-semibold text-slate-900">Payment Terms</label>
+                  <select id="paymentTerms" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
                     {PAYMENT_TERMS.map(term => <option key={term} value={term}>{term}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Credit Limit</label>
-                  <input type="number" min="0" value={creditLimit} onChange={e => setCreditLimit(Number(e.target.value))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="creditLimit" className="block text-sm font-semibold text-slate-900">Credit Limit</label>
+                  <input id="creditLimit" type="number" min="0" value={creditLimit} onChange={e => setCreditLimit(Number(e.target.value))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Default Expense Account</label>
-                  <input value={defaultExpenseAccount} onChange={e => setDefaultExpenseAccount(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="defaultExpenseAccount" className="block text-sm font-semibold text-slate-900">Default Expense Account</label>
+                  <input id="defaultExpenseAccount" value={defaultExpenseAccount} onChange={e => setDefaultExpenseAccount(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Bank Name</label>
-                  <input value={bankName} onChange={e => setBankName(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="bankName" className="block text-sm font-semibold text-slate-900">Bank Name</label>
+                  <input id="bankName" value={bankName} onChange={e => setBankName(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Bank Account Number</label>
-                  <input type="password" value={bankAccountNumber} onChange={e => setBankAccountNumber(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="bankAccountNumber" className="block text-sm font-semibold text-slate-900">Bank Account Number</label>
+                  <input id="bankAccountNumber" type="password" value={bankAccountNumber} onChange={e => setBankAccountNumber(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Routing Number</label>
-                  <input type="password" value={routingNumber} onChange={e => setRoutingNumber(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="routingNumber" className="block text-sm font-semibold text-slate-900">Routing Number</label>
+                  <input id="routingNumber" type="password" value={routingNumber} onChange={e => setRoutingNumber(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Tax Rate %</label>
-                  <input type="number" min="0" max="100" step="0.1" value={taxRate} onChange={e => setTaxRate(Number(e.target.value))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="taxRate" className="block text-sm font-semibold text-slate-900">Tax Rate %</label>
+                  <input id="taxRate" type="number" min="0" max="100" step="0.1" value={taxRate} onChange={e => setTaxRate(Number(e.target.value))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
               </div>
             </section>
@@ -406,20 +384,21 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
               <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
               <div className="grid gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-                  <textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="internalNotes" className="block text-sm font-semibold text-slate-900">Internal Notes</label>
+                  <textarea id="internalNotes" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900">Notes (visible to vendor)</label>
-                  <textarea value={publicNotes} onChange={e => setPublicNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <label htmlFor="publicNotes" className="block text-sm font-semibold text-slate-900">Notes (visible to vendor)</label>
+                  <textarea id="publicNotes" value={publicNotes} onChange={e => setPublicNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
               </div>
             </section>
           </aside>
         </div>
       </div>
+      </div>
 
-      <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
+      <div className="bg-white border-t border-slate-200">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -429,8 +408,8 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
                 <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-base font-semibold text-slate-900"><span>Status</span><span>{status === 'ACTIVE' ? 'Active' : 'Inactive'}</span></div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Notes</label>
-                <textarea value={publicNotes} onChange={e => setPublicNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <label htmlFor="publicNotesFooter" className="block text-sm font-semibold text-slate-900">Notes</label>
+                <textarea id="publicNotesFooter" value={publicNotes} onChange={e => setPublicNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
               </div>
             </div>
             <div className="flex flex-wrap gap-2 justify-end">

@@ -160,29 +160,9 @@ export default function MileageForm({ mode, logId, onClose, onSaved }: MileageFo
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/expense-capture/mileage')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to mileage
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Mileage Log' : 'Edit Mileage Log'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Capture mileage reimbursements with trip details.</p>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <div className="font-semibold">Log #</div>
-              <div>{logNumber || 'Auto-generated'}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
+    <div className="space-y-6 bg-slate-50 text-slate-900">
+      <div className="overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-6">
         <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -275,9 +255,10 @@ export default function MileageForm({ mode, logId, onClose, onSaved }: MileageFo
             </div>
           </section>
         </div>
+      </div>
       </main>
 
-      <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-4 sm:px-6 lg:px-8">
+      <div className="bg-white border-t border-slate-200 px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Save the mileage log when you are ready.</p>}

@@ -1908,6 +1908,18 @@
 			"problemMatcher": [
 				"$tsc"
 			]
+		},
+		{
+			"label": "git-commit-push-feature-branch",
+			"type": "shell",
+			"command": "git add -A && git commit -m \"feat(expenses): implement centered modal overlay and shared resizable table for HYP-010c\" && git push -u origin feature/hyp-010c-centered-modal-global-table",
+			"isBackground": false
+		},
+		{
+			"label": "git-commit-push-feature-branch-2",
+			"type": "shell",
+			"command": "git add -A && git commit -m 'feat(expenses): implement centered modal overlay and shared resizable table for HYP-010c' && git push -u origin feature/hyp-010c-centered-modal-global-table",
+			"isBackground": false
 		}
 	]
 }
