@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
+import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 
 interface Reimbursement {
   id: string
@@ -100,6 +101,14 @@ export default function ReimbursementsPage() {
 
   const fmt = (amount: number) => formatCurrency(amount, currency)
 
+  const columns: ResizableColumn<Reimbursement>[] = [
+    { key: 'reimbursementNumber', header: 'Reimbursement', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.reimbursementNumber ?? '—'}</span> },
+    { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
+    { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
+    { key: 'totalAmount', header: 'Total', width: 120, sortable: true, align: 'right', render: (_value, row) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.totalAmount)}</span> },
+    { key: 'status', header: 'Status', width: 120, sortable: true, render: (_value, row) => <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{row.status ?? 'PENDING'}</span> },
+  ]
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -129,38 +138,15 @@ export default function ReimbursementsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50">
-            <tr>
-              <th className="px-4 py-3">Reimbursement</th>
-              <th className="px-4 py-3">Employee</th>
-              <th className="px-4 py-3">Submitted</th>
-              <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">Loading reimbursements…</td></tr>
-            ) : pageItems.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">No reimbursements found</td></tr>
-            ) : (
-              pageItems.map((item) => (
-                <tr key={item.id} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50" onClick={() => openEditReimbursement(item.id)}>
-                  <td className="px-4 py-4 font-semibold text-slate-900">{item.reimbursementNumber ?? '—'}</td>
-                  <td className="px-4 py-4 text-slate-700">{item.employeeName ?? '—'}</td>
-                  <td className="px-4 py-4 text-slate-500">{fmtDate(item.submittedAt)}</td>
-                  <td className="px-4 py-4 text-right font-semibold text-emerald-800">{fmt(item.totalAmount)}</td>
-                  <td className="px-4 py-4">
-                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{item.status ?? 'PENDING'}</span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ResizableTable
+        columns={columns}
+        data={pageItems}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        emptyMessage={loading ? 'Loading reimbursements…' : 'No reimbursements found'}
+        onRowClick={(row) => openEditReimbursement(row.id)}
+      />
 
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span>{filtered.length} reimbursements</span>

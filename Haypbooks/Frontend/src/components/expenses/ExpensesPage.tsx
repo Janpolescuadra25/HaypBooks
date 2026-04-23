@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
+import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 
 interface ExpenseReport {
   id: string
@@ -104,6 +105,14 @@ export default function ExpensesPage() {
 
   const fmt = (amount: number) => formatCurrency(amount, currency)
 
+  const columns: ResizableColumn<ExpenseReport>[] = [
+    { key: 'expenseNumber', header: 'Expense', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.expenseNumber ?? '—'}</span> },
+    { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
+    { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
+    { key: 'status', header: 'Status', width: 120, sortable: true, render: (_value, row) => <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{row.status ?? 'DRAFT'}</span> },
+    { key: 'totalAmount', header: 'Total', width: 120, sortable: true, align: 'right', render: (_value, row) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.totalAmount)}</span> },
+  ]
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -133,36 +142,15 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50">
-            <tr>
-              <th className="px-4 py-3">Expense</th>
-              <th className="px-4 py-3">Employee</th>
-              <th className="px-4 py-3">Submitted</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">Loading expense reports…</td></tr>
-            ) : pageItems.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">No expense reports found</td></tr>
-            ) : (
-              pageItems.map((report) => (
-                <tr key={report.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/expenses/${report.id}/edit`)}>
-                  <td className="px-4 py-4 font-semibold text-slate-900">{report.expenseNumber ?? '—'}</td>
-                  <td className="px-4 py-4 text-slate-700">{report.employeeName ?? '—'}</td>
-                  <td className="px-4 py-4 text-slate-500">{fmtDate(report.submittedAt)}</td>
-                  <td className="px-4 py-4"><span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{report.status ?? 'DRAFT'}</span></td>
-                  <td className="px-4 py-4 text-right font-semibold text-emerald-800">{fmt(report.totalAmount)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ResizableTable
+        columns={columns}
+        data={pageItems}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        emptyMessage={loading ? 'Loading expense reports…' : 'No expense reports found'}
+        onRowClick={(row) => router.push(`/expenses/${row.id}/edit`)}
+      />
 
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span>{filtered.length} expense reports</span>

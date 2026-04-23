@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useMemo, useRef, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Send } from 'lucide-react'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Rfq { id: string; rfqNumber?: string; subject?: string; vendorCount?: number; dateSent?: string; closingDate?: string; status?: string }
@@ -50,14 +50,57 @@ export default function RfqPage() {
   const [dateFrom, setDateFrom]         = useState('')
   const [dateTo, setDateTo]             = useState('')
   const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
-  const colsRef                         = useRef(cols)
   const [toast, setToast]               = useState('')
 
-  useEffect(() => { colsRef.current = cols }, [cols])
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({ columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96 })
+  const visibleCols = cols.filter(c => c.visible)
+  const columns: ResizableColumn<Rfq>[] = [
+    {
+      key: '__select__',
+      header: (
+        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
+          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+      width: 44,
+      render: (_value, row) => (
+        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
+          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+    },
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+    {
+      key: '__actions__',
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
+
+  const handleColumnsChange = (next: ResizableColumn<Rfq>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
 
   const filtered = useMemo(() => {
     let list = rows
@@ -77,7 +120,6 @@ export default function RfqPage() {
   const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = () => { setShowExport(false); csvDownload(`rfq-${new Date().toISOString().slice(0,10)}.csv`,['RFQ #','Subject','Vendors','Date Sent','Closing Date','Status'],sorted.map(r=>[r.rfqNumber??'',r.subject??'',String(r.vendorCount??0),r.dateSent??'',r.closingDate??'',r.status??'']));showToast('CSV exported') }
-  const visibleCols = cols.filter(c => c.visible)
 
   const renderCell = (row: Rfq, key: string) => {
     switch (key) {
@@ -108,13 +150,16 @@ export default function RfqPage() {
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date Sent From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date Sent To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`rfq-sel.csv`,['RFQ #','Subject','Vendors','Date Sent','Closing Date','Status'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.rfqNumber??'',r.subject??'',String(r.vendorCount??0),r.dateSent??'',r.closingDate??'',r.status??'']));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup><col style={{ width: 44 }} />{visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}<col style={{ width: 52 }} /></colgroup>
-          <thead><tr className="bg-gray-50 border-b border-gray-200"><th className="px-4 py-2.5 border-r border-gray-200 w-10"><button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">{selected.size===paged.length&&paged.length>0?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></th>{visibleCols.map(c=>(<th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{width:c.width}}><button onClick={()=>toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden"><span className="truncate text-xs">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey===c.key?'text-emerald-600':'text-gray-300'}`}/></button><div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e=>startResize(e,c.key)}/></th>))}<th className="px-4 py-2.5 w-16"/></tr></thead>
-          <tbody>{paged.length===0?(<tr><td colSpan={visibleCols.length+2} className="px-4 py-16 text-center text-sm text-gray-400">No RFQs found</td></tr>):paged.map(row=>(<tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id)?'bg-blue-50/20':''}`}><td className="px-4 py-2.5 border-r border-gray-100"><button onClick={()=>toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">{selected.has(row.id)?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></td>{visibleCols.map(c=>(<td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{textAlign:c.align==='right'?'right':'left'}}>{renderCell(row,c.key)}</td>))}<td className="px-4 py-2.5 text-right"><button onClick={e=>{const r=e.currentTarget.getBoundingClientRect();actionMenuId===row.id?(setActionMenuId(null),setMenuPos(null)):(setActionMenuId(row.id),setMenuPos({x:r.right,y:r.bottom}))}} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"><MoreVertical size={14}/></button></td></tr>))}</tbody>
-        </table>
-      </div>
+      <ResizableTable
+        columns={columns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        emptyMessage="No RFQs found"
+        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+      />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.rfqNumber??'RFQ'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View RFQ" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Send size={13}/>} label="Send to Vendors" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}

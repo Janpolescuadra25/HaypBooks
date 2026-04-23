@@ -63,7 +63,6 @@
   .input-xs::placeholder { color: #94a3b8; }
   .input-xs:focus { outline: none; border-color: rgba(var(--hb-primary-400-rgb), 1); box-shadow: 0 0 0 2px rgba(var(--hb-primary-400-rgb), 0.4); background-color: #ffffff; }
   .input-xs:disabled { opacity: 0.6; cursor: not-allowed; }
-  /* Textareas often need a taller default */
   textarea.input { min-height: 5.5rem; }
   /* Dark mode (optional) */
   .dark .input, .dark .input-sm, .dark .input-xs {

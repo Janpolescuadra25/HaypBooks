@@ -39,6 +39,7 @@ export default function CenteredModal({
   useEffect(() => {
     if (!open) return
 
+    const original = document.body.style.overflow
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && closeOnEscape) {
         event.preventDefault()
@@ -50,7 +51,7 @@ export default function CenteredModal({
     window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      document.body.style.overflow = ''
+      document.body.style.overflow = original
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [open, closeOnEscape, onClose])
@@ -68,7 +69,7 @@ export default function CenteredModal({
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/60"
               onClick={closeOnOverlayClick ? onClose : undefined}
               aria-hidden="true"
               initial={{ opacity: 0 }}

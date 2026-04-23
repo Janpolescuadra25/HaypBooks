@@ -1224,6 +1224,13 @@ table,
   .avoid-break-inside { break-inside: avoid !important; page-break-inside: avoid !important; }
 }
 
+/* === Global square-cornered inputs (QuickBooks style) === */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"]),
+select,
+textarea {
+  border-radius: 0 !important;
+}
+
 /* Soften pure-white surfaces to let the tinted background show through */
 .glass { background-color: rgba(255, 255, 255, 0.55); }
 .glass-card { background-color: rgba(255, 255, 255, 0.55); }

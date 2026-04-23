@@ -219,7 +219,7 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
   return (
     <div className="space-y-6 bg-slate-50 text-slate-900">
       <div className="overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-6">
+        <div className="px-4 py-6 pb-6">
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -399,7 +399,7 @@ export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorF
       </div>
 
       <div className="bg-white border-t border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="px-4 py-4">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-3xl bg-slate-50 p-4">

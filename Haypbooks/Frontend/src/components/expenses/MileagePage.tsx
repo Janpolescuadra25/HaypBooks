@@ -7,7 +7,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { expensesService } from '@/services/expenses.service'
-import SlidePanel from '@/components/shared/SlidePanel'
+import CenteredModal from '@/components/shared/CenteredModal'
 import MileageForm from './MileageForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
@@ -213,16 +213,14 @@ export default function MileagePage() {
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;return(<div className="fixed right-4 top-24 z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.employee??'Log'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Log" onClick={()=>{openEditMileage(row.id);setActionMenuId(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <SlidePanel open={mileagePanelOpen} onClose={closeMileagePanel} title={openMileageMode === 'new' ? 'New Mileage Log' : 'Edit Mileage Log'}>
-        <div className="h-full min-h-screen overflow-hidden">
-          <MileageForm
-            mode={openMileageMode}
-            logId={openMileageId ?? undefined}
-            onClose={closeMileagePanel}
-            onSaved={onMileageSaved}
-          />
-        </div>
-      </SlidePanel>
+      <CenteredModal open={mileagePanelOpen} onClose={closeMileagePanel} title={openMileageMode === 'new' ? 'New Mileage Log' : 'Edit Mileage Log'}>
+        <MileageForm
+          mode={openMileageMode}
+          logId={openMileageId ?? undefined}
+          onClose={closeMileagePanel}
+          onSaved={onMileageSaved}
+        />
+      </CenteredModal>
     </div>
   )
 }

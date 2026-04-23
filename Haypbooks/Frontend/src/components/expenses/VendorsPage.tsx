@@ -10,7 +10,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
-import SlidePanel from '@/components/shared/SlidePanel'
+import CenteredModal from '@/components/shared/CenteredModal'
 import VendorForm from './VendorForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
@@ -347,16 +347,14 @@ export default function VendorsPage() {
       {actionMenuId && <div className="fixed inset-0 z-[9998]" onClick={() => { setActionMenuId(null); setMenuPos(null) }} />}
 
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <SlidePanel open={vendorPanelOpen} onClose={closeVendorPanel} title={openVendorMode === 'new' ? 'New Vendor' : 'Edit Vendor'}>
-        <div className="h-full min-h-screen overflow-hidden">
-          <VendorForm
-            mode={openVendorMode}
-            vendorId={openVendorId ?? undefined}
-            onClose={closeVendorPanel}
-            onSaved={onVendorSaved}
-          />
-        </div>
-      </SlidePanel>
+      <CenteredModal open={vendorPanelOpen} onClose={closeVendorPanel} title={openVendorMode === 'new' ? 'New Vendor' : 'Edit Vendor'}>
+        <VendorForm
+          mode={openVendorMode}
+          vendorId={openVendorId ?? undefined}
+          onClose={closeVendorPanel}
+          onSaved={onVendorSaved}
+        />
+      </CenteredModal>
     </div>
   )
 }

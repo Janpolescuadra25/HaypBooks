@@ -6,7 +6,7 @@ import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { csvDownload, MenuBtn } from './_helpers'
 
 interface ApAgingRow {
@@ -72,9 +72,52 @@ export default function ApAgingPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
 
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({
-    columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 44,
-  })
+  const visibleCols = cols.filter(c => c.visible)
+  const columns: ResizableColumn<ApAgingRow>[] = [
+    {
+      key: '__select__',
+      header: (
+        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
+          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+      width: 44,
+      render: (_value, row) => (
+        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
+          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+    },
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+    {
+      key: '__actions__',
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
+
+  const handleColumnsChange = (next: ResizableColumn<ApAgingRow>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchAging = useCallback(async () => {
@@ -116,8 +159,7 @@ export default function ApAgingPage() {
     showToast('CSV exported')
   }
 
-  const visibleCols = cols.filter(c => c.visible)
-
+  
   const renderCell = (row: ApAgingRow, key: string) => {
     switch (key) {
       case 'vendorName': return <span className="font-semibold text-gray-800">{row.vendorName ?? '—'}</span>
@@ -183,59 +225,16 @@ export default function ApAgingPage() {
         </div>
       )}
 
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        {(loading || cidLoading) && <div className="px-4 py-2 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">Loading AP aging...</div>}
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: 44 }} />
-            {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
-            <col style={{ width: 52 }} />
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-4 py-2.5 border-r border-gray-200 w-10">
-                <button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-                  {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                </button>
-              </th>
-              {visibleCols.map(c => (
-                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
-                  <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    <span className="truncate text-xs">{c.label}</span>
-                    <ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
-                  </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
-                </th>
-              ))}
-              <th className="px-4 py-2.5 w-16" />
-            </tr>
-          </thead>
-          <tbody>
-            {paged.length === 0 ? (
-              <tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No aging data found</td></tr>
-            ) : paged.map(row => (
-              <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-4 py-2.5 border-r border-gray-100">
-                  <button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-                    {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                  </button>
-                </td>
-                {visibleCols.map(c => (
-                  <td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                    {renderCell(row, c.key)}
-                  </td>
-                ))}
-                <td className="px-4 py-2.5 text-right">
-                  <button onClick={e => { const r = e.currentTarget.getBoundingClientRect(); actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom })) }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                    <MoreVertical size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ResizableTable
+        columns={columns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        emptyMessage="No aging data found"
+        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+      />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
