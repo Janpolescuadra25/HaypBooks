@@ -37,4 +37,29 @@ export class ExpensesController {
   recordBillPayment(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
     return this.expensesService.recordBillPayment(req.user.userId, companyId, body)
   }
+
+  @Get('expenses/reimbursements')
+  listReimbursements(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
+    return this.expensesService.listReimbursements(req.user.userId, companyId, query)
+  }
+
+  @Post('expenses/reimbursements')
+  createReimbursement(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
+    return this.expensesService.createReimbursement(req.user.userId, companyId, body)
+  }
+
+  @Get('expenses/reimbursements/:id')
+  getReimbursement(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.expensesService.getReimbursement(req.user.userId, companyId, id)
+  }
+
+  @Post('expenses/reimbursements/:id')
+  updateReimbursement(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string, @Body() body: any) {
+    return this.expensesService.updateReimbursement(req.user.userId, companyId, id, body)
+  }
+
+  @Post('expenses/:expenseId')
+  updateExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('expenseId') expenseId: string, @Body() body: any) {
+    return this.expensesService.updateExpenseReport(req.user.userId, companyId, expenseId, body)
+  }
 }

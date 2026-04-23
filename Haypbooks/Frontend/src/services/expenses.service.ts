@@ -161,7 +161,19 @@ export const expensesService = {
     apiClient.post(`/companies/${companyId}/expenses/${expenseId}/reimburse`, body),
 
   listReimbursements: (companyId: string, query?: any) =>
-    apiClient.get(`/companies/${companyId}/reimbursements`, { params: query }),
+    apiClient.get(`/companies/${companyId}/expenses/reimbursements`, { params: query }),
+
+  getReimbursement: (companyId: string, reimbursementId: string) =>
+    apiClient.get(`/companies/${companyId}/expenses/reimbursements/${reimbursementId}`),
+
+  createReimbursement: (companyId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/expenses/reimbursements`, body),
+
+  updateReimbursement: (companyId: string, reimbursementId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/expenses/reimbursements/${reimbursementId}`, body),
+
+  updateExpenseReport: (companyId: string, expenseId: string, body: any) =>
+    apiClient.post(`/companies/${companyId}/expenses/${expenseId}`, body),
 
   listEmployees: (companyId: string, query?: any) =>
     apiClient.get(`/companies/${companyId}/payroll/employees`, { params: query }),

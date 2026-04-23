@@ -4,6 +4,8 @@ import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Check, XCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { expensesService } from '@/services/expenses.service'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
@@ -22,13 +24,6 @@ const DEFAULT_COLS: ColDef[] = [
 const STORAGE_KEY = 'procurement-approvals-cols-v4'
 function loadCols(): ColDef[] { try { const s = localStorage.getItem(STORAGE_KEY); if (s) { const saved = JSON.parse(s) as ColDef[]; return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width, visible: sc.visible } : d }) } } catch {} return DEFAULT_COLS }
 
-const SAMPLE: ProcurementApproval[] = [
-  { id: 'pa-001', type: 'PR',      referenceNumber: 'PR-2026-001',  submittedBy: 'Maria Santos',   date: '2026-04-08', status: 'PENDING',  amount: 25800 },
-  { id: 'pa-002', type: 'PO',      referenceNumber: 'PO-2026-001',  submittedBy: 'Juan Dela Cruz', date: '2026-04-05', status: 'APPROVED', amount: 48200 },
-  { id: 'pa-003', type: 'EXPENSE', referenceNumber: 'EXP-2026-001', submittedBy: 'Alyssa Reyes',   date: '2026-04-03', status: 'REJECTED', amount: 3500  },
-  { id: 'pa-004', type: 'PR',      referenceNumber: 'PR-2026-002',  submittedBy: 'Marco Reyes',    date: '2026-04-10', status: 'PENDING',  amount: 16900 },
-]
-
 function compare(a: ProcurementApproval, b: ProcurementApproval, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'amount') { const d = a.amount - b.amount; return dir === 'asc' ? d : -d }
   const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
@@ -38,8 +33,9 @@ const STATUSES = ['ALL', 'PENDING', 'APPROVED', 'REJECTED']
 const TYPE_STYLES: Record<string, string> = { PR: 'bg-blue-50 text-blue-700', PO: 'bg-purple-50 text-purple-700', EXPENSE: 'bg-amber-50 text-amber-700' }
 
 export default function ProcurementApprovalsPage() {
+  const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows]                          = useState<ProcurementApproval[]>(SAMPLE)
+  const [rows, setRows]                 = useState<ProcurementApproval[]>([])
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]           = useState<SortKey>('date')
@@ -56,8 +52,42 @@ export default function ProcurementApprovalsPage() {
   const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
   const colsRef                         = useRef(cols)
   const [toast, setToast]               = useState('')
+  const [loading, setLoading]           = useState(false)
 
   useEffect(() => { colsRef.current = cols }, [cols])
+
+  useEffect(() => {
+    if (!companyId) return
+    setLoading(true)
+    Promise.all([
+      expensesService.listBills(companyId, { status: 'PENDING' }),
+      expensesService.listExpenseReports(companyId, { status: 'SUBMITTED', limit: 100 }),
+    ])
+      .then(([billRes, expenseRes]) => {
+        const billRows: ProcurementApproval[] = (billRes.data || []).map((bill: any) => ({
+          id: bill.id,
+          type: 'PO',
+          referenceNumber: bill.billNumber ?? bill.referenceNumber ?? `BILL-${bill.id}`,
+          submittedBy: bill.vendorName ?? bill.vendor ?? 'Vendor',
+          date: bill.dueDate ?? bill.createdAt ?? bill.approvalRequestedAt ?? new Date().toISOString().slice(0, 10),
+          status: bill.status ?? 'PENDING',
+          amount: Number(bill.totalAmount ?? bill.amount ?? 0),
+        }))
+        const expenseRows: ProcurementApproval[] = (expenseRes.data || []).map((expense: any) => ({
+          id: expense.id,
+          type: 'EXPENSE',
+          referenceNumber: expense.expenseNumber ?? `EXP-${expense.id}`,
+          submittedBy: expense.employeeName ?? 'Employee',
+          date: expense.submittedAt ?? expense.createdAt ?? new Date().toISOString().slice(0, 10),
+          status: expense.status ?? 'PENDING',
+          amount: Number(expense.totalAmount ?? 0),
+        }))
+        setRows([...billRows, ...expenseRows])
+      })
+      .catch(() => showToast('Failed to load approval items'))
+      .finally(() => setLoading(false))
+  }, [companyId])
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
@@ -82,6 +112,36 @@ export default function ProcurementApprovalsPage() {
   const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = () => { setShowExport(false); csvDownload(`proc-approvals-${new Date().toISOString().slice(0,10)}.csv`,['Type','Reference #','Submitted By','Date','Status','Amount'],sorted.map(r=>[r.type??'',r.referenceNumber??'',r.submittedBy??'',r.date,r.status??'',String(r.amount)]));showToast('CSV exported') }
+
+  const approveRow = async (row: ProcurementApproval) => {
+    if (!companyId) return showToast('Missing company context')
+    try {
+      if (row.type === 'PO') {
+        await expensesService.approveBill(companyId, row.id)
+      } else {
+        await expensesService.approveExpenseReport(companyId, row.id)
+      }
+      setRows((prev) => prev.map((item) => item.id === row.id ? { ...item, status: 'APPROVED' } : item))
+      showToast('Approval recorded')
+    } catch {
+      showToast('Approval failed')
+    }
+  }
+
+  const rejectRow = (row: ProcurementApproval) => {
+    if (row.type === 'EXPENSE') {
+      if (!companyId) return showToast('Missing company context')
+      expensesService.updateExpenseReport(companyId, row.id, { status: 'REJECTED' })
+        .then(() => {
+          setRows((prev) => prev.map((item) => item.id === row.id ? { ...item, status: 'REJECTED' } : item))
+          showToast('Expense report rejected')
+        })
+        .catch(() => showToast('Reject failed'))
+    } else {
+      showToast('Reject not available for bills yet')
+    }
+  }
+
   const visibleCols = cols.filter(c => c.visible)
 
   const renderCell = (row: ProcurementApproval, key: string) => {
@@ -121,7 +181,7 @@ export default function ProcurementApprovalsPage() {
         </table>
       </div>
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
-      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.referenceNumber??'Approval'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Details" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>{row.status==='PENDING'&&<><div className="my-1 border-t border-gray-100"/><MenuBtn icon={<Check size={13}/>} label="Approve" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/><MenuBtn icon={<XCircle size={13}/>} label="Reject" danger onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/></>}</div>)})()}
+      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.referenceNumber??'Approval'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Details" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>{row.status==='PENDING'&&<><div className="my-1 border-t border-gray-100"/><MenuBtn icon={<Check size={13}/>} label="Approve" onClick={()=>{approveRow(row);setActionMenuId(null)}}/><MenuBtn icon={<XCircle size={13}/>} label="Reject" danger onClick={()=>{rejectRow(row);setActionMenuId(null)}}/></>}</div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>

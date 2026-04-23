@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Search, Download } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -16,7 +17,7 @@ interface Reimbursement {
   status?: string
 }
 
-const STATUSES = ['ALL', 'DRAFT', 'PENDING', 'APPROVED', 'PAID', 'REJECTED']
+const STATUSES = ['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REIMBURSED', 'REJECTED']
 
 function fmtDate(dateString?: string) {
   if (!dateString) return '—'
@@ -24,6 +25,7 @@ function fmtDate(dateString?: string) {
 }
 
 export default function ReimbursementsPage() {
+  const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [reimbursements, setReimbursements] = useState<Reimbursement[]>([])
@@ -37,11 +39,11 @@ export default function ReimbursementsPage() {
   useEffect(() => {
     if (!companyId) return
     setLoading(true)
-    expensesService.listExpenseReports(companyId, { limit: 100 })
+    expensesService.listReimbursements(companyId, { limit: 100 })
       .then((res) => {
         setReimbursements((res.data || []).map((item: any) => ({
           id: item.id,
-          reimbursementNumber: item.expenseNumber,
+          reimbursementNumber: item.reimbursementNumber ?? item.id,
           employeeName: item.employeeName,
           submittedAt: item.submittedAt,
           totalAmount: Number(item.totalAmount ?? 0),
@@ -73,11 +75,11 @@ export default function ReimbursementsPage() {
   const handleRefresh = () => {
     if (!companyId) return
     setLoading(true)
-    expensesService.listExpenseReports(companyId, { limit: 100 })
+    expensesService.listReimbursements(companyId, { limit: 100 })
       .then((res) => {
         setReimbursements((res.data || []).map((item: any) => ({
           id: item.id,
-          reimbursementNumber: item.expenseNumber,
+          reimbursementNumber: item.reimbursementNumber ?? item.id,
           employeeName: item.employeeName,
           submittedAt: item.submittedAt,
           totalAmount: Number(item.totalAmount ?? 0),
@@ -88,21 +90,12 @@ export default function ReimbursementsPage() {
       .finally(() => setLoading(false))
   }
 
-  const handlePay = async (expenseId: string, amount: number) => {
-    if (!companyId) return
-    setLoading(true)
-    try {
-      await expensesService.reimburseExpenseReport(companyId, expenseId, {
-        amount,
-        paymentMethod: 'BANK_TRANSFER',
-        paidAt: new Date().toISOString().slice(0, 10),
-      })
-      showToast('Payment recorded')
-      handleRefresh()
-    } catch {
-      showToast('Payment failed')
-      setLoading(false)
-    }
+  const openNewReimbursement = () => {
+    router.push('/expenses/expense-capture/reimbursements/new')
+  }
+
+  const openEditReimbursement = (id: string) => {
+    router.push(`/expenses/expense-capture/reimbursements/${id}/edit`)
   }
 
   const fmt = (amount: number) => formatCurrency(amount, currency)
@@ -116,7 +109,7 @@ export default function ReimbursementsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Download size={16} /> Refresh</button>
-          <button onClick={() => showToast('Create reimbursement coming soon')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Reimbursement</button>
+          <button onClick={openNewReimbursement} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Reimbursement</button>
         </div>
       </div>
 
@@ -154,22 +147,13 @@ export default function ReimbursementsPage() {
               <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">No reimbursements found</td></tr>
             ) : (
               pageItems.map((item) => (
-                <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr key={item.id} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50" onClick={() => openEditReimbursement(item.id)}>
                   <td className="px-4 py-4 font-semibold text-slate-900">{item.reimbursementNumber ?? '—'}</td>
                   <td className="px-4 py-4 text-slate-700">{item.employeeName ?? '—'}</td>
                   <td className="px-4 py-4 text-slate-500">{fmtDate(item.submittedAt)}</td>
                   <td className="px-4 py-4 text-right font-semibold text-emerald-800">{fmt(item.totalAmount)}</td>
-                  <td className="px-4 py-4 space-y-2">
+                  <td className="px-4 py-4">
                     <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{item.status ?? 'PENDING'}</span>
-                    {item.status === 'APPROVED' && (
-                      <button
-                        type="button"
-                        onClick={() => handlePay(item.id, item.totalAmount)}
-                        className="inline-flex items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                      >
-                        Pay
-                      </button>
-                    )}
                   </td>
                 </tr>
               ))
