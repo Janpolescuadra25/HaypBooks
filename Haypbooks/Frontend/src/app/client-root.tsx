@@ -105,7 +105,8 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
     pathname.includes('/banking/transactions/match') ||
     pathname.includes('/banking/transactions/split') ||
     pathname.includes('/banking/transactions/transfer') ||
-    pathname.includes('/banking/transactions/view-record')
+    pathname.includes('/banking/transactions/view-record') ||
+    (pathname.startsWith('/expenses/') && /(\/new$|\/edit$)/.test(pathname))
 
   return (
     <>

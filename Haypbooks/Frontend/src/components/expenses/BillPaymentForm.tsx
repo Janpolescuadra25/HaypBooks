@@ -179,7 +179,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   const vendorOptions = useMemo(() => filteredVendors, [filteredVendors])
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -196,7 +196,8 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
         <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -229,44 +230,55 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Bills to Pay</h2>
-                <p className="mt-1 text-sm text-slate-500">Choose outstanding bills and enter payment amounts.</p>
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Bills to Pay</h2>
+                    <p className="mt-1 text-sm text-slate-500">Choose outstanding bills and enter payment amounts.</p>
+                  </div>
+                  {mode === 'new' && <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Total: {formatCurrency(totalPayment, currency)}</div>}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="border-b border-slate-200 text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3 w-12" />
+                        <th className="px-4 py-3">Bill #</th>
+                        <th className="px-4 py-3">Bill Date</th>
+                        <th className="px-4 py-3">Due Date</th>
+                        <th className="px-4 py-3 text-right">Amount Due</th>
+                        <th className="px-4 py-3 text-right">Payment</th>
+                        <th className="px-4 py-3">Memo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bills.length === 0 ? (
+                        <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
+                      ) : bills.map((bill) => (
+                        <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
+                          <td className="px-4 py-3"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
+                          <td className="px-4 py-3 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
+                          <td className="px-4 py-3 text-slate-500">{bill.date}</td>
+                          <td className="px-4 py-3 text-slate-500">{bill.dueDate}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
+                          <td className="px-4 py-3 text-right">
+                            <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                          </td>
+                          <td className="px-4 py-3"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              {mode === 'new' && <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Total: {formatCurrency(totalPayment, currency)}</div>}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3 w-12" />
-                    <th className="px-4 py-3">Bill #</th>
-                    <th className="px-4 py-3">Bill Date</th>
-                    <th className="px-4 py-3">Due Date</th>
-                    <th className="px-4 py-3 text-right">Amount Due</th>
-                    <th className="px-4 py-3 text-right">Payment</th>
-                    <th className="px-4 py-3">Memo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bills.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
-                  ) : bills.map((bill) => (
-                    <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="px-4 py-3"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
-                      <td className="px-4 py-3 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
-                      <td className="px-4 py-3 text-slate-500">{bill.date}</td>
-                      <td className="px-4 py-3 text-slate-500">{bill.dueDate}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                      </td>
-                      <td className="px-4 py-3"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-slate-900">Payment summary</div>
+                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
+                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Total payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -287,21 +299,15 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
             </div>
           </section>
         </div>
-      </div>
+      </main>
 
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
-            <div className="rounded-3xl bg-slate-50 p-4">
-              <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
-              <div className="flex items-center justify-between text-sm text-slate-600 mt-2"><span>Total Payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
-            </div>
-            <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push('/expenses/bills-payments/bill-payments')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
-              <button type="button" onClick={handleSave} disabled={mode === 'edit' || submitting || !selectedBills.length} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Record Payment
-              </button>
-            </div>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button type="button" onClick={() => router.push('/expenses/bills-payments/bill-payments')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
+            <button type="button" onClick={handleSave} disabled={mode === 'edit' || submitting || !selectedBills.length} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Record Payment
+            </button>
           </div>
           {error && <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         </div>

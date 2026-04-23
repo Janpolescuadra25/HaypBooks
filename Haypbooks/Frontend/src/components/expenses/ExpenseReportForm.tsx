@@ -234,7 +234,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const selectedEmployee = useMemo(() => employees.find((item) => item.id === employeeId), [employees, employeeId])
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-full flex min-h-[100vh] flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -255,7 +255,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
         <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -296,7 +297,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                 <thead className="border-b border-slate-200 text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Description</th>
                     <th className="px-4 py-3">Account</th>
                     <th className="px-4 py-3 text-right">Amount</th>
@@ -309,7 +309,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                   {lines.map((line) => (
                     <tr key={line.id} className="border-b border-slate-200 hover:bg-slate-50">
                       <td className="px-4 py-3"><input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
-                      <td className="px-4 py-3"><select value={line.category} onChange={(e) => updateLine(line.id, 'category', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">{CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></td>
                       <td className="px-4 py-3"><input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Description" /></td>
                       <td className="px-4 py-3"><select value={line.accountId} onChange={(e) => updateLine(line.id, 'accountId', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"><option value="">Select account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} • ${account.name}` : account.name}</option>)}</select></td>
                       <td className="px-4 py-3 text-right"><input type="number" min="0" step="0.01" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>

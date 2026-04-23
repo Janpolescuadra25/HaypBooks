@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
   CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw,
@@ -11,6 +10,8 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import SlidePanel from '@/components/shared/SlidePanel'
+import VendorForm from './VendorForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -55,7 +56,6 @@ function compare(a: Vendor, b: Vendor, key: SortKey, dir: 'asc' | 'desc'): numbe
 const STATUSES = ['ALL', 'ACTIVE', 'INACTIVE']
 
 export default function VendorsPage() {
-  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<Vendor[]>([])
@@ -76,11 +76,17 @@ export default function VendorsPage() {
   const [cols, setCols]   = useState<ColDef[]>(() => loadCols())
   const colsRef           = useRef(cols)
   const [toast, setToast] = useState('')
+  const [vendorPanelOpen, setVendorPanelOpen] = useState(false)
+  const [openVendorId, setOpenVendorId] = useState<string | null>(null)
+  const [openVendorMode, setOpenVendorMode] = useState<'new' | 'edit'>('new')
 
   useEffect(() => { colsRef.current = cols }, [cols])
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const closeVendorPanel = () => { setVendorPanelOpen(false); setOpenVendorId(null); setOpenVendorMode('new') }
+  const openNewVendor = () => { setVendorPanelOpen(true); setOpenVendorMode('new'); setOpenVendorId(null) }
+  const openEditVendor = (id: string) => { setVendorPanelOpen(true); setOpenVendorMode('edit'); setOpenVendorId(id) }
 
   const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({
     columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96,
@@ -102,6 +108,7 @@ export default function VendorsPage() {
   }, [companyId])
 
   useEffect(() => { fetchVendors() }, [fetchVendors])
+  const onVendorSaved = async () => { await fetchVendors(); closeVendorPanel() }
 
   const filtered = useMemo(() => {
     let list = rows
@@ -162,37 +169,37 @@ export default function VendorsPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Vendors</h1>
           <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} vendors`}</p>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
           {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={fetchVendors} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+            <button onClick={fetchVendors} title="Refresh vendors" aria-label="Refresh vendors" className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+            <div className="relative">
+              <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
+              {showColToggle && (
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">
+                  {cols.map(c => (
+                    <label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none">
+                      <input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
+              {showExport && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
+                  <button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
+                </div>
+              )}
+            </div>
+            <button onClick={openNewVendor} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
           </div>
-          <div className="relative">
-            <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
-            {showColToggle && (
-              <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">
-                {cols.map(c => (
-                  <label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none">
-                    <input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
-            {showExport && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
-                <button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
-              </div>
-            )}
-          </div>
-          <button onClick={() => router.push('/expenses/vendors/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
         </div>
       </div>
 
@@ -219,8 +226,8 @@ export default function VendorsPage() {
       {showAdvFilters && (
         <div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+            <label htmlFor="statusFilter" className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+            <select id="statusFilter" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}
               className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
               {STATUSES.map(s => <option key={s} value={s}>{s === 'ALL' ? 'All Statuses' : s}</option>)}
             </select>
@@ -237,18 +244,18 @@ export default function VendorsPage() {
             <button onClick={() => { csvDownload(`vendors-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Name','Email','Phone','Status','Balance'], sorted.filter(r => selected.has(r.id)).map(r => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)])); showToast('CSV exported') }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
             <button onClick={handleDeleteSelected} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-xs font-semibold"><Trash2 size={12} /> Delete</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
+            <button onClick={() => setSelected(new Set())} title="Clear selection" aria-label="Clear selection" className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
           </div>
         </div>
       )}
 
       <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
         {(loading || cidLoading) && <div className="px-4 py-2 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">Loading vendors...</div>}
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
+        <table className="w-full text-sm border-collapse table-fixed">
           <colgroup>
-            <col style={{ width: 44 }} />
-            {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
-            <col style={{ width: 52 }} />
+            <col width={44} />
+            {visibleCols.map(c => <col key={c.key} width={c.width} />)}
+            <col width={52} />
           </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -258,7 +265,7 @@ export default function VendorsPage() {
                 </button>
               </th>
               {visibleCols.map(c => (
-                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
+                <th key={c.key} width={c.width} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden">
                   <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden">
                     <span className="truncate text-xs">{c.label}</span>
                     <ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
@@ -275,12 +282,12 @@ export default function VendorsPage() {
             ) : paged.map(row => (
               <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
                 <td className="px-4 py-2.5 border-r border-gray-100">
-                  <button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
+                  <button onClick={() => toggleSelect(row.id)} title={selected.has(row.id) ? 'Deselect vendor' : 'Select vendor'} aria-label={selected.has(row.id) ? 'Deselect vendor' : 'Select vendor'} className="text-gray-300 hover:text-emerald-600">
                     {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
                   </button>
                 </td>
                 {visibleCols.map(c => (
-                  <td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
+                  <td key={c.key} className={`px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm ${c.align === 'right' ? 'text-right' : 'text-left'}`}>
                     {renderCell(row, c.key)}
                   </td>
                 ))}
@@ -291,6 +298,8 @@ export default function VendorsPage() {
                       if (actionMenuId === row.id) { setActionMenuId(null); setMenuPos(null) }
                       else { setActionMenuId(row.id); setMenuPos({ x: rect.right, y: rect.bottom }) }
                     }}
+                    title="Vendor actions"
+                    aria-label="Vendor actions"
                     className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
                     <MoreVertical size={14} />
                   </button>
@@ -318,10 +327,10 @@ export default function VendorsPage() {
         const ml = Math.min(Math.max(4, menuPos.x - 208), (typeof window !== 'undefined' ? window.innerWidth : 800) - 212)
         const mt = Math.min(menuPos.y + 4, (typeof window !== 'undefined' ? window.innerHeight : 600) - 160)
         return (
-          <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
+          <div className="fixed right-4 top-24 z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
             <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.name}</p></div>
-            <MenuBtn icon={<Eye size={13} />} label="View Vendor" onClick={() => { router.push(`/expenses/vendors/${row.id}/edit`); setActionMenuId(null) }} />
-            <MenuBtn icon={<Edit2 size={13} />} label="Edit Vendor" onClick={() => { router.push(`/expenses/vendors/${row.id}/edit`); setActionMenuId(null) }} />
+            <MenuBtn icon={<Eye size={13} />} label="View Vendor" onClick={() => { openEditVendor(row.id); setActionMenuId(null) }} />
+            <MenuBtn icon={<Edit2 size={13} />} label="Edit Vendor" onClick={() => { openEditVendor(row.id); setActionMenuId(null) }} />
             <div className="my-1 border-t border-gray-100" />
             <MenuBtn icon={<Trash2 size={13} />} label="Delete Vendor" danger onClick={() => handleDelete(row.id)} />
           </div>
@@ -330,6 +339,16 @@ export default function VendorsPage() {
       {actionMenuId && <div className="fixed inset-0 z-[9998]" onClick={() => { setActionMenuId(null); setMenuPos(null) }} />}
 
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
+      <SlidePanel open={vendorPanelOpen} onClose={closeVendorPanel} title={openVendorMode === 'new' ? 'New Vendor' : 'Edit Vendor'}>
+        <div className="h-full min-h-screen overflow-hidden">
+          <VendorForm
+            mode={openVendorMode}
+            vendorId={openVendorId ?? undefined}
+            onClose={closeVendorPanel}
+            onSaved={onVendorSaved}
+          />
+        </div>
+      </SlidePanel>
     </div>
   )
 }

@@ -24,9 +24,11 @@ interface Account {
 interface ReceiptFormProps {
   mode: 'new' | 'edit'
   receiptId?: string
+  onClose?: () => void
+  onSaved?: () => void
 }
 
-export default function ReceiptForm({ mode, receiptId }: ReceiptFormProps) {
+export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: ReceiptFormProps) {
   const router = useRouter()
   const toast = useToast()
   const { companyId } = useCompanyId()
@@ -129,7 +131,11 @@ export default function ReceiptForm({ mode, receiptId }: ReceiptFormProps) {
         await expensesService.updateReceipt(companyId, receiptId, payload)
         toast.success('Receipt updated')
       }
-      router.push('/expenses/expense-capture/receipts')
+      if (onSaved) {
+        onSaved()
+      } else {
+        router.push('/expenses/expense-capture/receipts')
+      }
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save receipt')
@@ -140,7 +146,7 @@ export default function ReceiptForm({ mode, receiptId }: ReceiptFormProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -161,7 +167,8 @@ export default function ReceiptForm({ mode, receiptId }: ReceiptFormProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
         <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -239,7 +246,7 @@ export default function ReceiptForm({ mode, receiptId }: ReceiptFormProps) {
             </div>
           </section>
         </div>
-      </div>
+      </main>
 
       <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -247,7 +254,7 @@ export default function ReceiptForm({ mode, receiptId }: ReceiptFormProps) {
             {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Save the receipt when you are ready.</p>}
           </div>
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => router.push('/expenses/expense-capture/receipts')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={() => onClose ? onClose() : router.push('/expenses/expense-capture/receipts')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
             <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save
             </button>

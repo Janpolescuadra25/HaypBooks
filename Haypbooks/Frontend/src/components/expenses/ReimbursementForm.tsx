@@ -183,7 +183,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -204,7 +204,8 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40 space-y-6">
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40 space-y-6">
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
           <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
             <div className="space-y-4">

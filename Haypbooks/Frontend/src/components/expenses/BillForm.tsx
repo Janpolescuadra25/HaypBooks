@@ -257,7 +257,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const title = mode === 'new' ? 'New Bill' : 'Edit Bill'
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -274,10 +274,11 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-6">
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-6">
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Bill Date</label>
@@ -412,6 +413,11 @@ export default function BillForm({ mode, billId }: BillFormProps) {
                 </div>
               </div>
             </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <label className="block text-sm font-semibold text-slate-900">Notes</label>
+              <textarea value={memo} onChange={e => setMemo(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+            </section>
           </div>
 
           <aside className="space-y-6">
@@ -440,38 +446,21 @@ export default function BillForm({ mode, billId }: BillFormProps) {
 
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] items-end">
-            <div className="grid gap-3">
-              <div className="grid gap-3 sm:grid-cols-[1fr_1fr] items-end">
-                <div className="rounded-3xl bg-slate-50 p-4">
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
-                  <div className="flex items-center justify-between text-sm text-slate-600 mt-2"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
-                  <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total</span><span>{formatCurrency(total, currency)}</span></div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Notes</label>
-                  <textarea value={memo} onChange={e => setMemo(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 items-stretch sm:items-end">
-              <div className="flex flex-wrap gap-2 justify-end">
-                <button type="button" onClick={() => handleSave('draft')} disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Draft
-                </button>
-                <button type="button" onClick={() => handleSave('submit')} disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Submit
-                </button>
-                {mode === 'edit' && status === 'DRAFT' && (
-                  <button type="button" onClick={() => handleSave('submit')} disabled={submitting}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-emerald-600 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50">
-                    <Check size={16} /> Approve
-                  </button>
-                )}
-              </div>
-            </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => handleSave('draft')} disabled={submitting}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Draft
+            </button>
+            <button type="button" onClick={() => handleSave('submit')} disabled={submitting}
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Submit
+            </button>
+            {mode === 'edit' && status === 'DRAFT' && (
+              <button type="button" onClick={() => handleSave('submit')} disabled={submitting}
+                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-600 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50">
+                <Check size={16} /> Approve
+              </button>
+            )}
           </div>
         </div>
       </div>

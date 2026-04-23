@@ -212,7 +212,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -233,36 +233,37 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-        <div className="space-y-6">
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+          <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div>
-                <label className="block text-sm font-semibold text-slate-900">PO Number</label>
-                <input value={poNumber || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+                <label htmlFor="poNumber" className="block text-sm font-semibold text-slate-900">PO Number</label>
+                <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Order Date</label>
-                <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <label htmlFor="orderDate" className="block text-sm font-semibold text-slate-900">Order Date</label>
+                <input id="orderDate" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Expected Delivery</label>
-                <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <label htmlFor="expectedDate" className="block text-sm font-semibold text-slate-900">Expected Delivery</label>
+                <input id="expectedDate" type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
               </div>
               <div className="sm:col-span-2 xl:col-span-1">
-                <label className="block text-sm font-semibold text-slate-900">Vendor</label>
+                <label htmlFor="vendorId" className="block text-sm font-semibold text-slate-900">Vendor</label>
                 <div className="mt-2 flex gap-2">
-                  <input value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={readonlyFields} placeholder="Search vendors" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <input id="vendorSearch" value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={readonlyFields} aria-label="Search vendors" placeholder="Search vendors" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                   <button type="button" onClick={() => setVendorSearch('')} disabled={readonlyFields} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">Clear</button>
                 </div>
-                <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
                   <option value="">Select vendor</option>
                   {filteredVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <label htmlFor="status" className="block text-sm font-semibold text-slate-900">Status</label>
+                <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
                   {STATUS_OPTIONS.map((option) => <option key={option.value + option.label} value={option.value}>{option.label}</option>)}
                 </select>
               </div>
@@ -270,48 +271,61 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
-                <p className="text-sm text-slate-500">Add items and pricing for this purchase order.</p>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
+                    <p className="text-sm text-slate-500">Add items and pricing for this purchase order.</p>
+                  </div>
+                  {!readonlyFields && (
+                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Row</button>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="border-b border-slate-200 text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3">Item / Description</th>
+                        <th className="px-4 py-3">Account</th>
+                        <th className="px-4 py-3">Qty</th>
+                        <th className="px-4 py-3">Unit Price</th>
+                        <th className="px-4 py-3">Tax %</th>
+                        <th className="px-4 py-3 text-right">Amount</th>
+                        {!readonlyFields && <th className="px-4 py-3"> </th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lineItems.map((line) => (
+                        <tr key={line.id} className="border-b border-slate-200">
+                          <td className="px-4 py-3">
+                            <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Item description" />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input value={line.account} onChange={(e) => updateLine(line.id, 'account', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Account" />
+                          </td>
+                          <td className="px-4 py-3 w-24"><input type="number" min="1" value={line.quantity} onChange={(e) => updateLine(line.id, 'quantity', Number(e.target.value))} disabled={readonlyFields} aria-label="Quantity" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
+                          <td className="px-4 py-3 w-32"><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => updateLine(line.id, 'unitPrice', Number(e.target.value))} disabled={readonlyFields} aria-label="Unit price" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
+                          <td className="px-4 py-3 w-28"><select value={line.taxRate} onChange={(e) => updateLine(line.id, 'taxRate', Number(e.target.value))} disabled={readonlyFields} aria-label="Tax rate" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                            {TAX_RATES.map((tax) => <option key={tax} value={tax}>{tax}%</option>)}
+                          </select></td>
+                          <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(line.amount, currency)}</td>
+                          {!readonlyFields && <td className="px-4 py-3 text-right"><button type="button" title="Remove line item" aria-label="Remove line item" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"><X size={14} /></button></td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              {!readonlyFields && (
-                <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Row</button>
-              )}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">Item / Description</th>
-                    <th className="px-4 py-3">Account</th>
-                    <th className="px-4 py-3">Qty</th>
-                    <th className="px-4 py-3">Unit Price</th>
-                    <th className="px-4 py-3">Tax %</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    {!readonlyFields && <th className="px-4 py-3"> </th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((line) => (
-                    <tr key={line.id} className="border-b border-slate-200">
-                      <td className="px-4 py-3">
-                        <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Item description" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input value={line.account} onChange={(e) => updateLine(line.id, 'account', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Account" />
-                      </td>
-                      <td className="px-4 py-3 w-24"><input type="number" min="1" value={line.quantity} onChange={(e) => updateLine(line.id, 'quantity', Number(e.target.value))} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
-                      <td className="px-4 py-3 w-32"><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => updateLine(line.id, 'unitPrice', Number(e.target.value))} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
-                      <td className="px-4 py-3 w-28"><select value={line.taxRate} onChange={(e) => updateLine(line.id, 'taxRate', Number(e.target.value))} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                        {TAX_RATES.map((tax) => <option key={tax} value={tax}>{tax}%</option>)}
-                      </select></td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(line.amount, currency)}</td>
-                      {!readonlyFields && <td className="px-4 py-3 text-right"><button type="button" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"><X size={14} /></button></td>}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-slate-900">Order summary</div>
+                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
+                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
+                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Shipping</span><span>{formatCurrency(shippingCost, currency)}</span></div>
+                  <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total</span><span>{formatCurrency(total, currency)}</span></div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -338,8 +352,8 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                 <input value={shipTo.country} onChange={(e) => setShipTo((prev) => ({ ...prev, country: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Country" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Shipping Method</label>
-                <select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <label htmlFor="shippingMethod" className="block text-sm font-semibold text-slate-900">Shipping Method</label>
+                <select id="shippingMethod" value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
                   {SHIPPING_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
                 </select>
               </div>
@@ -362,29 +376,22 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
               </div>
             </div>
           </section>
+          </div>
         </div>
-      </div>
+      </main>
 
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
-            <div className="rounded-3xl bg-slate-50 p-4">
-              <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
-              <div className="flex items-center justify-between text-sm text-slate-600 mt-2"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
-              <div className="flex items-center justify-between text-sm text-slate-600 mt-2"><span>Shipping</span><span>{formatCurrency(shippingCost, currency)}</span></div>
-              <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total</span><span>{formatCurrency(total, currency)}</span></div>
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto] items-end">
+            <div>
+              <label htmlFor="shippingCost" className="block text-sm font-semibold text-slate-900">Shipping Cost</label>
+              <input id="shippingCost" type="number" min="0" value={shippingCost} onChange={(e) => setShippingCost(Number(e.target.value))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto]">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Shipping Cost</label>
-                <input type="number" min="0" value={shippingCost} onChange={(e) => setShippingCost(Number(e.target.value))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div className="flex flex-wrap gap-2 justify-end">
-                <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
-                <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isEdit ? 'Update Status' : 'Save Draft'}
-                </button>
-              </div>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
+              <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isEdit ? 'Update Status' : 'Save Draft'}
+              </button>
             </div>
           </div>
           {error && <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}

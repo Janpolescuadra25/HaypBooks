@@ -11,6 +11,8 @@ import { expensesService } from '@/services/expenses.service'
 interface VendorFormProps {
   mode: 'new' | 'edit'
   vendorId?: string
+  onClose?: () => void
+  onSaved?: () => void
 }
 
 const PAYMENT_TERMS = ['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Due on Receipt']
@@ -21,7 +23,7 @@ const STATUS_OPTIONS = ['ACTIVE', 'INACTIVE']
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const phonePattern = /^[0-9()+\-\s]*$/
 
-export default function VendorForm({ mode, vendorId }: VendorFormProps) {
+export default function VendorForm({ mode, vendorId, onClose, onSaved }: VendorFormProps) {
   const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency: companyCurrency } = useCompanyCurrency()
@@ -189,6 +191,10 @@ export default function VendorForm({ mode, vendorId }: VendorFormProps) {
         toast.success('Vendor created')
         if (nextRoute === 'new') {
           clearForm()
+          if (onSaved) {
+            onSaved()
+            return
+          }
           router.push('/expenses/vendors/new')
           return
         }
@@ -196,7 +202,11 @@ export default function VendorForm({ mode, vendorId }: VendorFormProps) {
         await expensesService.updateVendor(companyId, vendorId, payload)
         toast.success('Vendor updated')
       }
-      router.push('/expenses/procurement/vendors')
+      if (onSaved) {
+        onSaved()
+      } else {
+        router.push('/expenses/procurement/vendors')
+      }
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save vendor')
@@ -207,14 +217,16 @@ export default function VendorForm({ mode, vendorId }: VendorFormProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-full flex min-h-[100vh] flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/procurement/vendors')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to vendors
-              </button>
+              {!onClose && (
+                <button type="button" onClick={() => router.push('/expenses/procurement/vendors')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
+                  <ArrowLeft size={16} /> Back to vendors
+                </button>
+              )}
               <div className="mt-3">
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Vendor' : 'Edit Vendor'}</h1>
                 <p className="mt-1 text-sm text-slate-500">Manage vendor details and payment information.</p>
@@ -228,7 +240,8 @@ export default function VendorForm({ mode, vendorId }: VendorFormProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -421,7 +434,7 @@ export default function VendorForm({ mode, vendorId }: VendorFormProps) {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push('/expenses/procurement/vendors')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <button type="button" onClick={() => onClose ? onClose() : router.push('/expenses/procurement/vendors')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <X size={16} /> Cancel
               </button>
               <button type="button" onClick={() => handleSave('list')} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
