@@ -9,6 +9,8 @@ import { useToast } from '@/components/ToastProvider'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 
 const genId = () => Math.random().toString(36).slice(2, 9)
 
@@ -85,6 +87,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const [submitting, setSubmitting] = useState(false)
   const [status, setStatus] = useState<'DRAFT' | 'PENDING' | 'APPROVED' | string>('DRAFT')
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
 
   const filteredVendors = useMemo(() => {
     if (!vendorSearch) return vendors
@@ -139,10 +142,11 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         setInternalNotes((data.internalNotes ?? '') as string)
         setStatus(data.status ?? 'DRAFT')
         if (Array.isArray(data.items) && data.items.length > 0) {
-          setLineItems(data.items.map((item: any) => ({
+          interface RawBillLine { description?: unknown; accountId?: unknown; quantity?: unknown; unitPrice?: unknown; rate?: unknown; taxRate?: unknown; amount?: unknown }
+          setLineItems((data.items as RawBillLine[]).map((item) => ({
             id: genId(),
-            description: item.description ?? '',
-            account: item.accountId ?? '',
+            description: String(item.description ?? ''),
+            account: String(item.accountId ?? ''),
             quantity: Number(item.quantity ?? 1),
             unitPrice: Number(item.unitPrice ?? item.rate ?? 0),
             taxRate: Number(item.taxRate ?? 0),
@@ -256,6 +260,12 @@ export default function BillForm({ mode, billId }: BillFormProps) {
 
   const title = mode === 'new' ? 'New Bill' : 'Edit Bill'
 
+  const { entries: activityEntries, loading: activityLoading } = useActivityLog({
+    companyId: activeTab === 'activity' ? companyId : null,
+    pageSize: 30,
+    initialFilters: activeTab === 'activity' && billId ? { tableName: 'Bill', recordId: billId } : undefined,
+  })
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
@@ -275,7 +285,14 @@ export default function BillForm({ mode, billId }: BillFormProps) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !billId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+          </div>
+        </div>
+        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-6">
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -444,6 +461,21 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         </div>
       </div>
 
+        </div>
+        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="space-y-6">
+                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
+                  <div className="mt-4">
+                    <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill yet." />
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-end gap-2">

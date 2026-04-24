@@ -6,12 +6,13 @@ import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
   CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Ban,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BillPayment {
@@ -44,12 +45,7 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE: BillPayment[] = [
-  { id: 'pay-001', paymentNumber: 'PAY-1001', vendorName: 'Luzon Supplies', date: '2026-04-10', method: 'Bank Transfer', status: 'COMPLETED', amount: 25000 },
-  { id: 'pay-002', paymentNumber: 'PAY-1002', vendorName: 'MNL Office Solutions', date: '2026-03-25', method: 'Check', status: 'COMPLETED', amount: 10000 },
-  { id: 'pay-003', paymentNumber: 'PAY-1003', vendorName: 'Cebu Transport Co.', date: '2026-03-15', method: 'Credit Card', status: 'VOIDED', amount: 9200 },
-  { id: 'pay-004', paymentNumber: 'PAY-1004', vendorName: 'Davao Hardware Depot', date: '2026-04-12', method: 'Bank Transfer', status: 'PENDING', amount: 6750 },
-]
+
 
 function compare(a: BillPayment, b: BillPayment, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'amount') { const d = a.amount - b.amount; return dir === 'asc' ? d : -d }
@@ -63,7 +59,7 @@ export default function BillPaymentsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]       = useState<BillPayment[]>(SAMPLE)
+  const [rows, setRows]       = useState<BillPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -103,7 +99,8 @@ export default function BillPaymentsPage() {
     if (!companyId) { setLoading(false); return }
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/bill-payments`)
+      const res = await expensesService.listBillPayments(companyId)
+      const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.payments ?? [])
     } catch { showToast('Failed to load payments') }
     finally { setLoading(false) }
@@ -114,7 +111,7 @@ export default function BillPaymentsPage() {
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/bill-payments/${id}/void`)
+      await expensesService.voidBillPayment(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'VOIDED' } : r))
       showToast('Payment voided'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to void payment') }
@@ -294,6 +291,10 @@ export default function BillPaymentsPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="BillPayment" entityLabel="Bill Payments" pageSize={8} />
+      </div>
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)

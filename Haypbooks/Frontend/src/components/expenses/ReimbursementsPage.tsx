@@ -8,6 +8,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface Reimbursement {
   id: string
@@ -46,13 +47,14 @@ export default function ReimbursementsPage() {
     setLoading(true)
     expensesService.listReimbursements(companyId, { limit: 100 })
       .then((res) => {
-        setReimbursements((res.data || []).map((item: any) => ({
-          id: item.id,
-          reimbursementNumber: item.reimbursementNumber ?? item.id,
-          employeeName: item.employeeName,
-          submittedAt: item.submittedAt,
+        interface RawReimbursement { id?: unknown; reimbursementNumber?: unknown; employeeName?: unknown; submittedAt?: unknown; totalAmount?: unknown; status?: unknown }
+        setReimbursements((res.data || []).map((item: RawReimbursement) => ({
+          id: String(item.id ?? ''),
+          reimbursementNumber: String(item.reimbursementNumber ?? item.id ?? ''),
+          employeeName: item.employeeName as string | undefined,
+          submittedAt: item.submittedAt as string | undefined,
           totalAmount: Number(item.totalAmount ?? 0),
-          status: item.status,
+          status: item.status as string | undefined,
         })))
       })
       .catch(() => setToast('Failed to load reimbursements'))
@@ -104,13 +106,14 @@ export default function ReimbursementsPage() {
     setLoading(true)
     expensesService.listReimbursements(companyId, { limit: 100 })
       .then((res) => {
-        setReimbursements((res.data || []).map((item: any) => ({
-          id: item.id,
-          reimbursementNumber: item.reimbursementNumber ?? item.id,
-          employeeName: item.employeeName,
-          submittedAt: item.submittedAt,
+        interface RawReimbursement2 { id?: unknown; reimbursementNumber?: unknown; employeeName?: unknown; submittedAt?: unknown; totalAmount?: unknown; status?: unknown }
+        setReimbursements((res.data || []).map((item: RawReimbursement2) => ({
+          id: String(item.id ?? ''),
+          reimbursementNumber: String(item.reimbursementNumber ?? item.id ?? ''),
+          employeeName: item.employeeName as string | undefined,
+          submittedAt: item.submittedAt as string | undefined,
           totalAmount: Number(item.totalAmount ?? 0),
-          status: item.status,
+          status: item.status as string | undefined,
         })))
       })
       .catch(() => showToast('Failed to load reimbursements'))
@@ -181,6 +184,10 @@ export default function ReimbursementsPage() {
           <span>Page {currentPage} of {totalPages}</span>
           <button onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 disabled:opacity-40">Next</button>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="Reimbursement" entityLabel="Reimbursements" pageSize={8} />
       </div>
 
       {toast && <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-xl">{toast}</div>}

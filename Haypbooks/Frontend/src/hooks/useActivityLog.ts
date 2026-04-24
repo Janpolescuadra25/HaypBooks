@@ -10,6 +10,7 @@ export interface ActivityLogFilters {
   userId?: string
   from?: string
   to?: string
+  recordId?: string
 }
 
 interface UseActivityLogOptions {
@@ -47,6 +48,7 @@ export function useActivityLog({
       const tableName = filters.tableName || filters.entityType
       if (tableName) params.tableName = tableName
       if (filters.userId) params.userId = filters.userId
+      if (filters.recordId) params.recordId = filters.recordId
       if (filters.from) params.from = filters.from
       if (filters.to) params.to = filters.to
 
@@ -66,7 +68,7 @@ export function useActivityLog({
     } finally {
       setLoading(false)
     }
-  }, [companyId, page, pageSize, filters.tableName, filters.entityType, filters.userId, filters.from, filters.to])
+  }, [companyId, page, pageSize, filters.tableName, filters.entityType, filters.userId, filters.recordId, filters.from, filters.to])
 
   useEffect(() => {
     fetchActivity()

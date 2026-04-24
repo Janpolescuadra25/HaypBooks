@@ -21,28 +21,41 @@ interface ProductPickerFieldProps extends PickerProps {
   onSelect?: (item: ProductPickerItem | null) => void
 }
 
-function normalizeItems(payload: any): any[] {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.items)) return payload.items
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.results)) return payload.results
+// Raw response shape may vary depending on API; keep properties optional and loosely typed.
+interface RawProduct {
+  id?: unknown
+  name?: unknown
+  type?: unknown
+  sku?: unknown
+  description?: unknown
+  salesPrice?: unknown
+  taxRate?: unknown
+  taxCodeId?: unknown
+}
+
+function normalizeItems(payload: unknown): RawProduct[] {
+  const p = payload as Record<string, unknown> | undefined
+  if (Array.isArray(payload)) return payload as RawProduct[]
+  if (Array.isArray(p?.items)) return p!.items as RawProduct[]
+  if (Array.isArray(p?.data)) return p!.data as RawProduct[]
+  if (Array.isArray(p?.results)) return p!.results as RawProduct[]
   return []
 }
 
-function normalizeItem(item: any): ProductPickerItem {
+function normalizeItem(item: RawProduct): ProductPickerItem {
   return {
     id: String(item?.id ?? ''),
     name: String(item?.name ?? 'Unnamed item'),
     type: String(item?.type ?? ''),
-    sku: item?.sku ?? null,
-    description: item?.description ?? undefined,
-    salesPrice: item?.salesPrice != null ? Number(item.salesPrice) : null,
-    taxRate: item?.taxRate != null ? Number(item.taxRate) : undefined,
-    taxCodeId: item?.taxCodeId ?? null,
+    sku: (item?.sku ?? null) as string | null,
+    description: item?.description as string | undefined,
+    salesPrice: item?.salesPrice != null ? Number(item.salesPrice as any) : null,
+    taxRate: item?.taxRate != null ? Number(item.taxRate as any) : undefined,
+    taxCodeId: (item?.taxCodeId ?? null) as string | null,
   }
 }
 
-function mapItemToOption(item: any): PickerOption {
+function mapItemToOption(item: RawProduct): PickerOption {
   const normalized = normalizeItem(item)
   return {
     id: normalized.id,

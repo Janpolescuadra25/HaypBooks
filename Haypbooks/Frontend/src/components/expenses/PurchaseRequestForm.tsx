@@ -10,6 +10,8 @@ import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 
 const today = new Date().toISOString().slice(0, 10)
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent']
@@ -58,6 +60,35 @@ const defaultLineItem = (): LineItem => ({
   amount: 0,
 })
 
+// API shapes for list responses
+interface ApiVendor {
+  id: string
+  displayName?: string | null
+  name?: string | null
+}
+
+interface ApiAccount {
+  id: string
+  code?: string | null
+  name?: string | null
+}
+
+interface ApiEmployee {
+  id: string
+  displayName?: string | null
+  name?: string | null
+}
+
+interface ApiPRLine {
+  id?: string
+  description?: string | null
+  accountId?: string | null
+  quantity?: number | null
+  unitPrice?: number | null
+  taxRate?: number | null
+  amount?: number | null
+}
+
 const defaultWidths = {
   description: 320,
   account: 180,
@@ -90,6 +121,14 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+
+  const { entries: activityEntries, loading: activityLoading } = useActivityLog({
+    companyId: activeTab === 'activity' ? companyId : null,
+    pageSize: 30,
+    initialFilters: activeTab === 'activity' && prId ? { tableName: 'PurchaseRequest', recordId: prId } : undefined,
+  })
+
   useEffect(() => {
     if (!companyId) return
     let active = true
@@ -98,7 +137,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         if (!active) return
         const payload = res.data ?? res
         const list = Array.isArray(payload) ? payload : payload.data ?? []
-        setVendors(list.map((vendor: any) => ({ id: vendor.id, displayName: vendor.displayName ?? vendor.name ?? vendor.id })))
+        setVendors(list.map((vendor: ApiVendor) => ({ id: vendor.id, displayName: vendor.displayName ?? vendor.name ?? vendor.id })))
         if (!vendorId && list.length > 0) setVendorId(list[0].id)
       })
       .catch(() => toast.error('Failed to load vendors'))
@@ -107,7 +146,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         if (!active) return
         const payload = res.data ?? res
         const list = Array.isArray(payload) ? payload : payload.data ?? []
-        setAccounts(list.map((account: any) => ({ id: account.id, code: account.code, name: account.name })))
+        setAccounts(list.map((account: ApiAccount) => ({ id: account.id, code: account.code, name: account.name })))
       })
       .catch(() => {})
     expensesService.listEmployees(companyId, { limit: 100 })
@@ -115,7 +154,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         if (!active) return
         const payload = res.data ?? res
         const list = Array.isArray(payload) ? payload : payload.data ?? []
-        setEmployees(list.map((employee: any) => ({ id: employee.id, displayName: employee.displayName ?? employee.name ?? employee.id })))
+        setEmployees(list.map((employee: ApiEmployee) => ({ id: employee.id, displayName: employee.displayName ?? employee.name ?? employee.id })))
         if (!requesterId && list.length > 0) setRequesterId(list[0].id)
       })
       .catch(() => {})
@@ -140,7 +179,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         setNotes(data.notes ?? '')
         setInternalNotes(data.internalNotes ?? '')
         if (Array.isArray(data.lines) && data.lines.length > 0) {
-          setLineItems(data.lines.map((line: any) => ({
+          setLineItems(data.lines.map((line: ApiPRLine) => ({
             id: genId(),
             description: line.description ?? '',
             accountId: line.accountId ?? '',
@@ -276,8 +315,15 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
-          <div className="space-y-6">
+        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !prId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+          </div>
+        </div>
+        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
+            <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_280px]">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -420,6 +466,19 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
               </div>
             </div>
           </section>
+            </div>
+          </div>
+        </div>
+        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div className="space-y-6">
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
+                <div className="mt-4">
+                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this purchase request yet." />
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </main>

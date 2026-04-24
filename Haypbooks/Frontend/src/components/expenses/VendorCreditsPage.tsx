@@ -9,6 +9,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface VendorCredit {
   id: string
@@ -288,6 +289,10 @@ export default function VendorCreditsPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="VendorCredit" entityLabel="Vendor Credits" pageSize={8} />
+      </div>
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)

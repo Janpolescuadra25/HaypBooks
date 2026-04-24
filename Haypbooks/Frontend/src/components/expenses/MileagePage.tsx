@@ -10,6 +10,7 @@ import { expensesService } from '@/services/expenses.service'
 import CenteredModal from '@/components/shared/CenteredModal'
 import MileageForm, { type MileageFormHandle } from './MileageForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface MileageLog { id: string; date: string; employee?: string; purpose?: string; route?: string; distanceKm?: number; rate?: number; amount: number; status?: string }
 type SortKey = 'date' | 'employee' | 'purpose' | 'route' | 'distanceKm' | 'rate' | 'amount' | 'status'
@@ -218,6 +219,10 @@ export default function MileagePage() {
         fixedWidth={96}
       />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="Mileage" entityLabel="Mileage Logs" pageSize={8} />
+      </div>
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;return(<div className="fixed right-4 top-24 z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.employee??'Log'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Log" onClick={()=>{openEditMileage(row.id);setActionMenuId(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}

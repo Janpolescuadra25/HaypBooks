@@ -8,6 +8,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface ExpenseReport {
   id: string
@@ -50,14 +51,15 @@ export default function ExpensesPage() {
     setError('')
     expensesService.listExpenseReports(companyId, { limit: 100 })
       .then((res) => {
-        setReports((res.data || []).map((item: any) => ({
-          id: item.id,
-          expenseNumber: item.expenseNumber,
-          employeeName: item.employeeName,
-          description: item.description,
-          status: item.status,
+        interface RawExpenseReport { id?: unknown; expenseNumber?: unknown; employeeName?: unknown; description?: unknown; status?: unknown; totalAmount?: unknown; submittedAt?: unknown }
+        setReports((res.data || []).map((item: RawExpenseReport) => ({
+          id: String(item.id ?? ''),
+          expenseNumber: item.expenseNumber as string | undefined,
+          employeeName: item.employeeName as string | undefined,
+          description: item.description as string | undefined,
+          status: item.status as string | undefined,
           totalAmount: Number(item.totalAmount ?? 0),
-          submittedAt: item.submittedAt,
+          submittedAt: item.submittedAt as string | undefined,
         })))
       })
       .catch(() => { setError('Failed to load expense reports'); setToast('Failed to load expense reports') })
@@ -111,14 +113,15 @@ export default function ExpensesPage() {
     setLoading(true)
     expensesService.listExpenseReports(companyId, { limit: 100 })
       .then((res) => {
-        setReports((res.data || []).map((item: any) => ({
-          id: item.id,
-          expenseNumber: item.expenseNumber,
-          employeeName: item.employeeName,
-          description: item.description,
-          status: item.status,
+        interface RawExpenseReport2 { id?: unknown; expenseNumber?: unknown; employeeName?: unknown; description?: unknown; status?: unknown; totalAmount?: unknown; submittedAt?: unknown }
+        setReports((res.data || []).map((item: RawExpenseReport2) => ({
+          id: String(item.id ?? ''),
+          expenseNumber: item.expenseNumber as string | undefined,
+          employeeName: item.employeeName as string | undefined,
+          description: item.description as string | undefined,
+          status: item.status as string | undefined,
           totalAmount: Number(item.totalAmount ?? 0),
-          submittedAt: item.submittedAt,
+          submittedAt: item.submittedAt as string | undefined,
         })))
       })
       .catch(() => showToast('Failed to load expense reports'))
@@ -186,6 +189,10 @@ export default function ExpensesPage() {
           <span>Page {currentPage} of {totalPages}</span>
           <button onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 disabled:opacity-40">Next</button>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="ExpenseReport" entityLabel="Expense Reports" pageSize={8} />
       </div>
 
       {toast && <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-xl">{toast}</div>}

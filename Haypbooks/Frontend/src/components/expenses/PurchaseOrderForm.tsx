@@ -8,6 +8,8 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 
 interface PurchaseOrderFormProps {
   mode: 'new' | 'edit'
@@ -51,6 +53,17 @@ const defaultLineItem = (): LineItem => ({
   amount: 0,
 })
 
+// API shape for a purchase order line
+interface ApiLine {
+  id?: string
+  description?: string | null
+  accountId?: string | null
+  quantity?: number | null
+  unitPrice?: number | null
+  taxRate?: number | null
+  amount?: number | null
+}
+
 export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
@@ -74,8 +87,16 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+
+  const { entries: activityEntries, loading: activityLoading } = useActivityLog({
+    companyId: activeTab === 'activity' ? companyId : null,
+    pageSize: 30,
+    initialFilters: activeTab === 'activity' && poId ? { tableName: 'PurchaseOrder', recordId: poId } : undefined,
+  })
+
   const isEdit = mode === 'edit'
-  const readonlyFields = isEdit
+  const readonlyFields = false
 
   const filteredVendors = useMemo(() => {
     if (!vendorSearch) return vendors
@@ -120,7 +141,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         setNotes(data.notes ?? '')
         setInternalNotes(data.internalNotes ?? '')
         if (Array.isArray(data.lines) && data.lines.length > 0) {
-          setLineItems(data.lines.map((line: any) => ({
+          setLineItems(data.lines.map((line: ApiLine) => ({
             id: Math.random().toString(36).slice(2, 9),
             description: line.description ?? '',
             account: line.accountId ?? '',
@@ -201,7 +222,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         await expensesService.updatePurchaseOrderStatus(companyId, poId, { status })
         toast.success('Purchase order status updated')
       }
-      router.push('/expenses/procurement/orders')
+      router.push('/expenses/procurement/purchase-orders')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save purchase order')
@@ -217,7 +238,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
+              <button type="button" onClick={() => router.push('/expenses/procurement/purchase-orders')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
                 <ArrowLeft size={16} /> Back to orders
               </button>
               <div className="mt-3">
@@ -234,8 +255,15 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-          <div className="space-y-6">
+        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !poId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+          </div>
+        </div>
+        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+            <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div>
@@ -374,8 +402,21 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                 <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
                 <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readonlyFields} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Internal use only" />
               </div>
+              </div>
+            </section>
             </div>
-          </section>
+          </div>
+        </div>
+        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div className="space-y-6">
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
+                <div className="mt-4">
+                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this purchase order yet." />
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </main>

@@ -1,12 +1,15 @@
 'use client'
 
-import React, { useMemo, useRef, useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Send } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, RefreshCw, Eye, Send } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { expensesService } from '@/services/expenses.service'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface PurchaseRequest {
   id: string
@@ -22,13 +25,13 @@ type SortKey = 'prNumber' | 'requestedBy' | 'vendorName' | 'date' | 'dateNeeded'
 type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<PurchaseRequest>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
-  { key: 'prNumber',    label: 'PR #',          visible: true, width: 130 },
-  { key: 'requestedBy', label: 'Requested By',  visible: true, width: 170 },
-  { key: 'vendorName',  label: 'Vendor',         visible: true, width: 200 },
-  { key: 'date',        label: 'Date',           visible: true, width: 115 },
-  { key: 'dateNeeded',  label: 'Date Needed',    visible: true, width: 130 },
-  { key: 'status',      label: 'Status',         visible: true, width: 130 },
-  { key: 'total',       label: 'Total',          visible: true, width: 130, align: 'right' },
+  { key: 'prNumber',    label: 'PR #',         visible: true, width: 130 },
+  { key: 'requestedBy', label: 'Requested By', visible: true, width: 170 },
+  { key: 'vendorName',  label: 'Vendor',        visible: true, width: 200 },
+  { key: 'date',        label: 'Date',          visible: true, width: 115 },
+  { key: 'dateNeeded',  label: 'Date Needed',   visible: true, width: 130 },
+  { key: 'status',      label: 'Status',        visible: true, width: 130 },
+  { key: 'total',       label: 'Total',         visible: true, width: 130, align: 'right' },
 ]
 const STORAGE_KEY = 'purchase-requests-cols-v4'
 
@@ -40,13 +43,6 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE: PurchaseRequest[] = [
-  { id: 'pr-001', prNumber: 'PR-2026-001', requestedBy: 'Maria Santos',  vendorName: 'Mabuhay Office Supplies', date: '2026-04-08', dateNeeded: '2026-04-18', status: 'PENDING',  total: 25800 },
-  { id: 'pr-002', prNumber: 'PR-2026-002', requestedBy: 'Juan Dela Cruz', vendorName: 'Luzon Steel Trading',    date: '2026-04-05', dateNeeded: '2026-04-20', status: 'DRAFT',    total: 48200 },
-  { id: 'pr-003', prNumber: 'PR-2026-003', requestedBy: 'Alyssa Reyes',   vendorName: 'Cebu Industrial Parts',  date: '2026-03-28', dateNeeded: '2026-04-10', status: 'APPROVED', total: 33500 },
-  { id: 'pr-004', prNumber: 'PR-2026-004', requestedBy: 'Marco Reyes',    vendorName: 'Davao Hardware Depot',   date: '2026-03-20', dateNeeded: '2026-04-05', status: 'ORDERED',  total: 16900 },
-]
-
 function compare(a: PurchaseRequest, b: PurchaseRequest, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'total') { const d = a.total - b.total; return dir === 'asc' ? d : -d }
   const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
@@ -57,8 +53,11 @@ const STATUSES = ['ALL', 'DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'ORDERED']
 
 export default function PurchaseRequestsPage() {
   const router = useRouter()
+  const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows]                          = useState<PurchaseRequest[]>(SAMPLE)
+  const [rows, setRows]                 = useState<PurchaseRequest[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState('')
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]           = useState<SortKey>('date')
@@ -81,7 +80,6 @@ export default function PurchaseRequestsPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-
   const visibleCols = cols.filter(c => c.visible)
 
   const handleColumnsChange = (next: ResizableColumn<PurchaseRequest>[]) => {
@@ -91,6 +89,22 @@ export default function PurchaseRequestsPage() {
     }))
   }
   const fmt = (n: number) => formatCurrency(n, currency)
+
+  const fetchRows = useCallback(async () => {
+    if (!companyId) { setLoading(false); return }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await expensesService.listPurchaseRequests(companyId)
+      const data = res.data ?? res
+      setRows(Array.isArray(data) ? data : data.purchaseRequests ?? [])
+    } catch {
+      setError('Failed to load purchase requests')
+      showToast('Failed to load purchase requests')
+    } finally { setLoading(false) }
+  }, [companyId])
+
+  useEffect(() => { fetchRows() }, [fetchRows])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -109,6 +123,7 @@ export default function PurchaseRequestsPage() {
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
   const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
   const columns: ResizableColumn<PurchaseRequest>[] = [
     {
       key: '__select__',
@@ -157,7 +172,6 @@ export default function PurchaseRequestsPage() {
     showToast('CSV exported')
   }
 
-  
   const renderCell = (row: PurchaseRequest, key: string) => {
     switch (key) {
       case 'prNumber':    return <span className="font-semibold text-gray-800">{row.prNumber ?? '—'}</span>
@@ -176,18 +190,22 @@ export default function PurchaseRequestsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Purchase Requests</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{`${sorted.length} requests`}</p>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} requests`}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
-            {showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+            <div className="relative">
+              <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
+              {showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}
+            </div>
+            <div className="relative">
+              <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
+              {showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}
+            </div>
+            <button onClick={() => router.push('/expenses/procurement/purchase-requests/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New PR</button>
           </div>
-          <div className="relative">
-            <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
-            {showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}
-          </div>
-          <button onClick={() => router.push('/expenses/procurement/purchase-requests/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New PR</button>
         </div>
       </div>
 
@@ -226,12 +244,16 @@ export default function PurchaseRequestsPage() {
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
-        emptyMessage="No purchase requests found"
+        emptyMessage={loading ? 'Loading...' : 'No purchase requests found'}
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
       />
-      
+
       {totalPages > 1 && (<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="PurchaseRequest" entityLabel="Purchase Requests" pageSize={8} />
+      </div>
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId); if (!row) return null

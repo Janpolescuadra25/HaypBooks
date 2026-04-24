@@ -49,7 +49,11 @@ export class IntegrationsController {
     // ─── Audit Logs ───────────────────────────────────────────────────────────
 
     @Get('audit-logs')
-    listAuditLogs(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+    listAuditLogs(
+        @Req() req: any,
+        @Param('companyId') cid: string,
+        @Query() q: { tableName?: string; recordId?: string; userId?: string; from?: string; to?: string; limit?: string; offset?: string },
+    ) {
         return this.svc.listAuditLogs(req.user.userId, cid, q)
     }
 

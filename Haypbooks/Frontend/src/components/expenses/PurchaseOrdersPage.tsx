@@ -9,6 +9,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { expensesService } from '@/services/expenses.service'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface PurchaseOrder { id: string; poNumber?: string; vendorName?: string; date: string; expectedDelivery?: string; status?: string; total: number }
 type SortKey = 'poNumber' | 'vendorName' | 'date' | 'expectedDelivery' | 'status' | 'total'
@@ -189,6 +190,10 @@ export default function PurchaseOrdersPage() {
         onColumnsChange={handleColumnsChange}
       />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="PurchaseOrder" entityLabel="Purchase Orders" pageSize={8} />
+      </div>
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.poNumber??'PO'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Order" onClick={()=>{router.push(`/expenses/procurement/purchase-orders/${row.id}/edit`);setActionMenuId(null);setMenuPos(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}

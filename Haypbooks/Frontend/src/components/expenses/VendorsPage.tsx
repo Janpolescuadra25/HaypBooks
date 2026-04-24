@@ -13,6 +13,7 @@ import ResizableTable, { type Column as ResizableColumn } from '@/components/sha
 import CenteredModal from '@/components/shared/CenteredModal'
 import VendorForm, { type VendorFormHandle } from './VendorForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Vendor {
@@ -336,6 +337,10 @@ export default function VendorsPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="Vendor" entityLabel="Vendors" pageSize={8} />
+      </div>
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)

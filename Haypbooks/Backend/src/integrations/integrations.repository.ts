@@ -106,13 +106,14 @@ export class IntegrationsRepository {
     // ─── Audit Logs ───────────────────────────────────────────────────────────
 
     async findAuditLogs(workspaceId: string, opts: {
-        companyId?: string; tableName?: string; userId?: string; from?: Date; to?: Date; limit?: number; offset?: number
+        companyId?: string; tableName?: string; userId?: string; recordId?: string; from?: Date; to?: Date; limit?: number; offset?: number
     } = {}) {
         return this.prisma.auditLog.findMany({
             where: {
                 workspaceId,
                 ...(opts.companyId ? { companyId: opts.companyId } : {}),
                 ...(opts.tableName ? { tableName: opts.tableName } : {}),
+                ...(opts.recordId ? { recordId: opts.recordId } : {}),
                 ...(opts.userId ? { userId: opts.userId } : {}),
                 ...(opts.from || opts.to ? { createdAt: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}),
             },

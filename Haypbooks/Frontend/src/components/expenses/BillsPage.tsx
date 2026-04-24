@@ -6,12 +6,13 @@ import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
   CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check, Ban,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface Bill {
   id: string
@@ -44,12 +45,7 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE_BILLS: Bill[] = [
-  { id: 'bill-001', billNumber: 'BILL-001', vendorName: 'Luzon Supplies', date: '2026-04-05', dueDate: '2026-04-20', status: 'PENDING', total: 25000, amountDue: 25000 },
-  { id: 'bill-002', billNumber: 'BILL-002', vendorName: 'MNL Office Solutions', date: '2026-03-20', dueDate: '2026-04-20', status: 'PARTIALLY_PAID', total: 18000, amountDue: 8000 },
-  { id: 'bill-003', billNumber: 'BILL-003', vendorName: 'Cebu Transport Co.', date: '2026-03-10', dueDate: '2026-04-10', status: 'PAID', total: 9200, amountDue: 0 },
-  { id: 'bill-004', billNumber: 'BILL-004', vendorName: 'Davao Hardware Depot', date: '2026-04-01', dueDate: '2026-04-16', status: 'DRAFT', total: 6750, amountDue: 6750 },
-]
+
 
 function compare(a: Bill, b: Bill, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'total') { const d = a.total - b.total; return dir === 'asc' ? d : -d }
@@ -63,8 +59,9 @@ export default function BillsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]       = useState<Bill[]>(SAMPLE_BILLS)
+  const [rows, setRows]       = useState<Bill[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]   = useState<SortKey>('date')
@@ -101,11 +98,15 @@ export default function BillsPage() {
   const fetchBills = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
     setLoading(true)
+    setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/bills`)
+      const res = await expensesService.listBills(companyId)
+      const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.bills ?? [])
-    } catch { showToast('Failed to load bills') }
-    finally { setLoading(false) }
+    } catch {
+      setError('Failed to load bills')
+      showToast('Failed to load bills')
+    } finally { setLoading(false) }
   }, [companyId])
 
   useEffect(() => { fetchBills() }, [fetchBills])
@@ -113,7 +114,7 @@ export default function BillsPage() {
   const handleApprove = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/bills/${id}/approve`)
+      await expensesService.approveBill(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'APPROVED' } : r))
       showToast('Bill approved'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to approve bill') }
@@ -122,7 +123,7 @@ export default function BillsPage() {
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/bills/${id}/void`)
+      await expensesService.voidBill(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'VOIDED' } : r))
       showToast('Bill voided'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to void bill') }
@@ -215,7 +216,9 @@ export default function BillsPage() {
           <h1 className="text-2xl font-bold text-emerald-900">Bills</h1>
           <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} bills`}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+          <div className="flex items-center gap-2 flex-wrap">
           <button onClick={fetchBills} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
           <div className="relative">
             <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
@@ -239,6 +242,7 @@ export default function BillsPage() {
             )}
           </div>
           <button onClick={() => router.push('/expenses/bills/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Bill</button>
+          </div>
         </div>
       </div>
 
@@ -311,6 +315,10 @@ export default function BillsPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="Bill" entityLabel="Bills" pageSize={8} />
+      </div>
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)

@@ -1,31 +1,28 @@
 'use client'
 
-import React, { useMemo, useState, useEffect } from 'react'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Send } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, RefreshCw, Eye, Send } from 'lucide-react'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { expensesService } from '@/services/expenses.service'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface Rfq { id: string; rfqNumber?: string; subject?: string; vendorCount?: number; dateSent?: string; closingDate?: string; status?: string }
 type SortKey = 'rfqNumber' | 'subject' | 'vendorCount' | 'dateSent' | 'closingDate' | 'status'
 type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Rfq>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
-  { key: 'rfqNumber',   label: 'RFQ #',         visible: true, width: 130 },
-  { key: 'subject',     label: 'Subject',        visible: true, width: 220 },
-  { key: 'vendorCount', label: 'Vendors',        visible: true, width: 100, align: 'right' },
-  { key: 'dateSent',    label: 'Date Sent',      visible: true, width: 115 },
-  { key: 'closingDate', label: 'Closing Date',   visible: true, width: 115 },
-  { key: 'status',      label: 'Status',         visible: true, width: 130 },
+  { key: 'rfqNumber',   label: 'RFQ #',       visible: true, width: 130 },
+  { key: 'subject',     label: 'Subject',      visible: true, width: 220 },
+  { key: 'vendorCount', label: 'Vendors',      visible: true, width: 100, align: 'right' },
+  { key: 'dateSent',    label: 'Date Sent',    visible: true, width: 115 },
+  { key: 'closingDate', label: 'Closing Date', visible: true, width: 115 },
+  { key: 'status',      label: 'Status',       visible: true, width: 130 },
 ]
 const STORAGE_KEY = 'rfq-cols-v4'
 function loadCols(): ColDef[] { try { const s = localStorage.getItem(STORAGE_KEY); if (s) { const saved = JSON.parse(s) as ColDef[]; return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width, visible: sc.visible } : d }) } } catch {} return DEFAULT_COLS }
-
-const SAMPLE: Rfq[] = [
-  { id: 'rfq-001', rfqNumber: 'RFQ-2026-001', subject: 'Office Furniture Procurement',  vendorCount: 4, dateSent: '2026-04-01', closingDate: '2026-04-15', status: 'SENT'   },
-  { id: 'rfq-002', rfqNumber: 'RFQ-2026-002', subject: 'IT Equipment Upgrade',          vendorCount: 3, dateSent: '2026-03-20', closingDate: '2026-04-05', status: 'CLOSED' },
-  { id: 'rfq-003', rfqNumber: 'RFQ-2026-003', subject: 'Janitorial Supplies Q2',        vendorCount: 0, dateSent: undefined,    closingDate: '2026-04-25', status: 'DRAFT'  },
-  { id: 'rfq-004', rfqNumber: 'RFQ-2026-004', subject: 'Office Renovation Materials',   vendorCount: 5, dateSent: '2026-03-10', closingDate: '2026-03-25', status: 'AWARDED'},
-]
 
 function compare(a: Rfq, b: Rfq, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'vendorCount') { const d = (a.vendorCount ?? 0) - (b.vendorCount ?? 0); return dir === 'asc' ? d : -d }
@@ -35,7 +32,11 @@ function compare(a: Rfq, b: Rfq, key: SortKey, dir: 'asc' | 'desc'): number {
 const STATUSES = ['ALL', 'DRAFT', 'SENT', 'CLOSED', 'AWARDED']
 
 export default function RfqPage() {
-  const [rows]                          = useState<Rfq[]>(SAMPLE)
+  const { companyId, loading: cidLoading } = useCompanyId()
+  const router = useRouter()
+  const [rows, setRows]                 = useState<Rfq[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState('')
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]           = useState<SortKey>('dateSent')
@@ -63,6 +64,22 @@ export default function RfqPage() {
       return updated ? { ...col, width: updated.width } : col
     }))
   }
+
+  const fetchRows = useCallback(async () => {
+    if (!companyId) { setLoading(false); return }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await expensesService.listRfqs(companyId)
+      const data = res.data ?? res
+      setRows(Array.isArray(data) ? data : data.rfqs ?? [])
+    } catch {
+      setError('Failed to load RFQs')
+      showToast('Failed to load RFQs')
+    } finally { setLoading(false) }
+  }, [companyId])
+
+  useEffect(() => { fetchRows() }, [fetchRows])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -97,11 +114,7 @@ export default function RfqPage() {
       ),
     },
     ...visibleCols.map(c => ({
-      key: c.key,
-      header: c.label,
-      width: c.width,
-      sortable: true,
-      align: c.align ?? 'left',
+      key: c.key, header: c.label, width: c.width, sortable: true, align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
     {
@@ -138,13 +151,20 @@ export default function RfqPage() {
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div><h1 className="text-2xl font-bold text-emerald-900">Request for Quotation</h1><p className="text-sm text-emerald-600/70 mt-0.5">{`${sorted.length} RFQs`}</p></div>
+        <div>
+          <h1 className="text-2xl font-bold text-emerald-900">Request for Quotation</h1>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} RFQs`}</p>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
           <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
           <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}</div>
-          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New RFQ</button>
+          <button onClick={() => router.push('/expenses/procurement/rfq/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New RFQ</button>
         </div>
       </div>
+
+      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+
       <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[180px]"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" /><input type="text" placeholder="Search RFQs..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }} className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
         <div className="flex items-center gap-1.5 flex-wrap">{STATUSES.map(s => (<button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>{s === 'ALL' ? 'All' : s}</button>))}</div>
@@ -152,18 +172,15 @@ export default function RfqPage() {
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date Sent From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date Sent To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`rfq-sel.csv`,['RFQ #','Subject','Vendors','Date Sent','Closing Date','Status'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.rfqNumber??'',r.subject??'',String(r.vendorCount??0),r.dateSent??'',r.closingDate??'',r.status??'']));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
-      <ResizableTable
-        columns={columns}
-        data={paged}
-        onSort={toggleSort}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        emptyMessage="No RFQs found"
-        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
-        onColumnsChange={handleColumnsChange}
-      />
+
+      <ResizableTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} emptyMessage={loading ? 'Loading...' : 'No RFQs found'} rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange} />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
-      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.rfqNumber??'RFQ'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View RFQ" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Send size={13}/>} label="Send to Vendors" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
+
+      <div className="mt-6">
+        <ExpenseActivityWidget tableName="Rfq" entityLabel="RFQs" pageSize={8} />
+      </div>
+
+      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.rfqNumber??'RFQ'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit RFQ" onClick={()=>{router.push(`/expenses/procurement/rfq/${row.id}/edit`);setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Send size={13}/>} label="Send to Vendors" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>

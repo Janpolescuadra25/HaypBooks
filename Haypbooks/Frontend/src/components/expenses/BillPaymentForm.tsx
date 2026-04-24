@@ -8,6 +8,8 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 
 interface BillPaymentFormProps {
   mode: 'new' | 'edit'
@@ -28,6 +30,23 @@ interface OutstandingBill {
   selected: boolean
   paymentAmount: number
   memo: string
+}
+
+// API shapes used when mapping responses
+interface ApiBill {
+  id: string
+  billNumber?: string | null
+  date?: string | null
+  dueDate?: string | null
+  amountDue?: number | null
+  total?: number | null
+  status?: string | null
+}
+
+interface ApplicationApi {
+  billId: string
+  amount?: number | null
+  bill?: ApiBill | null
 }
 
 const PAYMENT_METHODS = ['Check', 'Bank Transfer', 'Credit Card', 'Cash']
@@ -52,6 +71,13 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [readOnly, setReadOnly] = useState(false)
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+
+  const { entries: activityEntries, loading: activityLoading } = useActivityLog({
+    companyId: activeTab === 'activity' ? companyId : null,
+    pageSize: 30,
+    initialFilters: activeTab === 'activity' && paymentId ? { tableName: 'BillPayment', recordId: paymentId } : undefined,
+  })
 
   const filteredVendors = useMemo(() => {
     if (!vendorSearch) return vendors
@@ -80,7 +106,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
         if (!active) return
         const data = res.data ?? []
         const debts = Array.isArray(data) ? data : data.data ?? []
-        setBills(debts.filter((bill: any) => bill.status !== 'PAID' && bill.status !== 'VOIDED').map((bill: any) => ({
+        setBills(debts.filter((bill: ApiBill) => bill.status !== 'PAID' && bill.status !== 'VOIDED').map((bill: ApiBill) => ({
           id: bill.id,
           billNumber: bill.billNumber ?? '',
           date: bill.date ?? '',
@@ -111,7 +137,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
         setNotes(data.notes ?? '')
         setReadOnly(true)
         if (Array.isArray(data.applications)) {
-          setBills(data.applications.map((app: any) => ({
+          setBills(data.applications.map((app: ApplicationApi) => ({
             id: app.billId,
             billNumber: app.bill?.billNumber ?? '',
             date: app.bill?.date ?? '',
@@ -198,109 +224,124 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-        <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Payment Number</label>
-                <input value={paymentId ? paymentId : 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Payment Date</label>
-                <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Payment Method</label>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Vendor</label>
-                <div className="mt-2 flex gap-2">
-                  <input value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={mode === 'edit'} placeholder="Search vendors" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  <button type="button" onClick={() => setVendorSearch('')} disabled={mode === 'edit'} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">Clear</button>
-                </div>
-                <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  <option value="">Select vendor</option>
-                  {vendorOptions.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
-                </select>
-              </div>
-            </div>
-          </section>
+          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100 mb-4">
+            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !paymentId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+          </div>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div>
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Bills to Pay</h2>
-                    <p className="mt-1 text-sm text-slate-500">Choose outstanding bills and enter payment amounts.</p>
+          <div className={activeTab !== 'details' ? 'hidden' : ''}>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">Payment Number</label>
+                  <input value={paymentId ? paymentId : 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">Payment Date</label>
+                  <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">Payment Method</label>
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                    {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">Vendor</label>
+                  <div className="mt-2 flex gap-2">
+                    <input value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={mode === 'edit'} placeholder="Search vendors" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                    <button type="button" onClick={() => setVendorSearch('')} disabled={mode === 'edit'} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">Clear</button>
                   </div>
-                  {mode === 'new' && <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Total: {formatCurrency(totalPayment, currency)}</div>}
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="border-b border-slate-200 text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3 w-12" />
-                        <th className="px-4 py-3">Bill #</th>
-                        <th className="px-4 py-3">Bill Date</th>
-                        <th className="px-4 py-3">Due Date</th>
-                        <th className="px-4 py-3 text-right">Amount Due</th>
-                        <th className="px-4 py-3 text-right">Payment</th>
-                        <th className="px-4 py-3">Memo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bills.length === 0 ? (
-                        <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
-                      ) : bills.map((bill) => (
-                        <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
-                          <td className="px-4 py-3"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
-                          <td className="px-4 py-3 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
-                          <td className="px-4 py-3 text-slate-500">{bill.date}</td>
-                          <td className="px-4 py-3 text-slate-500">{bill.dueDate}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                          </td>
-                          <td className="px-4 py-3"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                    <option value="">Select vendor</option>
+                    {vendorOptions.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
+                  </select>
                 </div>
               </div>
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-                <div className="space-y-3">
-                  <div className="text-sm font-semibold text-slate-900">Payment summary</div>
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Total payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Reference / Check #</label>
-                <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Reference number" />
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <div>
+                  <div className="flex items-center justify-between gap-4 mb-4">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900">Bills to Pay</h2>
+                      <p className="mt-1 text-sm text-slate-500">Choose outstanding bills and enter payment amounts.</p>
+                    </div>
+                    {mode === 'new' && <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Total: {formatCurrency(totalPayment, currency)}</div>}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="border-b border-slate-200 text-slate-500">
+                        <tr>
+                          <th className="px-4 py-3 w-12" />
+                          <th className="px-4 py-3">Bill #</th>
+                          <th className="px-4 py-3">Bill Date</th>
+                          <th className="px-4 py-3">Due Date</th>
+                          <th className="px-4 py-3 text-right">Amount Due</th>
+                          <th className="px-4 py-3 text-right">Payment</th>
+                          <th className="px-4 py-3">Memo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bills.length === 0 ? (
+                          <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
+                        ) : bills.map((bill) => (
+                          <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
+                            <td className="px-4 py-3"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
+                            <td className="px-4 py-3 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
+                            <td className="px-4 py-3 text-slate-500">{bill.date}</td>
+                            <td className="px-4 py-3 text-slate-500">{bill.dueDate}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
+                            <td className="px-4 py-3 text-right">
+                              <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                            </td>
+                            <td className="px-4 py-3"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+                  <div className="space-y-3">
+                    <div className="text-sm font-semibold text-slate-900">Payment summary</div>
+                    <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
+                    <div className="flex items-center justify-between text-sm text-slate-600"><span>Total payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Bank Account</label>
-                <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Bank account" />
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">Reference / Check #</label>
+                  <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Reference number" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">Bank Account</label>
+                  <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Bank account" />
+                </div>
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-semibold text-slate-900">Memo</label>
+                  <textarea value={memo} onChange={(e) => setMemo(e.target.value)} disabled={mode === 'edit'} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Payment memo" />
+                </div>
               </div>
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label className="block text-sm font-semibold text-slate-900">Memo</label>
-                <textarea value={memo} onChange={(e) => setMemo(e.target.value)} disabled={mode === 'edit'} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Payment memo" />
+            </section>
+          </div>
+
+          <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
+              <div className="mt-4">
+                <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill payment yet." />
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
+
         </div>
-      </div>
-    </main>
+      </main>
 
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
