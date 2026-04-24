@@ -43,7 +43,15 @@ export default function ResizableTable<T extends Record<string, any>>({
   const columnsRef = useRef(tableColumns)
 
   useEffect(() => {
-    setTableColumns(columns)
+    const current = columnsRef.current
+    const next = columns
+    const same = current.length === next.length && current.every((col, index) => {
+      const nextCol = next[index]
+      return col.key === nextCol.key && col.width === nextCol.width && col.sortable === nextCol.sortable && col.align === nextCol.align
+    })
+    if (!same) {
+      setTableColumns(next)
+    }
   }, [columns])
 
   useEffect(() => {
