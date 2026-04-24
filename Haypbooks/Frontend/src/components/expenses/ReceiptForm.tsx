@@ -239,4 +239,7 @@ const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function Rec
       </div>
     </div>
   )
-}
+})
+
+export default ReceiptForm
+

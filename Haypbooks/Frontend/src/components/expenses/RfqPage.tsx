@@ -7,7 +7,7 @@ import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Rfq { id: string; rfqNumber?: string; subject?: string; vendorCount?: number; dateSent?: string; closingDate?: string; status?: string }
 type SortKey = 'rfqNumber' | 'subject' | 'vendorCount' | 'dateSent' | 'closingDate' | 'status'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Rfq>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'rfqNumber',   label: 'RFQ #',         visible: true, width: 130 },
@@ -56,6 +56,31 @@ export default function RfqPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
   const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: ResizableColumn<Rfq>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
+
+  const filtered = useMemo(() => {
+    let list = rows
+    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
+    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.rfqNumber ?? '').toLowerCase().includes(q) || (r.subject ?? '').toLowerCase().includes(q)) }
+    if (dateFrom) list = list.filter(r => (r.dateSent ?? '') >= dateFrom)
+    if (dateTo)   list = list.filter(r => (r.dateSent ?? '') <= dateTo)
+    return list
+  }, [rows, statusFilter, search, dateFrom, dateTo])
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
+  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
+  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
   const columns: ResizableColumn<Rfq>[] = [
     {
       key: '__select__',
@@ -95,29 +120,6 @@ export default function RfqPage() {
     },
   ]
 
-  const handleColumnsChange = (next: ResizableColumn<Rfq>[]) => {
-    saveCols(cols.map(col => {
-      const updated = next.find(c => c.key === col.key)
-      return updated ? { ...col, width: updated.width } : col
-    }))
-  }
-
-  const filtered = useMemo(() => {
-    let list = rows
-    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
-    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.rfqNumber ?? '').toLowerCase().includes(q) || (r.subject ?? '').toLowerCase().includes(q)) }
-    if (dateFrom) list = list.filter(r => (r.dateSent ?? '') >= dateFrom)
-    if (dateTo)   list = list.filter(r => (r.dateSent ?? '') <= dateTo)
-    return list
-  }, [rows, statusFilter, search, dateFrom, dateTo])
-
-  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
-  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
-  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = () => { setShowExport(false); csvDownload(`rfq-${new Date().toISOString().slice(0,10)}.csv`,['RFQ #','Subject','Vendors','Date Sent','Closing Date','Status'],sorted.map(r=>[r.rfqNumber??'',r.subject??'',String(r.vendorCount??0),r.dateSent??'',r.closingDate??'',r.status??'']));showToast('CSV exported') }
 

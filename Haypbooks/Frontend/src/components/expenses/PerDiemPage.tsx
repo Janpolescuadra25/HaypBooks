@@ -9,7 +9,7 @@ import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface PerDiem { id: string; perDiemNumber?: string; employee?: string; destination?: string; startDate: string; endDate: string; days?: number; dailyRate?: number; total: number; status?: string }
 type SortKey = 'perDiemNumber' | 'employee' | 'destination' | 'startDate' | 'endDate' | 'days' | 'dailyRate' | 'total' | 'status'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<PerDiem>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'perDiemNumber', label: 'Per Diem #',  visible: true, width: 130 },
@@ -63,6 +63,32 @@ export default function PerDiemPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
   const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: ResizableColumn<PerDiem>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
+  const fmt = (n: number) => formatCurrency(n, currency)
+
+  const filtered = useMemo(() => {
+    let list = rows
+    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
+    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.perDiemNumber ?? '').toLowerCase().includes(q) || (r.employee ?? '').toLowerCase().includes(q) || (r.destination ?? '').toLowerCase().includes(q)) }
+    if (dateFrom) list = list.filter(r => r.startDate >= dateFrom)
+    if (dateTo)   list = list.filter(r => r.startDate <= dateTo)
+    return list
+  }, [rows, statusFilter, search, dateFrom, dateTo])
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
+  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
+  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
   const columns: ResizableColumn<PerDiem>[] = [
     {
       key: '__select__',
@@ -102,30 +128,6 @@ export default function PerDiemPage() {
     },
   ]
 
-  const handleColumnsChange = (next: ResizableColumn<PerDiem>[]) => {
-    saveCols(cols.map(col => {
-      const updated = next.find(c => c.key === col.key)
-      return updated ? { ...col, width: updated.width } : col
-    }))
-  }
-  const fmt = (n: number) => formatCurrency(n, currency)
-
-  const filtered = useMemo(() => {
-    let list = rows
-    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
-    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.perDiemNumber ?? '').toLowerCase().includes(q) || (r.employee ?? '').toLowerCase().includes(q) || (r.destination ?? '').toLowerCase().includes(q)) }
-    if (dateFrom) list = list.filter(r => r.startDate >= dateFrom)
-    if (dateTo)   list = list.filter(r => r.startDate <= dateTo)
-    return list
-  }, [rows, statusFilter, search, dateFrom, dateTo])
-
-  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
-  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
-  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = () => { setShowExport(false); csvDownload(`per-diem-${new Date().toISOString().slice(0,10)}.csv`,['Per Diem #','Employee','Destination','Start','End','Days','Daily Rate','Total','Status'],sorted.map(r=>[r.perDiemNumber??'',r.employee??'',r.destination??'',r.startDate,r.endDate,String(r.days??0),String(r.dailyRate??0),String(r.total),r.status??'']));showToast('CSV exported') }
 

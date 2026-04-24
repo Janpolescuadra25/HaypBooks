@@ -66,6 +66,12 @@ export default function MileagePage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const handleColumnsChange = (next: ResizableColumn<MileageLog>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const closeMileagePanel = () => { setMileagePanelOpen(false); setOpenMileageId(null); setOpenMileageMode('new') }
   const openNewMileage = () => { setMileagePanelOpen(true); setOpenMileageMode('new'); setOpenMileageId(null) }
   const openEditMileage = (id: string) => { setMileagePanelOpen(true); setOpenMileageMode('edit'); setOpenMileageId(id) }
@@ -208,7 +214,7 @@ export default function MileagePage() {
         sortDir={sortDir}
         emptyMessage="No mileage logs found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
-        onColumnsChange={saveCols}
+        onColumnsChange={handleColumnsChange}
         fixedWidth={96}
       />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}

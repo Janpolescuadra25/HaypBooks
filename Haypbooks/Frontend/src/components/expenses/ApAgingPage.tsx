@@ -20,7 +20,7 @@ interface ApAgingRow {
   total: number
 }
 type SortKey = 'vendorName' | 'current' | 'days1To30' | 'days31To60' | 'days61To90' | 'over90' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<ApAgingRow>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'vendorName',  label: 'Vendor',    visible: true, width: 220 },
@@ -73,44 +73,6 @@ export default function ApAgingPage() {
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
 
   const visibleCols = cols.filter(c => c.visible)
-  const columns: ResizableColumn<ApAgingRow>[] = [
-    {
-      key: '__select__',
-      header: (
-        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-      width: 44,
-      render: (_value, row) => (
-        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
-    ...visibleCols.map(c => ({
-      key: c.key,
-      header: c.label,
-      width: c.width,
-      sortable: true,
-      align: c.align ?? 'left',
-      render: (_value, row) => renderCell(row, c.key),
-    })),
-    {
-      key: '__actions__',
-      header: '',
-      width: 52,
-      align: 'right',
-      render: (_value, row) => (
-        <button type="button" onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
-        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-          <MoreVertical size={14} />
-        </button>
-      ),
-    },
-  ]
 
   const handleColumnsChange = (next: ResizableColumn<ApAgingRow>[]) => {
     saveCols(cols.map(col => {
@@ -172,6 +134,51 @@ export default function ApAgingPage() {
       default: return null
     }
   }
+
+  const columns: ResizableColumn<ApAgingRow>[] = [
+    {
+      key: '__select__',
+      header: (
+        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
+          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+      width: 44,
+      render: (_value, row) => (
+        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
+          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+    },
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+    {
+      key: '__actions__',
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(event) => {
+          const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+          if (actionMenuId === row.id) {
+            setActionMenuId(null)
+            setMenuPos(null)
+          } else {
+            setActionMenuId(row.id)
+            setMenuPos({ x: rect.right, y: rect.bottom })
+          }
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
 
   return (
     <div className="p-4 sm:p-6 space-y-4">

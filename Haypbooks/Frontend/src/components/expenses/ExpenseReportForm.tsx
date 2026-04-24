@@ -374,6 +374,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         </div>
       </div>
     </div>
+  </div>
   )
 }
 

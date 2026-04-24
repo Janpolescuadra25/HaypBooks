@@ -26,7 +26,7 @@ interface Vendor {
 type SortKey = 'name' | 'email' | 'phone' | 'status' | 'balance'
 
 // ─── Columns ──────────────────────────────────────────────────────────────────
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Vendor>['align'] }
 const DEFAULT_COLS: ColDef[] = [
   { key: 'name',    label: 'Name',    visible: true, width: 240 },
   { key: 'email',   label: 'Email',   visible: true, width: 220 },
@@ -82,6 +82,12 @@ export default function VendorsPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const handleColumnsChange = (next: ResizableColumn<Vendor>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const vendorFormRef = useRef<VendorFormHandle | null>(null)
   const closeVendorPanel = () => { setVendorPanelOpen(false); setOpenVendorId(null); setOpenVendorMode('new') }
   const openNewVendor = () => { setVendorPanelOpen(true); setOpenVendorMode('new'); setOpenVendorId(null) }
@@ -316,7 +322,7 @@ export default function VendorsPage() {
         sortDir={sortDir}
         emptyMessage="No vendors found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
-        onColumnsChange={saveCols}
+        onColumnsChange={handleColumnsChange}
         fixedWidth={96}
       />
 
@@ -376,7 +382,6 @@ export default function VendorsPage() {
           ref={vendorFormRef}
           mode={openVendorMode}
           vendorId={openVendorId ?? undefined}
-          onClose={closeVendorPanel}
           onSaved={onVendorSaved}
         />
       </CenteredModal>

@@ -9,7 +9,7 @@ import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface PaymentRun { id: string; runNumber?: string; paymentDate: string; method?: string; status?: string; vendorCount?: number; totalAmount: number }
 type SortKey = 'runNumber' | 'paymentDate' | 'method' | 'status' | 'vendorCount' | 'totalAmount'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<PaymentRun>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'runNumber',   label: 'Run #',        visible: true, width: 130 },
@@ -59,6 +59,32 @@ export default function PaymentRunsPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
   const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: ResizableColumn<PaymentRun>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
+  const fmt = (n: number) => formatCurrency(n, currency)
+
+  const filtered = useMemo(() => {
+    let list = rows
+    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
+    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.runNumber ?? '').toLowerCase().includes(q) || (r.method ?? '').toLowerCase().includes(q)) }
+    if (dateFrom) list = list.filter(r => r.paymentDate >= dateFrom)
+    if (dateTo)   list = list.filter(r => r.paymentDate <= dateTo)
+    return list
+  }, [rows, statusFilter, search, dateFrom, dateTo])
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
+  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
+  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
   const columns: ResizableColumn<PaymentRun>[] = [
     {
       key: '__select__',
@@ -98,30 +124,6 @@ export default function PaymentRunsPage() {
     },
   ]
 
-  const handleColumnsChange = (next: ResizableColumn<PaymentRun>[]) => {
-    saveCols(cols.map(col => {
-      const updated = next.find(c => c.key === col.key)
-      return updated ? { ...col, width: updated.width } : col
-    }))
-  }
-  const fmt = (n: number) => formatCurrency(n, currency)
-
-  const filtered = useMemo(() => {
-    let list = rows
-    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
-    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.runNumber ?? '').toLowerCase().includes(q) || (r.method ?? '').toLowerCase().includes(q)) }
-    if (dateFrom) list = list.filter(r => r.paymentDate >= dateFrom)
-    if (dateTo)   list = list.filter(r => r.paymentDate <= dateTo)
-    return list
-  }, [rows, statusFilter, search, dateFrom, dateTo])
-
-  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
-  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
-  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = () => { setShowExport(false); csvDownload(`payment-runs-${new Date().toISOString().slice(0,10)}.csv`,['Run #','Payment Date','Method','Status','Vendors','Total'],sorted.map(r=>[r.runNumber??'',r.paymentDate,r.method??'',r.status??'',String(r.vendorCount??0),String(r.totalAmount)]));showToast('CSV exported') }
 

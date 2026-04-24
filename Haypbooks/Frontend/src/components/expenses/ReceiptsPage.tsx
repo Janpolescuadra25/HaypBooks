@@ -13,7 +13,7 @@ import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Receipt { id: string; receiptNumber?: string; merchant?: string; date: string; category?: string; amount: number; status?: string }
 type SortKey = 'receiptNumber' | 'merchant' | 'date' | 'category' | 'amount' | 'status'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Receipt>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'receiptNumber', label: 'Receipt #', visible: true, width: 130 },
@@ -62,6 +62,12 @@ export default function ReceiptsPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const handleColumnsChange = (next: ResizableColumn<Receipt>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const closeReceiptPanel = () => { setReceiptPanelOpen(false); setOpenReceiptId(null); setOpenReceiptMode('new') }
   const openNewReceipt = () => { setReceiptPanelOpen(true); setOpenReceiptMode('new'); setOpenReceiptId(null) }
   const openEditReceipt = (id: string) => { setReceiptPanelOpen(true); setOpenReceiptMode('edit'); setOpenReceiptId(id) }
@@ -202,7 +208,7 @@ export default function ReceiptsPage() {
         sortDir={sortDir}
         emptyMessage="No receipts found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
-        onColumnsChange={saveCols}
+        onColumnsChange={handleColumnsChange}
         fixedWidth={96}
       />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}

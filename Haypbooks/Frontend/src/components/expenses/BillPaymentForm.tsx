@@ -299,7 +299,8 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
             </div>
           </section>
         </div>
-      </main>
+      </div>
+    </main>
 
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">

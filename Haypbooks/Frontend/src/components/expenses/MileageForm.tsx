@@ -270,6 +270,7 @@ const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
           </section>
         </div>
       </div>
+    </div>
 
     </div>
   )

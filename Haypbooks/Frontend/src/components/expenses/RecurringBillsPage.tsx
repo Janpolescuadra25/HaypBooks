@@ -9,7 +9,7 @@ import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface RecurringBill { id: string; templateName?: string; vendorName?: string; frequency?: string; nextDate?: string; status?: string; amount: number }
 type SortKey = 'templateName' | 'vendorName' | 'frequency' | 'nextDate' | 'status' | 'amount'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<RecurringBill>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'templateName', label: 'Template',   visible: true, width: 190 },
@@ -59,6 +59,32 @@ export default function RecurringBillsPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
   const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: ResizableColumn<RecurringBill>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
+  const fmt = (n: number) => formatCurrency(n, currency)
+
+  const filtered = useMemo(() => {
+    let list = rows
+    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
+    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.templateName ?? '').toLowerCase().includes(q) || (r.vendorName ?? '').toLowerCase().includes(q)) }
+    if (dateFrom) list = list.filter(r => (r.nextDate ?? '') >= dateFrom)
+    if (dateTo)   list = list.filter(r => (r.nextDate ?? '') <= dateTo)
+    return list
+  }, [rows, statusFilter, search, dateFrom, dateTo])
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
+  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
+  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
   const columns: ResizableColumn<RecurringBill>[] = [
     {
       key: '__select__',
@@ -98,30 +124,6 @@ export default function RecurringBillsPage() {
     },
   ]
 
-  const handleColumnsChange = (next: ResizableColumn<RecurringBill>[]) => {
-    saveCols(cols.map(col => {
-      const updated = next.find(c => c.key === col.key)
-      return updated ? { ...col, width: updated.width } : col
-    }))
-  }
-  const fmt = (n: number) => formatCurrency(n, currency)
-
-  const filtered = useMemo(() => {
-    let list = rows
-    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
-    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.templateName ?? '').toLowerCase().includes(q) || (r.vendorName ?? '').toLowerCase().includes(q)) }
-    if (dateFrom) list = list.filter(r => (r.nextDate ?? '') >= dateFrom)
-    if (dateTo)   list = list.filter(r => (r.nextDate ?? '') <= dateTo)
-    return list
-  }, [rows, statusFilter, search, dateFrom, dateTo])
-
-  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
-  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
-  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = () => { setShowExport(false); csvDownload(`recurring-bills-${new Date().toISOString().slice(0,10)}.csv`,['Template','Vendor','Frequency','Next Date','Status','Amount'],sorted.map(r=>[r.templateName??'',r.vendorName??'',r.frequency??'',r.nextDate??'',r.status??'',String(r.amount)]));showToast('CSV exported') }
 

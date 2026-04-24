@@ -24,7 +24,7 @@ interface Bill {
   amountDue?: number
 }
 type SortKey = 'billNumber' | 'vendorName' | 'date' | 'dueDate' | 'status' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Bill>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'billNumber', label: 'Bill #',   visible: true, width: 130 },
@@ -89,44 +89,6 @@ export default function BillsPage() {
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
 
   const visibleCols = cols.filter(c => c.visible)
-  const columns: ResizableColumn<Bill>[] = [
-    {
-      key: '__select__',
-      header: (
-        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-      width: 44,
-      render: (_value, row) => (
-        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
-    ...visibleCols.map(c => ({
-      key: c.key,
-      header: c.label,
-      width: c.width,
-      sortable: true,
-      align: c.align ?? 'left',
-      render: (_value, row) => renderCell(row, c.key),
-    })),
-    {
-      key: '__actions__',
-      header: '',
-      width: 52,
-      align: 'right',
-      render: (_value, row) => (
-        <button type="button" onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
-        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-          <MoreVertical size={14} />
-        </button>
-      ),
-    },
-  ]
 
   const handleColumnsChange = (next: ResizableColumn<Bill>[]) => {
     saveCols(cols.map(col => {
@@ -183,6 +145,46 @@ export default function BillsPage() {
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
   const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
+  const columns: ResizableColumn<Bill>[] = [
+    {
+      key: '__select__',
+      header: (
+        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
+          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+      width: 44,
+      render: (_value, row) => (
+        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
+          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
+        </button>
+      ),
+    },
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+    {
+      key: '__actions__',
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
+
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
   const handleExportCSV = () => {

@@ -18,6 +18,8 @@ interface Reimbursement {
   status?: string
 }
 
+type SortKey = 'reimbursementNumber' | 'employeeName' | 'submittedAt' | 'totalAmount' | 'status'
+
 const STATUSES = ['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REIMBURSED', 'REJECTED']
 
 function fmtDate(dateString?: string) {
@@ -33,6 +35,8 @@ export default function ReimbursementsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortKey, setSortKey] = useState<SortKey>('submittedAt')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState('')
   const pageSize = 25
@@ -70,8 +74,30 @@ export default function ReimbursementsPage() {
       )
   }, [reimbursements, search, statusFilter])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const pageItems = useMemo(() => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize), [filtered, currentPage])
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => {
+      if (sortKey === 'totalAmount') {
+        const d = a.totalAmount - b.totalAmount
+        return sortDir === 'asc' ? d : -d
+      }
+      const av = String(a[sortKey] ?? '').toLowerCase()
+      const bv = String(b[sortKey] ?? '').toLowerCase()
+      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    })
+    return next
+  }, [filtered, sortKey, sortDir])
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  const pageItems = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
 
   const handleRefresh = () => {
     if (!companyId) return

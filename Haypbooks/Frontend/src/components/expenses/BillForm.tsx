@@ -473,5 +473,6 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         </div>
       )}
     </div>
+  </div>
   )
 }

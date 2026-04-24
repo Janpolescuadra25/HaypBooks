@@ -296,6 +296,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
           </div>
         </section>
       </div>
-    </div>
+    </main>
+  </div>
   )
 }
