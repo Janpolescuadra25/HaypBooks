@@ -2,11 +2,13 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, Eye, Check } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, Eye, Check, Loader2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import ModalForm from '@/components/shared/ModalForm'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 import { expensesService } from '@/services/expenses.service'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
@@ -55,10 +57,43 @@ export default function PurchaseOrdersPage() {
   const [dateTo, setDateTo]             = useState('')
   const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
   const colsRef                         = useRef(cols)
+  const [convertingId, setConvertingId] = useState<string | null>(null)
+  const [showConvertModal, setShowConvertModal] = useState(false)
+  const [convertTarget, setConvertTarget] = useState<PurchaseOrder | null>(null)
   const [toast, setToast]               = useState('')
 
   useEffect(() => { colsRef.current = cols }, [cols])
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const handleConvert = async (row: PurchaseOrder) => {
+    // open confirmation modal
+    setConvertTarget(row)
+    setShowConvertModal(true)
+  }
+
+  const confirmConvert = async () => {
+    if (!companyId || !convertTarget) { showToast('Company or PO not loaded'); return }
+    setConvertingId(convertTarget.id)
+    try {
+      const res = await expensesService.convertPurchaseOrderToBill(companyId, convertTarget.id)
+      const data = res.data ?? res
+      const billId = data?.id ?? data?.bill?.id ?? data?.billId
+      if (billId) {
+        showToast(`Bill created from PO ${convertTarget.poNumber ?? ''}`)
+        setShowConvertModal(false)
+        setConvertTarget(null)
+        router.push(`/expenses/bills/${billId}/edit`)
+      } else {
+        showToast('Conversion succeeded but no bill id returned')
+      }
+    } catch (err) {
+      console.error(err)
+      showToast('Failed to convert purchase order')
+    } finally {
+      setConvertingId(null)
+      setActionMenuId(null)
+      setMenuPos(null)
+    }
+  }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
 
   const fetchPurchaseOrders = useCallback(async () => {
@@ -133,15 +168,22 @@ export default function PurchaseOrdersPage() {
     {
       key: '__actions__',
       header: '',
-      width: 52,
+      width: 140,
       align: 'right',
       render: (_value, row) => (
-        <button type="button" onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
-        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-          <MoreVertical size={14} />
-        </button>
+        <div className="flex items-center justify-end gap-2">
+          {(row.status === 'APPROVED' || row.status === 'RECEIVED' || row.status === 'PARTIAL_RECEIVED') && (
+            <button type="button" disabled={convertingId === row.id} onClick={() => handleConvert(row)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 text-xs hover:bg-indigo-50">
+              {convertingId === row.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Convert
+            </button>
+          )}
+          <button type="button" onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect()
+            actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+          }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+            <MoreVertical size={14} />
+          </button>
+        </div>
       ),
     },
   ]
@@ -195,6 +237,21 @@ export default function PurchaseOrdersPage() {
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.poNumber??'PO'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Order" onClick={()=>{router.push(`/expenses/procurement/purchase-orders/${row.id}/edit`);setActionMenuId(null);setMenuPos(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
+      {showConvertModal && convertTarget && (
+        <ModalPortal>
+          <ModalForm isOpen={showConvertModal} onClose={() => { setShowConvertModal(false); setConvertTarget(null) }} title="Convert PO to Bill" showFooter={false}>
+            <div className="text-slate-700">
+              <p>This will create a new bill from PO <strong>{convertTarget.poNumber ?? ''}</strong>. The PO status will be updated. Continue?</p>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => { setShowConvertModal(false); setConvertTarget(null) }} className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={confirmConvert} disabled={convertingId === convertTarget.id} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-60">
+                {convertingId === convertTarget.id ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Converting...</span> : 'Convert to Bill'}
+              </button>
+            </div>
+          </ModalForm>
+        </ModalPortal>
+      )}
     </div>
   )
 }
