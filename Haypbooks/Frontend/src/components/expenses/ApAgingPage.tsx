@@ -6,7 +6,7 @@ import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { csvDownload, MenuBtn } from './_helpers'
 
 interface ApAgingRow {
@@ -20,7 +20,7 @@ interface ApAgingRow {
   total: number
 }
 type SortKey = 'vendorName' | 'current' | 'days1To30' | 'days31To60' | 'days61To90' | 'over90' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<ApAgingRow>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'vendorName',  label: 'Vendor',    visible: true, width: 220 },
@@ -58,7 +58,6 @@ export default function ApAgingPage() {
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -72,9 +71,14 @@ export default function ApAgingPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
 
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({
-    columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 44,
-  })
+  const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: EnhancedColumn<ApAgingRow>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchAging = useCallback(async () => {
@@ -103,10 +107,9 @@ export default function ApAgingPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<ApAgingRow>({ data: paged, tableId: 'ap-aging' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
   const handleExportCSV = () => {
     setShowExport(false)
@@ -116,8 +119,17 @@ export default function ApAgingPage() {
     showToast('CSV exported')
   }
 
-  const visibleCols = cols.filter(c => c.visible)
+  const handleExportSelected = () => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`ap-aging-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Vendor', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'],
+      sorted
+        .filter(r => table.selectedRows.includes(r.id))
+        .map(r => [r.vendorName ?? '', String(r.current), String(r.days1To30), String(r.days31To60), String(r.days61To90), String(r.over90), String(r.total)]))
+    showToast('Selected AP aging rows exported')
+  }
 
+  
   const renderCell = (row: ApAgingRow, key: string) => {
     switch (key) {
       case 'vendorName': return <span className="font-semibold text-gray-800">{row.vendorName ?? '—'}</span>
@@ -130,6 +142,38 @@ export default function ApAgingPage() {
       default: return null
     }
   }
+
+  const columns: EnhancedColumn<ApAgingRow>[] = [
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+{
+      key: 'actions',
+      isAction: true,
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(event) => {
+          const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+          if (actionMenuId === row.id) {
+            setActionMenuId(null)
+            setMenuPos(null)
+          } else {
+            setActionMenuId(row.id)
+            setMenuPos({ x: rect.right, y: rect.bottom })
+          }
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -172,70 +216,29 @@ export default function ApAgingPage() {
         </div>
       </div>
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`ap-aging-sel.csv`, ['Vendor','Current','1-30','31-60','61-90','90+','Total'], sorted.filter(r => selected.has(r.id)).map(r => [r.vendorName ?? '', String(r.current), String(r.days1To30), String(r.days31To60), String(r.days61To90), String(r.over90), String(r.total)])); showToast('CSV exported') }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
 
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        {(loading || cidLoading) && <div className="px-4 py-2 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">Loading AP aging...</div>}
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: 44 }} />
-            {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
-            <col style={{ width: 52 }} />
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-4 py-2.5 border-r border-gray-200 w-10">
-                <button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-                  {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                </button>
-              </th>
-              {visibleCols.map(c => (
-                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
-                  <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    <span className="truncate text-xs">{c.label}</span>
-                    <ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
-                  </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
-                </th>
-              ))}
-              <th className="px-4 py-2.5 w-16" />
-            </tr>
-          </thead>
-          <tbody>
-            {paged.length === 0 ? (
-              <tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No aging data found</td></tr>
-            ) : paged.map(row => (
-              <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-4 py-2.5 border-r border-gray-100">
-                  <button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-                    {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                  </button>
-                </td>
-                {visibleCols.map(c => (
-                  <td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                    {renderCell(row, c.key)}
-                  </td>
-                ))}
-                <td className="px-4 py-2.5 text-right">
-                  <button onClick={e => { const r = e.currentTarget.getBoundingClientRect(); actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom })) }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                    <MoreVertical size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <EnhancedTable
+        columns={columns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        tableId="ap-aging"
+        hasStickyActions={true}
+        emptyMessage="No aging data found"
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+      />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
@@ -265,3 +268,6 @@ export default function ApAgingPage() {
     </div>
   )
 }
+
+
+

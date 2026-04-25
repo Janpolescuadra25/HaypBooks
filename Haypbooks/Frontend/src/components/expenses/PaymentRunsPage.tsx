@@ -1,15 +1,18 @@
 'use client'
 
-import React, { useMemo, useRef, useState, useEffect } from 'react'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Play } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, RefreshCw, Eye, Play } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { expensesService } from '@/services/expenses.service'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface PaymentRun { id: string; runNumber?: string; paymentDate: string; method?: string; status?: string; vendorCount?: number; totalAmount: number }
 type SortKey = 'runNumber' | 'paymentDate' | 'method' | 'status' | 'vendorCount' | 'totalAmount'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<PaymentRun>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'runNumber',   label: 'Run #',        visible: true, width: 130 },
@@ -22,12 +25,6 @@ const DEFAULT_COLS: ColDef[] = [
 const STORAGE_KEY = 'payment-runs-cols-v4'
 function loadCols(): ColDef[] { try { const s = localStorage.getItem(STORAGE_KEY); if (s) { const saved = JSON.parse(s) as ColDef[]; return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width, visible: sc.visible } : d }) } } catch {} return DEFAULT_COLS }
 
-const SAMPLE: PaymentRun[] = [
-  { id: 'pr-001', runNumber: 'RUN-2026-001', paymentDate: '2026-04-05', method: 'Bank Transfer', status: 'COMPLETED',  vendorCount: 5, totalAmount: 87500 },
-  { id: 'pr-002', runNumber: 'RUN-2026-002', paymentDate: '2026-04-10', method: 'Bank Transfer', status: 'PROCESSING', vendorCount: 3, totalAmount: 34200 },
-  { id: 'pr-003', runNumber: 'RUN-2026-003', paymentDate: '2026-04-15', method: 'Check',         status: 'DRAFT',      vendorCount: 2, totalAmount: 18000 },
-]
-
 function compare(a: PaymentRun, b: PaymentRun, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'vendorCount') { const d = (a.vendorCount ?? 0) - (b.vendorCount ?? 0); return dir === 'asc' ? d : -d }
   if (key === 'totalAmount') { const d = a.totalAmount - b.totalAmount; return dir === 'asc' ? d : -d }
@@ -37,14 +34,17 @@ function compare(a: PaymentRun, b: PaymentRun, key: SortKey, dir: 'asc' | 'desc'
 const STATUSES = ['ALL', 'DRAFT', 'PROCESSING', 'COMPLETED', 'FAILED']
 
 export default function PaymentRunsPage() {
+  const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows]                          = useState<PaymentRun[]>(SAMPLE)
+  const router = useRouter()
+  const [rows, setRows]                 = useState<PaymentRun[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState('')
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]           = useState<SortKey>('paymentDate')
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage]   = useState(1); const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -53,15 +53,36 @@ export default function PaymentRunsPage() {
   const [dateFrom, setDateFrom]         = useState('')
   const [dateTo, setDateTo]             = useState('')
   const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
-  const colsRef                         = useRef(cols)
   const [toast, setToast]               = useState('')
 
-  useEffect(() => { colsRef.current = cols }, [cols])
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({ columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96 })
+  const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: EnhancedColumn<PaymentRun>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const fmt = (n: number) => formatCurrency(n, currency)
+
+  const fetchRows = useCallback(async () => {
+    if (!companyId) { setLoading(false); return }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await expensesService.listPaymentRuns(companyId)
+      const data = res.data ?? res
+      setRows(Array.isArray(data) ? data : data.paymentRuns ?? [])
+    } catch {
+      setError('Failed to load payment runs')
+      showToast('Failed to load payment runs')
+    } finally { setLoading(false) }
+  }, [companyId])
+
+  useEffect(() => { fetchRows() }, [fetchRows])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -76,12 +97,41 @@ export default function PaymentRunsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<PaymentRun>({ data: paged, tableId: 'payment-runs' })
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
+  const columns: EnhancedColumn<PaymentRun>[] = [
+    table.renderCheckboxColumn(),
+    ...visibleCols.map(c => ({
+      key: c.key, header: c.label, width: c.width, sortable: true, align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+{
+      key: 'actions',
+      isAction: true,
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
+
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = () => { setShowExport(false); csvDownload(`payment-runs-${new Date().toISOString().slice(0,10)}.csv`,['Run #','Payment Date','Method','Status','Vendors','Total'],sorted.map(r=>[r.runNumber??'',r.paymentDate,r.method??'',r.status??'',String(r.vendorCount??0),String(r.totalAmount)]));showToast('CSV exported') }
-  const visibleCols = cols.filter(c => c.visible)
+  const handleExportSelected = () => {
+    const selectedRows = paged.filter((row) => table.selectedRows.includes(row.id))
+    if (selectedRows.length === 0) return
+    csvDownload(`payment-runs-selected-${new Date().toISOString().slice(0,10)}.csv`, ['Run #','Payment Date','Method','Status','Vendors','Total'], selectedRows.map(row => [row.runNumber ?? '', row.paymentDate, row.method ?? '', row.status ?? '', String(row.vendorCount ?? 0), String(row.totalAmount)]))
+    table.clearSelection()
+    showToast('Selected rows exported')
+  }
 
   const renderCell = (row: PaymentRun, key: string) => {
     switch (key) {
@@ -98,31 +148,62 @@ export default function PaymentRunsPage() {
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div><h1 className="text-2xl font-bold text-emerald-900">Payment Runs</h1><p className="text-sm text-emerald-600/70 mt-0.5">{`${sorted.length} runs`}</p></div>
+        <div>
+          <h1 className="text-2xl font-bold text-emerald-900">Payment Runs</h1>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} runs`}</p>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
           <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
           <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}</div>
-          <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Run</button>
+          <button onClick={() => router.push('/expenses/bills-payments/payment-runs/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
+          <button onClick={() => router.push('/expenses/bills-payments/payment-runs/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Run</button>
         </div>
       </div>
+
+      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+
       <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[180px]"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" /><input type="text" placeholder="Search payment runs..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }} className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
         <div className="flex items-center gap-1.5 flex-wrap">{STATUSES.map(s => (<button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>{s === 'ALL' ? 'All' : s}</button>))}</div>
         <button onClick={() => setShowAdvFilters(p => !p)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}><Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}</button>
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
-      {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`pr-sel.csv`,['Run #','Payment Date','Method','Status','Vendors','Total'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.runNumber??'',r.paymentDate,r.method??'',r.status??'',String(r.vendorCount??0),String(r.totalAmount)]));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup><col style={{ width: 44 }} />{visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}<col style={{ width: 52 }} /></colgroup>
-          <thead><tr className="bg-gray-50 border-b border-gray-200"><th className="px-4 py-2.5 border-r border-gray-200 w-10"><button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">{selected.size===paged.length&&paged.length>0?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></th>{visibleCols.map(c=>(<th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{width:c.width}}><button onClick={()=>toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden"><span className="truncate text-xs">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey===c.key?'text-emerald-600':'text-gray-300'}`}/></button><div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e=>startResize(e,c.key)}/></th>))}<th className="px-4 py-2.5 w-16"/></tr></thead>
-          <tbody>{paged.length===0?(<tr><td colSpan={visibleCols.length+2} className="px-4 py-16 text-center text-sm text-gray-400">No payment runs found</td></tr>):paged.map(row=>(<tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id)?'bg-blue-50/20':''}`}><td className="px-4 py-2.5 border-r border-gray-100"><button onClick={()=>toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">{selected.has(row.id)?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></td>{visibleCols.map(c=>(<td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{textAlign:c.align==='right'?'right':'left'}}>{renderCell(row,c.key)}</td>))}<td className="px-4 py-2.5 text-right"><button onClick={e=>{const r=e.currentTarget.getBoundingClientRect();actionMenuId===row.id?(setActionMenuId(null),setMenuPos(null)):(setActionMenuId(row.id),setMenuPos({x:r.right,y:r.bottom}))}} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"><MoreVertical size={14}/></button></td></tr>))}</tbody>
-        </table>
-      </div>
+      {table.renderBulkToolbar([
+        {
+          label: 'Export selected',
+          icon: <Download size={12} />,
+          onClick: handleExportSelected,
+        },
+      ])}
+
+      <EnhancedTable
+        columns={columns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        tableId="payment-runs"
+        hasStickyActions={true}
+        emptyMessage={loading ? 'Loading...' : 'No payment runs found'}
+        rowClassName={row => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+        selectedRows={table.selectedRows}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+      />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
-      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.runNumber??'Run'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Run" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Play size={13}/>} label="Process Run" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
+
+      {/* Activity log available via top toolbar button */}
+      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.runNumber??'Run'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Run" onClick={()=>{router.push(`/expenses/bills-payments/payment-runs/${row.id}/edit`);setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Play size={13}/>} label="Process Run" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>
   )
 }
+
+
+

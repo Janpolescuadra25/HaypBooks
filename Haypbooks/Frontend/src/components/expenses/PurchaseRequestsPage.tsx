@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useMemo, useRef, useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Send } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, RefreshCw, Eye, Send } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import { useCompanyId } from '@/hooks/useCompanyId'
+import { expensesService } from '@/services/expenses.service'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface PurchaseRequest {
@@ -19,16 +21,16 @@ interface PurchaseRequest {
   total: number
 }
 type SortKey = 'prNumber' | 'requestedBy' | 'vendorName' | 'date' | 'dateNeeded' | 'status' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<PurchaseRequest>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
-  { key: 'prNumber',    label: 'PR #',          visible: true, width: 130 },
-  { key: 'requestedBy', label: 'Requested By',  visible: true, width: 170 },
-  { key: 'vendorName',  label: 'Vendor',         visible: true, width: 200 },
-  { key: 'date',        label: 'Date',           visible: true, width: 115 },
-  { key: 'dateNeeded',  label: 'Date Needed',    visible: true, width: 130 },
-  { key: 'status',      label: 'Status',         visible: true, width: 130 },
-  { key: 'total',       label: 'Total',          visible: true, width: 130, align: 'right' },
+  { key: 'prNumber',    label: 'PR #',         visible: true, width: 130 },
+  { key: 'requestedBy', label: 'Requested By', visible: true, width: 170 },
+  { key: 'vendorName',  label: 'Vendor',        visible: true, width: 200 },
+  { key: 'date',        label: 'Date',          visible: true, width: 115 },
+  { key: 'dateNeeded',  label: 'Date Needed',   visible: true, width: 130 },
+  { key: 'status',      label: 'Status',        visible: true, width: 130 },
+  { key: 'total',       label: 'Total',         visible: true, width: 130, align: 'right' },
 ]
 const STORAGE_KEY = 'purchase-requests-cols-v4'
 
@@ -40,13 +42,6 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE: PurchaseRequest[] = [
-  { id: 'pr-001', prNumber: 'PR-2026-001', requestedBy: 'Maria Santos',  vendorName: 'Mabuhay Office Supplies', date: '2026-04-08', dateNeeded: '2026-04-18', status: 'PENDING',  total: 25800 },
-  { id: 'pr-002', prNumber: 'PR-2026-002', requestedBy: 'Juan Dela Cruz', vendorName: 'Luzon Steel Trading',    date: '2026-04-05', dateNeeded: '2026-04-20', status: 'DRAFT',    total: 48200 },
-  { id: 'pr-003', prNumber: 'PR-2026-003', requestedBy: 'Alyssa Reyes',   vendorName: 'Cebu Industrial Parts',  date: '2026-03-28', dateNeeded: '2026-04-10', status: 'APPROVED', total: 33500 },
-  { id: 'pr-004', prNumber: 'PR-2026-004', requestedBy: 'Marco Reyes',    vendorName: 'Davao Hardware Depot',   date: '2026-03-20', dateNeeded: '2026-04-05', status: 'ORDERED',  total: 16900 },
-]
-
 function compare(a: PurchaseRequest, b: PurchaseRequest, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'total') { const d = a.total - b.total; return dir === 'asc' ? d : -d }
   const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
@@ -57,15 +52,17 @@ const STATUSES = ['ALL', 'DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'ORDERED']
 
 export default function PurchaseRequestsPage() {
   const router = useRouter()
+  const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows]                          = useState<PurchaseRequest[]>(SAMPLE)
+  const [rows, setRows]                 = useState<PurchaseRequest[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState('')
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]           = useState<SortKey>('date')
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage]   = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -81,9 +78,31 @@ export default function PurchaseRequestsPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const visibleCols = cols.filter(c => c.visible)
 
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({ columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96 })
+  const handleColumnsChange = (next: EnhancedColumn<PurchaseRequest>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const fmt = (n: number) => formatCurrency(n, currency)
+
+  const fetchRows = useCallback(async () => {
+    if (!companyId) { setLoading(false); return }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await expensesService.listPurchaseRequests(companyId)
+      const data = res.data ?? res
+      setRows(Array.isArray(data) ? data : data.purchaseRequests ?? [])
+    } catch {
+      setError('Failed to load purchase requests')
+      showToast('Failed to load purchase requests')
+    } finally { setLoading(false) }
+  }, [companyId])
+
+  useEffect(() => { fetchRows() }, [fetchRows])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -98,21 +117,76 @@ export default function PurchaseRequestsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged      = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<PurchaseRequest>({ data: paged, tableId: 'purchase-requests' })
 
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
+  const columns: EnhancedColumn<PurchaseRequest>[] = [
+    table.renderCheckboxColumn(),
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+{
+      key: 'actions',
+      isAction: true,
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
-  const handleExportCSV = () => {
+  const handleExportCSV = useCallback(() => {
     setShowExport(false)
     csvDownload(`purchase-requests-${new Date().toISOString().slice(0, 10)}.csv`,
       ['PR #', 'Requested By', 'Vendor', 'Date', 'Date Needed', 'Status', 'Total'],
       sorted.map(r => [r.prNumber ?? '', r.requestedBy ?? '', r.vendorName ?? '', r.date, r.dateNeeded ?? '', r.status ?? '', String(r.total)]))
     showToast('CSV exported')
-  }
+  }, [sorted, showToast])
 
-  const visibleCols = cols.filter(c => c.visible)
+  const handleExportSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`purchase-requests-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['PR #', 'Requested By', 'Vendor', 'Date', 'Date Needed', 'Status', 'Total'],
+      sorted
+        .filter((r) => table.selectedRows.includes(r.id))
+        .map(r => [r.prNumber ?? '', r.requestedBy ?? '', r.vendorName ?? '', r.date, r.dateNeeded ?? '', r.status ?? '', String(r.total)]))
+    showToast('Selected purchase requests exported')
+  }, [sorted, showToast, table.selectedRows])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    if (!confirm(`Delete ${count} selected purchase request${count !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.deletePurchaseRequest(companyId, id)))
+      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
+      table.clearSelection()
+      showToast(`${count} purchase request${count !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected purchase requests')
+    }
+  }, [companyId, table.selectedRows, table, showToast])
+
+  const handleSubmitSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'SUBMITTED' } : row))
+    table.clearSelection()
+    showToast(`${table.selectedRows.length} selected request${table.selectedRows.length !== 1 ? 's' : ''} submitted`)
+  }, [table.selectedRows, table, showToast])
 
   const renderCell = (row: PurchaseRequest, key: string) => {
     switch (key) {
@@ -132,18 +206,23 @@ export default function PurchaseRequestsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Purchase Requests</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{`${sorted.length} requests`}</p>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} requests`}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
-            {showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+            <div className="relative">
+              <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
+              {showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}
+            </div>
+            <div className="relative">
+              <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
+              {showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}
+            </div>
+            <button onClick={() => router.push('/expenses/procurement/requests/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
+            <button onClick={() => router.push('/expenses/procurement/purchase-requests/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New PR</button>
           </div>
-          <div className="relative">
-            <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
-            {showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}
-          </div>
-          <button onClick={() => router.push('/expenses/procurement/purchase-requests/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New PR</button>
         </div>
       </div>
 
@@ -166,45 +245,35 @@ export default function PurchaseRequestsPage() {
         </div>
       )}
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`pr-sel.csv`, ['PR #','Requested By','Vendor','Date','Date Needed','Status','Total'], sorted.filter(r => selected.has(r.id)).map(r => [r.prNumber ?? '', r.requestedBy ?? '', r.vendorName ?? '', r.date, r.dateNeeded ?? '', r.status ?? '', String(r.total)])); showToast('CSV exported') }} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
+        { label: 'Submit Selected', onClick: () => handleSubmitSelected() },
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
 
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup><col style={{ width: 44 }} />{visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}<col style={{ width: 52 }} /></colgroup>
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-4 py-2.5 border-r border-gray-200 w-10"><button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">{selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}</button></th>
-              {visibleCols.map(c => (
-                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
-                  <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden"><span className="truncate text-xs">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} /></button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
-                </th>
-              ))}
-              <th className="px-4 py-2.5 w-16" />
-            </tr>
-          </thead>
-          <tbody>
-            {paged.length === 0 ? (<tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No purchase requests found</td></tr>)
-              : paged.map(row => (
-              <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-4 py-2.5 border-r border-gray-100"><button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">{selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}</button></td>
-                {visibleCols.map(c => (<td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>{renderCell(row, c.key)}</td>))}
-                <td className="px-4 py-2.5 text-right"><button onClick={e => { const r = e.currentTarget.getBoundingClientRect(); actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom })) }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"><MoreVertical size={14} /></button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <EnhancedTable
+        columns={columns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        tableId="purchase-requests"
+        hasStickyActions={true}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        emptyMessage="No purchase requests found"
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+      />
 
       {totalPages > 1 && (<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
+
+      {/* Activity log available via top toolbar button */}
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId); if (!row) return null
@@ -221,3 +290,6 @@ export default function PurchaseRequestsPage() {
     </div>
   )
 }
+
+
+

@@ -1,19 +1,20 @@
 'use client'
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { expensesService } from '@/services/expenses.service'
-import SlidePanel from '@/components/shared/SlidePanel'
-import ReceiptForm from './ReceiptForm'
+import CenteredModal from '@/components/shared/CenteredModal'
+import ReceiptForm, { type ReceiptFormHandle } from './ReceiptForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Receipt { id: string; receiptNumber?: string; merchant?: string; date: string; category?: string; amount: number; status?: string }
 type SortKey = 'receiptNumber' | 'merchant' | 'date' | 'category' | 'amount' | 'status'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Receipt>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'receiptNumber', label: 'Receipt #', visible: true, width: 130 },
@@ -34,6 +35,7 @@ function compare(a: Receipt, b: Receipt, key: SortKey, dir: 'asc' | 'desc'): num
 const STATUSES = ['ALL', 'DRAFT', 'UNMATCHED', 'MATCHED', 'ATTACHED']
 
 export default function ReceiptsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]                 = useState<Receipt[]>([])
@@ -44,7 +46,6 @@ export default function ReceiptsPage() {
   const [sortKey, setSortKey]           = useState<SortKey>('date')
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage]   = useState(1); const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -53,19 +54,25 @@ export default function ReceiptsPage() {
   const [dateFrom, setDateFrom]         = useState('')
   const [dateTo, setDateTo]             = useState('')
   const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
-  const colsRef                         = useRef(cols)
   const [toast, setToast]               = useState('')
   const [receiptPanelOpen, setReceiptPanelOpen] = useState(false)
   const [openReceiptId, setOpenReceiptId] = useState<string | null>(null)
   const [openReceiptMode, setOpenReceiptMode] = useState<'new' | 'edit'>('new')
+  const receiptFormRef = useRef<ReceiptFormHandle | null>(null)
 
-  useEffect(() => { colsRef.current = cols }, [cols])
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const handleColumnsChange = (next: EnhancedColumn<Receipt>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const closeReceiptPanel = () => { setReceiptPanelOpen(false); setOpenReceiptId(null); setOpenReceiptMode('new') }
   const openNewReceipt = () => { setReceiptPanelOpen(true); setOpenReceiptMode('new'); setOpenReceiptId(null) }
   const openEditReceipt = (id: string) => { setReceiptPanelOpen(true); setOpenReceiptMode('edit'); setOpenReceiptId(id) }
+  const saveReceipt = () => { receiptFormRef.current?.save() }
 
   const fetchReceipts = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -83,8 +90,7 @@ export default function ReceiptsPage() {
 
   useEffect(() => { fetchReceipts() }, [fetchReceipts])
   const onReceiptSaved = async () => { await fetchReceipts(); closeReceiptPanel() }
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({ columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96 })
-  const fmt = (n: number) => formatCurrency(n, currency)
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -99,14 +105,46 @@ export default function ReceiptsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<Receipt>({ data: paged, tableId: 'receipts' })
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
-  const handleExportCSV = () => { setShowExport(false); csvDownload(`receipts-${new Date().toISOString().slice(0,10)}.csv`,['Receipt #','Merchant','Date','Category','Amount','Status'],sorted.map(r=>[r.receiptNumber??'',r.merchant??'',r.date,r.category??'',String(r.amount),r.status??'']));showToast('CSV exported') }
+  const handleExportCSV = useCallback(() => {
+    setShowExport(false)
+    csvDownload(`receipts-${new Date().toISOString().slice(0,10)}.csv`, ['Receipt #','Merchant','Date','Category','Amount','Status'], sorted.map(r => [r.receiptNumber ?? '', r.merchant ?? '', r.date, r.category ?? '', String(r.amount), r.status ?? '']))
+    showToast('CSV exported')
+  }, [sorted, showToast])
+
+  const handleExportSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`receipts-selected-${new Date().toISOString().slice(0,10)}.csv`, ['Receipt #','Merchant','Date','Category','Amount','Status'], sorted.filter((r) => table.selectedRows.includes(r.id)).map(r => [r.receiptNumber ?? '', r.merchant ?? '', r.date, r.category ?? '', String(r.amount), r.status ?? '']))
+    showToast('Selected receipts exported')
+  }, [sorted, table.selectedRows, showToast])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    if (!confirm(`Delete ${count} selected receipt${count !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.deleteReceipt(companyId, id)))
+      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
+      table.clearSelection()
+      showToast(`${count} receipt${count !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected receipts')
+    }
+  }, [companyId, table, showToast])
+
+  const handleMatchSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'MATCHED' } : row))
+    table.clearSelection()
+    showToast(`${count} selected receipt${count !== 1 ? 's' : ''} marked as matched`)
+  }, [table, showToast])
+
   const visibleCols = cols.filter(c => c.visible)
 
-  const renderCell = (row: Receipt, key: string) => {
+  const renderCell = useCallback((row: Receipt, key: string) => {
     switch (key) {
       case 'receiptNumber': return <span className="font-semibold text-gray-800">{row.receiptNumber ?? '—'}</span>
       case 'merchant':      return <span className="text-gray-700 truncate">{row.merchant ?? '—'}</span>
@@ -116,7 +154,49 @@ export default function ReceiptsPage() {
       case 'status':        return <StatusPill status={row.status ?? 'DRAFT'} />
       default: return null
     }
-  }
+  }, [fmt])
+
+  const tableColumns: EnhancedColumn<Receipt>[] = useMemo(() => [
+    ...visibleCols.map((col) => ({
+      key: col.key,
+      header: col.label,
+      width: col.width,
+      minWidth: col.width,
+      sortable: true,
+      align: col.align,
+      render: (_value, row) => renderCell(row, col.key),
+    })),
+{
+      key: 'actions',
+      isAction: true,
+      header: '',
+      width: 52,
+      minWidth: 52,
+      sortable: false,
+      align: 'right',
+      render: (_value, row) => (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+            if (actionMenuId === row.id) {
+              setActionMenuId(null)
+              setMenuPos(null)
+            } else {
+              setActionMenuId(row.id)
+              setMenuPos({ x: rect.right, y: rect.bottom })
+            }
+          }}
+          title="Receipt actions"
+          aria-label="Receipt actions"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+        >
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ], [visibleCols, actionMenuId, renderCell])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -125,6 +205,7 @@ export default function ReceiptsPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
           <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button></div>)}</div>
+          <button onClick={() => router.push('/expenses/receipts/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           <button onClick={openNewReceipt} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Receipt</button>
         </div>
       </div>
@@ -135,28 +216,71 @@ export default function ReceiptsPage() {
       </div>
       {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label htmlFor="dateFrom" className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input id="dateFrom" type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label htmlFor="dateTo" className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input id="dateTo" type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
-      {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`rct-sel.csv`,['Receipt #','Merchant','Date','Category','Amount','Status'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.receiptNumber??'',r.merchant??'',r.date,r.category??'',String(r.amount),r.status??'']));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} title="Clear selection" aria-label="Clear selection" className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        <table className="w-full text-sm border-collapse table-fixed">
-          <colgroup><col width={44} />{visibleCols.map(c => <col key={c.key} width={c.width} />)}<col width={52} /></colgroup>
-          <thead><tr className="bg-gray-50 border-b border-gray-200"><th className="px-4 py-2.5 border-r border-gray-200 w-10"><button onClick={toggleAll} title="Toggle all receipts" aria-label="Toggle all receipts" className="text-gray-300 hover:text-emerald-600">{selected.size===paged.length&&paged.length>0?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></th>{visibleCols.map(c=>(<th key={c.key} width={c.width} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden"><button onClick={()=>toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden"><span className="truncate text-xs">{c.label}</span><ArrowUpDown size={11} className={`shrink-0 ${sortKey===c.key?'text-emerald-600':'text-gray-300'}`}/></button><div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e=>startResize(e,c.key)}/></th>))}<th className="px-4 py-2.5 w-16"/></tr></thead>
-          <tbody>{paged.length===0?(<tr><td colSpan={visibleCols.length+2} className="px-4 py-16 text-center text-sm text-gray-400">No receipts found</td></tr>):paged.map(row=>(<tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id)?'bg-blue-50/20':''}`}><td className="px-4 py-2.5 border-r border-gray-100"><button onClick={()=>toggleSelect(row.id)} title={selected.has(row.id) ? 'Deselect receipt' : 'Select receipt'} aria-label={selected.has(row.id) ? 'Deselect receipt' : 'Select receipt'} className="text-gray-300 hover:text-emerald-600">{selected.has(row.id)?<CheckSquare size={15} className="text-emerald-500"/>:<Square size={15}/>}</button></td>{visibleCols.map(c=>(<td key={c.key} className={`px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm ${c.align==='right'?'text-right':'text-left'}`}>{renderCell(row,c.key)}</td>))}<td className="px-4 py-2.5 text-right"><button onClick={e=>{const r=e.currentTarget.getBoundingClientRect();actionMenuId===row.id?(setActionMenuId(null),setMenuPos(null)):(setActionMenuId(row.id),setMenuPos({x:r.right,y:r.bottom}))}} title="Receipt actions" aria-label="Receipt actions" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"><MoreVertical size={14}/></button></td></tr>))}</tbody>
-        </table>
-      </div>
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
+        { label: 'Mark as Matched Selected', onClick: () => handleMatchSelected() },
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
+      <EnhancedTable
+        columns={tableColumns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        tableId="receipts"
+        hasStickyActions={true}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        emptyMessage="No receipts found"
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+        fixedWidth={96}
+      />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
+
+      {/* Activity log available via top toolbar button */}
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;return(<div className="fixed right-4 top-24 z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.receiptNumber??'Receipt'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Receipt" onClick={()=>{openEditReceipt(row.id);setActionMenuId(null)}}/></div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <SlidePanel open={receiptPanelOpen} onClose={closeReceiptPanel} title={openReceiptMode === 'new' ? 'New Receipt' : 'Edit Receipt'}>
-        <div className="h-full min-h-screen overflow-hidden">
-          <ReceiptForm
-            mode={openReceiptMode}
-            receiptId={openReceiptId ?? undefined}
-            onClose={closeReceiptPanel}
-            onSaved={onReceiptSaved}
-          />
-        </div>
-      </SlidePanel>
+      <CenteredModal
+        open={receiptPanelOpen}
+        onClose={closeReceiptPanel}
+        title={openReceiptMode === 'new' ? 'New Receipt' : 'Edit Receipt'}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={closeReceiptPanel}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={saveReceipt}
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Save
+            </button>
+          </div>
+        }
+      >
+        <ReceiptForm
+          ref={receiptFormRef}
+          mode={openReceiptMode}
+          receiptId={openReceiptId ?? undefined}
+          onClose={closeReceiptPanel}
+          onSaved={onReceiptSaved}
+        />
+      </CenteredModal>
     </div>
   )
 }
+
+
+

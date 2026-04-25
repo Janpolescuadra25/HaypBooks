@@ -9,6 +9,8 @@ import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 
 interface ExpenseReportFormProps {
   mode: 'new' | 'edit'
@@ -74,6 +76,14 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const isEdit = mode === 'edit'
   const readOnly = isEdit && status !== 'DRAFT'
 
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+
+  const { entries: activityEntries, loading: activityLoading } = useActivityLog({
+    companyId: activeTab === 'activity' ? companyId : null,
+    pageSize: 30,
+    initialFilters: activeTab === 'activity' && expenseId ? { tableName: 'ExpenseReport', recordId: expenseId } : undefined,
+  })
+
   useEffect(() => {
     if (!companyId) return
     let active = true
@@ -83,7 +93,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         if (!active) return
         const data = res.data ?? []
         const items = Array.isArray(data) ? data : data.data ?? []
-        setEmployees(items.map((item: any) => ({ id: item.id, displayName: item.displayName ?? item.name ?? item.id })))
+          interface ApiEmployee { id: string; displayName?: string | null; name?: string | null }
+          setEmployees(items.map((item: ApiEmployee) => ({ id: item.id, displayName: item.displayName ?? item.name ?? item.id })))
         if (!employeeId && items.length > 0) {
           setEmployeeId(items[0].id)
         }
@@ -95,7 +106,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         if (!active) return
         const data = res.data ?? []
         const list = Array.isArray(data) ? data : data.data ?? []
-        setAccounts(list.map((account: any) => ({ id: account.id, code: account.code, name: account.name })))
+        interface ApiAccount { id: string; code?: string | null; name?: string | null }
+        setAccounts(list.map((account: ApiAccount) => ({ id: account.id, code: account.code, name: account.name })))
       })
       .catch(() => {})
 
@@ -119,7 +131,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         setNotes(data.notes ?? '')
         setInternalNotes(data.internalNotes ?? '')
         if (Array.isArray(data.lines) && data.lines.length > 0) {
-          setLines(data.lines.map((line: any) => ({
+          interface ApiExpenseLine { id?: string; date?: string | null; category?: string | null; description?: string | null; accountId?: string | null; amount?: number | null; receiptUrl?: string | null; billable?: boolean | null }
+          setLines(data.lines.map((line: ApiExpenseLine) => ({
             id: Math.random().toString(36).slice(2, 9),
             date: line.date ?? today,
             category: line.category ?? 'Other',
@@ -184,7 +197,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       const payload = createPayload()
       await expensesService.createExpenseReport(companyId, payload)
       toast.success('Expense report saved as draft')
-      router.push('/expenses/expense-capture/expenses')
+      router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save expense report')
@@ -205,7 +218,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       if (!id) throw new Error('Created report id missing')
       await expensesService.submitExpenseReport(companyId, id)
       toast.success('Expense report submitted for approval')
-      router.push('/expenses/expense-capture/expenses')
+      router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to submit expense report')
@@ -221,7 +234,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
     try {
       await expensesService.submitExpenseReport(companyId, expenseId)
       toast.success('Expense report submitted for approval')
-      router.push('/expenses/expense-capture/expenses')
+      router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to submit expense report')
@@ -239,7 +252,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/expense-capture/expenses')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
+              <button type="button" onClick={() => router.push('/expenses/employee-expenses/expenses')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
                 <ArrowLeft size={16} /> Back to expense reports
               </button>
               <div className="mt-3">
@@ -256,8 +269,15 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-        <div className="space-y-6">
+        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !expenseId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+          </div>
+        </div>
+        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+          <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
@@ -351,15 +371,28 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </div>
             </div>
           </section>
+            </div>
+          </div>
         </div>
-      </div>
+        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div className="space-y-6">
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
+                <div className="mt-4">
+                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this expense report yet." />
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
 
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
             <div className="text-sm text-slate-600">Report owner: {selectedEmployee?.displayName ?? '—'}</div>
             <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push('/expenses/expense-capture/expenses')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
+              <button type="button" onClick={() => router.push('/expenses/employee-expenses/expenses')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
               {mode === 'new' ? (
                 <>
                   <button type="button" onClick={handleSaveDraft} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed">Save Draft</button>
@@ -374,6 +407,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         </div>
       </div>
     </div>
+  </div>
   )
 }
 

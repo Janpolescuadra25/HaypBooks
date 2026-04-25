@@ -248,7 +248,7 @@ Primary Module
 ## 7. EXPENSES
 
 ### Vendors
-- Vendors `/expenses/vendors/vendors`
+- Vendors `/expenses/vendors`
 - Vendor Documents `/expenses/vendors/vendor-documents`
 - Contractor Management `/expenses/vendors/contractor-management`
 - 1099 Management `/expenses/vendors/1099-management`
@@ -261,13 +261,13 @@ Primary Module
 - Budget Checks `[E]` `/expenses/purchasing/budget-checks`
 - RFQ (Request for Quote) `/expenses/purchasing/rfq`
 
-### Expense Capture
-- Expenses `/expenses/expense-capture/expenses`
-- Receipts `/expenses/expense-capture/receipts`
-- Mileage `/expenses/expense-capture/mileage`
-- Per Diem `/expenses/expense-capture/per-diem`
-- Employee Reimbursements `/expenses/expense-capture/employee-reimbursements`
-- Company Card Activity `/expenses/expense-capture/company-card-activity`
+### Employee Expenses
+- Expense Reports `/expenses/employee-expenses/expenses`
+- Receipts `/expenses/employee-expenses/receipts`
+- Mileage `/expenses/employee-expenses/mileage`
+- Per Diem `/expenses/employee-expenses/per-diem`
+- Employee Reimbursements `/expenses/employee-expenses/reimbursements`
+- Company Card Activity `/expenses/employee-expenses/company-card-activity`
 
 ### Payables
 - Bills `/expenses/payables/bills`

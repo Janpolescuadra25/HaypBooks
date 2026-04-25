@@ -2,17 +2,18 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
+  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
   CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
-import SlidePanel from '@/components/shared/SlidePanel'
-import VendorForm from './VendorForm'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
+import CenteredModal from '@/components/shared/CenteredModal'
+import VendorForm, { type VendorFormHandle } from './VendorForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import { useRouter } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Vendor {
@@ -26,7 +27,7 @@ interface Vendor {
 type SortKey = 'name' | 'email' | 'phone' | 'status' | 'balance'
 
 // ─── Columns ──────────────────────────────────────────────────────────────────
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Vendor>['align'] }
 const DEFAULT_COLS: ColDef[] = [
   { key: 'name',    label: 'Name',    visible: true, width: 240 },
   { key: 'email',   label: 'Email',   visible: true, width: 220 },
@@ -56,6 +57,7 @@ function compare(a: Vendor, b: Vendor, key: SortKey, dir: 'asc' | 'desc'): numbe
 const STATUSES = ['ALL', 'ACTIVE', 'INACTIVE']
 
 export default function VendorsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<Vendor[]>([])
@@ -67,30 +69,32 @@ export default function VendorsPage() {
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
-  const [selected, setSelected]       = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
   const [showAdvFilters, setShowAdvFilters] = useState(false)
   const [showColToggle, setShowColToggle]   = useState(false)
   const [cols, setCols]   = useState<ColDef[]>(() => loadCols())
-  const colsRef           = useRef(cols)
   const [toast, setToast] = useState('')
   const [vendorPanelOpen, setVendorPanelOpen] = useState(false)
   const [openVendorId, setOpenVendorId] = useState<string | null>(null)
   const [openVendorMode, setOpenVendorMode] = useState<'new' | 'edit'>('new')
 
-  useEffect(() => { colsRef.current = cols }, [cols])
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  const handleColumnsChange = (next: EnhancedColumn<Vendor>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
+  const vendorFormRef = useRef<VendorFormHandle | null>(null)
   const closeVendorPanel = () => { setVendorPanelOpen(false); setOpenVendorId(null); setOpenVendorMode('new') }
   const openNewVendor = () => { setVendorPanelOpen(true); setOpenVendorMode('new'); setOpenVendorId(null) }
   const openEditVendor = (id: string) => { setVendorPanelOpen(true); setOpenVendorMode('edit'); setOpenVendorId(id) }
+  const saveVendor = () => { vendorFormRef.current?.save() }
 
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({
-    columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96,
-  })
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchVendors = useCallback(async () => {
@@ -121,30 +125,31 @@ export default function VendorsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<Vendor>({ data: paged, tableId: 'vendors' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL'].filter(Boolean).length
 
   const handleDelete = useCallback(async (id: string) => {
     if (!companyId) return
     try {
       await expensesService.deleteVendor(companyId, id)
-      setRows(p => p.filter(r => r.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n })
+      setRows(p => p.filter(r => r.id !== id))
+      table.clearSelection()
       showToast('Vendor deleted'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to delete vendor') }
-  }, [companyId])
+  }, [companyId, table])
 
   const handleDeleteSelected = useCallback(async () => {
-    if (!companyId || selected.size === 0) return
-    const ids = [...selected]
+    if (!companyId || table.selectedRows.length === 0) return
+    const ids = table.selectedRows
     try {
       await Promise.all(ids.map(id => expensesService.deleteVendor(companyId, id)))
-      setRows(p => p.filter(r => !ids.includes(r.id))); setSelected(new Set())
+      setRows(p => p.filter(r => !ids.includes(r.id)))
+      table.clearSelection()
       showToast(`${ids.length} vendor${ids.length > 1 ? 's' : ''} deleted`)
     } catch { showToast('Failed to delete selected vendors') }
-  }, [companyId, selected])
+  }, [companyId, table, showToast])
 
   const handleExportCSV = () => {
     setShowExport(false)
@@ -156,7 +161,7 @@ export default function VendorsPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  const renderCell = (row: Vendor, key: string) => {
+  const renderCell = useCallback((row: Vendor, key: string) => {
     switch (key) {
       case 'name':    return <span className="font-semibold text-gray-800 truncate">{row.name}</span>
       case 'email':   return <span className="text-gray-500 truncate">{row.email ?? 'u2014'}</span>
@@ -165,7 +170,53 @@ export default function VendorsPage() {
       case 'balance': return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.balance ?? 0)}</span>
       default: return null
     }
-  }
+  }, [fmt])
+
+  const tableColumns = useMemo<EnhancedColumn<Vendor>[]>(() => [
+    table.renderCheckboxColumn(),
+    ...visibleCols.map((col) => ({
+      key: col.key,
+      header: col.label,
+      width: col.width,
+      minWidth: col.width,
+      sortable: true,
+      align: col.align,
+      render: (_value, row: Vendor) => renderCell(row, col.key),
+    })),
+    {
+      key: 'actions',
+      isAction: true,
+      header: '',
+      width: 52,
+      minWidth: 52,
+      sortable: false,
+      align: 'right',
+      render: (_value, row: Vendor) => {
+        const isOpen = actionMenuId === row.id
+        return (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+              if (isOpen) {
+                setActionMenuId(null)
+                setMenuPos(null)
+              } else {
+                setActionMenuId(row.id)
+                setMenuPos({ x: rect.right, y: rect.bottom })
+              }
+            }}
+            title="Vendor actions"
+            aria-label="Vendor actions"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+          >
+            <MoreVertical size={14} />
+          </button>
+        )
+      },
+    },
+  ], [visibleCols, actionMenuId, renderCell, table])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -198,7 +249,7 @@ export default function VendorsPage() {
                 </div>
               )}
             </div>
-            <button onClick={openNewVendor} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
+            <button onClick={() => router.push('/expenses/vendors/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           </div>
         </div>
       </div>
@@ -209,6 +260,7 @@ export default function VendorsPage() {
           <input type="text" placeholder="Search vendors..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
             className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
+        <button onClick={openNewVendor} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Plus size={14} /> New Vendor</button>
         <div className="flex items-center gap-1.5">
           {STATUSES.map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }}
@@ -236,79 +288,29 @@ export default function VendorsPage() {
         </div>
       )}
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} />
-          <span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`vendors-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Name','Email','Phone','Status','Balance'], sorted.filter(r => selected.has(r.id)).map(r => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)])); showToast('CSV exported') }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={handleDeleteSelected} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-xs font-semibold"><Trash2 size={12} /> Delete</button>
-            <button onClick={() => setSelected(new Set())} title="Clear selection" aria-label="Clear selection" className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: handleDeleteSelected },
+        { label: 'Export Selected', onClick: () => table.exportSelectedToCsv(`vendors-selected-${new Date().toISOString().slice(0, 10)}.csv`, ['Name','Email','Phone','Status','Balance'], (row) => [row.name, row.email ?? '', row.phone ?? '', row.status ?? '', String(row.balance ?? 0)] ) },
+      ])}
 
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        {(loading || cidLoading) && <div className="px-4 py-2 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">Loading vendors...</div>}
-        <table className="w-full text-sm border-collapse table-fixed">
-          <colgroup>
-            <col width={44} />
-            {visibleCols.map(c => <col key={c.key} width={c.width} />)}
-            <col width={52} />
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-4 py-2.5 border-r border-gray-200 w-10">
-                <button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-                  {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                </button>
-              </th>
-              {visibleCols.map(c => (
-                <th key={c.key} width={c.width} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden">
-                  <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    <span className="truncate text-xs">{c.label}</span>
-                    <ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
-                  </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
-                </th>
-              ))}
-              <th className="px-4 py-2.5 w-16" />
-            </tr>
-          </thead>
-          <tbody>
-            {paged.length === 0 ? (
-              <tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No vendors found</td></tr>
-            ) : paged.map(row => (
-              <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-4 py-2.5 border-r border-gray-100">
-                  <button onClick={() => toggleSelect(row.id)} title={selected.has(row.id) ? 'Deselect vendor' : 'Select vendor'} aria-label={selected.has(row.id) ? 'Deselect vendor' : 'Select vendor'} className="text-gray-300 hover:text-emerald-600">
-                    {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                  </button>
-                </td>
-                {visibleCols.map(c => (
-                  <td key={c.key} className={`px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm ${c.align === 'right' ? 'text-right' : 'text-left'}`}>
-                    {renderCell(row, c.key)}
-                  </td>
-                ))}
-                <td className="px-4 py-2.5 text-right">
-                  <button
-                    onClick={e => {
-                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
-                      if (actionMenuId === row.id) { setActionMenuId(null); setMenuPos(null) }
-                      else { setActionMenuId(row.id); setMenuPos({ x: rect.right, y: rect.bottom }) }
-                    }}
-                    title="Vendor actions"
-                    aria-label="Vendor actions"
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                    <MoreVertical size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <EnhancedTable
+        columns={tableColumns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        emptyMessage="No vendors found"
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+        fixedWidth={96}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+      />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
@@ -320,6 +322,8 @@ export default function VendorsPage() {
           </div>
         </div>
       )}
+
+      {/* Activity log available via top toolbar button */}
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)
@@ -339,16 +343,37 @@ export default function VendorsPage() {
       {actionMenuId && <div className="fixed inset-0 z-[9998]" onClick={() => { setActionMenuId(null); setMenuPos(null) }} />}
 
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <SlidePanel open={vendorPanelOpen} onClose={closeVendorPanel} title={openVendorMode === 'new' ? 'New Vendor' : 'Edit Vendor'}>
-        <div className="h-full min-h-screen overflow-hidden">
-          <VendorForm
-            mode={openVendorMode}
-            vendorId={openVendorId ?? undefined}
-            onClose={closeVendorPanel}
-            onSaved={onVendorSaved}
-          />
-        </div>
-      </SlidePanel>
+      <CenteredModal
+        open={vendorPanelOpen}
+        onClose={closeVendorPanel}
+        title={openVendorMode === 'new' ? 'New Vendor' : 'Edit Vendor'}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={closeVendorPanel}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={saveVendor}
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Save
+            </button>
+          </div>
+        }
+      >
+        <VendorForm
+          ref={vendorFormRef}
+          mode={openVendorMode}
+          vendorId={openVendorId ?? undefined}
+          onSaved={onVendorSaved}
+        />
+      </CenteredModal>
     </div>
   )
 }
+

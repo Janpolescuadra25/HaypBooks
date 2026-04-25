@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Loader2, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -21,6 +21,10 @@ interface Account {
   name?: string
 }
 
+export type ReceiptFormHandle = {
+  save: () => Promise<void>
+}
+
 interface ReceiptFormProps {
   mode: 'new' | 'edit'
   receiptId?: string
@@ -28,7 +32,7 @@ interface ReceiptFormProps {
   onSaved?: () => void
 }
 
-export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: ReceiptFormProps) {
+const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function ReceiptForm({ mode, receiptId, onClose, onSaved }, ref) {
   const router = useRouter()
   const toast = useToast()
   const { companyId } = useCompanyId()
@@ -94,14 +98,14 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
     if (!billable) setClientProject('')
   }, [billable])
 
-  const validate = () => {
+  const validate = useCallback(() => {
     if (!companyId) { setError('Company not loaded'); return false }
     if (!merchant.trim()) { setError('Merchant is required'); return false }
     if (amount <= 0) { setError('Amount must be greater than zero'); return false }
     if (billable && !clientProject.trim()) { setError('Client/Project is required when billable'); return false }
     setError('')
     return true
-  }
+  }, [companyId, merchant, amount, billable, clientProject])
 
   const payload = useMemo(() => ({
     receiptDate,
@@ -119,7 +123,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
     notes,
   }), [receiptDate, status, merchant, category, paymentMethod, amount, currency, referenceNumber, expenseDate, accountId, billable, clientProject, notes])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!companyId) return
     if (!validate()) return
     setSubmitting(true)
@@ -133,8 +137,10 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
       }
       if (onSaved) {
         onSaved()
+      } else if (onClose) {
+        onClose()
       } else {
-        router.push('/expenses/expense-capture/receipts')
+        router.push('/expenses/employee-expenses/receipts')
       }
     } catch (err: any) {
       console.error(err)
@@ -143,32 +149,14 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [companyId, mode, receiptId, payload, validate, toast, onSaved, onClose, router])
+
+  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/expense-capture/receipts')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to receipts
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Receipt' : 'Edit Receipt'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Capture receipt details and expense metadata.</p>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <div className="font-semibold">Receipt #</div>
-              <div>{receiptNumber || 'Auto-generated'}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
+    <div className="space-y-6 bg-slate-50 text-slate-900">
+      <div className="overflow-y-auto">
+        <div className="px-4 py-6 pb-6">
         <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -246,21 +234,12 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
             </div>
           </section>
         </div>
-      </main>
+      </div>
 
-      <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Save the receipt when you are ready.</p>}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => onClose ? onClose() : router.push('/expenses/expense-capture/receipts')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   )
-}
+})
+
+export default ReceiptForm
+

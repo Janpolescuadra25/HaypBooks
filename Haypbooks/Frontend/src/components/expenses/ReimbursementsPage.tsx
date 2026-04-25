@@ -2,11 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download } from 'lucide-react'
+import { Plus, Search, Download, Clock } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 
 interface Reimbursement {
   id: string
@@ -16,6 +17,8 @@ interface Reimbursement {
   totalAmount: number
   status?: string
 }
+
+type SortKey = 'reimbursementNumber' | 'employeeName' | 'submittedAt' | 'totalAmount' | 'status'
 
 const STATUSES = ['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REIMBURSED', 'REJECTED']
 
@@ -32,6 +35,8 @@ export default function ReimbursementsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortKey, setSortKey] = useState<SortKey>('submittedAt')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState('')
   const pageSize = 25
@@ -41,13 +46,14 @@ export default function ReimbursementsPage() {
     setLoading(true)
     expensesService.listReimbursements(companyId, { limit: 100 })
       .then((res) => {
-        setReimbursements((res.data || []).map((item: any) => ({
-          id: item.id,
-          reimbursementNumber: item.reimbursementNumber ?? item.id,
-          employeeName: item.employeeName,
-          submittedAt: item.submittedAt,
+        interface RawReimbursement { id?: unknown; reimbursementNumber?: unknown; employeeName?: unknown; submittedAt?: unknown; totalAmount?: unknown; status?: unknown }
+        setReimbursements((res.data || []).map((item: RawReimbursement) => ({
+          id: String(item.id ?? ''),
+          reimbursementNumber: String(item.reimbursementNumber ?? item.id ?? ''),
+          employeeName: item.employeeName as string | undefined,
+          submittedAt: item.submittedAt as string | undefined,
           totalAmount: Number(item.totalAmount ?? 0),
-          status: item.status,
+          status: item.status as string | undefined,
         })))
       })
       .catch(() => setToast('Failed to load reimbursements'))
@@ -69,21 +75,44 @@ export default function ReimbursementsPage() {
       )
   }, [reimbursements, search, statusFilter])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const pageItems = useMemo(() => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize), [filtered, currentPage])
+  const sorted = useMemo(() => {
+    const next = [...filtered]
+    next.sort((a, b) => {
+      if (sortKey === 'totalAmount') {
+        const d = a.totalAmount - b.totalAmount
+        return sortDir === 'asc' ? d : -d
+      }
+      const av = String(a[sortKey] ?? '').toLowerCase()
+      const bv = String(b[sortKey] ?? '').toLowerCase()
+      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    })
+    return next
+  }, [filtered, sortKey, sortDir])
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  const pageItems = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
 
   const handleRefresh = () => {
     if (!companyId) return
     setLoading(true)
     expensesService.listReimbursements(companyId, { limit: 100 })
       .then((res) => {
-        setReimbursements((res.data || []).map((item: any) => ({
-          id: item.id,
-          reimbursementNumber: item.reimbursementNumber ?? item.id,
-          employeeName: item.employeeName,
-          submittedAt: item.submittedAt,
+        interface RawReimbursement2 { id?: unknown; reimbursementNumber?: unknown; employeeName?: unknown; submittedAt?: unknown; totalAmount?: unknown; status?: unknown }
+        setReimbursements((res.data || []).map((item: RawReimbursement2) => ({
+          id: String(item.id ?? ''),
+          reimbursementNumber: String(item.reimbursementNumber ?? item.id ?? ''),
+          employeeName: item.employeeName as string | undefined,
+          submittedAt: item.submittedAt as string | undefined,
           totalAmount: Number(item.totalAmount ?? 0),
-          status: item.status,
+          status: item.status as string | undefined,
         })))
       })
       .catch(() => showToast('Failed to load reimbursements'))
@@ -91,14 +120,22 @@ export default function ReimbursementsPage() {
   }
 
   const openNewReimbursement = () => {
-    router.push('/expenses/expense-capture/reimbursements/new')
+    router.push('/expenses/employee-expenses/reimbursements/new')
   }
 
   const openEditReimbursement = (id: string) => {
-    router.push(`/expenses/expense-capture/reimbursements/${id}/edit`)
+    router.push(`/expenses/employee-expenses/reimbursements/${id}/edit`)
   }
 
   const fmt = (amount: number) => formatCurrency(amount, currency)
+
+  const columns: EnhancedColumn<Reimbursement>[] = [
+    { key: 'reimbursementNumber', header: 'Reimbursement', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.reimbursementNumber ?? '—'}</span> },
+    { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
+    { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
+    { key: 'totalAmount', header: 'Total', width: 120, sortable: true, align: 'right', render: (_value, row) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.totalAmount)}</span> },
+    { key: 'status', header: 'Status', width: 120, sortable: true, render: (_value, row) => <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{row.status ?? 'PENDING'}</span> },
+  ]
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -109,6 +146,7 @@ export default function ReimbursementsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Download size={16} /> Refresh</button>
+          <button onClick={() => router.push('/expenses/employee-expenses/reimbursements/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
           <button onClick={openNewReimbursement} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Reimbursement</button>
         </div>
       </div>
@@ -129,38 +167,17 @@ export default function ReimbursementsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50">
-            <tr>
-              <th className="px-4 py-3">Reimbursement</th>
-              <th className="px-4 py-3">Employee</th>
-              <th className="px-4 py-3">Submitted</th>
-              <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">Loading reimbursements…</td></tr>
-            ) : pageItems.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">No reimbursements found</td></tr>
-            ) : (
-              pageItems.map((item) => (
-                <tr key={item.id} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50" onClick={() => openEditReimbursement(item.id)}>
-                  <td className="px-4 py-4 font-semibold text-slate-900">{item.reimbursementNumber ?? '—'}</td>
-                  <td className="px-4 py-4 text-slate-700">{item.employeeName ?? '—'}</td>
-                  <td className="px-4 py-4 text-slate-500">{fmtDate(item.submittedAt)}</td>
-                  <td className="px-4 py-4 text-right font-semibold text-emerald-800">{fmt(item.totalAmount)}</td>
-                  <td className="px-4 py-4">
-                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{item.status ?? 'PENDING'}</span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <EnhancedTable
+        columns={columns}
+        data={pageItems}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        tableId="reimbursements"
+        hasStickyActions={true}
+        emptyMessage={loading ? 'Loading reimbursements…' : 'No reimbursements found'}
+        onRowClick={(row) => openEditReimbursement(row.id)}
+      />
 
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span>{filtered.length} reimbursements</span>
@@ -170,6 +187,8 @@ export default function ReimbursementsPage() {
           <button onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 disabled:opacity-40">Next</button>
         </div>
       </div>
+
+      {/* Activity log available via top toolbar button */}
 
       {toast && <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-xl">{toast}</div>}
     </div>

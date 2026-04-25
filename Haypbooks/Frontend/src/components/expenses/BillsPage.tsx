@@ -3,28 +3,30 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
+  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
   CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check, Ban,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Bill {
   id: string
   billNumber?: string
+  vendorId?: string
   vendorName?: string
   date: string
   dueDate: string
   status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'VOIDED'
   total: number
   amountDue?: number
+  amountPaid?: number
 }
-type SortKey = 'billNumber' | 'vendorName' | 'date' | 'dueDate' | 'status' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type SortKey = 'billNumber' | 'vendorName' | 'date' | 'dueDate' | 'status' | 'amountDue' | 'amountPaid' | 'total'
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Bill>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'billNumber', label: 'Bill #',   visible: true, width: 130 },
@@ -32,6 +34,8 @@ const DEFAULT_COLS: ColDef[] = [
   { key: 'date',       label: 'Date',     visible: true, width: 115 },
   { key: 'dueDate',    label: 'Due Date', visible: true, width: 115 },
   { key: 'status',     label: 'Status',   visible: true, width: 130 },
+  { key: 'amountDue',  label: 'Amount Due', visible: true, width: 120, align: 'right' },
+  { key: 'amountPaid', label: 'Amount Paid', visible: true, width: 120, align: 'right' },
   { key: 'total',      label: 'Total',    visible: true, width: 130, align: 'right' },
 ]
 const STORAGE_KEY = 'bills-cols-v4'
@@ -44,12 +48,7 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE_BILLS: Bill[] = [
-  { id: 'bill-001', billNumber: 'BILL-001', vendorName: 'Luzon Supplies', date: '2026-04-05', dueDate: '2026-04-20', status: 'PENDING', total: 25000, amountDue: 25000 },
-  { id: 'bill-002', billNumber: 'BILL-002', vendorName: 'MNL Office Solutions', date: '2026-03-20', dueDate: '2026-04-20', status: 'PARTIALLY_PAID', total: 18000, amountDue: 8000 },
-  { id: 'bill-003', billNumber: 'BILL-003', vendorName: 'Cebu Transport Co.', date: '2026-03-10', dueDate: '2026-04-10', status: 'PAID', total: 9200, amountDue: 0 },
-  { id: 'bill-004', billNumber: 'BILL-004', vendorName: 'Davao Hardware Depot', date: '2026-04-01', dueDate: '2026-04-16', status: 'DRAFT', total: 6750, amountDue: 6750 },
-]
+
 
 function compare(a: Bill, b: Bill, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'total') { const d = a.total - b.total; return dir === 'asc' ? d : -d }
@@ -63,15 +62,15 @@ export default function BillsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]       = useState<Bill[]>(SAMPLE_BILLS)
+  const [rows, setRows]       = useState<Bill[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]   = useState<SortKey>('date')
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -88,19 +87,28 @@ export default function BillsPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
 
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({
-    columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96,
-  })
+  const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: EnhancedColumn<Bill>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchBills = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
     setLoading(true)
+    setError('')
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/bills`)
+      const res = await expensesService.listBills(companyId)
+      const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.bills ?? [])
-    } catch { showToast('Failed to load bills') }
-    finally { setLoading(false) }
+    } catch {
+      setError('Failed to load bills')
+      showToast('Failed to load bills')
+    } finally { setLoading(false) }
   }, [companyId])
 
   useEffect(() => { fetchBills() }, [fetchBills])
@@ -108,7 +116,7 @@ export default function BillsPage() {
   const handleApprove = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/bills/${id}/approve`)
+      await expensesService.approveBill(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'APPROVED' } : r))
       showToast('Bill approved'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to approve bill') }
@@ -117,7 +125,7 @@ export default function BillsPage() {
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/bills/${id}/void`)
+      await expensesService.voidBill(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'VOIDED' } : r))
       showToast('Bill voided'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to void bill') }
@@ -136,22 +144,76 @@ export default function BillsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<Bill>({ data: paged, tableId: 'bills' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    if (!confirm(`Delete ${count} selected bill${count !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.deleteBill(companyId, id)))
+      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
+      showToast(`${count} bill${count !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected bills')
+    }
+  }, [companyId, table.selectedRows])
+  const handleMarkPaidSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.approveBill(companyId, id)))
+      setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'PAID' } : row))
+      showToast(`${table.selectedRows.length} selected bill${table.selectedRows.length !== 1 ? 's' : ''} marked as paid`)
+    } catch {
+      showToast('Failed to mark selected bills as paid')
+    }
+  }, [companyId, table.selectedRows])
+  const handleExportSelected = () => {
+    table.exportSelectedToCsv(
+      `bills-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Amount Due', 'Amount Paid', 'Total'],
+      (row) => [row.billNumber ?? '', row.vendorName ?? '', row.date, row.dueDate, row.status, String(row.amountDue ?? 0), String(row.amountPaid ?? 0), String(row.total)],
+    )
+  }
+
+  const columns: EnhancedColumn<Bill>[] = [
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+{
+      key: 'actions',
+      isAction: true,
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
+
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
   const handleExportCSV = () => {
     setShowExport(false)
     csvDownload(`bills-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Total'],
-      sorted.map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.total)]))
+      ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Amount Due', 'Amount Paid', 'Total'],
+      sorted.map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.amountDue ?? 0), String(r.amountPaid ?? 0), String(r.total)]))
     showToast('CSV exported')
   }
 
-  const visibleCols = cols.filter(c => c.visible)
-
+  
   const renderCell = (row: Bill, key: string) => {
     switch (key) {
       case 'billNumber': return <span className="font-semibold text-gray-800">{row.billNumber ?? '—'}</span>
@@ -159,6 +221,8 @@ export default function BillsPage() {
       case 'date':       return <span className="text-gray-500">{fmtDate(row.date)}</span>
       case 'dueDate':    return <span className="text-gray-500">{fmtDate(row.dueDate)}</span>
       case 'status':     return <StatusPill status={row.status} />
+      case 'amountDue':  return <span className="font-semibold text-rose-700 tabular-nums">{fmt(row.amountDue ?? 0)}</span>
+      case 'amountPaid': return <span className="font-semibold text-sky-700 tabular-nums">{fmt(row.amountPaid ?? 0)}</span>
       case 'total':      return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.total)}</span>
       default: return null
     }
@@ -171,7 +235,9 @@ export default function BillsPage() {
           <h1 className="text-2xl font-bold text-emerald-900">Bills</h1>
           <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} bills`}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+          <div className="flex items-center gap-2 flex-wrap">
           <button onClick={fetchBills} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
           <div className="relative">
             <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
@@ -194,7 +260,9 @@ export default function BillsPage() {
               </div>
             )}
           </div>
+          <button onClick={() => router.push('/expenses/bills-payments/bills/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           <button onClick={() => router.push('/expenses/bills/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Bill</button>
+          </div>
         </div>
       </div>
 
@@ -234,71 +302,31 @@ export default function BillsPage() {
         </div>
       )}
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} />
-          <span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`bills-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Bill #','Vendor','Date','Due Date','Status','Total'], sorted.filter(r => selected.has(r.id)).map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.total)])); showToast('CSV exported') }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
+        { label: 'Mark as Paid', variant: 'primary', onClick: () => handleMarkPaidSelected() },
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
 
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        {(loading || cidLoading) && <div className="px-4 py-2 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">Loading bills...</div>}
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: 44 }} />
-            {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
-            <col style={{ width: 52 }} />
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-4 py-2.5 border-r border-gray-200 w-10">
-                <button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-                  {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                </button>
-              </th>
-              {visibleCols.map(c => (
-                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
-                  <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    <span className="truncate text-xs">{c.label}</span>
-                    <ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
-                  </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
-                </th>
-              ))}
-              <th className="px-4 py-2.5 w-16" />
-            </tr>
-          </thead>
-          <tbody>
-            {paged.length === 0 ? (
-              <tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No bills found</td></tr>
-            ) : paged.map(row => (
-              <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-4 py-2.5 border-r border-gray-100">
-                  <button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-                    {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                  </button>
-                </td>
-                {visibleCols.map(c => (
-                  <td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                    {renderCell(row, c.key)}
-                  </td>
-                ))}
-                <td className="px-4 py-2.5 text-right">
-                  <button onClick={e => { const r = e.currentTarget.getBoundingClientRect(); actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom })) }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                    <MoreVertical size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <EnhancedTable
+        columns={columns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        tableId="bills"
+        hasStickyActions={true}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        emptyMessage="No bills found"
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+      />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
@@ -311,6 +339,8 @@ export default function BillsPage() {
         </div>
       )}
 
+      {/* Activity log moved to top toolbar button */}
+
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)
         if (!row) return null
@@ -322,7 +352,17 @@ export default function BillsPage() {
             <MenuBtn icon={<Eye size={13} />} label="View Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
             <MenuBtn icon={<Check size={13} />} label="Edit Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
             {(row.status === 'DRAFT' || row.status === 'PENDING') && <MenuBtn icon={<Check size={13} />} label="Approve Bill" onClick={() => handleApprove(row.id)} />}
-            {(row.status === 'APPROVED' || row.status === 'PARTIALLY_PAID') && <MenuBtn icon={<Check size={13} />} label="Record Payment" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />}
+            {(row.status !== 'PAID' && row.status !== 'VOIDED' && (row.amountDue ?? 0) > 0) && (
+              <MenuBtn
+                icon={<Check size={13} />}
+                label="Record Payment"
+                onClick={() => {
+                  setActionMenuId(null)
+                  setMenuPos(null)
+                  router.push(`/expenses/bills-payments/bill-payments/new?billId=${encodeURIComponent(row.id)}`)
+                }}
+              />
+            )}
             {row.status !== 'PAID' && row.status !== 'VOIDED' && (
               <>
                 <div className="my-1 border-t border-gray-100" />
@@ -338,3 +378,6 @@ export default function BillsPage() {
     </div>
   )
 }
+
+
+

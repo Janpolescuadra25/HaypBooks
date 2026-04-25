@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function Page() {
-  redirect('/expenses/procurement/vendors')
+  redirect('/expenses/procurement/purchase-requests')
 }

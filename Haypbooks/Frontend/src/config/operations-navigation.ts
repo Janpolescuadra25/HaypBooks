@@ -137,13 +137,19 @@ export const OPERATIONS_NAV: OperationsSection[] = [
     label: 'Expense Management',
     subsections: [
       {
+        id: 'vendors',
+        label: 'Vendors',
+        tabs: [
+          { id: 'vendors',              label: 'Vendors',              path: '/expenses/vendors' },
+        ],
+      },
+      {
         id: 'procurement',
         label: 'Procurement',
         tabs: [
-          { id: 'vendors',              label: 'Vendors',              path: '/expenses/procurement/vendors' },
           { id: 'purchase-requests',    label: 'Purchase Requests',    path: '/expenses/procurement/purchase-requests' },
           { id: 'purchase-orders',      label: 'Purchase Orders',      path: '/expenses/procurement/purchase-orders' },
-          { id: 'rfq',                  label: 'RFQ',                  path: '/expenses/procurement/rfq' },
+          { id: 'rfq',                  label: 'RFQs',                 path: '/expenses/procurement/rfq' },
           { id: 'approvals',            label: 'Approvals',            path: '/expenses/procurement/approvals' },
         ],
       },
@@ -153,21 +159,21 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         tabs: [
           { id: 'bills',                label: 'Bills',                path: '/expenses/bills-payments/bills' },
           { id: 'recurring-bills',      label: 'Recurring Bills',      path: '/expenses/bills-payments/recurring-bills' },
-          { id: 'bill-payments',        label: 'Bill Payments',        path: '/expenses/bills-payments/bill-payments' },
+          { id: 'bill-payments',        label: 'Payments',             path: '/expenses/bills-payments/bill-payments' },
           { id: 'payment-runs',         label: 'Payment Runs',         path: '/expenses/bills-payments/payment-runs' },
           { id: 'vendor-credits',       label: 'Vendor Credits',       path: '/expenses/bills-payments/vendor-credits' },
           { id: 'ap-aging',             label: 'A/P Aging',            path: '/expenses/bills-payments/ap-aging' },
         ],
       },
       {
-        id: 'expense-capture',
-        label: 'Expenses',
+        id: 'employee-expenses',
+        label: 'Employee Expenses',
         tabs: [
-          { id: 'expenses',             label: 'Expenses',             path: '/expenses/expense-capture/expenses' },
-          { id: 'receipts',             label: 'Receipts',             path: '/expenses/expense-capture/receipts' },
-          { id: 'mileage',              label: 'Mileage',              path: '/expenses/expense-capture/mileage' },
-          { id: 'per-diem',             label: 'Per Diem',             path: '/expenses/expense-capture/per-diem' },
-          { id: 'reimbursements',       label: 'Reimbursements',       path: '/expenses/expense-capture/reimbursements' },
+          { id: 'expenses',             label: 'Expense Reports',      path: '/expenses/employee-expenses/expenses' },
+          { id: 'receipts',             label: 'Receipts',             path: '/expenses/employee-expenses/receipts' },
+          { id: 'mileage',              label: 'Mileage',              path: '/expenses/employee-expenses/mileage' },
+          { id: 'per-diem',             label: 'Per Diem',             path: '/expenses/employee-expenses/per-diem' },
+          { id: 'reimbursements',       label: 'Reimbursements',       path: '/expenses/employee-expenses/reimbursements' },
         ],
       },
     ],

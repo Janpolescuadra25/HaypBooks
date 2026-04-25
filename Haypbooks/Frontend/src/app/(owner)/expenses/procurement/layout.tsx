@@ -3,10 +3,9 @@ import ModuleTabs from '@/components/shared/ModuleTabs'
 import { ToastProvider } from '@/components/ui/Toast'
 
 const TABS = [
-  { label: 'Vendors', value: 'vendors' },
   { label: 'Purchase Requests', value: 'purchase-requests' },
   { label: 'Orders', value: 'orders' },
-  { label: 'RFQ', value: 'rfq' },
+  { label: 'RFQs', value: 'rfq' },
   { label: 'Approvals', value: 'approvals' },
 ]
 

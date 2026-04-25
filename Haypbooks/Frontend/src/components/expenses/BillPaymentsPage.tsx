@@ -3,14 +3,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
+  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
   CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Ban,
 } from 'lucide-react'
-import apiClient from '@/lib/api-client'
+import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ interface BillPayment {
   amount: number
 }
 type SortKey = 'paymentNumber' | 'vendorName' | 'date' | 'method' | 'status' | 'amount'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'right' }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<BillPayment>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'paymentNumber', label: 'Payment #', visible: true, width: 140 },
@@ -44,12 +44,7 @@ function loadCols(): ColDef[] {
   return DEFAULT_COLS
 }
 
-const SAMPLE: BillPayment[] = [
-  { id: 'pay-001', paymentNumber: 'PAY-1001', vendorName: 'Luzon Supplies', date: '2026-04-10', method: 'Bank Transfer', status: 'COMPLETED', amount: 25000 },
-  { id: 'pay-002', paymentNumber: 'PAY-1002', vendorName: 'MNL Office Solutions', date: '2026-03-25', method: 'Check', status: 'COMPLETED', amount: 10000 },
-  { id: 'pay-003', paymentNumber: 'PAY-1003', vendorName: 'Cebu Transport Co.', date: '2026-03-15', method: 'Credit Card', status: 'VOIDED', amount: 9200 },
-  { id: 'pay-004', paymentNumber: 'PAY-1004', vendorName: 'Davao Hardware Depot', date: '2026-04-12', method: 'Bank Transfer', status: 'PENDING', amount: 6750 },
-]
+
 
 function compare(a: BillPayment, b: BillPayment, key: SortKey, dir: 'asc' | 'desc'): number {
   if (key === 'amount') { const d = a.amount - b.amount; return dir === 'asc' ? d : -d }
@@ -63,7 +58,7 @@ export default function BillPaymentsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]       = useState<BillPayment[]>(SAMPLE)
+  const [rows, setRows]       = useState<BillPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -71,7 +66,6 @@ export default function BillPaymentsPage() {
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -88,16 +82,23 @@ export default function BillPaymentsPage() {
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
 
-  const { containerRef, startResize, isOverflowing } = useFixedWidthResizableColumns({
-    columns: cols, columnsRef: colsRef, saveColumns: saveCols, fixedWidth: 96,
-  })
+  const visibleCols = cols.filter(c => c.visible)
+
+  const handleColumnsChange = (next: EnhancedColumn<BillPayment>[]) => {
+    saveCols(cols.map(col => {
+      const updated = next.find(c => c.key === col.key)
+      return updated ? { ...col, width: updated.width } : col
+    }))
+  }
+
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchPayments = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
     setLoading(true)
     try {
-      const { data } = await apiClient.get(`/companies/${companyId}/bill-payments`)
+      const res = await expensesService.listBillPayments(companyId)
+      const data = res.data ?? res
       setRows(Array.isArray(data) ? data : data.payments ?? [])
     } catch { showToast('Failed to load payments') }
     finally { setLoading(false) }
@@ -108,7 +109,7 @@ export default function BillPaymentsPage() {
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
     try {
-      await apiClient.post(`/companies/${companyId}/bill-payments/${id}/void`)
+      await expensesService.voidBillPayment(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'VOIDED' } : r))
       showToast('Payment voided'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to void payment') }
@@ -127,10 +128,36 @@ export default function BillPaymentsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<BillPayment>({ data: paged, tableId: 'bill-payments' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
+
+  const columns: EnhancedColumn<BillPayment>[] = [
+    ...visibleCols.map(c => ({
+      key: c.key,
+      header: c.label,
+      width: c.width,
+      sortable: true,
+      align: c.align ?? 'left',
+      render: (_value, row) => renderCell(row, c.key),
+    })),
+{
+      key: 'actions',
+      isAction: true,
+      header: '',
+      width: 52,
+      align: 'right',
+      render: (_value, row) => (
+        <button type="button" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
+        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <MoreVertical size={14} />
+        </button>
+      ),
+    },
+  ]
+
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
   const handleExportCSV = () => {
@@ -141,8 +168,17 @@ export default function BillPaymentsPage() {
     showToast('CSV exported')
   }
 
-  const visibleCols = cols.filter(c => c.visible)
+  const handleExportSelected = () => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`bill-payments-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Payment #', 'Vendor', 'Date', 'Method', 'Status', 'Amount'],
+      sorted
+        .filter(r => table.selectedRows.includes(r.id))
+        .map(r => [r.paymentNumber ?? '', r.vendorName ?? '', r.date, r.method ?? '', r.status ?? '', String(r.amount)]))
+    showToast('Selected payments exported')
+  }
 
+  
   const renderCell = (row: BillPayment, key: string) => {
     switch (key) {
       case 'paymentNumber': return <span className="font-semibold text-gray-800">{row.paymentNumber ?? '—'}</span>
@@ -159,7 +195,7 @@ export default function BillPaymentsPage() {
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Bill Payments</h1>
+          <h1 className="text-2xl font-bold text-emerald-900">Payments</h1>
           <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} payments`}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -185,7 +221,8 @@ export default function BillPaymentsPage() {
               </div>
             )}
           </div>
-          <button onClick={() => router.push('/expenses/bills-payments/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Payment</button>
+          <button onClick={() => router.push('/expenses/bills-payments/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
+          <button onClick={() => router.push('/expenses/bills-payments/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Record Payment</button>
         </div>
       </div>
 
@@ -217,70 +254,29 @@ export default function BillPaymentsPage() {
         </div>
       )}
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`bill-payments-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Payment #','Vendor','Date','Method','Status','Amount'], sorted.filter(r => selected.has(r.id)).map(r => [r.paymentNumber ?? '', r.vendorName ?? '', r.date, r.method ?? '', r.status ?? '', String(r.amount)])); showToast('CSV exported') }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
 
-      <div ref={containerRef} className={`rounded-xl border border-gray-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'} bg-white shadow-sm`}>
-        {(loading || cidLoading) && <div className="px-4 py-2 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">Loading payments...</div>}
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: 44 }} />
-            {visibleCols.map(c => <col key={c.key} style={{ width: c.width }} />)}
-            <col style={{ width: 52 }} />
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-4 py-2.5 border-r border-gray-200 w-10">
-                <button onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-                  {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                </button>
-              </th>
-              {visibleCols.map(c => (
-                <th key={c.key} className="relative px-4 py-2.5 font-semibold text-gray-600 border-r border-gray-200 select-none text-left overflow-hidden" style={{ width: c.width }}>
-                  <button onClick={() => toggleSort(c.key as SortKey)} className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    <span className="truncate text-xs">{c.label}</span>
-                    <ArrowUpDown size={11} className={`shrink-0 ${sortKey === c.key ? 'text-emerald-600' : 'text-gray-300'}`} />
-                  </button>
-                  <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-200/60 select-none" onMouseDown={e => startResize(e, c.key)} />
-                </th>
-              ))}
-              <th className="px-4 py-2.5 w-16" />
-            </tr>
-          </thead>
-          <tbody>
-            {paged.length === 0 ? (
-              <tr><td colSpan={visibleCols.length + 2} className="px-4 py-16 text-center text-sm text-gray-400">No payments found</td></tr>
-            ) : paged.map(row => (
-              <tr key={row.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${selected.has(row.id) ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-4 py-2.5 border-r border-gray-100">
-                  <button onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-                    {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-                  </button>
-                </td>
-                {visibleCols.map(c => (
-                  <td key={c.key} className="px-4 py-2.5 border-r border-gray-100 overflow-hidden text-sm" style={{ textAlign: c.align === 'right' ? 'right' : 'left' }}>
-                    {renderCell(row, c.key)}
-                  </td>
-                ))}
-                <td className="px-4 py-2.5 text-right">
-                  <button onClick={e => { const r = e.currentTarget.getBoundingClientRect(); actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom })) }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                    <MoreVertical size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <EnhancedTable
+        columns={columns}
+        data={paged}
+        onSort={toggleSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        tableId="bill-payments"
+        hasStickyActions={true}
+        emptyMessage="No payments found"
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
+        onColumnsChange={handleColumnsChange}
+      />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
@@ -292,6 +288,8 @@ export default function BillPaymentsPage() {
           </div>
         </div>
       )}
+
+      {/* Activity log moved to top toolbar button */}
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)
@@ -317,3 +315,6 @@ export default function BillPaymentsPage() {
     </div>
   )
 }
+
+
+
