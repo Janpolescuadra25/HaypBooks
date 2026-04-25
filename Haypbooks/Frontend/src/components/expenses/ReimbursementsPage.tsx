@@ -121,11 +121,11 @@ export default function ReimbursementsPage() {
   }
 
   const openNewReimbursement = () => {
-    router.push('/expenses/expense-capture/reimbursements/new')
+    router.push('/expenses/employee-expenses/reimbursements/new')
   }
 
   const openEditReimbursement = (id: string) => {
-    router.push(`/expenses/expense-capture/reimbursements/${id}/edit`)
+    router.push(`/expenses/employee-expenses/reimbursements/${id}/edit`)
   }
 
   const fmt = (amount: number) => formatCurrency(amount, currency)

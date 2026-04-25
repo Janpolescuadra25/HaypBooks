@@ -153,7 +153,7 @@ const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
       if (onSaved) {
         onSaved()
       } else {
-        router.push('/expenses/expense-capture/mileage')
+        router.push('/expenses/employee-expenses/mileage')
       }
     } catch (err: any) {
       console.error(err)

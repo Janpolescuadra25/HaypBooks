@@ -353,7 +353,7 @@
       {
         "title": "Vendors",
         "items": [
-          {"title": "Vendors", "path": "/expenses/vendors/vendors"},
+          {"title": "Vendors", "path": "/expenses/vendors"},
           {"title": "Vendor Documents", "path": "/expenses/vendors/vendor-documents"},
           {"title": "Contractor Management", "path": "/expenses/vendors/contractor-management"},
           {"title": "1099 Management", "path": "/expenses/vendors/1099-management"}
@@ -371,14 +371,14 @@
         ]
       },
       {
-        "title": "Expense Capture",
+        "title": "Employee Expenses",
         "items": [
-          {"title": "Expenses", "path": "/expenses/expense-capture/expenses"},
-          {"title": "Receipts", "path": "/expenses/expense-capture/receipts"},
-          {"title": "Mileage", "path": "/expenses/expense-capture/mileage"},
-          {"title": "Per Diem", "path": "/expenses/expense-capture/per-diem"},
-          {"title": "Employee Reimbursements", "path": "/expenses/expense-capture/employee-reimbursements"},
-          {"title": "Company Card Activity", "path": "/expenses/expense-capture/company-card-activity"}
+          {"title": "Expense Reports", "path": "/expenses/employee-expenses/expenses"},
+          {"title": "Receipts", "path": "/expenses/employee-expenses/receipts"},
+          {"title": "Mileage", "path": "/expenses/employee-expenses/mileage"},
+          {"title": "Per Diem", "path": "/expenses/employee-expenses/per-diem"},
+          {"title": "Employee Reimbursements", "path": "/expenses/employee-expenses/reimbursements"},
+          {"title": "Company Card Activity", "path": "/expenses/employee-expenses/company-card-activity"}
         ]
       },
       {

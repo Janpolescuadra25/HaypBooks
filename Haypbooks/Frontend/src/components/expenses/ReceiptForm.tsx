@@ -140,7 +140,7 @@ const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function Rec
       } else if (onClose) {
         onClose()
       } else {
-        router.push('/expenses/expense-capture/receipts')
+        router.push('/expenses/employee-expenses/receipts')
       }
     } catch (err: any) {
       console.error(err)

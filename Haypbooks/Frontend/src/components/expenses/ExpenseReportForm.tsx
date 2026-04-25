@@ -197,7 +197,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       const payload = createPayload()
       await expensesService.createExpenseReport(companyId, payload)
       toast.success('Expense report saved as draft')
-      router.push('/expenses/expense-capture/expenses')
+      router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save expense report')
@@ -218,7 +218,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       if (!id) throw new Error('Created report id missing')
       await expensesService.submitExpenseReport(companyId, id)
       toast.success('Expense report submitted for approval')
-      router.push('/expenses/expense-capture/expenses')
+      router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to submit expense report')
@@ -234,7 +234,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
     try {
       await expensesService.submitExpenseReport(companyId, expenseId)
       toast.success('Expense report submitted for approval')
-      router.push('/expenses/expense-capture/expenses')
+      router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to submit expense report')
@@ -252,7 +252,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/expense-capture/expenses')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
+              <button type="button" onClick={() => router.push('/expenses/employee-expenses/expenses')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
                 <ArrowLeft size={16} /> Back to expense reports
               </button>
               <div className="mt-3">
@@ -392,7 +392,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
             <div className="text-sm text-slate-600">Report owner: {selectedEmployee?.displayName ?? '—'}</div>
             <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push('/expenses/expense-capture/expenses')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
+              <button type="button" onClick={() => router.push('/expenses/employee-expenses/expenses')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
               {mode === 'new' ? (
                 <>
                   <button type="button" onClick={handleSaveDraft} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed">Save Draft</button>

@@ -160,7 +160,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         await expensesService.createReimbursement(companyId, data)
       }
       toast.success('Reimbursement saved as draft')
-      router.push('/expenses/expense-capture/reimbursements')
+      router.push('/expenses/employee-expenses/reimbursements')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save reimbursement')
@@ -184,7 +184,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         await expensesService.createReimbursement(companyId, data)
       }
       toast.success('Reimbursement submitted for approval')
-      router.push('/expenses/expense-capture/reimbursements')
+      router.push('/expenses/employee-expenses/reimbursements')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to submit reimbursement')
@@ -200,7 +200,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/expense-capture/reimbursements')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
+              <button type="button" onClick={() => router.push('/expenses/employee-expenses/reimbursements')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
                 <ArrowLeft size={16} /> Back to reimbursements
               </button>
               <div className="mt-3">
@@ -341,7 +341,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
             {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Review before saving or submitting.</p>}
           </div>
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => router.push('/expenses/expense-capture/reimbursements')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
+            <button type="button" onClick={() => router.push('/expenses/employee-expenses/reimbursements')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
             <button type="button" onClick={saveDraft} disabled={submitting || isReadOnly} className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">Save</button>
             <button type="button" onClick={submitForApproval} disabled={submitting || isReadOnly} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Submit

@@ -270,7 +270,7 @@ export default function ExpenseCreatePage() {
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 text-gray-700">
-            <Link href="/expenses/expense-capture/expenses" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-emerald-700 transition-colors">
+            <Link href="/expenses/employee-expenses/expenses" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-emerald-700 transition-colors">
               <ArrowLeft size={16} /> Back to Expenses
             </Link>
           </div>

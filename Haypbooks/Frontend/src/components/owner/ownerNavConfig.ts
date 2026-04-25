@@ -183,13 +183,19 @@ export const navigationData: NavSection[] = [
         icon: Receipt,
         items: [
           {
+            title: 'Vendors',
+            path: '/expenses/vendors',
+            tabs: [
+              { label: 'Vendors', value: 'vendors', status: 'existing' },
+            ],
+          },
+          {
             title: 'Procurement',
             path: '/expenses/procurement',
             tabs: [
-              { label: 'Vendors',            value: 'vendors',            status: 'existing' },
               { label: 'Purchase Requests',  value: 'purchase-requests',  status: 'coming-soon' },
               { label: 'Purchase Orders',    value: 'orders',             status: 'coming-soon' },
-              { label: 'RFQ',                value: 'rfq',                status: 'coming-soon' },
+              { label: 'RFQs',               value: 'rfq',                status: 'coming-soon' },
               { label: 'Approvals',          value: 'approvals',          status: 'coming-soon' },
             ],
           },
@@ -199,17 +205,17 @@ export const navigationData: NavSection[] = [
             tabs: [
               { label: 'Bills',             value: 'bills',             status: 'existing' },
               { label: 'Recurring Bills',   value: 'recurring-bills',   status: 'coming-soon' },
-              { label: 'Bill Payments',     value: 'bill-payments',     status: 'existing' },
+              { label: 'Payments',          value: 'bill-payments',     status: 'existing' },
               { label: 'Payment Runs',      value: 'payment-runs',      status: 'coming-soon' },
               { label: 'Vendor Credits',    value: 'vendor-credits',    status: 'existing' },
               { label: 'A/P Aging',         value: 'ap-aging',          status: 'existing' },
             ],
           },
           {
-            title: 'Expenses',
-            path: '/expenses/expense-capture',
+            title: 'Employee Expenses',
+            path: '/expenses/employee-expenses',
             tabs: [
-              { label: 'Expenses',         value: 'expenses',         status: 'coming-soon' },
+              { label: 'Expense Reports',  value: 'expenses',         status: 'coming-soon' },
               { label: 'Receipts',         value: 'receipts',         status: 'coming-soon' },
               { label: 'Mileage',          value: 'mileage',          status: 'coming-soon' },
               { label: 'Per Diem',         value: 'per-diem',         status: 'coming-soon' },

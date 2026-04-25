@@ -3,7 +3,7 @@ import ModuleTabs from '@/components/shared/ModuleTabs'
 import { ToastProvider } from '@/components/ui/Toast'
 
 const TABS = [
-  { label: 'Expenses', value: 'expenses' },
+  { label: 'Expense Reports', value: 'expenses' },
   { label: 'Receipts', value: 'receipts' },
   { label: 'Mileage', value: 'mileage' },
   { label: 'Per Diem', value: 'per-diem' },
@@ -14,7 +14,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <div className="flex flex-col h-full">
-        <ModuleTabs tabs={TABS} basePath="/expenses/expense-capture" />
+        <ModuleTabs tabs={TABS} basePath="/expenses/employee-expenses" />
         <div className="flex-1 overflow-y-auto">
           {children}
         </div>
