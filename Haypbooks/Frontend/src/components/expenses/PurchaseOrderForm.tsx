@@ -8,6 +8,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
+import { accountingService } from '@/services/accounting.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
 
@@ -29,6 +30,12 @@ interface LineItem {
   unitPrice: number
   taxRate: number
   amount: number
+}
+
+interface Account {
+  id: string
+  code?: string
+  name?: string
 }
 
 const STATUS_OPTIONS = [
@@ -87,6 +94,8 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const [accounts, setAccounts] = useState<Account[]>([])
+
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
@@ -96,6 +105,8 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   })
 
   const isEdit = mode === 'edit'
+  // Only lock PO number and vendor when editing a non-DRAFT status
+  const lockIdFields = isEdit && status !== 'OPEN'
   const readonlyFields = false
 
   const filteredVendors = useMemo(() => {
@@ -114,6 +125,15 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         setVendors(Array.isArray(data) ? data : data.data ?? [])
       })
       .catch(() => toast.error('Failed to load vendors'))
+    
+    accountingService.listAccounts(companyId, { includeInactive: false })
+      .then((res) => {
+        if (!active) return
+        const data = res.data ?? []
+        const list = Array.isArray(data) ? data : data.data ?? []
+        setAccounts(list.map((a: any) => ({ id: a.id, code: a.code, name: a.name })))
+      })
+      .catch(() => {})
     return () => { active = false }
   }, [companyId, toast])
 
@@ -268,7 +288,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div>
                 <label htmlFor="poNumber" className="block text-sm font-semibold text-slate-900">PO Number</label>
-                <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+                <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly={lockIdFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
               </div>
               <div>
                 <label htmlFor="orderDate" className="block text-sm font-semibold text-slate-900">Order Date</label>
@@ -281,10 +301,10 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
               <div className="sm:col-span-2 xl:col-span-1">
                 <label htmlFor="vendorId" className="block text-sm font-semibold text-slate-900">Vendor</label>
                 <div className="mt-2 flex gap-2">
-                  <input id="vendorSearch" value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={readonlyFields} aria-label="Search vendors" placeholder="Search vendors" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  <button type="button" onClick={() => setVendorSearch('')} disabled={readonlyFields} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">Clear</button>
+                  <input id="vendorSearch" value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={lockIdFields} aria-label="Search vendors" placeholder="Search vendors" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <button type="button" onClick={() => setVendorSearch('')} disabled={lockIdFields} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">Clear</button>
                 </div>
-                <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={lockIdFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
                   <option value="">Select vendor</option>
                   {filteredVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
                 </select>
@@ -330,7 +350,10 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                             <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Item description" />
                           </td>
                           <td className="px-4 py-3">
-                            <input value={line.account} onChange={(e) => updateLine(line.id, 'account', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Account" />
+                            <select value={line.account} onChange={(e) => updateLine(line.id, 'account', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                              <option value="">Select account</option>
+                              {accounts.map(a => <option key={a.id} value={a.id}>{a.code ? `${a.code} ${a.name}` : a.name}</option>)}
+                            </select>
                           </td>
                           <td className="px-4 py-3 w-24"><input type="number" min="1" value={line.quantity} onChange={(e) => updateLine(line.id, 'quantity', Number(e.target.value))} disabled={readonlyFields} aria-label="Quantity" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
                           <td className="px-4 py-3 w-32"><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => updateLine(line.id, 'unitPrice', Number(e.target.value))} disabled={readonlyFields} aria-label="Unit price" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>

@@ -9,6 +9,7 @@ import { useToast } from '@/components/ToastProvider'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
+import { accountingService } from '@/services/accounting.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
 
@@ -30,6 +31,12 @@ interface LineItem {
   unitPrice: number
   taxRate: number
   amount: number
+}
+
+interface Account {
+  id: string
+  code?: string
+  name?: string
 }
 
 interface BillFormProps {
@@ -82,6 +89,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const [terms, setTerms] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [discountType, setDiscountType] = useState<'pct' | 'flat'>('pct')
   const [discountValue, setDiscountValue] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -122,6 +130,20 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     load()
     return () => { cancelled = true }
   }, [companyId, toast])
+
+  useEffect(() => {
+    if (!companyId) return
+    let active = true
+    accountingService.listAccounts(companyId, { includeInactive: false })
+      .then((res) => {
+        if (!active) return
+        const data = res.data ?? []
+        const list = Array.isArray(data) ? data : data.data ?? []
+        setAccounts(list.map((a: any) => ({ id: a.id, code: a.code, name: a.name })))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [companyId])
 
   useEffect(() => {
     if (mode !== 'edit' || !billId || !companyId) return
@@ -296,7 +318,11 @@ export default function BillForm({ mode, billId }: BillFormProps) {
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-6">
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">Bill #</label>
+                  <input value={billNumber || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+                </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Bill Date</label>
                   <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
@@ -394,7 +420,12 @@ export default function BillForm({ mode, billId }: BillFormProps) {
                           <input value={line.description} onChange={e => updateLine(line.id, 'description', e.target.value)} placeholder="Item or description" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                         </td>
                         <td className="px-4 py-3">
-                          <input value={line.account} onChange={e => updateLine(line.id, 'account', e.target.value)} placeholder="Account" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                          <select value={line.account} onChange={e => updateLine(line.id, 'account', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                            <option value="">Select account</option>
+                            {accounts.map(a => (
+                              <option key={a.id} value={a.id}>{a.code ? `${a.code} ${a.name}` : a.name}</option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-4 py-3">
                           <input type="number" min="1" value={line.quantity} onChange={e => updateLine(line.id, 'quantity', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />

@@ -17,14 +17,16 @@ import ExpenseActivityWidget from './ExpenseActivityWidget'
 interface Bill {
   id: string
   billNumber?: string
+  vendorId?: string
   vendorName?: string
   date: string
   dueDate: string
   status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'VOIDED'
   total: number
   amountDue?: number
+  amountPaid?: number
 }
-type SortKey = 'billNumber' | 'vendorName' | 'date' | 'dueDate' | 'status' | 'total'
+type SortKey = 'billNumber' | 'vendorName' | 'date' | 'dueDate' | 'status' | 'amountDue' | 'amountPaid' | 'total'
 type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Bill>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
@@ -33,6 +35,8 @@ const DEFAULT_COLS: ColDef[] = [
   { key: 'date',       label: 'Date',     visible: true, width: 115 },
   { key: 'dueDate',    label: 'Due Date', visible: true, width: 115 },
   { key: 'status',     label: 'Status',   visible: true, width: 130 },
+  { key: 'amountDue',  label: 'Amount Due', visible: true, width: 120, align: 'right' },
+  { key: 'amountPaid', label: 'Amount Paid', visible: true, width: 120, align: 'right' },
   { key: 'total',      label: 'Total',    visible: true, width: 130, align: 'right' },
 ]
 const STORAGE_KEY = 'bills-cols-v4'
@@ -191,8 +195,8 @@ export default function BillsPage() {
   const handleExportCSV = () => {
     setShowExport(false)
     csvDownload(`bills-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Total'],
-      sorted.map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.total)]))
+      ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Amount Due', 'Amount Paid', 'Total'],
+      sorted.map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.amountDue ?? 0), String(r.amountPaid ?? 0), String(r.total)]))
     showToast('CSV exported')
   }
 
@@ -204,6 +208,8 @@ export default function BillsPage() {
       case 'date':       return <span className="text-gray-500">{fmtDate(row.date)}</span>
       case 'dueDate':    return <span className="text-gray-500">{fmtDate(row.dueDate)}</span>
       case 'status':     return <StatusPill status={row.status} />
+      case 'amountDue':  return <span className="font-semibold text-rose-700 tabular-nums">{fmt(row.amountDue ?? 0)}</span>
+      case 'amountPaid': return <span className="font-semibold text-sky-700 tabular-nums">{fmt(row.amountPaid ?? 0)}</span>
       case 'total':      return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.total)}</span>
       default: return null
     }
@@ -287,7 +293,7 @@ export default function BillsPage() {
           <CheckSquare size={16} />
           <span className="text-sm font-semibold">{selected.size} selected</span>
           <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`bills-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Bill #','Vendor','Date','Due Date','Status','Total'], sorted.filter(r => selected.has(r.id)).map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.total)])); showToast('CSV exported') }}
+            <button onClick={() => { csvDownload(`bills-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Bill #','Vendor','Date','Due Date','Status','Amount Due','Amount Paid','Total'], sorted.filter(r => selected.has(r.id)).map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String((r as any).amountDue ?? 0), String((r as any).amountPaid ?? 0), String(r.total)])); showToast('CSV exported') }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
             <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
           </div>
@@ -331,7 +337,19 @@ export default function BillsPage() {
             <MenuBtn icon={<Eye size={13} />} label="View Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
             <MenuBtn icon={<Check size={13} />} label="Edit Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
             {(row.status === 'DRAFT' || row.status === 'PENDING') && <MenuBtn icon={<Check size={13} />} label="Approve Bill" onClick={() => handleApprove(row.id)} />}
-            {(row.status === 'APPROVED' || row.status === 'PARTIALLY_PAID') && <MenuBtn icon={<Check size={13} />} label="Record Payment" onClick={() => { showToast('Coming soon'); setActionMenuId(null) }} />}
+            {(row.status === 'APPROVED' || row.status === 'PARTIALLY_PAID') && (
+              <MenuBtn
+                icon={<Check size={13} />}
+                label="Record Payment"
+                onClick={() => {
+                  setActionMenuId(null)
+                  setMenuPos(null)
+                  const vendorId = (row as any).vendorId || (row as any).vendor?.id || ''
+                  const url = vendorId ? `/expenses/bills-payments/bill-payments/new?vendorId=${encodeURIComponent(vendorId)}` : '/expenses/bills-payments/bill-payments/new'
+                  router.push(url)
+                }}
+              />
+            )}
             {row.status !== 'PAID' && row.status !== 'VOIDED' && (
               <>
                 <div className="my-1 border-t border-gray-100" />
