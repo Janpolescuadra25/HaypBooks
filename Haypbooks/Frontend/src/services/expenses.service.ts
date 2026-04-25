@@ -321,6 +321,9 @@ export const expensesService = {
   updatePurchaseOrderStatus: (companyId: string, poId: string, body: { status: string }): Promise<AxiosResponse> =>
     apiClient.patch(`/companies/${companyId}/ap/purchase-orders/${poId}/status`, body),
 
+  deletePurchaseOrder: (companyId: string, poId: string): Promise<AxiosResponse> =>
+    apiClient.delete(`/companies/${companyId}/ap/purchase-orders/${poId}`),
+
   convertPurchaseOrderToBill: (companyId: string, poId: string): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/ap/purchase-orders/${poId}/convert`),
 

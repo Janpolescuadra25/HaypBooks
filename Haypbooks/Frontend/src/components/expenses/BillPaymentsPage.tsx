@@ -10,7 +10,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ interface BillPayment {
   amount: number
 }
 type SortKey = 'paymentNumber' | 'vendorName' | 'date' | 'method' | 'status' | 'amount'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<BillPayment>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<BillPayment>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'paymentNumber', label: 'Payment #', visible: true, width: 140 },
@@ -85,7 +85,7 @@ export default function BillPaymentsPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: ResizableColumn<BillPayment>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<BillPayment>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -134,9 +134,10 @@ export default function BillPaymentsPage() {
   const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
-  const columns: ResizableColumn<BillPayment>[] = [
+  const columns: EnhancedColumn<BillPayment>[] = [
     {
       key: '__select__',
+      stickyLeft: 0,
       header: (
         <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
           {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
@@ -157,8 +158,9 @@ export default function BillPaymentsPage() {
       align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
-    {
-      key: '__actions__',
+{
+      key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       align: 'right',
@@ -227,7 +229,7 @@ export default function BillPaymentsPage() {
             )}
           </div>
           <button onClick={() => router.push('/expenses/bills-payments/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
-          <button onClick={() => router.push('/expenses/bills-payments/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Payment</button>
+          <button onClick={() => router.push('/expenses/bills-payments/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Record Payment</button>
         </div>
       </div>
 
@@ -270,12 +272,14 @@ export default function BillPaymentsPage() {
         </div>
       )}
 
-      <ResizableTable
+      <EnhancedTable
         columns={columns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="bill-payments"
+        hasStickyActions={true}
         emptyMessage="No payments found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
@@ -318,3 +322,6 @@ export default function BillPaymentsPage() {
     </div>
   )
 }
+
+
+

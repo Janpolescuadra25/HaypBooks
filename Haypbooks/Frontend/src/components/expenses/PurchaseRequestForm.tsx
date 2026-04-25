@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Save, Send, Trash2, Loader2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -9,7 +9,7 @@ import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
-import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import LineItemTable from './LineItemTable'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
 
@@ -89,14 +89,14 @@ interface ApiPRLine {
   amount?: number | null
 }
 
-const defaultWidths = {
-  description: 320,
-  account: 180,
-  quantity: 96,
-  unitPrice: 120,
-  taxRate: 110,
-  amount: 120,
-}
+const lineItemColumns = [
+  { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Description', required: true },
+  { key: 'accountId', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: [] },
+  { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
+  { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
+  { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
+  { key: 'amount', label: 'Amount', type: 'calculated', width: 120, minWidth: 110 },
+]
 
 export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormProps) {
   const router = useRouter()
@@ -193,23 +193,6 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
       .catch(() => toast.error('Failed to load purchase request'))
     return () => { active = false }
   }, [companyId, mode, prId, toast])
-
-  const [colWidths, setColWidths] = useState(defaultWidths)
-  const colWidthsRef = useRef(colWidths)
-  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
-  const saveColWidths = useCallback((next: typeof defaultWidths) => {
-    setColWidths(next)
-    try { localStorage.setItem('purchase-request-line-cols-v1', JSON.stringify(next)) } catch {}
-  }, [])
-
-  const { containerRef: lineItemsTableRef, startResize: startLineResize, isOverflowing: lineItemsOverflowing } = useFixedWidthResizableMap({
-    widths: colWidths,
-    widthsRef: colWidthsRef,
-    order: ['description', 'account', 'quantity', 'unitPrice', 'taxRate', 'amount'],
-    saveWidths: saveColWidths,
-    fixedWidth: 64,
-    minWidth: { description: 220, account: 140, quantity: 70, unitPrice: 90, taxRate: 90, amount: 110 },
-  })
 
   const subtotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0), [lineItems])
   const taxTotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0) * (Number(line.taxRate || 0) / 100), 0), [lineItems])
@@ -316,12 +299,14 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
-            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !prId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-          </div>
+          {mode !== 'new' && (
+            <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+              <button type="button" onClick={() => setActiveTab('activity')} disabled={!prId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+            </div>
+          )}
         </div>
-        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+        <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
             <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -368,7 +353,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -380,63 +365,17 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                   </button>
                 </div>
 
-                <div ref={lineItemsTableRef} className={`mt-6 overflow-x-auto rounded-3xl border border-slate-200 ${lineItemsOverflowing ? 'shadow-inner' : ''}`}>
-                  <table className="w-full min-w-[800px] border-collapse text-sm">
-                    <colgroup>
-                      <col width={colWidths.description} />
-                      <col width={colWidths.account} />
-                      <col width={colWidths.quantity} />
-                      <col width={colWidths.unitPrice} />
-                      <col width={colWidths.taxRate} />
-                      <col width={colWidths.amount} />
-                      <col width={64} />
-                    </colgroup>
-                    <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3">Description</th>
-                        <th className="px-4 py-3">Account</th>
-                        <th className="px-4 py-3">Quantity</th>
-                        <th className="px-4 py-3">Unit Price</th>
-                        <th className="px-4 py-3">Tax %</th>
-                        <th className="px-4 py-3">Amount</th>
-                        <th className="px-4 py-3" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lineItems.map((line) => (
-                        <tr key={line.id} className="border-t border-slate-200">
-                          <td className="px-4 py-3 align-top">
-                            <input type="text" value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} placeholder="Description" aria-label="Line item description" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <select value={line.accountId} onChange={(e) => updateLine(line.id, 'accountId', e.target.value)} aria-label="Line item account" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                              <option value="">Account</option>
-                              {accounts.map((account) => (
-                                <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name}` : account.name}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <input type="number" value={line.quantity} min={1} onChange={(e) => updateLine(line.id, 'quantity', Number(e.target.value))} aria-label="Line item quantity" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <input type="number" value={line.unitPrice} min={0} step="0.01" onChange={(e) => updateLine(line.id, 'unitPrice', Number(e.target.value))} aria-label="Line item unit price" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <input type="number" value={line.taxRate} min={0} max={100} step="0.1" onChange={(e) => updateLine(line.id, 'taxRate', Number(e.target.value))} aria-label="Line item tax rate" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <div className="rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700">{formatCurrency(line.amount, currency)}</div>
-                          </td>
-                          <td className="px-4 py-3 align-top text-right">
-                            <button type="button" title="Remove line item" aria-label="Remove line item" onClick={() => removeLine(line.id)} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 hover:text-rose-600 hover:border-rose-200">
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="mt-6">
+                  <LineItemTable
+                    columns={lineItemColumns.map((column) => column.key === 'accountId'
+                      ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} — ${account.name}` : account.name ?? '' })) }
+                      : column
+                    )}
+                    rows={lineItems}
+                    onChange={setLineItems}
+                    currency={currency ?? 'USD'}
+                    calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+                  />
                 </div>
               </div>
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -469,7 +408,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
             </div>
           </div>
         </div>
-        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+        <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <div className="space-y-6">
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

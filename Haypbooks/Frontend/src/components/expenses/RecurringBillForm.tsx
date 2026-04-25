@@ -1,6 +1,6 @@
 'use client'
 
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState, useCallback } from 'react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -115,7 +115,7 @@ const RecurringBillForm = forwardRef<RecurringBillFormHandle, RecurringBillFormP
       return () => { active = false }
     }, [companyId, billId, mode, toast])
 
-    const validate = () => {
+    const validate = useCallback(() => {
       if (!companyId) { setError('Company not loaded'); return false }
       if (!vendorId) { setError('Vendor is required'); return false }
       if (!description.trim()) { setError('Description is required'); return false }
@@ -123,9 +123,9 @@ const RecurringBillForm = forwardRef<RecurringBillFormHandle, RecurringBillFormP
       if (!startDate) { setError('Start date is required'); return false }
       setError('')
       return true
-    }
+    }, [companyId, vendorId, description, amount, startDate])
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
       if (!companyId) return
       if (!validate()) return
       setSubmitting(true)
@@ -160,119 +160,134 @@ const RecurringBillForm = forwardRef<RecurringBillFormHandle, RecurringBillFormP
       } finally {
         setSubmitting(false)
       }
-    }
+    }, [companyId, validate, vendorId, description, frequency, startDate, endDate, nextDueDate, amount, currency, accountId, paymentTerms, status, internalNotes, mode, billId, onSaved, onClose, toast])
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
     return (
       <div className="space-y-6 bg-slate-50 text-slate-900">
         <div className="overflow-y-auto">
-          <div className="px-4 py-6 space-y-6">
-            <div className="mx-auto max-w-7xl px-0 sm:px-6 lg:px-8">
-              <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
-                <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-                <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !billId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+          <div className="mx-auto w-full max-w-4xl px-4 py-6 text-slate-900">
+            <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">{mode === 'new' ? 'New Recurring Bill Template' : 'Edit Recurring Bill Template'}</h2>
+                    <p className="mt-1 text-sm text-slate-500">Create a clean recurring bill template with schedule and payment details.</p>
+                  </div>
+                  {mode !== 'new' && (
+                    <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+                      <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+                      <button type="button" onClick={() => setActiveTab('activity')} disabled={!billId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
+                <div className="p-6 space-y-6">
+                  {error && (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+                  )}
+
+                  <section className="space-y-4 pb-6 border-b border-slate-200">
+                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Vendor & Details</h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="recurringVendor" className="block text-sm font-medium text-slate-700 mb-1">Vendor <span className="text-rose-500">*</span></label>
+                        <select id="recurringVendor" value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                          <option value="">Select vendor</option>
+                          {vendors.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="recurringStatus" className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                        <select id="recurringStatus" value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Description / Template Name <span className="text-rose-500">*</span></label>
+                        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Monthly SaaS subscription" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4 pb-6 border-b border-slate-200">
+                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Schedule</h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="recurringFrequency" className="block text-sm font-medium text-slate-700 mb-1">Frequency</label>
+                        <select id="recurringFrequency" value={frequency} onChange={(e) => setFrequency(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                          {FREQUENCIES.map((f) => <option key={f} value={f}>{f.replace('_', '-')}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="recurringStartDate" className="block text-sm font-medium text-slate-700 mb-1">Start Date <span className="text-rose-500">*</span></label>
+                        <input id="recurringStartDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label htmlFor="recurringEndDate" className="block text-sm font-medium text-slate-700 mb-1">End Date <span className="text-slate-400 font-normal">(optional)</span></label>
+                        <input id="recurringEndDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                      </div>
+                      {nextDueDate && (
+                        <div className="sm:col-span-2">
+                          <p className="text-sm text-slate-500">Next bill will be generated on <strong className="text-slate-700">{nextDueDate}</strong></p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="space-y-4 pb-6 border-b border-slate-200">
+                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Line Items</h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="recurringAmount" className="block text-sm font-medium text-slate-700 mb-1">Amount <span className="text-rose-500">*</span></label>
+                        <div className="mt-2 flex rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
+                          <span className="inline-flex items-center px-4 text-sm text-slate-500">{currency}</span>
+                          <input id="recurringAmount" type="number" value={amount} min={0} step="0.01" onChange={(e) => setAmount(Number(e.target.value))} className="w-full rounded-none border-0 bg-transparent px-4 py-3 text-sm text-slate-900 focus:outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="recurringAccount" className="block text-sm font-medium text-slate-700 mb-1">Expense Account</label>
+                        <select id="recurringAccount" value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                          <option value="">Select account</option>
+                          {accounts.map((a) => <option key={a.id} value={a.id}>{a.code ? `${a.code} — ${a.name}` : a.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="text-sm text-slate-600">Subtotal</div>
+                        <div className="text-sm text-slate-600">Tax</div>
+                        <div className="text-sm text-slate-600">Total</div>
+                      </div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm font-semibold text-slate-900">
+                        <div>{currency} {amount.toFixed(2)}</div>
+                        <div>{currency} 0.00</div>
+                        <div>{currency} {amount.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Notes</h3>
+                    <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={4} className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Internal notes (not shown on bills)" />
+                  </section>
+                </div>
               </div>
             </div>
-            <div className={activeTab !== 'details' ? 'hidden' : ''}>
-            {error && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
-            )}
 
-            {/* Header fields */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Vendor <span className="text-rose-500">*</span></label>
-                  <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    <option value="">Select vendor</option>
-                    {vendors.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Status</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-slate-900">Description / Template Name <span className="text-rose-500">*</span></label>
-                  <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Monthly SaaS subscription" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-              </div>
-            </section>
-
-            {/* Schedule */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900 mb-4">Schedule</h2>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Frequency</label>
-                  <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {FREQUENCIES.map((f) => <option key={f} value={f}>{f.replace('_', '-')}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Start Date <span className="text-rose-500">*</span></label>
-                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">End Date <span className="text-slate-400 font-normal">(optional)</span></label>
-                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                {nextDueDate && (
-                  <div className="sm:col-span-2 xl:col-span-3">
-                    <p className="text-xs text-slate-500">Next bill will be generated on <strong className="text-slate-700">{nextDueDate}</strong></p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Amount & Account */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900 mb-4">Amount & Account</h2>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Amount <span className="text-rose-500">*</span></label>
-                  <div className="mt-2 flex rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-                    <span className="inline-flex items-center px-4 text-sm text-slate-500">{currency}</span>
-                    <input type="number" value={amount} min={0} step="0.01" onChange={(e) => setAmount(Number(e.target.value))} className="w-full rounded-none border-0 bg-transparent px-4 py-3 text-sm text-slate-900 focus:outline-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Expense Account</label>
-                  <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    <option value="">Select account</option>
-                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.code ? `${a.code} — ${a.name}` : a.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Payment Terms</label>
-                  <select value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {PAYMENT_TERMS.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            {/* Notes */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-              <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Internal notes (not shown on bills)" />
-            </section>
-            </div>
-          </div>
-          <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-            <div className="px-4 py-6">
-              <div className="space-y-6">
+            {mode !== 'new' && activeTab === 'activity' && (
+              <div className="mx-auto w-full max-w-4xl px-4 py-6">
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Activity</h3>
                   <div className="mt-4">
                     <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this recurring bill yet." />
                   </div>
                 </section>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

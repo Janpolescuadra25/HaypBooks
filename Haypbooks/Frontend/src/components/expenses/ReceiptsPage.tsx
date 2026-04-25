@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { expensesService } from '@/services/expenses.service'
 import CenteredModal from '@/components/shared/CenteredModal'
 import ReceiptForm, { type ReceiptFormHandle } from './ReceiptForm'
@@ -14,7 +14,7 @@ import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Receipt { id: string; receiptNumber?: string; merchant?: string; date: string; category?: string; amount: number; status?: string }
 type SortKey = 'receiptNumber' | 'merchant' | 'date' | 'category' | 'amount' | 'status'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Receipt>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Receipt>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'receiptNumber', label: 'Receipt #', visible: true, width: 130 },
@@ -46,7 +46,6 @@ export default function ReceiptsPage() {
   const [sortKey, setSortKey]           = useState<SortKey>('date')
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage]   = useState(1); const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -64,7 +63,7 @@ export default function ReceiptsPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-  const handleColumnsChange = (next: ResizableColumn<Receipt>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<Receipt>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -91,7 +90,7 @@ export default function ReceiptsPage() {
 
   useEffect(() => { fetchReceipts() }, [fetchReceipts])
   const onReceiptSaved = async () => { await fetchReceipts(); closeReceiptPanel() }
-  const fmt = (n: number) => formatCurrency(n, currency)
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -106,32 +105,58 @@ export default function ReceiptsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<Receipt>({ data: paged, tableId: 'receipts' })
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
-  const handleExportCSV = () => { setShowExport(false); csvDownload(`receipts-${new Date().toISOString().slice(0,10)}.csv`,['Receipt #','Merchant','Date','Category','Amount','Status'],sorted.map(r=>[r.receiptNumber??'',r.merchant??'',r.date,r.category??'',String(r.amount),r.status??'']));showToast('CSV exported') }
+  const handleExportCSV = useCallback(() => {
+    setShowExport(false)
+    csvDownload(`receipts-${new Date().toISOString().slice(0,10)}.csv`, ['Receipt #','Merchant','Date','Category','Amount','Status'], sorted.map(r => [r.receiptNumber ?? '', r.merchant ?? '', r.date, r.category ?? '', String(r.amount), r.status ?? '']))
+    showToast('CSV exported')
+  }, [sorted, showToast])
+
+  const handleExportSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`receipts-selected-${new Date().toISOString().slice(0,10)}.csv`, ['Receipt #','Merchant','Date','Category','Amount','Status'], sorted.filter((r) => table.selectedRows.includes(r.id)).map(r => [r.receiptNumber ?? '', r.merchant ?? '', r.date, r.category ?? '', String(r.amount), r.status ?? '']))
+    showToast('Selected receipts exported')
+  }, [sorted, table.selectedRows, showToast])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    if (!confirm(`Delete ${count} selected receipt${count !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.deleteReceipt(companyId, id)))
+      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
+      table.clearSelection()
+      showToast(`${count} receipt${count !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected receipts')
+    }
+  }, [companyId, table, showToast])
+
+  const handleMatchSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'MATCHED' } : row))
+    table.clearSelection()
+    showToast(`${count} selected receipt${count !== 1 ? 's' : ''} marked as matched`)
+  }, [table, showToast])
+
   const visibleCols = cols.filter(c => c.visible)
 
-  const tableColumns: ResizableColumn<Receipt>[] = useMemo(() => [
-    {
-      key: 'select',
-      header: '',
-      width: 44,
-      minWidth: 44,
-      sortable: false,
-      render: (_value, row) => (
-        <button
-          type="button"
-          onClick={(event) => { event.stopPropagation(); toggleSelect(row.id) }}
-          title={selected.has(row.id) ? 'Deselect receipt' : 'Select receipt'}
-          aria-label={selected.has(row.id) ? 'Deselect receipt' : 'Select receipt'}
-          className="text-gray-300 hover:text-emerald-600"
-        >
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
+  const renderCell = useCallback((row: Receipt, key: string) => {
+    switch (key) {
+      case 'receiptNumber': return <span className="font-semibold text-gray-800">{row.receiptNumber ?? '—'}</span>
+      case 'merchant':      return <span className="text-gray-700 truncate">{row.merchant ?? '—'}</span>
+      case 'date':          return <span className="text-gray-500">{fmtDate(row.date)}</span>
+      case 'category':      return <span className="text-gray-600 text-xs">{row.category ?? '—'}</span>
+      case 'amount':        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.amount)}</span>
+      case 'status':        return <StatusPill status={row.status ?? 'DRAFT'} />
+      default: return null
+    }
+  }, [fmt])
+
+  const tableColumns: EnhancedColumn<Receipt>[] = useMemo(() => [
     ...visibleCols.map((col) => ({
       key: col.key,
       header: col.label,
@@ -141,8 +166,9 @@ export default function ReceiptsPage() {
       align: col.align,
       render: (_value, row) => renderCell(row, col.key),
     })),
-    {
+{
       key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       minWidth: 52,
@@ -170,19 +196,7 @@ export default function ReceiptsPage() {
         </button>
       ),
     },
-  ], [visibleCols, selected, actionMenuId])
-
-  const renderCell = (row: Receipt, key: string) => {
-    switch (key) {
-      case 'receiptNumber': return <span className="font-semibold text-gray-800">{row.receiptNumber ?? '—'}</span>
-      case 'merchant':      return <span className="text-gray-700 truncate">{row.merchant ?? '—'}</span>
-      case 'date':          return <span className="text-gray-500">{fmtDate(row.date)}</span>
-      case 'category':      return <span className="text-gray-600 text-xs">{row.category ?? '—'}</span>
-      case 'amount':        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.amount)}</span>
-      case 'status':        return <StatusPill status={row.status ?? 'DRAFT'} />
-      default: return null
-    }
-  }
+  ], [visibleCols, actionMenuId, renderCell])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -202,15 +216,28 @@ export default function ReceiptsPage() {
       </div>
       {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label htmlFor="dateFrom" className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input id="dateFrom" type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label htmlFor="dateTo" className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input id="dateTo" type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
-      {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`rct-sel.csv`,['Receipt #','Merchant','Date','Category','Amount','Status'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.receiptNumber??'',r.merchant??'',r.date,r.category??'',String(r.amount),r.status??'']));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} title="Clear selection" aria-label="Clear selection" className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
-      <ResizableTable
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
+        { label: 'Mark as Matched Selected', onClick: () => handleMatchSelected() },
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
+      <EnhancedTable
         columns={tableColumns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="receipts"
+        hasStickyActions={true}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
         emptyMessage="No receipts found"
-        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
         fixedWidth={96}
       />
@@ -254,3 +281,6 @@ export default function ReceiptsPage() {
     </div>
   )
 }
+
+
+

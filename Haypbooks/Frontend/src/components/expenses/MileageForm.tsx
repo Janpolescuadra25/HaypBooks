@@ -31,8 +31,7 @@ export interface MileageFormHandle {
   save: () => Promise<void>
 }
 
-const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
-  ({ mode, logId, onClose, onSaved }, ref) => {
+function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, ref: React.ForwardedRef<MileageFormHandle>) {
   const router = useRouter()
   const toast = useToast()
   const { companyId } = useCompanyId()
@@ -106,7 +105,7 @@ const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
 
   const amount = useMemo(() => Math.max(0, Number(distance || 0) * Number(rate || 0)), [distance, rate])
 
-  const validate = () => {
+  const validate = useCallback(() => {
     if (!companyId) { setError('Company not loaded'); return false }
     if (!tripDate) { setError('Trip date is required'); return false }
     if (!purpose.trim()) { setError('Purpose is required'); return false }
@@ -117,7 +116,7 @@ const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
     if (billable && !clientProject.trim()) { setError('Client/Project is required when billable'); return false }
     setError('')
     return true
-  }
+  }, [companyId, tripDate, purpose, startLocation, endLocation, distance, rate, billable, clientProject])
 
   const payload = useMemo(() => ({
     logDate,
@@ -138,7 +137,7 @@ const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
     notes,
   }), [logDate, status, tripDate, purpose, startLocation, endLocation, distance, distanceUnit, rate, amount, vehicle, personalVehicle, accountId, billable, clientProject, notes])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!companyId) return
     if (!validate()) return
     setSubmitting(true)
@@ -162,11 +161,11 @@ const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [companyId, validate, mode, logId, payload, toast, onSaved, router])
 
   useImperativeHandle(ref, () => ({
     save: handleSave,
-  }))
+  }), [handleSave])
 
   return (
     <div className="space-y-6 bg-slate-50 text-slate-900">
@@ -268,12 +267,15 @@ const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(
               </div>
             </div>
           </section>
+          </div>
         </div>
       </div>
     </div>
-
-    </div>
   )
-})
+}
+
+const MileageForm = forwardRef<MileageFormHandle, MileageFormProps>(MileageFormInner);
+
+(MileageForm as any).displayName = 'MileageForm'
 
 export default MileageForm

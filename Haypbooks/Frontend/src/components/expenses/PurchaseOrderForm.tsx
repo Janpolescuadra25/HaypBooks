@@ -11,6 +11,7 @@ import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
+import LineItemTable from './LineItemTable'
 // Modal confirmation removed; using window.confirm flow per UX spec
 
 interface PurchaseOrderFormProps {
@@ -50,6 +51,15 @@ const STATUS_OPTIONS = [
 const SHIPPING_METHODS = ['Standard', 'Express', 'Air Freight', 'Courier']
 const TAX_RATES = [0, 5, 10, 12, 15, 20]
 const today = new Date().toISOString().slice(0, 10)
+
+const lineItemColumns = [
+  { key: 'description', label: 'Item / Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item description', required: true },
+  { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: [] },
+  { key: 'quantity', label: 'Qty', type: 'number', width: 96, minWidth: 70, required: true },
+  { key: 'unitPrice', label: 'Unit Price', type: 'number', width: 120, minWidth: 90, required: true },
+  { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
+  { key: 'amount', label: 'Amount', type: 'calculated', width: 120, minWidth: 110 },
+]
 
 const defaultLineItem = (): LineItem => ({
   id: Math.random().toString(36).slice(2, 9),
@@ -244,7 +254,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         await expensesService.updatePurchaseOrderStatus(companyId, poId, { status })
         toast.success('Purchase order status updated')
       }
-      router.push('/expenses/procurement/purchase-orders')
+      router.push('/expenses/procurement/orders')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save purchase order')
@@ -282,7 +292,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/procurement/purchase-orders')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
+              <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
                 <ArrowLeft size={16} /> Back to orders
               </button>
               <div className="mt-3">
@@ -300,12 +310,14 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
-            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !poId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-          </div>
+          {mode !== 'new' && (
+            <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+              <button type="button" onClick={() => setActiveTab('activity')} disabled={!poId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+            </div>
+          )}
         </div>
-        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+        <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
             <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -354,57 +366,35 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                     <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Row</button>
                   )}
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="border-b border-slate-200 text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3">Item / Description</th>
-                        <th className="px-4 py-3">Account</th>
-                        <th className="px-4 py-3">Qty</th>
-                        <th className="px-4 py-3">Unit Price</th>
-                        <th className="px-4 py-3">Tax %</th>
-                        <th className="px-4 py-3 text-right">Amount</th>
-                        {!readonlyFields && <th className="px-4 py-3"> </th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lineItems.map((line) => (
-                        <tr key={line.id} className="border-b border-slate-200">
-                          <td className="px-4 py-3">
-                            <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Item description" />
-                          </td>
-                          <td className="px-4 py-3">
-                            <select value={line.account} onChange={(e) => updateLine(line.id, 'account', e.target.value)} disabled={readonlyFields} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                              <option value="">Select account</option>
-                              {accounts.map(a => <option key={a.id} value={a.id}>{a.code ? `${a.code} ${a.name}` : a.name}</option>)}
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 w-24"><input type="number" min="1" value={line.quantity} onChange={(e) => updateLine(line.id, 'quantity', Number(e.target.value))} disabled={readonlyFields} aria-label="Quantity" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
-                          <td className="px-4 py-3 w-32"><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => updateLine(line.id, 'unitPrice', Number(e.target.value))} disabled={readonlyFields} aria-label="Unit price" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
-                          <td className="px-4 py-3 w-28"><select value={line.taxRate} onChange={(e) => updateLine(line.id, 'taxRate', Number(e.target.value))} disabled={readonlyFields} aria-label="Tax rate" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                            {TAX_RATES.map((tax) => <option key={tax} value={tax}>{tax}%</option>)}
-                          </select></td>
-                          <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(line.amount, currency)}</td>
-                          {!readonlyFields && <td className="px-4 py-3 text-right"><button type="button" title="Remove line item" aria-label="Remove line item" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"><X size={14} /></button></td>}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-                <div className="space-y-3">
-                  <div className="text-sm font-semibold text-slate-900">Order summary</div>
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Shipping</span><span>{formatCurrency(shippingCost, currency)}</span></div>
-                  <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total</span><span>{formatCurrency(total, currency)}</span></div>
+                <div className="mt-6">
+                  <LineItemTable
+                    columns={lineItemColumns.map((column) => column.key === 'account'
+                      ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} ${account.name}` : account.name ?? '' })) }
+                      : column
+                    )}
+                    rows={lineItems}
+                    onChange={setLineItems}
+                    currency={currency ?? 'USD'}
+                    calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+                    showDragHandle={!readonlyFields}
+                    showCopyButton={!readonlyFields}
+                    showDeleteButton={!readonlyFields}
+                  />
                 </div>
               </div>
             </div>
-          </section>
+            </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end border-t border-slate-200 pt-4">
+                <div className="text-sm text-slate-600">Subtotal: <span className="font-semibold text-slate-900">{formatCurrency(subtotal, currency)}</span></div>
+                <div className="text-sm text-slate-600">Tax: <span className="font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</span></div>
+                <div className="text-sm text-slate-600">Shipping: <span className="font-semibold text-slate-900">{formatCurrency(shippingCost, currency)}</span></div>
+                <div className="text-sm font-semibold text-slate-900">Total: <span>{formatCurrency(total, currency)}</span></div>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label className="block text-sm font-semibold text-slate-900">Ship To</label>

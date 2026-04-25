@@ -6,7 +6,7 @@ import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 import { csvDownload, MenuBtn } from './_helpers'
 
 interface ApAgingRow {
@@ -20,7 +20,7 @@ interface ApAgingRow {
   total: number
 }
 type SortKey = 'vendorName' | 'current' | 'days1To30' | 'days31To60' | 'days61To90' | 'over90' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<ApAgingRow>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<ApAgingRow>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'vendorName',  label: 'Vendor',    visible: true, width: 220 },
@@ -74,7 +74,7 @@ export default function ApAgingPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: ResizableColumn<ApAgingRow>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<ApAgingRow>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -135,9 +135,10 @@ export default function ApAgingPage() {
     }
   }
 
-  const columns: ResizableColumn<ApAgingRow>[] = [
+  const columns: EnhancedColumn<ApAgingRow>[] = [
     {
       key: '__select__',
+      stickyLeft: 0,
       header: (
         <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
           {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
@@ -158,8 +159,9 @@ export default function ApAgingPage() {
       align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
-    {
-      key: '__actions__',
+{
+      key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       align: 'right',
@@ -232,12 +234,14 @@ export default function ApAgingPage() {
         </div>
       )}
 
-      <ResizableTable
+      <EnhancedTable
         columns={columns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="ap-aging"
+        hasStickyActions={true}
         emptyMessage="No aging data found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
@@ -271,3 +275,6 @@ export default function ApAgingPage() {
     </div>
   )
 }
+
+
+

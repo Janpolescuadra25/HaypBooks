@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, RefreshCw, Eye, Send } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Rfq { id: string; rfqNumber?: string; subject?: string; vendorCount?: number; dateSent?: string; closingDate?: string; status?: string }
 type SortKey = 'rfqNumber' | 'subject' | 'vendorCount' | 'dateSent' | 'closingDate' | 'status'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Rfq>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Rfq>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'rfqNumber',   label: 'RFQ #',       visible: true, width: 130 },
@@ -51,13 +51,14 @@ export default function RfqPage() {
   const [dateTo, setDateTo]             = useState('')
   const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
   const [toast, setToast]               = useState('')
+  const [sendingId, setSendingId]       = useState<string | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: ResizableColumn<Rfq>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<Rfq>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -80,6 +81,22 @@ export default function RfqPage() {
 
   useEffect(() => { fetchRows() }, [fetchRows])
 
+  const sendRfq = useCallback(async (id: string) => {
+    if (!companyId) { showToast('Company not loaded'); return }
+    setSendingId(id)
+    try {
+      await expensesService.updateRfq(companyId, id, { status: 'SENT' })
+      showToast('RFQ sent to vendors')
+      fetchRows()
+    } catch (err) {
+      showToast('Failed to send RFQ')
+    } finally {
+      setSendingId(null)
+    }
+  }, [companyId, fetchRows])
+
+  const handleSendClick = (id: string) => { setActionMenuId(null); void sendRfq(id) }
+
   const filtered = useMemo(() => {
     let list = rows
     if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
@@ -97,9 +114,10 @@ export default function RfqPage() {
   const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
-  const columns: ResizableColumn<Rfq>[] = [
+  const columns: EnhancedColumn<Rfq>[] = [
     {
       key: '__select__',
+      stickyLeft: 0,
       header: (
         <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
           {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
@@ -116,8 +134,9 @@ export default function RfqPage() {
       key: c.key, header: c.label, width: c.width, sortable: true, align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
-    {
-      key: '__actions__',
+{
+      key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       align: 'right',
@@ -173,14 +192,38 @@ export default function RfqPage() {
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date Sent From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date Sent To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`rfq-sel.csv`,['RFQ #','Subject','Vendors','Date Sent','Closing Date','Status'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.rfqNumber??'',r.subject??'',String(r.vendorCount??0),r.dateSent??'',r.closingDate??'',r.status??'']));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
 
-      <ResizableTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} emptyMessage={loading ? 'Loading...' : 'No RFQs found'} rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange} />
+      <EnhancedTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} tableId="rfq" hasStickyActions={true} emptyMessage={loading ? 'Loading...' : 'No RFQs found'} rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange} />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
 
       {/* Activity log available via top toolbar button */}
 
-      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.rfqNumber??'RFQ'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit RFQ" onClick={()=>{router.push(`/expenses/procurement/rfq/${row.id}/edit`);setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Send size={13}/>} label="Send to Vendors" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
+      {actionMenuId && menuPos && (() => {
+        const row = rows.find(r => r.id === actionMenuId)
+        if (!row) return null
+        const ml = Math.min(Math.max(4, menuPos.x - 208), (typeof window !== 'undefined' ? window.innerWidth : 800) - 212)
+        const mt = Math.min(menuPos.y + 4, (typeof window !== 'undefined' ? window.innerHeight : 600) - 160)
+        return (
+          <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
+            <div className="px-3 py-1.5 border-b border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.rfqNumber ?? 'RFQ'}</p>
+            </div>
+            <MenuBtn icon={<Eye size={13} />} label="Edit RFQ" onClick={() => { router.push(`/expenses/procurement/rfq/${row.id}/edit`); setActionMenuId(null) }} />
+            {row.status === 'DRAFT' && (
+              <MenuBtn
+                icon={<Send size={13} />}
+                label={sendingId === row.id ? 'Sending…' : 'Send to Vendors'}
+                onClick={() => handleSendClick(row.id)}
+                disabled={sendingId === row.id}
+              />
+            )}
+          </div>
+        )
+      })()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>
   )
 }
+
+
+

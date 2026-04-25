@@ -98,14 +98,14 @@ const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function Rec
     if (!billable) setClientProject('')
   }, [billable])
 
-  const validate = () => {
+  const validate = useCallback(() => {
     if (!companyId) { setError('Company not loaded'); return false }
     if (!merchant.trim()) { setError('Merchant is required'); return false }
     if (amount <= 0) { setError('Amount must be greater than zero'); return false }
     if (billable && !clientProject.trim()) { setError('Client/Project is required when billable'); return false }
     setError('')
     return true
-  }
+  }, [companyId, merchant, amount, billable, clientProject])
 
   const payload = useMemo(() => ({
     receiptDate,
@@ -123,7 +123,7 @@ const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function Rec
     notes,
   }), [receiptDate, status, merchant, category, paymentMethod, amount, currency, referenceNumber, expenseDate, accountId, billable, clientProject, notes])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!companyId) return
     if (!validate()) return
     setSubmitting(true)
@@ -149,7 +149,7 @@ const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function Rec
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [companyId, mode, receiptId, payload, validate, toast, onSaved, onClose, router])
 
   useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 

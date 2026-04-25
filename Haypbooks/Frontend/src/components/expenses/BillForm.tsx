@@ -1,16 +1,18 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Trash2, Save, Send, Loader2, Check } from 'lucide-react'
+import { ArrowLeft, Trash2, Save, Send, Loader2, Check, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
-import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import LineItemTable from './LineItemTable'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
+import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import ActivityLog from '@/components/ui/ActivityLog'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 import { useActivityLog } from '@/hooks/useActivityLog'
 
 const genId = () => Math.random().toString(36).slice(2, 9)
@@ -61,25 +63,20 @@ const defaultLineItem = (): LineItem => ({
   amount: 0,
 })
 
-const defaultWidths = {
-  description: 320,
-  account: 180,
-  quantity: 96,
-  unitPrice: 120,
-  taxRate: 110,
-  amount: 120,
-}
-
 export default function BillForm({ mode, billId }: BillFormProps) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const toast = useToast()
   const [vendors, setVendors] = useState<Vendor[]>([])
-  const [vendorSearch, setVendorSearch] = useState('')
   const [vendorId, setVendorId] = useState('')
   const [vendorEmail, setVendorEmail] = useState('')
   const [vendorPhone, setVendorPhone] = useState('')
+  const [showVendorModal, setShowVendorModal] = useState(false)
+  const [newVendorName, setNewVendorName] = useState('')
+  const [newVendorEmail, setNewVendorEmail] = useState('')
+  const [newVendorPhone, setNewVendorPhone] = useState('')
+  const [creatingVendor, setCreatingVendor] = useState(false)
   const [billNumber, setBillNumber] = useState('')
   const [date, setDate] = useState(today)
   const [dueDate, setDueDate] = useState(defaultDue)
@@ -97,13 +94,47 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
 
-  const filteredVendors = useMemo(() => {
-    if (!vendorSearch) return vendors
-    const q = vendorSearch.toLowerCase()
-    return vendors.filter(v => v.displayName.toLowerCase().includes(q) || String(v.email ?? '').toLowerCase().includes(q) || String(v.phone ?? '').toLowerCase().includes(q))
-  }, [vendorSearch, vendors])
+  const vendorOptions = useMemo(() => vendors.map((v) => ({ id: v.id, name: v.displayName, email: v.email })), [vendors])
 
   const vendor = useMemo(() => vendors.find(v => v.id === vendorId), [vendorId, vendors])
+
+  const handleCreateVendor = useCallback(async () => {
+    if (!companyId) return
+    if (!newVendorName.trim()) { setError('Vendor name is required'); return }
+    setCreatingVendor(true)
+    try {
+      const payload = {
+        name: newVendorName.trim(),
+        displayName: newVendorName.trim(),
+        status: 'ACTIVE',
+        email: newVendorEmail || undefined,
+        phone: newVendorPhone || undefined,
+      }
+      const response = await expensesService.createVendor(companyId, payload)
+      const saved = response.data ?? response
+      const createdVendor = {
+        id: String(saved.id),
+        displayName: saved.displayName ?? saved.name ?? newVendorName.trim(),
+        email: saved.email ?? newVendorEmail,
+        phone: saved.phone ?? newVendorPhone,
+      }
+      setVendors((prev) => [createdVendor, ...prev])
+      setVendorId(createdVendor.id)
+      setVendorEmail(createdVendor.email ?? '')
+      setVendorPhone(createdVendor.phone ?? '')
+      setShowVendorModal(false)
+      setNewVendorName('')
+      setNewVendorEmail('')
+      setNewVendorPhone('')
+      toast.success('Vendor created')
+    } catch (err: any) {
+      console.error(err)
+      setError(err?.response?.data?.message ?? 'Unable to create vendor')
+      toast.error('Unable to create vendor')
+    } finally {
+      setCreatingVendor(false)
+    }
+  }, [companyId, newVendorEmail, newVendorName, newVendorPhone, toast])
 
   // Vendor contact fields are mirrored from the selected vendor.
   // If the vendor object contains null values, coerce them to empty strings.
@@ -184,45 +215,15 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     return () => { cancelled = true }
   }, [billId, companyId, mode, toast])
 
-  const [colWidths, setColWidths] = useState(defaultWidths)
-  const colWidthsRef = useRef(colWidths)
-  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
-  const saveColWidths = useCallback((next: typeof defaultWidths) => {
-    setColWidths(next)
-    try { localStorage.setItem('bill-form-line-cols-v1', JSON.stringify(next)) } catch {}
-  }, [])
-  const { containerRef: lineItemsTableRef, startResize: startLineResize, isOverflowing: lineItemsOverflowing } = useFixedWidthResizableMap({
-    widths: colWidths,
-    widthsRef: colWidthsRef,
-    order: ['description', 'account', 'quantity', 'unitPrice', 'taxRate', 'amount'],
-    saveWidths: saveColWidths,
-    fixedWidth: 64,
-    minWidth: { description: 220, account: 140, quantity: 70, unitPrice: 90, taxRate: 90, amount: 110 },
-  })
 
   const subtotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0), [lineItems])
   const taxTotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0) * (Number(line.taxRate || 0) / 100), 0), [lineItems])
   const discountAmount = useMemo(() => discountType === 'pct' ? subtotal * (discountValue / 100) : discountValue, [discountType, discountValue, subtotal])
   const total = Math.max(0, subtotal + taxTotal - discountAmount)
 
-  const updateLine = useCallback((id: string, field: keyof LineItem, value: string | number) => {
-    setLineItems(items => items.map(item => item.id === id ? {
-      ...item,
-      [field]: field === 'description' || field === 'account' ? String(value) : Number(value),
-      amount: field === 'description' || field === 'account'
-        ? item.amount
-        : field === 'quantity'
-          ? Number(value) * item.unitPrice
-          : field === 'unitPrice'
-            ? item.quantity * Number(value)
-            : field === 'taxRate'
-              ? item.amount
-              : item.amount,
-    } : item))
+  const handleLineItemsChange = useCallback((rows: LineItem[]) => {
+    setLineItems(rows)
   }, [])
-
-  const addLine = useCallback(() => setLineItems(items => [...items, defaultLineItem()]), [])
-  const removeLine = useCallback((id: string) => setLineItems(items => items.filter(item => item.id !== id)), [])
 
   const validate = () => {
     if (!companyId) { setError('Company not loaded'); return false }
@@ -270,7 +271,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         }
         toast.success(action === 'submit' ? 'Bill updated and submitted' : 'Draft updated')
       }
-      router.push('/expenses/bills')
+      router.push('/expenses/bills-payments/bills')
     } catch (err: any) {
       console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save bill')
@@ -294,7 +295,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/bills')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
+              <button type="button" onClick={() => router.push('/expenses/bills-payments/bills')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
                 <ArrowLeft size={16} /> Back to bills
               </button>
               <div className="mt-3">
@@ -306,194 +307,196 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto pb-28">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
-            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !billId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-          </div>
+          {mode !== 'new' && (
+            <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+              <button type="button" onClick={() => setActiveTab('activity')} disabled={!billId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+            </div>
+          )}
         </div>
-        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+        <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-6">
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Bill #</label>
-                  <input value={billNumber || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Bill Date</label>
-                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Due Date</label>
-                  <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Vendor</h2>
-                  <p className="mt-1 text-sm text-slate-500">Select a vendor for this bill.</p>
-                </div>
-                <div className="max-w-xs">
-                  <label className="sr-only" htmlFor="vendor-search">Search vendor</label>
-                  <input id="vendor-search" value={vendorSearch} onChange={e => setVendorSearch(e.target.value)} placeholder="Search vendors" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_160px]">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Vendor</label>
-                  <select value={vendorId} onChange={e => setVendorId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    <option value="">Select vendor</option>
-                    {filteredVendors.map(v => (
-                      <option key={v.id} value={v.id}>{v.displayName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Payment Terms</label>
-                  <input value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Net 30" />
-                </div>
-              </div>
-
-              {vendor && (
-                <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Vendor</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{vendor.displayName}</p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label htmlFor="billNumber" className="block text-sm font-semibold text-slate-900">Bill #</label>
+                    <input id="billNumber" value={billNumber || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
                   </div>
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Email</p>
-                    <p className="mt-2 text-sm text-slate-700">{vendorEmail || '—'}</p>
+                  <div>
+                    <label htmlFor="billDate" className="block text-sm font-semibold text-slate-900">Bill Date</label>
+                    <input id="billDate" type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                   </div>
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Phone</p>
-                    <p className="mt-2 text-sm text-slate-700">{vendorPhone || '—'}</p>
+                  <div>
+                    <label htmlFor="dueDate" className="block text-sm font-semibold text-slate-900">Due Date</label>
+                    <input id="dueDate" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                   </div>
                 </div>
-              )}
-            </section>
+              </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
-                  <p className="mt-1 text-sm text-slate-500">Add each expense line and the bill will update automatically.</p>
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Vendor</h2>
+                    <p className="mt-1 text-sm text-slate-500">Select a vendor for this bill.</p>
+                  </div>
                 </div>
-                <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                  <Plus size={16} /> Add row
-                </button>
-              </div>
 
-              <div className={`mt-6 overflow-x-auto rounded-3xl border border-slate-200 ${lineItemsOverflowing ? 'shadow-sm' : ''}`} ref={lineItemsTableRef}>
-                <table className="min-w-full table-fixed text-sm border-collapse">
-                  <colgroup>
-                    <col style={{ width: colWidths.description }} />
-                    <col style={{ width: colWidths.account }} />
-                    <col style={{ width: colWidths.quantity }} />
-                    <col style={{ width: colWidths.unitPrice }} />
-                    <col style={{ width: colWidths.taxRate }} />
-                    <col style={{ width: colWidths.amount }} />
-                    <col style={{ width: 56 }} />
-                  </colgroup>
-                  <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3">Description</th>
-                      <th className="px-4 py-3">Account</th>
-                      <th className="px-4 py-3">Quantity</th>
-                      <th className="px-4 py-3">Unit Price</th>
-                      <th className="px-4 py-3">Tax %</th>
-                      <th className="px-4 py-3 text-right">Amount</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lineItems.map(line => (
-                      <tr key={line.id} className="border-t border-slate-200">
-                        <td className="px-4 py-3">
-                          <input value={line.description} onChange={e => updateLine(line.id, 'description', e.target.value)} placeholder="Item or description" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                        </td>
-                        <td className="px-4 py-3">
-                          <select value={line.account} onChange={e => updateLine(line.id, 'account', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                            <option value="">Select account</option>
-                            {accounts.map(a => (
-                              <option key={a.id} value={a.id}>{a.code ? `${a.code} ${a.name}` : a.name}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-4 py-3">
-                          <input type="number" min="1" value={line.quantity} onChange={e => updateLine(line.id, 'quantity', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input type="number" min="0" step="0.01" value={line.unitPrice} onChange={e => updateLine(line.id, 'unitPrice', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input type="number" min="0" max="100" step="0.1" value={line.taxRate} onChange={e => updateLine(line.id, 'taxRate', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(line.quantity * line.unitPrice, currency)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button type="button" onClick={() => removeLine(line.id)} className="text-slate-400 hover:text-red-600">
-                            <Trash2 size={16} />
+                <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_160px]">
+                  <div>
+                    <CustomerPickerField
+                      label="Vendor"
+                      value={vendorId}
+                      customers={vendorOptions}
+                      placeholder="Search vendors by name or email…"
+                      createLabel="+ New Vendor"
+                      onChange={(id) => {
+                        setVendorId(id)
+                        setShowVendorModal(false)
+                      }}
+                      onCreateNew={() => {
+                        setShowVendorModal(true)
+                        setNewVendorName('')
+                        setNewVendorEmail('')
+                        setNewVendorPhone('')
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Payment Terms</label>
+                    <input value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Net 30" />
+                  </div>
+                </div>
+
+                {showVendorModal && (
+                  <ModalPortal>
+                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                      <div className="absolute inset-0 bg-black/60" onClick={() => setShowVendorModal(false)} />
+                      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                          <div>
+                            <h2 className="text-lg font-semibold text-slate-900">New Vendor</h2>
+                            <p className="text-sm text-slate-500">Create a vendor and select it for this bill.</p>
+                          </div>
+                          <button type="button" aria-label="Close vendor modal" onClick={() => setShowVendorModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">
+                            <X size={18} />
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                        </div>
+                        <div className="space-y-4 px-6 py-6">
+                          {error && (
+                            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
+                          )}
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Name</label>
+                            <input
+                              autoFocus
+                              value={newVendorName}
+                              onChange={(e) => setNewVendorName(e.target.value)}
+                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                              placeholder="Vendor name"
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                              <input
+                                type="email"
+                                value={newVendorEmail}
+                                onChange={(e) => setNewVendorEmail(e.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                                placeholder="email@example.com"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                              <input
+                                value={newVendorPhone}
+                                onChange={(e) => setNewVendorPhone(e.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                                placeholder="(123) 456-7890"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+                          <button type="button" onClick={() => setShowVendorModal(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                            Cancel
+                          </button>
+                          <button type="button" onClick={handleCreateVendor} disabled={creatingVendor} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                            {creatingVendor ? <Loader2 size={16} className="animate-spin" /> : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </ModalPortal>
+                )}
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Terms & Conditions</label>
-                  <textarea value={terms} onChange={e => setTerms(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-                  <textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={7} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <label className="block text-sm font-semibold text-slate-900">Notes</label>
-              <textarea value={memo} onChange={e => setMemo(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-            </section>
-          </div>
-
-          <aside className="space-y-6">
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Summary</h2>
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
-                <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax total</span><span>{formatCurrency(taxTotal, currency)}</span></div>
-                <div className="flex items-center justify-between text-sm text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <span>Discount</span>
-                    <select value={discountType} onChange={e => setDiscountType(e.target.value as 'pct' | 'flat')}
-                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700 focus:outline-none">
-                      <option value="pct">%</option>
-                      <option value="flat">Fixed</option>
-                    </select>
+                {vendor && (
+                  <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Vendor</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{vendor.displayName}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Email</p>
+                      <p className="mt-2 text-sm text-slate-700">{vendorEmail || '—'}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Phone</p>
+                      <p className="mt-2 text-sm text-slate-700">{vendorPhone || '—'}</p>
+                    </div>
                   </div>
-                  <input type="number" min="0" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))} className="w-24 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total</span><span>{formatCurrency(total, currency)}</span></div>
-              </div>
-            </section>
-          </aside>
-        </div>
-      </div>
+                )}
+              </section>
 
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <LineItemTable
+                  columns={[
+                    { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item or description', required: true },
+                    { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? '' })) },
+                    { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
+                    { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
+                    { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
+                    { key: 'amount', label: 'Amount', type: 'calculated', width: 120, minWidth: 110 },
+                  ]}
+                  rows={lineItems}
+                  onChange={handleLineItemsChange}
+                  currency={currency ?? 'USD'}
+                  calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+                />
+              </section>
+
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end border-t border-slate-200 pt-4">
+                  <div className="text-sm text-slate-600">Subtotal: <span className="font-semibold text-slate-900">{formatCurrency(subtotal, currency)}</span></div>
+                  <div className="text-sm text-slate-600">Tax: <span className="font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</span></div>
+                  <div className="text-sm text-slate-600">Total: <span className="font-semibold text-slate-900">{formatCurrency(total, currency)}</span></div>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="terms" className="block text-sm font-semibold text-slate-900">Terms & Conditions</label>
+                    <textarea id="terms" value={terms} onChange={e => setTerms(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label htmlFor="internalNotes" className="block text-sm font-semibold text-slate-900">Internal Notes</label>
+                    <textarea id="internalNotes" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={7} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <label htmlFor="memo" className="block text-sm font-semibold text-slate-900">Notes</label>
+                <textarea id="memo" value={memo} onChange={e => setMemo(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+              </section>
+            </div>
+          </div>
         </div>
-        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+        <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="space-y-6">
@@ -507,9 +510,14 @@ export default function BillForm({ mode, billId }: BillFormProps) {
             </div>
           </div>
         </div>
-      <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
+      </div>
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => router.push('/expenses/bills-payments/bills')} disabled={submitting}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+              Cancel
+            </button>
             <button type="button" onClick={() => handleSave('draft')} disabled={submitting}
               className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Draft
@@ -536,6 +544,5 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         </div>
       )}
     </div>
-  </div>
   )
 }

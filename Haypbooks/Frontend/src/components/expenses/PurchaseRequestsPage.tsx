@@ -7,7 +7,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface PurchaseRequest {
@@ -21,7 +21,7 @@ interface PurchaseRequest {
   total: number
 }
 type SortKey = 'prNumber' | 'requestedBy' | 'vendorName' | 'date' | 'dateNeeded' | 'status' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<PurchaseRequest>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<PurchaseRequest>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'prNumber',    label: 'PR #',         visible: true, width: 130 },
@@ -63,7 +63,6 @@ export default function PurchaseRequestsPage() {
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage]   = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -81,7 +80,7 @@ export default function PurchaseRequestsPage() {
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: ResizableColumn<PurchaseRequest>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<PurchaseRequest>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -118,14 +117,14 @@ export default function PurchaseRequestsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged      = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<PurchaseRequest>({ data: paged, tableId: 'purchase-requests' })
 
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
-  const columns: ResizableColumn<PurchaseRequest>[] = [
+  const columns: EnhancedColumn<PurchaseRequest>[] = [
     {
       key: '__select__',
+      stickyLeft: 0,
       header: (
         <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
           {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
@@ -146,8 +145,9 @@ export default function PurchaseRequestsPage() {
       align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
-    {
-      key: '__actions__',
+{
+      key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       align: 'right',
@@ -163,13 +163,44 @@ export default function PurchaseRequestsPage() {
   ]
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
-  const handleExportCSV = () => {
+  const handleExportCSV = useCallback(() => {
     setShowExport(false)
     csvDownload(`purchase-requests-${new Date().toISOString().slice(0, 10)}.csv`,
       ['PR #', 'Requested By', 'Vendor', 'Date', 'Date Needed', 'Status', 'Total'],
       sorted.map(r => [r.prNumber ?? '', r.requestedBy ?? '', r.vendorName ?? '', r.date, r.dateNeeded ?? '', r.status ?? '', String(r.total)]))
     showToast('CSV exported')
-  }
+  }, [sorted, showToast])
+
+  const handleExportSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`purchase-requests-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['PR #', 'Requested By', 'Vendor', 'Date', 'Date Needed', 'Status', 'Total'],
+      sorted
+        .filter((r) => table.selectedRows.includes(r.id))
+        .map(r => [r.prNumber ?? '', r.requestedBy ?? '', r.vendorName ?? '', r.date, r.dateNeeded ?? '', r.status ?? '', String(r.total)]))
+    showToast('Selected purchase requests exported')
+  }, [sorted, showToast, table.selectedRows])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    if (!confirm(`Delete ${count} selected purchase request${count !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.deletePurchaseRequest(companyId, id)))
+      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
+      table.clearSelection()
+      showToast(`${count} purchase request${count !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected purchase requests')
+    }
+  }, [companyId, table.selectedRows, table, showToast])
+
+  const handleSubmitSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'SUBMITTED' } : row))
+    table.clearSelection()
+    showToast(`${table.selectedRows.length} selected request${table.selectedRows.length !== 1 ? 's' : ''} submitted`)
+  }, [table.selectedRows, table, showToast])
 
   const renderCell = (row: PurchaseRequest, key: string) => {
     switch (key) {
@@ -228,24 +259,29 @@ export default function PurchaseRequestsPage() {
         </div>
       )}
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`pr-sel.csv`, ['PR #','Requested By','Vendor','Date','Date Needed','Status','Total'], sorted.filter(r => selected.has(r.id)).map(r => [r.prNumber ?? '', r.requestedBy ?? '', r.vendorName ?? '', r.date, r.dateNeeded ?? '', r.status ?? '', String(r.total)])); showToast('CSV exported') }} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
+        { label: 'Submit Selected', onClick: () => handleSubmitSelected() },
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
 
-      <ResizableTable
+      <EnhancedTable
         columns={columns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
-        emptyMessage={loading ? 'Loading...' : 'No purchase requests found'}
-        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        tableId="purchase-requests"
+        hasStickyActions={true}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        emptyMessage="No purchase requests found"
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
       />
 
@@ -268,3 +304,6 @@ export default function PurchaseRequestsPage() {
     </div>
   )
 }
+
+
+

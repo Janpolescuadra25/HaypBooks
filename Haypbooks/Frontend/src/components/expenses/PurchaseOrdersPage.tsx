@@ -6,14 +6,14 @@ import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface PurchaseOrder { id: string; poNumber?: string; vendorName?: string; date: string; expectedDelivery?: string; status?: string; total: number }
 type SortKey = 'poNumber' | 'vendorName' | 'date' | 'expectedDelivery' | 'status' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<PurchaseOrder>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<PurchaseOrder>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'poNumber',         label: 'PO #',             visible: true, width: 130 },
@@ -47,7 +47,6 @@ export default function PurchaseOrdersPage() {
   const [sortKey, setSortKey]           = useState<SortKey>('date')
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage]   = useState(1); const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -74,13 +73,13 @@ export default function PurchaseOrdersPage() {
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, toast])
 
   useEffect(() => { fetchPurchaseOrders() }, [fetchPurchaseOrders])
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: ResizableColumn<PurchaseOrder>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<PurchaseOrder>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -102,25 +101,10 @@ export default function PurchaseOrdersPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<PurchaseOrder>({ data: paged, tableId: 'purchase-orders' })
 
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
-  const columns: ResizableColumn<PurchaseOrder>[] = [
-    {
-      key: '__select__',
-      header: (
-        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-      width: 44,
-      render: (_value, row) => (
-        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
+  const columns: EnhancedColumn<PurchaseOrder>[] = [
     ...visibleCols.map(c => ({
       key: c.key,
       header: c.label,
@@ -129,8 +113,9 @@ export default function PurchaseOrdersPage() {
       align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
-    {
-      key: '__actions__',
+{
+      key: 'actions',
+      isAction: true,
       header: '',
       width: 140,
       align: 'right',
@@ -148,7 +133,51 @@ export default function PurchaseOrdersPage() {
   ]
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
-  const handleExportCSV = () => { setShowExport(false); csvDownload(`purchase-orders-${new Date().toISOString().slice(0,10)}.csv`, ['PO #','Vendor','Date','Exp. Delivery','Status','Total'], sorted.map(r => [r.poNumber ?? '', r.vendorName ?? '', r.date, r.expectedDelivery ?? '', r.status ?? '', String(r.total)])); toast.success('CSV exported') }
+  const handleExportCSV = useCallback(() => {
+    setShowExport(false)
+    csvDownload(`purchase-orders-${new Date().toISOString().slice(0,10)}.csv`, ['PO #','Vendor','Date','Exp. Delivery','Status','Total'], sorted.map(r => [r.poNumber ?? '', r.vendorName ?? '', r.date, r.expectedDelivery ?? '', r.status ?? '', String(r.total)]))
+    toast.success('CSV exported')
+  }, [sorted, toast])
+
+  const handleExportSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`purchase-orders-selected-${new Date().toISOString().slice(0,10)}.csv`, ['PO #','Vendor','Date','Exp. Delivery','Status','Total'], sorted.filter((r) => table.selectedRows.includes(r.id)).map(r => [r.poNumber ?? '', r.vendorName ?? '', r.date, r.expectedDelivery ?? '', r.status ?? '', String(r.total)]))
+    toast.success('Selected purchase orders exported')
+  }, [sorted, table.selectedRows, toast])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    if (!confirm(`Delete ${count} selected purchase order${count !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.deletePurchaseOrder(companyId, id)))
+      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
+      table.clearSelection()
+      toast.success(`${count} purchase order${count !== 1 ? 's' : ''} deleted`)
+    } catch {
+      toast.error('Failed to delete selected purchase orders')
+    }
+  }, [companyId, table.selectedRows, table, toast])
+
+  const handleApproveSelected = useCallback(() => {
+    if (table.selectedRows.length === 0) return
+    setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'APPROVED' } : row))
+    table.clearSelection()
+    toast.success(`${table.selectedRows.length} selected order${table.selectedRows.length !== 1 ? 's' : ''} approved`)
+  }, [table.selectedRows, table, toast])
+
+  const handleConvertSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const count = table.selectedRows.length
+    if (!confirm(`Convert ${count} selected purchase order${count !== 1 ? 's' : ''} to bills?`)) return
+    try {
+      await Promise.all(table.selectedRows.map((id) => expensesService.convertPurchaseOrderToBill(companyId, id)))
+      table.clearSelection()
+      toast.success(`${count} selected order${count !== 1 ? 's' : ''} converted to bills`)
+    } catch {
+      toast.error('Failed to convert selected purchase orders')
+    }
+  }, [companyId, table.selectedRows, toast])
 
   const renderCell = (row: PurchaseOrder, key: string) => {
     switch (key) {
@@ -179,33 +208,29 @@ export default function PurchaseOrdersPage() {
         <button onClick={() => setShowAdvFilters(p => !p)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}><Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}</button>
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} />
-          <span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => {
-              csvDownload(
-                `po-sel.csv`,
-                ['PO #','Vendor','Date','Exp. Delivery','Status','Total'],
-                sorted.filter(r => selected.has(r.id)).map(r => [r.poNumber ?? '', r.vendorName ?? '', r.date, r.expectedDelivery ?? '', r.status ?? '', String(r.total)])
-              )
-              toast.success('CSV exported')
-            }} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold">
-              <Download size={12}/> Export
-            </button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button>
-          </div>
-        </div>
-      )}
-      <ResizableTable
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
+        { label: 'Approve Selected', variant: 'primary', onClick: () => handleApproveSelected() },
+        { label: 'Convert to Bill', onClick: () => handleConvertSelected() },
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
+      <EnhancedTable
         columns={columns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="purchase-orders"
+        hasStickyActions={true}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
         emptyMessage="No purchase orders found"
-        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
       />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
@@ -256,3 +281,6 @@ export default function PurchaseOrdersPage() {
     </div>
   )
 }
+
+
+

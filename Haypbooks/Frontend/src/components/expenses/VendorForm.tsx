@@ -96,13 +96,12 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
 
   const validate = useCallback(() => {
     if (!companyName.trim()) { setError('Company name is required'); return false }
-    if (!contactName.trim()) { setError('Primary contact name is required'); return false }
-    if (!email.trim() || !emailPattern.test(email)) { setError('A valid email address is required'); return false }
+    if (email && !emailPattern.test(email)) { setError('A valid email address is required'); return false }
     if (phone && !phonePattern.test(phone)) { setError('Phone number may only include digits, spaces, dashes, parentheses, and plus sign'); return false }
     if (mobile && !phonePattern.test(mobile)) { setError('Mobile number may only include digits, spaces, dashes, parentheses, and plus sign'); return false }
     setError('')
     return true
-  }, [companyName, contactName, email, phone, mobile])
+  }, [companyName, email, phone, mobile])
 
   const payload = useMemo(() => ({
     name: companyName,
@@ -232,7 +231,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
         <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Contact Information</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Primary Contact *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Primary Contact</label>
             <input
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}

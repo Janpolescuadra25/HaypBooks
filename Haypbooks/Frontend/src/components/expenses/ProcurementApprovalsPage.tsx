@@ -6,13 +6,13 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 import { useRouter } from 'next/navigation'
 
 interface ProcurementApproval { id: string; type?: string; referenceNumber?: string; submittedBy?: string; date: string; status?: string; amount: number }
 type SortKey = 'type' | 'referenceNumber' | 'submittedBy' | 'date' | 'status' | 'amount'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<ProcurementApproval>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<ProcurementApproval>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'type',            label: 'Type',          visible: true, width: 100 },
@@ -99,7 +99,7 @@ export default function ProcurementApprovalsPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: ResizableColumn<ProcurementApproval>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<ProcurementApproval>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -124,9 +124,10 @@ export default function ProcurementApprovalsPage() {
   const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
-  const columns: ResizableColumn<ProcurementApproval>[] = [
+  const columns: EnhancedColumn<ProcurementApproval>[] = [
     {
       key: '__select__',
+      stickyLeft: 0,
       header: (
         <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
           {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
@@ -147,8 +148,9 @@ export default function ProcurementApprovalsPage() {
       align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
-    {
-      key: '__actions__',
+{
+      key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       align: 'right',
@@ -228,12 +230,14 @@ export default function ProcurementApprovalsPage() {
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`pa-sel.csv`,['Type','Reference #','Submitted By','Date','Status','Amount'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.type??'',r.referenceNumber??'',r.submittedBy??'',r.date,r.status??'',String(r.amount)]));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
-      <ResizableTable
+      <EnhancedTable
         columns={columns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="procurement-approvals"
+        hasStickyActions={true}
         emptyMessage="No approvals found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
@@ -247,3 +251,6 @@ export default function ProcurementApprovalsPage() {
     </div>
   )
 }
+
+
+

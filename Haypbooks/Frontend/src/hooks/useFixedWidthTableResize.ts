@@ -291,7 +291,7 @@ export function useFixedWidthResizableColumns<T extends WidthColumn>({
 
   useEffect(() => {
     syncToContainer()
-  }, [columns, syncToContainer])
+  }, [syncToContainer])
 
   useEffect(() => {
     if (!containerEl || typeof ResizeObserver === 'undefined') return undefined
@@ -407,7 +407,7 @@ export function useFixedWidthResizableMap({
 
   useEffect(() => {
     syncToContainer()
-  }, [syncToContainer, widths])
+  }, [syncToContainer])
 
   useEffect(() => {
     if (!containerEl || typeof ResizeObserver === 'undefined') return undefined

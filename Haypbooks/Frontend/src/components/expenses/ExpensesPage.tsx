@@ -7,7 +7,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 
 interface ExpenseReport {
   id: string
@@ -134,7 +134,7 @@ export default function ExpensesPage() {
 
   const fmt = (amount: number) => formatCurrency(amount, currency)
 
-  const columns: ResizableColumn<ExpenseReport>[] = [
+  const columns: EnhancedColumn<ExpenseReport>[] = [
     { key: 'expenseNumber', header: 'Expense', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.expenseNumber ?? '—'}</span> },
     { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
     { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
@@ -146,7 +146,7 @@ export default function ExpensesPage() {
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Expense Reports</h1>
+          <h1 className="text-2xl font-bold text-emerald-900">Employee Expenses</h1>
           <p className="mt-2 text-sm text-slate-600">Create and manage employee expense reports.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -172,7 +172,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <ResizableTable
+      <EnhancedTable
         columns={columns}
         data={pageItems}
         onSort={toggleSort}

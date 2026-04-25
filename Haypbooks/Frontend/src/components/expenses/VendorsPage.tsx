@@ -9,7 +9,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 import CenteredModal from '@/components/shared/CenteredModal'
 import VendorForm, { type VendorFormHandle } from './VendorForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
@@ -27,7 +27,7 @@ interface Vendor {
 type SortKey = 'name' | 'email' | 'phone' | 'status' | 'balance'
 
 // ─── Columns ──────────────────────────────────────────────────────────────────
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<Vendor>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Vendor>['align'] }
 const DEFAULT_COLS: ColDef[] = [
   { key: 'name',    label: 'Name',    visible: true, width: 240 },
   { key: 'email',   label: 'Email',   visible: true, width: 220 },
@@ -84,7 +84,7 @@ export default function VendorsPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-  const handleColumnsChange = (next: ResizableColumn<Vendor>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<Vendor>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -161,14 +161,25 @@ export default function VendorsPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  const tableColumns: ResizableColumn<Vendor>[] = useMemo(() => [
+  const renderCell = useCallback((row: Vendor, key: string) => {
+    switch (key) {
+      case 'name':    return <span className="font-semibold text-gray-800 truncate">{row.name}</span>
+      case 'email':   return <span className="text-gray-500 truncate">{row.email ?? 'u2014'}</span>
+      case 'phone':   return <span className="text-gray-500 truncate">{row.phone ?? 'u2014'}</span>
+      case 'status':  return <StatusPill status={row.status ?? 'ACTIVE'} />
+      case 'balance': return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.balance ?? 0)}</span>
+      default: return null
+    }
+  }, [fmt])
+
+  const tableColumns = useMemo<EnhancedColumn<Vendor>[]>(() => [
     {
       key: 'select',
       header: '',
       width: 44,
       minWidth: 44,
       sortable: false,
-      render: (_value, row) => (
+      render: (_value, row: Vendor) => (
         <button
           type="button"
           onClick={(event) => { event.stopPropagation(); toggleSelect(row.id) }}
@@ -187,16 +198,17 @@ export default function VendorsPage() {
       minWidth: col.width,
       sortable: true,
       align: col.align,
-      render: (_value, row) => renderCell(row, col.key),
+      render: (_value, row: Vendor) => renderCell(row, col.key),
     })),
     {
       key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       minWidth: 52,
       sortable: false,
       align: 'right',
-      render: (_value, row) => {
+      render: (_value, row: Vendor) => {
         const isOpen = actionMenuId === row.id
         return (
           <button
@@ -221,18 +233,7 @@ export default function VendorsPage() {
         )
       },
     },
-  ], [visibleCols, selected, actionMenuId])
-
-  const renderCell = (row: Vendor, key: string) => {
-    switch (key) {
-      case 'name':    return <span className="font-semibold text-gray-800 truncate">{row.name}</span>
-      case 'email':   return <span className="text-gray-500 truncate">{row.email ?? 'u2014'}</span>
-      case 'phone':   return <span className="text-gray-500 truncate">{row.phone ?? 'u2014'}</span>
-      case 'status':  return <StatusPill status={row.status ?? 'ACTIVE'} />
-      case 'balance': return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.balance ?? 0)}</span>
-      default: return null
-    }
-  }
+  ], [visibleCols, selected, actionMenuId, renderCell])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -266,7 +267,6 @@ export default function VendorsPage() {
               )}
             </div>
             <button onClick={() => router.push('/expenses/vendors/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
-            <button onClick={openNewVendor} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
           </div>
         </div>
       </div>
@@ -277,6 +277,7 @@ export default function VendorsPage() {
           <input type="text" placeholder="Search vendors..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
             className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
+        <button onClick={openNewVendor} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Plus size={14} /> New Vendor</button>
         <div className="flex items-center gap-1.5">
           {STATUSES.map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }}
@@ -317,7 +318,7 @@ export default function VendorsPage() {
         </div>
       )}
 
-      <ResizableTable
+      <EnhancedTable
         columns={tableColumns}
         data={paged}
         onSort={toggleSort}
@@ -393,3 +394,4 @@ export default function VendorsPage() {
     </div>
   )
 }
+

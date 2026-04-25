@@ -7,7 +7,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 
 interface Reimbursement {
   id: string
@@ -129,7 +129,7 @@ export default function ReimbursementsPage() {
 
   const fmt = (amount: number) => formatCurrency(amount, currency)
 
-  const columns: ResizableColumn<Reimbursement>[] = [
+  const columns: EnhancedColumn<Reimbursement>[] = [
     { key: 'reimbursementNumber', header: 'Reimbursement', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.reimbursementNumber ?? '—'}</span> },
     { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
     { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
@@ -167,12 +167,14 @@ export default function ReimbursementsPage() {
         </div>
       </div>
 
-      <ResizableTable
+      <EnhancedTable
         columns={columns}
         data={pageItems}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="reimbursements"
+        hasStickyActions={true}
         emptyMessage={loading ? 'Loading reimbursements…' : 'No reimbursements found'}
         onRowClick={(row) => openEditReimbursement(row.id)}
       />

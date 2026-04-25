@@ -7,7 +7,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface VendorCredit {
@@ -20,7 +20,7 @@ interface VendorCredit {
   availableAmount?: number
 }
 type SortKey = 'creditNumber' | 'vendorName' | 'issueDate' | 'status' | 'amount' | 'availableAmount'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: ResizableColumn<VendorCredit>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<VendorCredit>['align'] }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'creditNumber',   label: 'Credit #',   visible: true, width: 140 },
@@ -80,7 +80,7 @@ export default function VendorCreditsPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: ResizableColumn<VendorCredit>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<VendorCredit>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -132,9 +132,10 @@ export default function VendorCreditsPage() {
   const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
-  const columns: ResizableColumn<VendorCredit>[] = [
+  const columns: EnhancedColumn<VendorCredit>[] = [
     {
       key: '__select__',
+      stickyLeft: 0,
       header: (
         <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
           {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
@@ -155,8 +156,9 @@ export default function VendorCreditsPage() {
       align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
     })),
-    {
-      key: '__actions__',
+{
+      key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       align: 'right',
@@ -268,12 +270,14 @@ export default function VendorCreditsPage() {
         </div>
       )}
 
-      <ResizableTable
+      <EnhancedTable
         columns={columns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="vendor-credits"
+        hasStickyActions={true}
         emptyMessage="No credits found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
@@ -313,3 +317,6 @@ export default function VendorCreditsPage() {
     </div>
   )
 }
+
+
+

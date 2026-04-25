@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
+import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
 import { expensesService } from '@/services/expenses.service'
 import CenteredModal from '@/components/shared/CenteredModal'
 import MileageForm, { type MileageFormHandle } from './MileageForm'
@@ -68,7 +68,7 @@ export default function MileagePage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
   const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-  const handleColumnsChange = (next: ResizableColumn<MileageLog>[]) => {
+  const handleColumnsChange = (next: EnhancedColumn<MileageLog>[]) => {
     saveCols(cols.map(col => {
       const updated = next.find(c => c.key === col.key)
       return updated ? { ...col, width: updated.width } : col
@@ -95,7 +95,7 @@ export default function MileagePage() {
   useEffect(() => { fetchMileage() }, [fetchMileage])
   const onMileageSaved = async () => { await fetchMileage(); closeMileagePanel() }
   const saveMileageLog = async () => { await mileageFormRef.current?.save() }
-  const fmt = (n: number) => formatCurrency(n, currency)
+  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -117,7 +117,21 @@ export default function MileagePage() {
   const handleExportCSV = () => { setShowExport(false); csvDownload(`mileage-${new Date().toISOString().slice(0,10)}.csv`,['Date','Employee','Purpose','Route','Km','Rate/Km','Amount','Status'],sorted.map(r=>[r.date,r.employee??'',r.purpose??'',r.route??'',String(r.distanceKm??0),String(r.rate??0),String(r.amount),r.status??'']));showToast('CSV exported') }
   const visibleCols = cols.filter(c => c.visible)
 
-  const tableColumns: ResizableColumn<MileageLog>[] = useMemo(() => [
+  const renderCell = useCallback((row: MileageLog, key: string) => {
+    switch (key) {
+      case 'date':       return <span className="text-gray-500">{fmtDate(row.date)}</span>
+      case 'employee':   return <span className="font-medium text-gray-800">{row.employee ?? '—'}</span>
+      case 'purpose':    return <span className="text-gray-700 truncate">{row.purpose ?? '—'}</span>
+      case 'route':      return <span className="text-gray-600 text-xs truncate">{row.route ?? '—'}</span>
+      case 'distanceKm': return <span className="font-medium text-gray-700 tabular-nums">{row.distanceKm ?? 0}</span>
+      case 'rate':       return <span className="text-gray-600 tabular-nums">{fmt(row.rate ?? 0)}</span>
+      case 'amount':     return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.amount)}</span>
+      case 'status':     return <StatusPill status={row.status ?? 'DRAFT'} />
+      default: return null
+    }
+  }, [fmt])
+
+  const tableColumns: EnhancedColumn<MileageLog>[] = useMemo(() => [
     {
       key: 'select',
       header: '',
@@ -145,8 +159,9 @@ export default function MileagePage() {
       align: col.align,
       render: (_value, row) => renderCell(row, col.key),
     })),
-    {
+{
       key: 'actions',
+      isAction: true,
       header: '',
       width: 52,
       minWidth: 52,
@@ -174,21 +189,7 @@ export default function MileagePage() {
         </button>
       ),
     },
-  ], [visibleCols, selected, actionMenuId])
-
-  const renderCell = (row: MileageLog, key: string) => {
-    switch (key) {
-      case 'date':       return <span className="text-gray-500">{fmtDate(row.date)}</span>
-      case 'employee':   return <span className="font-medium text-gray-800">{row.employee ?? '—'}</span>
-      case 'purpose':    return <span className="text-gray-700 truncate">{row.purpose ?? '—'}</span>
-      case 'route':      return <span className="text-gray-600 text-xs truncate">{row.route ?? '—'}</span>
-      case 'distanceKm': return <span className="font-medium text-gray-700 tabular-nums">{row.distanceKm ?? 0}</span>
-      case 'rate':       return <span className="text-gray-600 tabular-nums">{fmt(row.rate ?? 0)}</span>
-      case 'amount':     return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.amount)}</span>
-      case 'status':     return <StatusPill status={row.status ?? 'DRAFT'} />
-      default: return null
-    }
-  }
+  ], [visibleCols, selected, actionMenuId, renderCell])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -209,12 +210,14 @@ export default function MileagePage() {
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label htmlFor="dateFrom" className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input id="dateFrom" type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label htmlFor="dateTo" className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input id="dateTo" type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`ml-sel.csv`,['Date','Employee','Purpose','Route','Km','Rate/Km','Amount','Status'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.date,r.employee??'',r.purpose??'',r.route??'',String(r.distanceKm??0),String(r.rate??0),String(r.amount),r.status??'']));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} title="Clear selection" aria-label="Clear selection" className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
-      <ResizableTable
+      <EnhancedTable
         columns={tableColumns}
         data={paged}
         onSort={toggleSort}
         sortKey={sortKey}
         sortDir={sortDir}
+        tableId="mileage"
+        hasStickyActions={true}
         emptyMessage="No mileage logs found"
         rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
@@ -260,3 +263,6 @@ export default function MileagePage() {
     </div>
   )
 }
+
+
+

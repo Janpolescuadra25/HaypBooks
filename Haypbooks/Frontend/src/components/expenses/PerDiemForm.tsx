@@ -1,6 +1,6 @@
 'use client'
 
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -92,7 +92,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
       return () => { active = false }
     }, [companyId, perDiemId, mode, toast])
 
-    const validate = () => {
+    const validate = useCallback(() => {
       if (!companyId) { setError('Company not loaded'); return false }
       if (!employeeId) { setError('Employee is required'); return false }
       if (!destination.trim()) { setError('Destination is required'); return false }
@@ -101,9 +101,9 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
       if (dailyRate <= 0) { setError('Daily rate must be greater than zero'); return false }
       setError('')
       return true
-    }
+    }, [companyId, employeeId, destination, startDate, endDate, days, dailyRate])
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
       if (!companyId) return
       if (!validate()) return
       setSubmitting(true)
@@ -137,7 +137,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
       } finally {
         setSubmitting(false)
       }
-    }
+    }, [companyId, validate, employeeId, destination, purpose, startDate, endDate, days, dailyRate, totalAmount, currency, status, notes, mode, perDiemId, onSaved, onClose, toast])
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 

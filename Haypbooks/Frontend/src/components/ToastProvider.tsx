@@ -66,22 +66,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useToast() {
-  // Early return during SSR to avoid invoking React hooks in a non-react render context
+  // Always call hooks in the same order. useToast is a hook and must call
+  // React hooks unconditionally to satisfy the rules-of-hooks.
+  const ctx = useContext(ToastContext);
+  const noop = () => {}
+
+  // During SSR or when no provider is mounted, return no-op implementations.
   if (typeof window === 'undefined') {
-    const noop = () => {};
     return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue
   }
 
-  try {
-    const ctx = useContext(ToastContext);
-    // Return a no-op when a provider is not present (helps tests and non-critical render paths)
-    if (!ctx) {
-      const noop = () => {};
-      return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue;
-    }
-    return ctx;
-  } catch (e) {
-    const noop = () => {};
-    return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue;
+  if (!ctx) {
+    return { push: noop, success: noop, error: noop, info: noop } as unknown as ToastContextValue
   }
+
+  return ctx
 }
