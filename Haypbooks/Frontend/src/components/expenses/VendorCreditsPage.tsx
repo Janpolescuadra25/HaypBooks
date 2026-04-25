@@ -7,7 +7,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface VendorCredit {
@@ -61,7 +61,6 @@ export default function VendorCreditsPage() {
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -127,27 +126,12 @@ export default function VendorCreditsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<VendorCredit>({ data: paged, tableId: 'vendor-credits' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
   const columns: EnhancedColumn<VendorCredit>[] = [
-    {
-      key: '__select__',
-      stickyLeft: 0,
-      header: (
-        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-      width: 44,
-      render: (_value, row) => (
-        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
+    table.renderCheckboxColumn(),
     ...visibleCols.map(c => ({
       key: c.key,
       header: c.label,
@@ -259,16 +243,9 @@ export default function VendorCreditsPage() {
         </div>
       )}
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`vc-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Credit #','Vendor','Issue Date','Status','Amount','Remaining'], sorted.filter(r => selected.has(r.id)).map(r => [r.creditNumber ?? '', r.vendorName ?? '', r.issueDate, r.status ?? '', String(r.amount), String(r.availableAmount ?? 0)])); showToast('CSV exported') }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Export Selected', onClick: () => table.exportSelectedToCsv(`vendor-credits-selected-${new Date().toISOString().slice(0, 10)}.csv`, ['Credit #','Vendor','Issue Date','Status','Amount','Remaining'], (row) => [row.creditNumber ?? '', row.vendorName ?? '', row.issueDate, row.status ?? '', String(row.amount), String(row.availableAmount ?? 0)] ) },
+      ])}
 
       <EnhancedTable
         columns={columns}
@@ -279,8 +256,15 @@ export default function VendorCreditsPage() {
         tableId="vendor-credits"
         hasStickyActions={true}
         emptyMessage="No credits found"
-        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
       />
 
       {totalPages > 1 && (

@@ -6,7 +6,7 @@ import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { csvDownload, MenuBtn } from './_helpers'
 
 interface ApAgingRow {
@@ -58,7 +58,6 @@ export default function ApAgingPage() {
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -108,10 +107,9 @@ export default function ApAgingPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<ApAgingRow>({ data: paged, tableId: 'ap-aging' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
   const handleExportCSV = () => {
     setShowExport(false)
@@ -119,6 +117,16 @@ export default function ApAgingPage() {
       ['Vendor', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'],
       sorted.map(r => [r.vendorName ?? '', String(r.current), String(r.days1To30), String(r.days31To60), String(r.days61To90), String(r.over90), String(r.total)]))
     showToast('CSV exported')
+  }
+
+  const handleExportSelected = () => {
+    if (table.selectedRows.length === 0) return
+    csvDownload(`ap-aging-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Vendor', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'],
+      sorted
+        .filter(r => table.selectedRows.includes(r.id))
+        .map(r => [r.vendorName ?? '', String(r.current), String(r.days1To30), String(r.days31To60), String(r.days61To90), String(r.over90), String(r.total)]))
+    showToast('Selected AP aging rows exported')
   }
 
   
@@ -136,21 +144,6 @@ export default function ApAgingPage() {
   }
 
   const columns: EnhancedColumn<ApAgingRow>[] = [
-    {
-      key: '__select__',
-      stickyLeft: 0,
-      header: (
-        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-      width: 44,
-      render: (_value, row) => (
-        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
     ...visibleCols.map(c => ({
       key: c.key,
       header: c.label,
@@ -223,16 +216,9 @@ export default function ApAgingPage() {
         </div>
       </div>
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`ap-aging-sel.csv`, ['Vendor','Current','1-30','31-60','61-90','90+','Total'], sorted.filter(r => selected.has(r.id)).map(r => [r.vendorName ?? '', String(r.current), String(r.days1To30), String(r.days31To60), String(r.days61To90), String(r.over90), String(r.total)])); showToast('CSV exported') }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Export Selected', onClick: () => handleExportSelected() },
+      ])}
 
       <EnhancedTable
         columns={columns}
@@ -243,7 +229,14 @@ export default function ApAgingPage() {
         tableId="ap-aging"
         hasStickyActions={true}
         emptyMessage="No aging data found"
-        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
       />
 

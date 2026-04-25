@@ -6,7 +6,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import CenteredModal from '@/components/shared/CenteredModal'
 import RecurringBillForm, { type RecurringBillFormHandle } from './RecurringBillForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
@@ -47,7 +47,6 @@ export default function RecurringBillsPage() {
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage]   = useState(1)
   const pageSize = 25
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -105,26 +104,11 @@ export default function RecurringBillsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<RecurringBill>({ data: paged, tableId: 'recurring-bills' })
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string)   => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll    = ()             => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
 
   const columns: EnhancedColumn<RecurringBill>[] = [
-    {
-      key: '__select__',
-      stickyLeft: 0,
-      header: (
-        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-      width: 44,
-      render: (_value, row) => (
-        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
+    table.renderCheckboxColumn(),
     ...visibleCols.map(c => ({
       key: c.key, header: c.label, width: c.width, sortable: true, align: c.align ?? 'left',
       render: (_value, row) => renderCell(row, c.key),
@@ -185,9 +169,19 @@ export default function RecurringBillsPage() {
         <button onClick={() => setShowAdvFilters(p => !p)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}><Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}</button>
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Next Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Next Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
-      {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`rb-sel.csv`,['Template','Vendor','Frequency','Next Date','Status','Amount'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.templateName??'',r.vendorName??'',r.frequency??'',r.nextDate??'',r.status??'',String(r.amount)]));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
+      {table.renderBulkToolbar([
+        { label: 'Export Selected', onClick: () => table.exportSelectedToCsv(`recurring-bills-selected-${new Date().toISOString().slice(0, 10)}.csv`, ['Template','Vendor','Frequency','Next Date','Status','Amount'], (row) => [row.templateName ?? '', row.vendorName ?? '', row.frequency ?? '', row.nextDate ?? '', row.status ?? '', String(row.amount)]) },
+      ])}
 
-      <EnhancedTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} tableId="recurring-bills" hasStickyActions={true} emptyMessage={loading ? 'Loading...' : 'No recurring bills found'} rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange} />
+      <EnhancedTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} tableId="recurring-bills" hasStickyActions={true} emptyMessage={loading ? 'Loading...' : 'No recurring bills found'} rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
+      />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
 
       {/* Activity log available via top toolbar button */}

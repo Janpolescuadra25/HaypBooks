@@ -122,21 +122,7 @@ export default function PurchaseRequestsPage() {
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
 
   const columns: EnhancedColumn<PurchaseRequest>[] = [
-    {
-      key: '__select__',
-      stickyLeft: 0,
-      header: (
-        <button type="button" onClick={toggleAll} className="text-gray-300 hover:text-emerald-600">
-          {selected.size === paged.length && paged.length > 0 ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-      width: 44,
-      render: (_value, row) => (
-        <button type="button" onClick={() => toggleSelect(row.id)} className="text-gray-300 hover:text-emerald-600">
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
+    table.renderCheckboxColumn(),
     ...visibleCols.map(c => ({
       key: c.key,
       header: c.label,

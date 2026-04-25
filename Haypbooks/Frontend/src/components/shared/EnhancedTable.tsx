@@ -23,7 +23,7 @@ export interface BulkAction<T = any> {
   icon?: React.ReactNode
   variant?: 'danger' | 'primary' | 'default'
   disabled?: boolean
-  onClick: (selectedIds: string[], selectedRows: T[]) => void
+  onClick: () => void
 }
 
 export interface EnhancedTableProps<T = any> {
@@ -88,7 +88,7 @@ export interface UseEnhancedTableResult<T = any> {
   isIndeterminate: boolean
   selectAllRef: React.RefObject<HTMLInputElement>
   renderCheckboxColumn: () => Column<T>
-  renderBulkToolbar: (actions: BulkAction<T>[]) => React.ReactNode
+  renderBulkToolbar: (actions: BulkAction<T>[]) => JSX.Element | null
   exportSelectedToCsv: (filename: string, headers: string[], rowMapper: (row: T) => string[]) => void
 }
 
@@ -192,7 +192,7 @@ export function useEnhancedTable<T extends Record<string, any>>({
                   key={action.label}
                   type="button"
                   disabled={action.disabled}
-                  onClick={() => action.onClick(selectedRows, data.filter((row) => selectedRows.includes(String((row as any).id))))}
+                  onClick={action.onClick}
                   className={`rounded-2xl px-3 py-2 text-sm font-semibold transition ${action.variant === 'danger' ? 'bg-rose-600 text-white hover:bg-rose-700' : action.variant === 'primary' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'}`}
                 >
                   {action.icon}
@@ -211,7 +211,7 @@ export function useEnhancedTable<T extends Record<string, any>>({
         </div>
       )
     },
-    [data, selectedRows],
+    [selectedRows, clearSelection],
   )
 
   return {

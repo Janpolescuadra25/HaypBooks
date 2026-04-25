@@ -9,7 +9,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import CenteredModal from '@/components/shared/CenteredModal'
 import VendorForm, { type VendorFormHandle } from './VendorForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
@@ -69,7 +69,6 @@ export default function VendorsPage() {
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
-  const [selected, setSelected]       = useState<Set<string>>(new Set())
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
   const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
   const [showExport, setShowExport]     = useState(false)
@@ -126,30 +125,31 @@ export default function VendorsPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<Vendor>({ data: paged, tableId: 'vendors' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  const toggleAll = () => setSelected(p => p.size === paged.length ? new Set() : new Set(paged.map(r => r.id)))
   const activeFilterCount = [statusFilter !== 'ALL'].filter(Boolean).length
 
   const handleDelete = useCallback(async (id: string) => {
     if (!companyId) return
     try {
       await expensesService.deleteVendor(companyId, id)
-      setRows(p => p.filter(r => r.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n })
+      setRows(p => p.filter(r => r.id !== id))
+      table.clearSelection()
       showToast('Vendor deleted'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to delete vendor') }
-  }, [companyId])
+  }, [companyId, table])
 
   const handleDeleteSelected = useCallback(async () => {
-    if (!companyId || selected.size === 0) return
-    const ids = [...selected]
+    if (!companyId || table.selectedRows.length === 0) return
+    const ids = table.selectedRows
     try {
       await Promise.all(ids.map(id => expensesService.deleteVendor(companyId, id)))
-      setRows(p => p.filter(r => !ids.includes(r.id))); setSelected(new Set())
+      setRows(p => p.filter(r => !ids.includes(r.id)))
+      table.clearSelection()
       showToast(`${ids.length} vendor${ids.length > 1 ? 's' : ''} deleted`)
     } catch { showToast('Failed to delete selected vendors') }
-  }, [companyId, selected])
+  }, [companyId, table, showToast])
 
   const handleExportCSV = () => {
     setShowExport(false)
@@ -173,24 +173,7 @@ export default function VendorsPage() {
   }, [fmt])
 
   const tableColumns = useMemo<EnhancedColumn<Vendor>[]>(() => [
-    {
-      key: 'select',
-      header: '',
-      width: 44,
-      minWidth: 44,
-      sortable: false,
-      render: (_value, row: Vendor) => (
-        <button
-          type="button"
-          onClick={(event) => { event.stopPropagation(); toggleSelect(row.id) }}
-          title={selected.has(row.id) ? 'Deselect vendor' : 'Select vendor'}
-          aria-label={selected.has(row.id) ? 'Deselect vendor' : 'Select vendor'}
-          className="text-gray-300 hover:text-emerald-600"
-        >
-          {selected.has(row.id) ? <CheckSquare size={15} className="text-emerald-500" /> : <Square size={15} />}
-        </button>
-      ),
-    },
+    table.renderCheckboxColumn(),
     ...visibleCols.map((col) => ({
       key: col.key,
       header: col.label,
@@ -233,7 +216,7 @@ export default function VendorsPage() {
         )
       },
     },
-  ], [visibleCols, selected, actionMenuId, renderCell])
+  ], [visibleCols, actionMenuId, renderCell, table])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -305,18 +288,10 @@ export default function VendorsPage() {
         </div>
       )}
 
-      {selected.size > 0 && (
-        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
-          <CheckSquare size={16} />
-          <span className="text-sm font-semibold">{selected.size} selected</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => { csvDownload(`vendors-sel-${new Date().toISOString().slice(0,10)}.csv`, ['Name','Email','Phone','Status','Balance'], sorted.filter(r => selected.has(r.id)).map(r => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)])); showToast('CSV exported') }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12} /> Export</button>
-            <button onClick={handleDeleteSelected} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-xs font-semibold"><Trash2 size={12} /> Delete</button>
-            <button onClick={() => setSelected(new Set())} title="Clear selection" aria-label="Clear selection" className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14} /></button>
-          </div>
-        </div>
-      )}
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: handleDeleteSelected },
+        { label: 'Export Selected', onClick: () => table.exportSelectedToCsv(`vendors-selected-${new Date().toISOString().slice(0, 10)}.csv`, ['Name','Email','Phone','Status','Balance'], (row) => [row.name, row.email ?? '', row.phone ?? '', row.status ?? '', String(row.balance ?? 0)] ) },
+      ])}
 
       <EnhancedTable
         columns={tableColumns}
@@ -325,9 +300,16 @@ export default function VendorsPage() {
         sortKey={sortKey}
         sortDir={sortDir}
         emptyMessage="No vendors found"
-        rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')}
+        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
         onColumnsChange={handleColumnsChange}
         fixedWidth={96}
+        enableRowSelection={true}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
       />
 
       {totalPages > 1 && (
