@@ -2,13 +2,12 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, Eye, Check, Loader2 } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, Eye, Check, FileText } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
-import ModalForm from '@/components/shared/ModalForm'
-import { ModalPortal } from '@/components/shared/ModalPortal'
+import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
 
@@ -39,6 +38,7 @@ export default function PurchaseOrdersPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [rows, setRows]                  = useState<PurchaseOrder[]>([])
   const [search, setSearch]              = useState('')
   const [loading, setLoading]            = useState(true)
@@ -57,43 +57,7 @@ export default function PurchaseOrdersPage() {
   const [dateTo, setDateTo]             = useState('')
   const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
   const colsRef                         = useRef(cols)
-  const [convertingId, setConvertingId] = useState<string | null>(null)
-  const [showConvertModal, setShowConvertModal] = useState(false)
-  const [convertTarget, setConvertTarget] = useState<PurchaseOrder | null>(null)
-  const [toast, setToast]               = useState('')
-
   useEffect(() => { colsRef.current = cols }, [cols])
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
-  const handleConvert = async (row: PurchaseOrder) => {
-    // open confirmation modal
-    setConvertTarget(row)
-    setShowConvertModal(true)
-  }
-
-  const confirmConvert = async () => {
-    if (!companyId || !convertTarget) { showToast('Company or PO not loaded'); return }
-    setConvertingId(convertTarget.id)
-    try {
-      const res = await expensesService.convertPurchaseOrderToBill(companyId, convertTarget.id)
-      const data = res.data ?? res
-      const billId = data?.id ?? data?.bill?.id ?? data?.billId
-      if (billId) {
-        showToast(`Bill created from PO ${convertTarget.poNumber ?? ''}`)
-        setShowConvertModal(false)
-        setConvertTarget(null)
-        router.push(`/expenses/bills/${billId}/edit`)
-      } else {
-        showToast('Conversion succeeded but no bill id returned')
-      }
-    } catch (err) {
-      console.error(err)
-      showToast('Failed to convert purchase order')
-    } finally {
-      setConvertingId(null)
-      setActionMenuId(null)
-      setMenuPos(null)
-    }
-  }
   const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
 
   const fetchPurchaseOrders = useCallback(async () => {
@@ -106,7 +70,7 @@ export default function PurchaseOrdersPage() {
       setRows(Array.isArray(data) ? data : data.purchaseOrders ?? [])
     } catch {
       setError('Failed to load purchase orders')
-      showToast('Failed to load purchase orders')
+      toast.error('Failed to load purchase orders')
     } finally {
       setLoading(false)
     }
@@ -172,11 +136,6 @@ export default function PurchaseOrdersPage() {
       align: 'right',
       render: (_value, row) => (
         <div className="flex items-center justify-end gap-2">
-          {(row.status === 'APPROVED' || row.status === 'RECEIVED' || row.status === 'PARTIAL_RECEIVED') && (
-            <button type="button" disabled={convertingId === row.id} onClick={() => handleConvert(row)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 text-xs hover:bg-indigo-50">
-              {convertingId === row.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Convert
-            </button>
-          )}
           <button type="button" onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect()
             actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
@@ -189,7 +148,7 @@ export default function PurchaseOrdersPage() {
   ]
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
-  const handleExportCSV = () => { setShowExport(false); csvDownload(`purchase-orders-${new Date().toISOString().slice(0,10)}.csv`, ['PO #','Vendor','Date','Exp. Delivery','Status','Total'], sorted.map(r => [r.poNumber ?? '', r.vendorName ?? '', r.date, r.expectedDelivery ?? '', r.status ?? '', String(r.total)])); showToast('CSV exported') }
+  const handleExportCSV = () => { setShowExport(false); csvDownload(`purchase-orders-${new Date().toISOString().slice(0,10)}.csv`, ['PO #','Vendor','Date','Exp. Delivery','Status','Total'], sorted.map(r => [r.poNumber ?? '', r.vendorName ?? '', r.date, r.expectedDelivery ?? '', r.status ?? '', String(r.total)])); toast.success('CSV exported') }
 
   const renderCell = (row: PurchaseOrder, key: string) => {
     switch (key) {
@@ -220,7 +179,25 @@ export default function PurchaseOrdersPage() {
         <button onClick={() => setShowAdvFilters(p => !p)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}><Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}</button>
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
-      {selected.size > 0 && (<div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3"><CheckSquare size={16} /><span className="text-sm font-semibold">{selected.size} selected</span><div className="flex items-center gap-2 ml-auto"><button onClick={() => { csvDownload(`po-sel.csv`,['PO #','Vendor','Date','Exp. Delivery','Status','Total'],sorted.filter(r=>selected.has(r.id)).map(r=>[r.poNumber??'',r.vendorName??'',r.date,r.expectedDelivery??'',r.status??'',String(r.total)]));showToast('CSV exported')}} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold"><Download size={12}/> Export</button><button onClick={()=>setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button></div></div>)}
+      {selected.size > 0 && (
+        <div className="bg-emerald-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-3">
+          <CheckSquare size={16} />
+          <span className="text-sm font-semibold">{selected.size} selected</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={() => {
+              csvDownload(
+                `po-sel.csv`,
+                ['PO #','Vendor','Date','Exp. Delivery','Status','Total'],
+                sorted.filter(r => selected.has(r.id)).map(r => [r.poNumber ?? '', r.vendorName ?? '', r.date, r.expectedDelivery ?? '', r.status ?? '', String(r.total)])
+              )
+              toast.success('CSV exported')
+            }} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold">
+              <Download size={12}/> Export
+            </button>
+            <button onClick={() => setSelected(new Set())} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg"><X size={14}/></button>
+          </div>
+        </div>
+      )}
       <ResizableTable
         columns={columns}
         data={paged}
@@ -234,24 +211,48 @@ export default function PurchaseOrdersPage() {
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
 
       {/* Activity log available via top toolbar button */}
-      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.poNumber??'PO'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Order" onClick={()=>{router.push(`/expenses/procurement/purchase-orders/${row.id}/edit`);setActionMenuId(null);setMenuPos(null)}}/></div>)})()}
-      {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
-      {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      {showConvertModal && convertTarget && (
-        <ModalPortal>
-          <ModalForm isOpen={showConvertModal} onClose={() => { setShowConvertModal(false); setConvertTarget(null) }} title="Convert PO to Bill" showFooter={false}>
-            <div className="text-slate-700">
-              <p>This will create a new bill from PO <strong>{convertTarget.poNumber ?? ''}</strong>. The PO status will be updated. Continue?</p>
+      {actionMenuId && menuPos && (() => {
+        const row = rows.find(r => r.id === actionMenuId)
+        if (!row) return null
+        const ml = Math.min(Math.max(4, menuPos.x - 208), (typeof window !== 'undefined' ? window.innerWidth : 800) - 212)
+        const mt = Math.min(menuPos.y + 4, (typeof window !== 'undefined' ? window.innerHeight : 600) - 160)
+        const targetId = row.id
+        const poNum = row.poNumber ?? ''
+        return (
+          <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
+            <div className="px-3 py-1.5 border-b border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.poNumber ?? 'PO'}</p>
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => { setShowConvertModal(false); setConvertTarget(null) }} className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-              <button onClick={confirmConvert} disabled={convertingId === convertTarget.id} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-60">
-                {convertingId === convertTarget.id ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Converting...</span> : 'Convert to Bill'}
-              </button>
-            </div>
-          </ModalForm>
-        </ModalPortal>
-      )}
+            <MenuBtn icon={<Eye size={13} />} label="View Order" onClick={() => { router.push(`/expenses/procurement/purchase-orders/${row.id}/edit`); setActionMenuId(null); setMenuPos(null) }} />
+            {(row.status === 'APPROVED' || row.status === 'RECEIVED' || row.status === 'PARTIAL_RECEIVED') && (
+              <>
+                <div className="border-t border-gray-100 my-1" />
+                <MenuBtn icon={<FileText size={13} />} label="Convert to Bill" onClick={async () => {
+                  setActionMenuId(null); setMenuPos(null)
+                  if (!companyId) { toast.error('Company not loaded'); return }
+                  if (!window.confirm('Convert PO #' + poNum + ' to a bill? This will create a new bill.')) return
+                  try {
+                    const res = await expensesService.convertPurchaseOrderToBill(companyId, targetId!)
+                    const data = res.data ?? res
+                    const billId = data?.id ?? data?.bill?.id ?? data?.billId
+                    if (billId) {
+                      toast.success('Bill created from PO #' + poNum)
+                      router.push(`/expenses/bills-payments/bills/${billId}/edit`)
+                      fetchPurchaseOrders()
+                    } else {
+                      toast.error('Failed to convert PO to bill')
+                    }
+                  } catch (err) {
+                    console.error(err)
+                    toast.error('Failed to convert PO to bill')
+                  }
+                }} />
+              </>
+            )}
+          </div>
+        )
+      })()}
+      {actionMenuId && <div className="fixed inset-0 z-[9998]" onClick={() => { setActionMenuId(null); setMenuPos(null) }} />}
     </div>
   )
 }
