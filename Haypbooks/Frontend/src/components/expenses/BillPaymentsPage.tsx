@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
+  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
   CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Ban,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
@@ -12,7 +12,6 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
-import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BillPayment {
@@ -227,6 +226,7 @@ export default function BillPaymentsPage() {
               </div>
             )}
           </div>
+          <button onClick={() => router.push('/expenses/bills-payments/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           <button onClick={() => router.push('/expenses/bills-payments/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Payment</button>
         </div>
       </div>
@@ -292,9 +292,7 @@ export default function BillPaymentsPage() {
         </div>
       )}
 
-      <div className="mt-6">
-        <ExpenseActivityWidget tableName="BillPayment" entityLabel="Bill Payments" pageSize={8} />
-      </div>
+      {/* Activity log moved to top toolbar button */}
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)

@@ -2,12 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, RefreshCw, Eye, Send } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, RefreshCw, Eye, Send } from 'lucide-react'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
-import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface Rfq { id: string; rfqNumber?: string; subject?: string; vendorCount?: number; dateSent?: string; closingDate?: string; status?: string }
 type SortKey = 'rfqNumber' | 'subject' | 'vendorCount' | 'dateSent' | 'closingDate' | 'status'
@@ -159,6 +158,7 @@ export default function RfqPage() {
           <button onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
           <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
           <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}</div>
+          <button onClick={() => router.push('/expenses/procurement/rfq/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           <button onClick={() => router.push('/expenses/procurement/rfq/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New RFQ</button>
         </div>
       </div>
@@ -176,9 +176,7 @@ export default function RfqPage() {
       <ResizableTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} emptyMessage={loading ? 'Loading...' : 'No RFQs found'} rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange} />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
 
-      <div className="mt-6">
-        <ExpenseActivityWidget tableName="Rfq" entityLabel="RFQs" pageSize={8} />
-      </div>
+      {/* Activity log available via top toolbar button */}
 
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.rfqNumber??'RFQ'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit RFQ" onClick={()=>{router.push(`/expenses/procurement/rfq/${row.id}/edit`);setActionMenuId(null)}}/>{row.status==='DRAFT'&&<MenuBtn icon={<Send size={13}/>} label="Send to Vendors" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}

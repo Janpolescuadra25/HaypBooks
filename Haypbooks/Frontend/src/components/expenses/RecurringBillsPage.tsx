@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, RefreshCw, Eye, Pause, Play, StopCircle } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, RefreshCw, Eye, Pause, Play, StopCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -10,7 +10,7 @@ import ResizableTable, { type Column as ResizableColumn } from '@/components/sha
 import CenteredModal from '@/components/shared/CenteredModal'
 import RecurringBillForm, { type RecurringBillFormHandle } from './RecurringBillForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
-import ExpenseActivityWidget from './ExpenseActivityWidget'
+import { useRouter } from 'next/navigation'
 
 interface RecurringBill { id: string; templateName?: string; vendorName?: string; frequency?: string; nextDate?: string; status?: string; amount: number }
 type SortKey = 'templateName' | 'vendorName' | 'frequency' | 'nextDate' | 'status' | 'amount'
@@ -35,6 +35,7 @@ function compare(a: RecurringBill, b: RecurringBill, key: SortKey, dir: 'asc' | 
 const STATUSES = ['ALL', 'ACTIVE', 'PAUSED', 'ENDED']
 
 export default function RecurringBillsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]                 = useState<RecurringBill[]>([])
@@ -169,6 +170,7 @@ export default function RecurringBillsPage() {
           <button onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
           <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
           <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}</div>
+          <button onClick={() => router.push('/expenses/bills-payments/recurring-bills/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           <button onClick={() => { setPanelOpen(true); setOpenMode('new'); setOpenId(null) }} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Template</button>
         </div>
       </div>
@@ -186,9 +188,7 @@ export default function RecurringBillsPage() {
       <ResizableTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} emptyMessage={loading ? 'Loading...' : 'No recurring bills found'} rowClassName={(row) => (selected.has(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange} />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
 
-      <div className="mt-6">
-        <ExpenseActivityWidget tableName="RecurringBill" entityLabel="Recurring Bills" pageSize={8} />
-      </div>
+      {/* Activity log available via top toolbar button */}
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.templateName??'Template'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Template" onClick={()=>{setPanelOpen(true);setOpenMode('edit');setOpenId(row.id);setActionMenuId(null)}}/><div className="my-1 border-t border-gray-100"/>{row.status==='ACTIVE'&&<MenuBtn icon={<Pause size={13}/>} label="Pause" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}{row.status==='PAUSED'&&<MenuBtn icon={<Play size={13}/>} label="Resume" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}{row.status!=='ENDED'&&<MenuBtn icon={<StopCircle size={13}/>} label="End" danger onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>}</div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       <CenteredModal open={panelOpen} onClose={() => { setPanelOpen(false); setOpenId(null); setOpenMode('new') }} title={openMode === 'new' ? 'New Recurring Bill Template' : 'Edit Recurring Bill Template'} footer={<div className="flex gap-3 justify-end"><button type="button" onClick={() => { setPanelOpen(false); setOpenId(null) }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button type="button" onClick={() => formRef.current?.save()} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">Save</button></div>}><RecurringBillForm ref={formRef} mode={openMode} billId={openId ?? undefined} onClose={() => { setPanelOpen(false); setOpenId(null) }} onSaved={() => { setPanelOpen(false); setOpenId(null); fetchRows() }} /></CenteredModal>

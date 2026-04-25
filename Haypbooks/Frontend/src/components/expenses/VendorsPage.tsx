@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal,
+  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
   CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
@@ -13,7 +13,7 @@ import ResizableTable, { type Column as ResizableColumn } from '@/components/sha
 import CenteredModal from '@/components/shared/CenteredModal'
 import VendorForm, { type VendorFormHandle } from './VendorForm'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
-import ExpenseActivityWidget from './ExpenseActivityWidget'
+import { useRouter } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Vendor {
@@ -57,6 +57,7 @@ function compare(a: Vendor, b: Vendor, key: SortKey, dir: 'asc' | 'desc'): numbe
 const STATUSES = ['ALL', 'ACTIVE', 'INACTIVE']
 
 export default function VendorsPage() {
+  const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]       = useState<Vendor[]>([])
@@ -264,6 +265,7 @@ export default function VendorsPage() {
                 </div>
               )}
             </div>
+            <button onClick={() => router.push('/expenses/vendors/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
             <button onClick={openNewVendor} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Vendor</button>
           </div>
         </div>
@@ -338,9 +340,7 @@ export default function VendorsPage() {
         </div>
       )}
 
-      <div className="mt-6">
-        <ExpenseActivityWidget tableName="Vendor" entityLabel="Vendors" pageSize={8} />
-      </div>
+      {/* Activity log available via top toolbar button */}
 
       {actionMenuId && menuPos && (() => {
         const row = rows.find(r => r.id === actionMenuId)

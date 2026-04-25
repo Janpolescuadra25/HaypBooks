@@ -1,14 +1,14 @@
 'use client'
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, CheckSquare, Square, X, ArrowUpDown, Eye, Check, XCircle, RefreshCw } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, Eye, Check, XCircle, RefreshCw } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
 import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
-import ExpenseActivityWidget from './ExpenseActivityWidget'
+import { useRouter } from 'next/navigation'
 
 interface ProcurementApproval { id: string; type?: string; referenceNumber?: string; submittedBy?: string; date: string; status?: string; amount: number }
 type SortKey = 'type' | 'referenceNumber' | 'submittedBy' | 'date' | 'status' | 'amount'
@@ -34,6 +34,7 @@ const STATUSES = ['ALL', 'PENDING', 'APPROVED', 'REJECTED']
 const TYPE_STYLES: Record<string, string> = { PR: 'bg-blue-50 text-blue-700', PO: 'bg-purple-50 text-purple-700', EXPENSE: 'bg-amber-50 text-amber-700' }
 
 export default function ProcurementApprovalsPage() {
+  const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const [rows, setRows]                 = useState<ProcurementApproval[]>([])
@@ -215,6 +216,7 @@ export default function ProcurementApprovalsPage() {
           <button onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
           <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
           <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button><button onClick={() => { setShowExport(false); showToast('PDF coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button></div>)}</div>
+          <button onClick={() => router.push('/expenses/procurement/approvals/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           <button onClick={() => showToast('Coming soon')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Approval</button>
         </div>
       </div>
@@ -238,9 +240,7 @@ export default function ProcurementApprovalsPage() {
       />
       {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
 
-      <div className="mt-6">
-        <ExpenseActivityWidget tableName="ProcurementApproval" entityLabel="Approvals" pageSize={8} />
-      </div>
+      {/* Activity log available via top toolbar button */}
       {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;const ml=Math.min(Math.max(4,menuPos.x-208),(typeof window!=='undefined'?window.innerWidth:800)-212);const mt=Math.min(menuPos.y+4,(typeof window!=='undefined'?window.innerHeight:600)-160);return(<div style={{position:'fixed',top:mt,left:ml,zIndex:9999}} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.referenceNumber??'Approval'}</p></div><MenuBtn icon={<Eye size={13}/>} label="View Details" onClick={()=>{showToast('Coming soon');setActionMenuId(null)}}/>{row.status==='PENDING'&&<><div className="my-1 border-t border-gray-100"/><MenuBtn icon={<Check size={13}/>} label="Approve" onClick={()=>{approveRow(row);setActionMenuId(null)}}/><MenuBtn icon={<XCircle size={13}/>} label="Reject" danger onClick={()=>{rejectRow(row);setActionMenuId(null)}}/></>}</div>)})()}
       {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
       {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}

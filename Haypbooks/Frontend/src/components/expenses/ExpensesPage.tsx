@@ -2,13 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, CheckSquare, Square, Eye, Send } from 'lucide-react'
+import { Plus, Search, Download, CheckSquare, Square, Eye, Send, Clock } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import ResizableTable, { type Column as ResizableColumn } from '@/components/shared/ResizableTable'
-import ExpenseActivityWidget from './ExpenseActivityWidget'
 
 interface ExpenseReport {
   id: string
@@ -152,6 +151,7 @@ export default function ExpensesPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => router.push('/expenses/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Expense</button>
+          <button onClick={() => router.push('/expenses/employee-expenses/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
           <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Download size={16} /> Refresh</button>
         </div>
       </div>
@@ -191,9 +191,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <div className="mt-6">
-        <ExpenseActivityWidget tableName="ExpenseReport" entityLabel="Expense Reports" pageSize={8} />
-      </div>
+      {/* Activity log available via top toolbar button */}
 
       {toast && <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-xl">{toast}</div>}
     </div>
