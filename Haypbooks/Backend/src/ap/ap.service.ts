@@ -35,18 +35,24 @@ export class ApService {
     }
 
     private normalizeBill(b: any) {
+        const items = (b.lines ?? b.items ?? []).map((l: any) => ({
+            ...l,
+            unitPrice: Number(l.rate ?? l.unitPrice ?? 0),
+            amount: Number(l.amount ?? 0),
+        }))
+        const subtotal = items.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0)
         return {
             ...b,
             total: Number(b.total ?? 0),
+            subtotal,
+            tax: Number(b.tax ?? 0),
+            balanceDue: Number(b.balance ?? b.amountDue ?? 0),
             amountDue: Number(b.balance ?? b.amountDue ?? 0),
             date: b.issuedAt ?? b.date,
             dueDate: b.dueAt ?? b.dueDate,
+            paymentTerms: b.paymentTerm?.name ?? b.paymentTerms ?? '',
             vendorName: b.vendor?.contact?.displayName ?? b.vendorName ?? '',
-            items: (b.lines ?? b.items ?? []).map((l: any) => ({
-                ...l,
-                unitPrice: Number(l.rate ?? l.unitPrice ?? 0),
-                amount: Number(l.amount ?? 0),
-            })),
+            items,
         }
     }
 
@@ -82,7 +88,8 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const displayName = data.displayName || data.name
         if (!displayName) throw new BadRequestException('displayName is required')
-        const result = await this.repo.createVendor(wid, { ...data, displayName })
+        const paymentTermId = await this.resolvePaymentTermId(wid, data.paymentTermId ?? data.paymentTerms) ?? undefined
+        const result = await this.repo.createVendor(wid, { ...data, displayName, ...(paymentTermId ? { paymentTermId } : {}) })
         await this.prisma.auditLog.create({
             data: { workspaceId: wid, companyId, userId, action: 'CREATE', tableName: 'Vendor', recordId: result.contactId, changes: { displayName } },
         }).catch(() => { /* non-critical */ })
@@ -95,6 +102,9 @@ export class ApService {
         const v = await this.repo.findVendorById(wid, contactId)
         if (!v) throw new NotFoundException('Vendor not found')
         if (data.name && !data.displayName) data.displayName = data.name
+        if ((data.paymentTermId || data.paymentTerms) && !data.paymentTermId) {
+            data.paymentTermId = await this.resolvePaymentTermId(wid, data.paymentTermId ?? data.paymentTerms)
+        }
         const result = await this.repo.updateVendor(wid, contactId, data)
         await this.prisma.auditLog.create({
             data: { workspaceId: wid, companyId, userId, action: 'UPDATE', tableName: 'Vendor', recordId: contactId, changes: data },
@@ -107,6 +117,8 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const v = await this.repo.findVendorById(wid, contactId)
         if (!v) throw new NotFoundException('Vendor not found')
+        const openBills = await this.repo.countOpenBillsForVendor(companyId, contactId)
+        if (openBills > 0) throw new BadRequestException('Cannot delete vendor with open bills')
         await this.prisma.auditLog.create({
             data: { workspaceId: wid, companyId, userId, action: 'DELETE', tableName: 'Vendor', recordId: contactId, changes: { displayName: this.normalizeVendor(v).name } },
         }).catch(() => { /* non-critical */ })
@@ -170,7 +182,7 @@ export class ApService {
         const lines = data.lines ?? data.items
         if (!lines?.length) throw new BadRequestException('At least one line item is required')
         const dueAt = data.dueAt ?? data.dueDate
-        const paymentTermId = await this.resolvePaymentTermId(workspaceId, data.paymentTermId)
+        const paymentTermId = await this.resolvePaymentTermId(workspaceId, data.paymentTermId) ?? undefined
         let result
         try {
             result = await this.repo.createBill({
@@ -178,7 +190,7 @@ export class ApService {
                 vendorId: data.vendorId,
                 description: data.description,
                 currency: data.currency,
-                paymentTermId,
+                ...(paymentTermId ? { paymentTermId } : {}),
                 dueAt: dueAt ? new Date(dueAt) : undefined,
                 lines: lines.map((l: any) => ({
                     description: l.description ?? '',
@@ -217,12 +229,23 @@ export class ApService {
 
     async updateBill(userId: string, companyId: string, billId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        if (data.paymentTermId) {
-            data.paymentTermId = await this.resolvePaymentTermId(await this.getWorkspaceId(companyId), data.paymentTermId)
+        if (data.paymentTermId || data.paymentTerms) {
+            data.paymentTermId = await this.resolvePaymentTermId(await this.getWorkspaceId(companyId), data.paymentTermId ?? data.paymentTerms)
         }
         const result = await this.repo.updateBill(companyId, billId, data, userId)
         if (!result) throw new BadRequestException('Bill not found or not editable (only DRAFT bills can be updated)')
         return result
+    }
+
+    async deleteBill(userId: string, companyId: string, billId: string) {
+        await this.assertAccess(userId, companyId)
+        const bill = await this.repo.findBillById(companyId, billId)
+        if (!bill) throw new NotFoundException('Bill not found')
+        if (bill.status !== 'DRAFT') throw new BadRequestException('Only draft bills can be deleted')
+        await this.prisma.auditLog.create({
+            data: { workspaceId: await this.getWorkspaceId(companyId), companyId, userId, action: 'DELETE', tableName: 'Bill', recordId: billId, changes: { status: bill.status } },
+        }).catch(() => { /* non-critical */ })
+        return this.repo.deleteBill(companyId, billId)
     }
 
     async approveBill(userId: string, companyId: string, billId: string) {
@@ -764,28 +787,9 @@ export class ApService {
         }
 
         // Group rows by vendor for the frontend aging table
-        const vendorMap = new Map<string, any>()
-        for (const row of raw.rows) {
-            const vId = row.vendor?.contactId ?? row.id
-            const vName = row.vendor?.contact?.displayName ?? ''
-            if (!vendorMap.has(vId)) {
-                vendorMap.set(vId, { vendorId: vId, vendorName: vName, current: 0, days1to30: 0, days31to60: 0, days61to90: 0, over90: 0, total: 0 })
-            }
-            const entry = vendorMap.get(vId)!
-            const bal = Number(row.balance ?? 0)
-            const daysOverdue = row.daysOverdue ?? 0
-            if (daysOverdue <= 0) entry.current += bal
-            else if (daysOverdue <= 30) entry.days1to30 += bal
-            else if (daysOverdue <= 60) entry.days31to60 += bal
-            else if (daysOverdue <= 90) entry.days61to90 += bal
-            else entry.over90 += bal
-            entry.total += bal
-        }
-
         return {
             ...raw,
             summary,
-            vendors: Array.from(vendorMap.values()),
         }
     }
 }

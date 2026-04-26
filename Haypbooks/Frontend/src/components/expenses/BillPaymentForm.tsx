@@ -121,7 +121,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   useEffect(() => {
     if (!companyId || mode !== 'new') return
     let active = true
-    const listQuery: Record<string, any> = { status: 'PENDING', limit: 100 }
+    const listQuery: Record<string, any> = { status: 'APPROVED', limit: 100 }
     if (queryBillId) {
       // load all bills in order to find the preselected bill and vendor
     } else if (vendorId) {

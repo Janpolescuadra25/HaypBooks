@@ -70,6 +70,11 @@ export class ApController {
         return this.svc.updateBill(req.user.userId, cid, bid, body)
     }
 
+    @Delete('bills/:billId')
+    deleteBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string) {
+        return this.svc.deleteBill(req.user.userId, cid, bid)
+    }
+
     @Post('bills/:billId/approve')
     @HttpCode(HttpStatus.OK)
     approveBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') bid: string) {

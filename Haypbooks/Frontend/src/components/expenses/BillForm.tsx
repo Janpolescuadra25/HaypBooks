@@ -241,6 +241,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     if (lineItems.some(line => !line.description.trim())) { setError('Each line item requires a description'); return false }
     if (lineItems.some(line => line.quantity <= 0)) { setError('Quantity must be at least 1'); return false }
     if (lineItems.some(line => line.unitPrice < 0)) { setError('Unit price cannot be negative'); return false }
+    if (lineItems.some(line => line.taxRate < 0)) { setError('Tax percentage cannot be negative'); return false }
     setError('')
     return true
   }
@@ -256,14 +257,17 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         description: memo,
         currency,
         paymentTermId: paymentTerms,
-        lines: lineItems.map(line => ({
-          description: line.description,
-          accountId: line.account || null,
-          quantity: line.quantity,
-          rate: line.unitPrice,
-          amount: line.quantity * line.unitPrice,
-          taxRate: line.taxRate,
-        })),
+        lines: lineItems.map(line => {
+          const lineAmount = Number(line.quantity || 0) * Number(line.unitPrice || 0)
+          const taxAmount = Number(line.taxRate || 0) / 100 * lineAmount
+          return {
+            description: line.description,
+            accountId: line.account || null,
+            quantity: line.quantity,
+            rate: line.unitPrice,
+            amount: Number((lineAmount + taxAmount).toFixed(2)),
+          }
+        }),
       }
 
       if (mode === 'new') {

@@ -112,6 +112,7 @@ export class ApRepository {
             where: { id: billId, companyId, deletedAt: null },
             include: {
                 vendor: { include: { contact: { include: { contactEmails: true } } } },
+                paymentTerm: { select: { name: true } },
                 lines: { include: { account: { select: { id: true, code: true, name: true } }, item: { select: { id: true, name: true } } } },
                 BillPaymentApplication: { include: { payment: true } },
                 journalEntry: { select: { id: true, entryNumber: true, postingStatus: true } },
@@ -172,6 +173,23 @@ export class ApRepository {
                 } as any,
                 include: { lines: true },
             })
+        })
+    }
+
+    async deleteBill(companyId: string, billId: string) {
+        const bill = await this.prisma.bill.findFirst({ where: { id: billId, companyId, deletedAt: null } })
+        if (!bill) return null
+        return this.prisma.bill.delete({ where: { id: billId } })
+    }
+
+    async countOpenBillsForVendor(companyId: string, vendorId: string) {
+        return this.prisma.bill.count({
+            where: {
+                companyId,
+                vendorId,
+                deletedAt: null,
+                balance: { gt: 0 },
+            },
         })
     }
 
@@ -558,22 +576,46 @@ export class ApRepository {
             where: { companyId, deletedAt: null, status: { in: ['APPROVED', 'OVERDUE'] as any }, balance: { gt: 0 } },
             select: {
                 id: true, billNumber: true, issuedAt: true, dueAt: true, total: true, balance: true,
-                vendor: { include: { contact: { select: { displayName: true } } } },
+                vendor: { select: { contact: { select: { id: true, displayName: true } } } },
             },
         })
 
         const today = new Date()
         const buckets = { current: 0, days1_30: 0, days31_60: 0, days61_90: 0, over90: 0 }
-        const rows = bills.map((b) => {
-            const daysOverdue = b.dueAt ? Math.floor((today.getTime() - new Date(b.dueAt).getTime()) / 86400000) : 0
-            const bal = Number(b.balance)
+        const vendorMap = new Map<string, { id: string; vendorName: string; current: number; days1To30: number; days31To60: number; days61To90: number; over90: number; total: number }>()
+
+        for (const bill of bills) {
+            const vendorKey = bill.vendor?.contact?.id ?? `vendor-${bill.id}`
+            const vendorName = bill.vendor?.contact?.displayName ?? 'Vendor'
+            const daysOverdue = bill.dueAt ? Math.floor((today.getTime() - new Date(bill.dueAt).getTime()) / 86400000) : 0
+            const bal = Number(bill.balance)
             if (daysOverdue <= 0) buckets.current += bal
             else if (daysOverdue <= 30) buckets.days1_30 += bal
             else if (daysOverdue <= 60) buckets.days31_60 += bal
             else if (daysOverdue <= 90) buckets.days61_90 += bal
             else buckets.over90 += bal
-            return { ...b, daysOverdue }
-        })
-        return { rows, buckets, generatedAt: today.toISOString() }
+
+            const entry = vendorMap.get(vendorKey) ?? {
+                id: vendorKey,
+                vendorName,
+                current: 0,
+                days1To30: 0,
+                days31To60: 0,
+                days61To90: 0,
+                over90: 0,
+                total: 0,
+            }
+
+            if (daysOverdue <= 0) entry.current += bal
+            else if (daysOverdue <= 30) entry.days1To30 += bal
+            else if (daysOverdue <= 60) entry.days31To60 += bal
+            else if (daysOverdue <= 90) entry.days61To90 += bal
+            else entry.over90 += bal
+            entry.total += bal
+
+            vendorMap.set(vendorKey, entry)
+        }
+
+        return { rows: Array.from(vendorMap.values()), buckets, generatedAt: today.toISOString() }
     }
 }
