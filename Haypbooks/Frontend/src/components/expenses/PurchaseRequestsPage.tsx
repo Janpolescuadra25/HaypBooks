@@ -118,7 +118,11 @@ export default function PurchaseRequestsPage() {
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged      = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
   const table = useEnhancedTable<PurchaseRequest>({ data: paged, tableId: 'purchase-requests' })
-
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
 
   const columns: EnhancedColumn<PurchaseRequest>[] = [
@@ -169,6 +173,10 @@ export default function PurchaseRequestsPage() {
 
   const handleDeleteSelected = useCallback(async () => {
     if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) {
+      showToast('Only draft purchase requests can be deleted')
+      return
+    }
     const count = table.selectedRows.length
     if (!confirm(`Delete ${count} selected purchase request${count !== 1 ? 's' : ''}?`)) return
     try {
@@ -179,7 +187,7 @@ export default function PurchaseRequestsPage() {
     } catch {
       showToast('Failed to delete selected purchase requests')
     }
-  }, [companyId, table.selectedRows, table, showToast])
+  }, [canDeleteSelected, companyId, table.selectedRows, table, showToast])
 
   const handleSubmitSelected = useCallback(() => {
     if (table.selectedRows.length === 0) return
@@ -246,9 +254,9 @@ export default function PurchaseRequestsPage() {
       )}
 
       {table.renderBulkToolbar([
-        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
-        { label: 'Submit Selected', onClick: () => handleSubmitSelected() },
-        { label: 'Export Selected', onClick: () => handleExportSelected() },
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected(), disabled: !canDeleteSelected },
+        { label: 'Submit Selected', onClick: () => handleSubmitSelected(), disabled: table.selectedRows.length === 0 },
+        { label: 'Export Selected', onClick: () => handleExportSelected(), disabled: table.selectedRows.length === 0 },
       ])}
 
       <EnhancedTable

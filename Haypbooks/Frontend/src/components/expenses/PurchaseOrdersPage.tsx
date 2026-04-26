@@ -103,6 +103,12 @@ export default function PurchaseOrdersPage() {
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
   const table = useEnhancedTable<PurchaseOrder>({ data: paged, tableId: 'purchase-orders' })
 
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
+
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
   const columns: EnhancedColumn<PurchaseOrder>[] = [
     ...visibleCols.map(c => ({
@@ -147,6 +153,10 @@ export default function PurchaseOrdersPage() {
 
   const handleDeleteSelected = useCallback(async () => {
     if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) {
+      toast.error('Only draft purchase orders can be deleted')
+      return
+    }
     const count = table.selectedRows.length
     if (!confirm(`Delete ${count} selected purchase order${count !== 1 ? 's' : ''}?`)) return
     try {
@@ -157,7 +167,7 @@ export default function PurchaseOrdersPage() {
     } catch {
       toast.error('Failed to delete selected purchase orders')
     }
-  }, [companyId, table.selectedRows, table, toast])
+  }, [canDeleteSelected, companyId, table.selectedRows, table, toast])
 
   const handleApproveSelected = useCallback(() => {
     if (table.selectedRows.length === 0) return
@@ -209,10 +219,10 @@ export default function PurchaseOrdersPage() {
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {table.renderBulkToolbar([
-        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
-        { label: 'Approve Selected', variant: 'primary', onClick: () => handleApproveSelected() },
-        { label: 'Convert to Bill', onClick: () => handleConvertSelected() },
-        { label: 'Export Selected', onClick: () => handleExportSelected() },
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected(), disabled: !canDeleteSelected },
+        { label: 'Approve Selected', variant: 'primary', onClick: () => handleApproveSelected(), disabled: table.selectedRows.length === 0 },
+        { label: 'Convert to Bill', onClick: () => handleConvertSelected(), disabled: table.selectedRows.length === 0 },
+        { label: 'Export Selected', onClick: () => handleExportSelected(), disabled: table.selectedRows.length === 0 },
       ])}
       <EnhancedTable
         columns={columns}

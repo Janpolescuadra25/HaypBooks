@@ -122,8 +122,25 @@ export default function BillsPage() {
     } catch { showToast('Failed to approve bill') }
   }, [companyId])
 
+  const isVoidableStatus = useCallback((status?: Bill['status']) => {
+    return status === 'PENDING' || status === 'APPROVED' || status === 'PAID' || status === 'PARTIALLY_PAID'
+  }, [])
+
+  const handleDeleteBill = useCallback(async (id: string) => {
+    if (!companyId) return
+    if (!confirm('Delete this draft bill? This action cannot be undone.')) return
+    try {
+      await expensesService.deleteBill(companyId, id)
+      setRows(p => p.filter((r) => r.id !== id))
+      showToast('Draft bill deleted'); setActionMenuId(null); setMenuPos(null)
+    } catch {
+      showToast('Failed to delete draft bill')
+    }
+  }, [companyId])
+
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
+    if (!confirm('Are you sure you want to void this bill?')) return
     try {
       await expensesService.voidBill(companyId, id)
       setRows(p => p.map(r => r.id === id ? { ...r, status: 'VOIDED' } : r))
@@ -147,28 +164,59 @@ export default function BillsPage() {
   const table = useEnhancedTable<Bill>({ data: paged, tableId: 'bills' })
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
+  const canVoidSelected = selectedRowsData.some((row) => isVoidableStatus(row.status))
+  const voidableSelectedRows = selectedRowsData.filter((row) => isVoidableStatus(row.status))
+
   const handleDeleteSelected = useCallback(async () => {
     if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) return
     const count = table.selectedRows.length
     if (!confirm(`Delete ${count} selected bill${count !== 1 ? 's' : ''}?`)) return
     try {
       await Promise.all(table.selectedRows.map((id) => expensesService.deleteBill(companyId, id)))
       setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
       showToast(`${count} bill${count !== 1 ? 's' : ''} deleted`)
+      table.clearSelection()
     } catch {
       showToast('Failed to delete selected bills')
     }
-  }, [companyId, table.selectedRows])
+  }, [canDeleteSelected, companyId, table])
+
+  const handleVoidSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canVoidSelected) return
+    const voidCount = voidableSelectedRows.length
+    if (!confirm(`Void ${voidCount} selected bill${voidCount !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(
+        voidableSelectedRows.map((row) => expensesService.voidBill(companyId, row.id)),
+      )
+      setRows((prev) => prev.map((row) => voidableSelectedRows.some((selected) => selected.id === row.id) ? { ...row, status: 'VOIDED' } : row))
+      showToast(`${voidCount} selected bill${voidCount !== 1 ? 's' : ''} voided`)
+      table.clearSelection()
+    } catch {
+      showToast('Failed to void selected bills')
+    }
+  }, [canVoidSelected, companyId, table, voidableSelectedRows])
+
   const handleMarkPaidSelected = useCallback(async () => {
     if (!companyId || table.selectedRows.length === 0) return
     try {
       await Promise.all(table.selectedRows.map((id) => expensesService.approveBill(companyId, id)))
       setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'PAID' } : row))
       showToast(`${table.selectedRows.length} selected bill${table.selectedRows.length !== 1 ? 's' : ''} marked as paid`)
+      table.clearSelection()
     } catch {
       showToast('Failed to mark selected bills as paid')
     }
-  }, [companyId, table.selectedRows])
+  }, [companyId, table])
+
   const handleExportSelected = () => {
     table.exportSelectedToCsv(
       `bills-selected-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -303,9 +351,10 @@ export default function BillsPage() {
       )}
 
       {table.renderBulkToolbar([
-        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
-        { label: 'Mark as Paid', variant: 'primary', onClick: () => handleMarkPaidSelected() },
-        { label: 'Export Selected', onClick: () => handleExportSelected() },
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected(), disabled: !canDeleteSelected },
+        { label: 'Void Selected', variant: 'danger', onClick: () => handleVoidSelected(), disabled: !canVoidSelected },
+        { label: 'Mark as Paid', variant: 'primary', onClick: () => handleMarkPaidSelected(), disabled: table.selectedRows.length === 0 },
+        { label: 'Export Selected', onClick: () => handleExportSelected(), disabled: table.selectedRows.length === 0 },
       ])}
 
       <EnhancedTable
@@ -349,8 +398,8 @@ export default function BillsPage() {
         return (
           <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
             <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.billNumber ?? 'Bill'}</p></div>
-            <MenuBtn icon={<Eye size={13} />} label="View Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
-            <MenuBtn icon={<Check size={13} />} label="Edit Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null) }} />
+            <MenuBtn icon={<Eye size={13} />} label="View Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null); setMenuPos(null) }} />
+            <MenuBtn icon={<Check size={13} />} label="Edit Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null); setMenuPos(null) }} />
             {(row.status === 'DRAFT' || row.status === 'PENDING') && <MenuBtn icon={<Check size={13} />} label="Approve Bill" onClick={() => handleApprove(row.id)} />}
             {(row.status !== 'PAID' && row.status !== 'VOIDED' && (row.amountDue ?? 0) > 0) && (
               <MenuBtn
@@ -363,12 +412,17 @@ export default function BillsPage() {
                 }}
               />
             )}
-            {row.status !== 'PAID' && row.status !== 'VOIDED' && (
+            {row.status === 'DRAFT' ? (
+              <>
+                <div className="my-1 border-t border-gray-100" />
+                <MenuBtn icon={<X size={13} />} label="Delete Bill" danger onClick={() => handleDeleteBill(row.id)} />
+              </>
+            ) : isVoidableStatus(row.status) ? (
               <>
                 <div className="my-1 border-t border-gray-100" />
                 <MenuBtn icon={<Ban size={13} />} label="Void Bill" danger onClick={() => handleVoid(row.id)} />
               </>
-            )}
+            ) : null}
           </div>
         )
       })()}

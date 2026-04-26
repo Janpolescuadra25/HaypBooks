@@ -8,6 +8,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import { csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Reimbursement {
   id: string
@@ -134,7 +135,7 @@ export default function ReimbursementsPage() {
     { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
     { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
     { key: 'totalAmount', header: 'Total', width: 120, sortable: true, align: 'right', render: (_value, row) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.totalAmount)}</span> },
-    { key: 'status', header: 'Status', width: 120, sortable: true, render: (_value, row) => <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{row.status ?? 'PENDING'}</span> },
+    { key: 'status', header: 'Status', width: 120, sortable: true, render: (_value, row) => <StatusPill status={row.status ?? 'PENDING'} /> },
   ]
 
   return (

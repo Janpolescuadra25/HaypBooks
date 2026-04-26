@@ -106,6 +106,13 @@ export default function ReceiptsPage() {
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
   const table = useEnhancedTable<Receipt>({ data: paged, tableId: 'receipts' })
+
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
+
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
   const handleExportCSV = useCallback(() => {
@@ -122,6 +129,10 @@ export default function ReceiptsPage() {
 
   const handleDeleteSelected = useCallback(async () => {
     if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) {
+      showToast('Only draft receipts can be deleted')
+      return
+    }
     const count = table.selectedRows.length
     if (!confirm(`Delete ${count} selected receipt${count !== 1 ? 's' : ''}?`)) return
     try {
@@ -132,7 +143,7 @@ export default function ReceiptsPage() {
     } catch {
       showToast('Failed to delete selected receipts')
     }
-  }, [companyId, table, showToast])
+  }, [canDeleteSelected, companyId, table, showToast])
 
   const handleMatchSelected = useCallback(() => {
     if (table.selectedRows.length === 0) return
@@ -217,9 +228,9 @@ export default function ReceiptsPage() {
       {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label htmlFor="dateFrom" className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input id="dateFrom" type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label htmlFor="dateTo" className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input id="dateTo" type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {table.renderBulkToolbar([
-        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected() },
-        { label: 'Mark as Matched Selected', onClick: () => handleMatchSelected() },
-        { label: 'Export Selected', onClick: () => handleExportSelected() },
+        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected(), disabled: !canDeleteSelected },
+        { label: 'Mark Selected as Matched', onClick: () => handleMatchSelected(), disabled: table.selectedRows.length === 0 },
+        { label: 'Export Selected', onClick: () => handleExportSelected(), disabled: table.selectedRows.length === 0 },
       ])}
       <EnhancedTable
         columns={tableColumns}

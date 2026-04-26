@@ -8,6 +8,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import { StatusPill } from '@/components/expenses/_helpers'
 
 interface ExpenseReport {
   id: string
@@ -138,7 +139,7 @@ export default function ExpensesPage() {
     { key: 'expenseNumber', header: 'Expense', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.expenseNumber ?? '—'}</span> },
     { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
     { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
-    { key: 'status', header: 'Status', width: 120, sortable: true, render: (_value, row) => <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{row.status ?? 'DRAFT'}</span> },
+    { key: 'status', header: 'Status', width: 120, sortable: true, render: (_value, row) => <StatusPill status={row.status ?? 'DRAFT'} /> },
     { key: 'totalAmount', header: 'Total', width: 120, sortable: true, align: 'right', render: (_value, row) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.totalAmount)}</span> },
   ]
 
@@ -146,8 +147,8 @@ export default function ExpensesPage() {
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Employee Expenses</h1>
-          <p className="mt-2 text-sm text-slate-600">Create and manage employee expense reports.</p>
+          <h1 className="text-2xl font-bold text-emerald-900">Expenses</h1>
+          <p className="mt-2 text-sm text-slate-600">Create and manage expense reports.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => router.push('/expenses/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Expense</button>

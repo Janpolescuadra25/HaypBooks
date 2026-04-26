@@ -257,7 +257,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </button>
               <div className="mt-3">
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Track employee expenses and receipts in one report.</p>
+                <p className="mt-1 text-sm text-slate-500">Track expense receipts and approvals in one report.</p>
               </div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
