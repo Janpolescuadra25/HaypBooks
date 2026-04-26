@@ -14,52 +14,84 @@ interface BackgroundEffectsProps {
   showFlashlight?: boolean
 }
 
+interface DustParticle {
+  startX: string
+  startY: string
+  size: number
+  duration: number
+  delay: number
+  moveX: number
+  moveY: number
+}
+
+interface FloatingIcon {
+  Icon: typeof Calculator
+  size: number
+  startX: string
+  startY: string
+  duration: number
+  delay: number
+  moveX: number
+  moveY: number
+  rotate: number
+}
+
+const createDustParticles = (): DustParticle[] =>
+  Array.from({ length: DUST_COUNT }).map(() => ({
+    startX: Math.random() * 100 + '%',
+    startY: Math.random() * 100 + '%',
+    size: Math.random() * 4 + 4,
+    duration: Math.random() * 15 + 15,
+    delay: Math.random() * -30,
+    moveX: (Math.random() - 0.5) * 400,
+    moveY: (Math.random() - 0.5) * 400,
+  }))
+
+const createFloatingIcons = (): FloatingIcon[] =>
+  [
+    { Icon: Calculator,  size: 48 },
+    { Icon: FileText,    size: 54 },
+    { Icon: Receipt,     size: 42 },
+    { Icon: Landmark,    size: 60 },
+    { Icon: PieChart,    size: 52 },
+    { Icon: Coins,       size: 40 },
+    { Icon: TrendingUp,  size: 58 },
+    { Icon: Briefcase,   size: 48 },
+    { Icon: Calculator,  size: 40 },
+    { Icon: FileText,    size: 45 },
+    { Icon: Receipt,     size: 38 },
+    { Icon: Landmark,    size: 50 },
+  ].map((item) => ({
+    ...item,
+    startX:   Math.random() * 100 + '%',
+    startY:   Math.random() * 100 + '%',
+    duration: Math.random() * 20 + 20,
+    delay:    Math.random() * -40,
+    moveX:    (Math.random() - 0.5) * 300,
+    moveY:    (Math.random() - 0.5) * 300,
+    rotate:   Math.random() * 360,
+  }))
+
 export const BackgroundEffects = React.memo(function BackgroundEffects({
   className = '',
   isFixed = true,
   showFlashlight = true,
 }: BackgroundEffectsProps) {
+  const [hydrated, setHydrated] = React.useState(false)
+
   const dustParticles = React.useMemo(
-    () =>
-      Array.from({ length: DUST_COUNT }).map(() => ({
-        startX: Math.random() * 100 + '%',
-        startY: Math.random() * 100 + '%',
-        size: Math.random() * 4 + 4,
-        duration: Math.random() * 15 + 15,
-        delay: Math.random() * -30,
-        moveX: (Math.random() - 0.5) * 400,
-        moveY: (Math.random() - 0.5) * 400,
-      })),
-    [],
+    () => (hydrated ? createDustParticles() : []),
+    [hydrated],
   )
 
   const floatingIcons = React.useMemo(
-    () =>
-      [
-        { Icon: Calculator,  size: 48 },
-        { Icon: FileText,    size: 54 },
-        { Icon: Receipt,     size: 42 },
-        { Icon: Landmark,    size: 60 },
-        { Icon: PieChart,    size: 52 },
-        { Icon: Coins,       size: 40 },
-        { Icon: TrendingUp,  size: 58 },
-        { Icon: Briefcase,   size: 48 },
-        { Icon: Calculator,  size: 40 },
-        { Icon: FileText,    size: 45 },
-        { Icon: Receipt,     size: 38 },
-        { Icon: Landmark,    size: 50 },
-      ].map((item) => ({
-        ...item,
-        startX:   Math.random() * 100 + '%',
-        startY:   Math.random() * 100 + '%',
-        duration: Math.random() * 20 + 20,
-        delay:    Math.random() * -40,
-        moveX:    (Math.random() - 0.5) * 300,
-        moveY:    (Math.random() - 0.5) * 300,
-        rotate:   Math.random() * 360,
-      })),
-    [],
+    () => (hydrated ? createFloatingIcons() : []),
+    [hydrated],
   )
+
+  React.useEffect(() => {
+    setHydrated(true)
+  }, [])
 
   return (
     <div
