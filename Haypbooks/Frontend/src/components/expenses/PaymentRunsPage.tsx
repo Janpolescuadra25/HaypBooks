@@ -98,6 +98,31 @@ export default function PaymentRunsPage() {
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
   const table = useEnhancedTable<PaymentRun>({ data: paged, tableId: 'payment-runs' })
+
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+  const canProcessSelected = selectedRowsData.some((row) => row.status === 'DRAFT')
+
+  const handleProcessSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const drafts = selectedRowsData.filter((row) => row.status === 'DRAFT')
+    if (drafts.length === 0) {
+      showToast('No draft payment runs selected to process')
+      return
+    }
+    if (!confirm(`Process ${drafts.length} selected payment run${drafts.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(drafts.map((row) => expensesService.processPaymentRun(companyId, row.id)))
+      setRows((prev) => prev.map((row) => drafts.some((draft) => draft.id === row.id) ? { ...row, status: 'PROCESSING' } : row))
+      table.clearSelection()
+      showToast(`${drafts.length} selected payment run${drafts.length !== 1 ? 's' : ''} processing`)
+    } catch {
+      showToast('Failed to process selected payment runs')
+    }
+  }, [companyId, selectedRowsData, table, showToast])
+
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
 
   const columns: EnhancedColumn<PaymentRun>[] = [
@@ -170,10 +195,12 @@ export default function PaymentRunsPage() {
       </div>
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {table.renderBulkToolbar([
+        { label: 'Process Selected', variant: 'primary', onClick: handleProcessSelected, disabled: !canProcessSelected },
         {
-          label: 'Export selected',
+          label: 'Export Selected',
           icon: <Download size={12} />,
           onClick: handleExportSelected,
+          disabled: table.selectedRows.length === 0,
         },
       ])}
 

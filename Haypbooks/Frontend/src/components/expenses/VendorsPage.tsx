@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
-  CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw,
+  CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw, Power,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
@@ -130,26 +130,71 @@ export default function VendorsPage() {
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
   const activeFilterCount = [statusFilter !== 'ALL'].filter(Boolean).length
 
+  const handleDeactivate = useCallback(async (id: string) => {
+    if (!companyId) return
+    if (!confirm('Deactivate this vendor? This will retain the vendor record but mark it inactive.')) return
+    try {
+      await expensesService.updateVendor(companyId, id, { status: 'INACTIVE' })
+      setRows(p => p.map(r => r.id === id ? { ...r, status: 'INACTIVE' } : r))
+      showToast('Vendor deactivated'); setActionMenuId(null); setMenuPos(null)
+    } catch { showToast('Failed to deactivate vendor') }
+  }, [companyId, showToast])
+
   const handleDelete = useCallback(async (id: string) => {
     if (!companyId) return
+    const vendor = rows.find((row) => row.id === id)
+    if (vendor?.status === 'ACTIVE') {
+      showToast('Active vendors must be deactivated before deletion')
+      return
+    }
     try {
       await expensesService.deleteVendor(companyId, id)
       setRows(p => p.filter(r => r.id !== id))
       table.clearSelection()
       showToast('Vendor deleted'); setActionMenuId(null); setMenuPos(null)
     } catch { showToast('Failed to delete vendor') }
-  }, [companyId, table])
+  }, [companyId, rows, table, showToast])
+
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => (row.status ?? 'ACTIVE') !== 'ACTIVE')
+  const canDeactivateSelected = selectedRowsData.some((row) => (row.status ?? 'ACTIVE') === 'ACTIVE')
+
+  const handleDeactivateSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeactivateSelected) {
+      showToast('No active vendors selected to deactivate')
+      return
+    }
+    const activeIds = selectedRowsData.filter((row) => (row.status ?? 'ACTIVE') === 'ACTIVE').map((row) => row.id)
+    if (!confirm(`Deactivate ${activeIds.length} selected vendor${activeIds.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(activeIds.map((id) => expensesService.updateVendor(companyId, id, { status: 'INACTIVE' })))
+      setRows((prev) => prev.map((row) => activeIds.includes(row.id) ? { ...row, status: 'INACTIVE' } : row))
+      table.clearSelection()
+      showToast(`${activeIds.length} selected vendor${activeIds.length !== 1 ? 's' : ''} deactivated`)
+    } catch {
+      showToast('Failed to deactivate selected vendors')
+    }
+  }, [canDeactivateSelected, companyId, selectedRowsData, table, showToast])
 
   const handleDeleteSelected = useCallback(async () => {
     if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) {
+      showToast('Only inactive vendors can be deleted')
+      return
+    }
     const ids = table.selectedRows
+    if (!confirm(`Delete ${ids.length} selected vendor${ids.length !== 1 ? 's' : ''}?`)) return
     try {
       await Promise.all(ids.map(id => expensesService.deleteVendor(companyId, id)))
       setRows(p => p.filter(r => !ids.includes(r.id)))
       table.clearSelection()
       showToast(`${ids.length} vendor${ids.length > 1 ? 's' : ''} deleted`)
     } catch { showToast('Failed to delete selected vendors') }
-  }, [companyId, table, showToast])
+  }, [canDeleteSelected, companyId, table, showToast])
 
   const handleExportCSV = () => {
     setShowExport(false)
@@ -289,7 +334,8 @@ export default function VendorsPage() {
       )}
 
       {table.renderBulkToolbar([
-        { label: 'Delete Selected', variant: 'danger', onClick: handleDeleteSelected },
+        { label: 'Deactivate Selected', variant: 'danger', onClick: handleDeactivateSelected, disabled: !canDeactivateSelected },
+        { label: 'Delete Selected', variant: 'danger', onClick: handleDeleteSelected, disabled: !canDeleteSelected },
         { label: 'Export Selected', onClick: () => table.exportSelectedToCsv(`vendors-selected-${new Date().toISOString().slice(0, 10)}.csv`, ['Name','Email','Phone','Status','Balance'], (row) => [row.name, row.email ?? '', row.phone ?? '', row.status ?? '', String(row.balance ?? 0)] ) },
       ])}
 
@@ -336,7 +382,11 @@ export default function VendorsPage() {
             <MenuBtn icon={<Eye size={13} />} label="View Vendor" onClick={() => { openEditVendor(row.id); setActionMenuId(null) }} />
             <MenuBtn icon={<Edit2 size={13} />} label="Edit Vendor" onClick={() => { openEditVendor(row.id); setActionMenuId(null) }} />
             <div className="my-1 border-t border-gray-100" />
-            <MenuBtn icon={<Trash2 size={13} />} label="Delete Vendor" danger onClick={() => handleDelete(row.id)} />
+            {row.status === 'ACTIVE' ? (
+              <MenuBtn icon={<Trash2 size={13} />} label="Deactivate Vendor" danger onClick={() => handleDeactivate(row.id)} />
+            ) : (
+              <MenuBtn icon={<Trash2 size={13} />} label="Delete Vendor" danger onClick={() => handleDelete(row.id)} />
+            )}
           </div>
         )
       })()}

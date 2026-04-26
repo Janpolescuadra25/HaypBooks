@@ -5,10 +5,18 @@ import { PendingSignupService } from '../auth/pending-signup.service'
 import { PrismaAuthService } from '../auth/prisma-auth.service'
 import { CompanyRepository } from '../companies/company.repository.prisma'
 import { OnboardingService } from '../onboarding/onboarding.service'
+import { ONBOARDING_REPOSITORY } from '../repositories/prisma/prisma-repositories.module'
+import { IOnboardingRepository } from '../repositories/interfaces/onboarding.repository.interface'
 
 @Controller('api/test')
 export class TestController {
-  constructor(private readonly prisma: PrismaService, private readonly pendingSignupService: PendingSignupService, private readonly authService: PrismaAuthService, private readonly onboardingService: OnboardingService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pendingSignupService: PendingSignupService,
+    private readonly authService: PrismaAuthService,
+    private readonly onboardingService: OnboardingService,
+    @Inject(ONBOARDING_REPOSITORY) private readonly onboardingRepository: IOnboardingRepository,
+  ) {}
 
   private ensureEnabled() {
     const allowFlag = process.env.ALLOW_TEST_ENDPOINTS === 'true'
@@ -152,8 +160,8 @@ export class TestController {
     if (!user) return { error: 'user not found' }
     const mode = body.mode || 'quick'
     // Use onboarding repository to mark completion and store mode (schema no longer has onboarding flags on User)
-    await (this as any).onboardingRepository.markComplete(user.id)
-    await (this as any).onboardingRepository.save(user.id, 'onboarding_mode', { mode })
+    await this.onboardingRepository.markComplete(user.id)
+    await this.onboardingRepository.save(user.id, 'onboarding_mode', { mode })
     return { success: true, user: { id: user.id, email: user.email, onboardingComplete: true, onboardingMode: mode } }
   }
 

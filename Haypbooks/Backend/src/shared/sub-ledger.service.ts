@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { createAndPostJE } from './gl-integration'
 
 /**
  * SubLedgerService — the bridge between the AR/AP sub-ledgers and the General Ledger.
@@ -480,9 +481,9 @@ export class SubLedgerService {
         finalLines.push({ accountId: ewtPayableAccountId, debit: 0, credit: ewtAmount, memo: 'EWT Payable' })
       }
 
-      await this.prisma.$transaction(async (tx) => {
+      if (tx) {
         const entryNumber = await this.nextEntryNumber(bill.companyId, 'AP')
-        const je = await this.createPostedJE(tx, {
+        const je = await createAndPostJE(tx, {
           workspaceId: bill.workspaceId,
           companyId: bill.companyId,
           date: (bill as any).issuedAt ?? (bill as any).date ?? new Date(),
@@ -496,7 +497,25 @@ export class SubLedgerService {
         if (je) {
           await tx.bill.update({ where: { id: billId }, data: { journalEntryId: je.id } })
         }
-      })
+      } else {
+        await this.prisma.$transaction(async (txClient) => {
+          const entryNumber = await this.nextEntryNumber(bill.companyId, 'AP')
+          const je = await createAndPostJE(txClient, {
+            workspaceId: bill.workspaceId,
+            companyId: bill.companyId,
+            date: (bill as any).issuedAt ?? (bill as any).date ?? new Date(),
+            description: `Bill ${(bill as any).billNumber ?? billId}`,
+            currency: bill.currency ?? undefined,
+            createdById: postedById,
+            entryNumber,
+            lines: finalLines,
+          })
+
+          if (je) {
+            await txClient.bill.update({ where: { id: billId }, data: { journalEntryId: je.id } })
+          }
+        })
+      }
     } catch (err: any) {
       this.logger.error(`[SubLedger] Failed to post bill ${billId}: ${err?.message}`)
     }

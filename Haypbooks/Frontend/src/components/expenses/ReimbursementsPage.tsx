@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, Download, Clock } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { csvDownload, MenuBtn, StatusPill } from './_helpers'
 
 interface Reimbursement {
@@ -92,6 +92,51 @@ export default function ReimbursementsPage() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const pageItems = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<Reimbursement>({ data: pageItems, tableId: 'reimbursements' })
+
+  const selectedRowsData = useMemo(
+    () => reimbursements.filter((row) => table.selectedRows.includes(row.id)),
+    [reimbursements, table.selectedRows],
+  )
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
+  const canVoidSelected = selectedRowsData.some((row) => row.status !== 'DRAFT' && row.status !== 'VOID')
+  const voidableSelectedRows = selectedRowsData.filter((row) => row.status !== 'DRAFT' && row.status !== 'VOID')
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) return
+    const drafts = selectedRowsData.filter((row) => row.status === 'DRAFT')
+    if (drafts.length === 0) return
+    if (!confirm(`Delete ${drafts.length} selected reimbursement${drafts.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(drafts.map((row) => expensesService.updateReimbursement(companyId, row.id, { status: 'DELETED' })))
+      setReimbursements((prev) => prev.filter((row) => !drafts.some((draft) => draft.id === row.id)))
+      table.clearSelection()
+      showToast(`${drafts.length} selected reimbursement${drafts.length !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected reimbursements')
+    }
+  }, [canDeleteSelected, companyId, selectedRowsData, table])
+
+  const handleVoidSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canVoidSelected) return
+    const voidable = voidableSelectedRows
+    if (voidable.length === 0) {
+      showToast('No reimbursements selected to void')
+      return
+    }
+    if (!confirm(`Void ${voidable.length} selected reimbursement${voidable.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(voidable.map((row) => expensesService.updateReimbursement(companyId, row.id, { status: 'VOID' })))
+      setReimbursements((prev) => prev.map((row) => voidable.some((selected) => selected.id === row.id) ? { ...row, status: 'VOID' } : row))
+      table.clearSelection()
+      showToast(`${voidable.length} selected reimbursement${voidable.length !== 1 ? 's' : ''} voided`)
+    } catch {
+      showToast('Failed to void selected reimbursements')
+    }
+  }, [canVoidSelected, companyId, table, voidableSelectedRows])
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
@@ -131,6 +176,7 @@ export default function ReimbursementsPage() {
   const fmt = (amount: number) => formatCurrency(amount, currency)
 
   const columns: EnhancedColumn<Reimbursement>[] = [
+    table.renderCheckboxColumn(),
     { key: 'reimbursementNumber', header: 'Reimbursement', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.reimbursementNumber ?? '—'}</span> },
     { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
     { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
@@ -168,6 +214,10 @@ export default function ReimbursementsPage() {
         </div>
       </div>
 
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: handleDeleteSelected, disabled: !canDeleteSelected },
+        { label: 'Void Selected', variant: 'danger', onClick: handleVoidSelected, disabled: !canVoidSelected },
+      ])}
       <EnhancedTable
         columns={columns}
         data={pageItems}
@@ -178,6 +228,12 @@ export default function ReimbursementsPage() {
         hasStickyActions={true}
         emptyMessage={loading ? 'Loading reimbursements…' : 'No reimbursements found'}
         onRowClick={(row) => openEditReimbursement(row.id)}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
       />
 
       <div className="flex items-center justify-between text-xs text-slate-500">

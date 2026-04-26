@@ -240,7 +240,7 @@ export interface ReimbursementPayload {
 
 // ─── Expense Report status update ────────────────────────────────────────────
 export interface ExpenseReportUpdatePayload {
-  status: 'APPROVED' | 'REJECTED' | 'SUBMITTED'
+  status: 'APPROVED' | 'REJECTED' | 'SUBMITTED' | 'DELETED' | 'VOID'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

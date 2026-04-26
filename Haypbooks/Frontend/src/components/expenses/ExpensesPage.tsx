@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, Download, CheckSquare, Square, Eye, Send, Clock } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
-import EnhancedTable, { type Column as EnhancedColumn } from '@/components/shared/EnhancedTable'
+import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { StatusPill } from '@/components/expenses/_helpers'
 
 interface ExpenseReport {
@@ -98,6 +98,50 @@ export default function ExpensesPage() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const pageItems = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
+  const table = useEnhancedTable<ExpenseReport>({ data: pageItems, tableId: 'expense-reports' })
+
+  const selectedRowsData = useMemo(
+    () => reports.filter((row) => table.selectedRows.includes(row.id)),
+    [reports, table.selectedRows],
+  )
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
+  const canVoidSelected = selectedRowsData.some((row) => row.status !== 'DRAFT' && row.status !== 'VOID')
+  const voidableSelectedRows = selectedRowsData.filter((row) => row.status !== 'DRAFT' && row.status !== 'VOID')
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) return
+    const drafts = selectedRowsData.filter((row) => row.status === 'DRAFT')
+    if (drafts.length === 0) return
+    if (!confirm(`Delete ${drafts.length} selected expense report${drafts.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(drafts.map((row) => expensesService.updateExpenseReport(companyId, row.id, { status: 'DELETED' })))
+      setReports((prev) => prev.filter((row) => !drafts.some((draft) => draft.id === row.id)))
+      table.clearSelection()
+      showToast(`${drafts.length} selected expense report${drafts.length !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected expense reports')
+    }
+  }, [canDeleteSelected, companyId, selectedRowsData, table])
+
+  const handleVoidSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canVoidSelected) return
+    const voidable = voidableSelectedRows
+    if (voidable.length === 0) {
+      showToast('No expense reports selected to void')
+      return
+    }
+    if (!confirm(`Void ${voidable.length} selected expense report${voidable.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(voidable.map((row) => expensesService.updateExpenseReport(companyId, row.id, { status: 'VOID' })))
+      setReports((prev) => prev.map((row) => voidable.some((selected) => selected.id === row.id) ? { ...row, status: 'VOID' } : row))
+      table.clearSelection()
+      showToast(`${voidable.length} selected expense report${voidable.length !== 1 ? 's' : ''} voided`)
+    } catch {
+      showToast('Failed to void selected expense reports')
+    }
+  }, [canVoidSelected, companyId, table, voidableSelectedRows])
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -136,6 +180,7 @@ export default function ExpensesPage() {
   const fmt = (amount: number) => formatCurrency(amount, currency)
 
   const columns: EnhancedColumn<ExpenseReport>[] = [
+    table.renderCheckboxColumn(),
     { key: 'expenseNumber', header: 'Expense', width: 180, sortable: true, render: (_value, row) => <span className="font-semibold text-slate-900">{row.expenseNumber ?? '—'}</span> },
     { key: 'employeeName', header: 'Employee', width: 180, sortable: true, render: (_value, row) => <span className="text-slate-700">{row.employeeName ?? '—'}</span> },
     { key: 'submittedAt', header: 'Submitted', width: 140, sortable: true, render: (_value, row) => <span className="text-slate-500">{fmtDate(row.submittedAt)}</span> },
@@ -173,6 +218,10 @@ export default function ExpensesPage() {
         </div>
       </div>
 
+      {table.renderBulkToolbar([
+        { label: 'Delete Selected', variant: 'danger', onClick: handleDeleteSelected, disabled: !canDeleteSelected },
+        { label: 'Void Selected', variant: 'danger', onClick: handleVoidSelected, disabled: !canVoidSelected },
+      ])}
       <EnhancedTable
         columns={columns}
         data={pageItems}
@@ -181,6 +230,12 @@ export default function ExpensesPage() {
         sortDir={sortDir}
         emptyMessage={loading ? 'Loading expense reports…' : 'No expense reports found'}
         onRowClick={(row) => router.push(`/expenses/${row.id}/edit`)}
+        selectedRows={table.selectedRows}
+        toggleRowSelection={table.toggleRowSelection}
+        handleSelectAll={table.handleSelectAll}
+        isAllSelected={table.isAllSelected}
+        isIndeterminate={table.isIndeterminate}
+        selectAllRef={table.selectAllRef}
       />
 
       <div className="flex items-center justify-between text-xs text-slate-500">

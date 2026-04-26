@@ -1096,6 +1096,24 @@
 			"problemMatcher": [
 				"$tsc"
 			]
+		},
+		{
+			"label": "Temp Run AP smoke test",
+			"type": "shell",
+			"command": "cd c:\\Users\\HomePC\\Desktop\\Haypbooksv9\\Haypbooks\\Frontend && npx playwright test src/__tests__/e2e/expenses-ap-smoke.spec.ts --project=chromium",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Playwright smoke test verify",
+			"type": "shell",
+			"command": "npx playwright test src/__tests__/e2e/expenses-ap-smoke.spec.ts --project=chromium --reporter=list",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
 		}
 	]
 }

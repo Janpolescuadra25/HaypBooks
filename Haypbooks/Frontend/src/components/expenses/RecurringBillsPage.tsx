@@ -105,6 +105,50 @@ export default function RecurringBillsPage() {
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
   const table = useEnhancedTable<RecurringBill>({ data: paged, tableId: 'recurring-bills' })
+
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
+  const canVoidSelected = selectedRowsData.some((row) => row.status !== 'DRAFT' && row.status !== 'VOID')
+  const voidableSelectedRows = selectedRowsData.filter((row) => row.status !== 'DRAFT' && row.status !== 'VOID')
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canDeleteSelected) return
+    const drafts = selectedRowsData.filter((row) => row.status === 'DRAFT')
+    if (drafts.length === 0) return
+    if (!confirm(`Delete ${drafts.length} selected recurring bill${drafts.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(drafts.map((row) => expensesService.updateRecurringBill(companyId, row.id, { status: 'DELETED' })))
+      setRows((prev) => prev.filter((row) => !drafts.some((draft) => draft.id === row.id)))
+      table.clearSelection()
+      showToast(`${drafts.length} selected recurring bill${drafts.length !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected recurring bills')
+    }
+  }, [canDeleteSelected, companyId, selectedRowsData, table])
+
+  const handleVoidSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    if (!canVoidSelected) return
+    const voidable = voidableSelectedRows
+    if (voidable.length === 0) {
+      showToast('No recurring bills selected to void')
+      return
+    }
+    if (!confirm(`Void ${voidable.length} selected recurring bill${voidable.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(voidable.map((row) => expensesService.updateRecurringBill(companyId, row.id, { status: 'VOID' })))
+      setRows((prev) => prev.map((row) => voidable.some((selected) => selected.id === row.id) ? { ...row, status: 'VOID' } : row))
+      table.clearSelection()
+      showToast(`${voidable.length} selected recurring bill${voidable.length !== 1 ? 's' : ''} voided`)
+    } catch {
+      showToast('Failed to void selected recurring bills')
+    }
+  }, [canVoidSelected, companyId, table, voidableSelectedRows])
+
   const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
 
   const columns: EnhancedColumn<RecurringBill>[] = [
@@ -171,8 +215,9 @@ export default function RecurringBillsPage() {
       {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label className="block text-xs font-medium text-gray-500 mb-1">Next Date From</label><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label className="block text-xs font-medium text-gray-500 mb-1">Next Date To</label><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
       {table.renderBulkToolbar([
         { label: 'Export Selected', onClick: () => table.exportSelectedToCsv(`recurring-bills-selected-${new Date().toISOString().slice(0, 10)}.csv`, ['Template','Vendor','Frequency','Next Date','Status','Amount'], (row) => [row.templateName ?? '', row.vendorName ?? '', row.frequency ?? '', row.nextDate ?? '', row.status ?? '', String(row.amount)]) },
+        { label: 'Delete Selected', variant: 'danger', onClick: handleDeleteSelected, disabled: !canDeleteSelected },
+        { label: 'Void Selected', variant: 'danger', onClick: handleVoidSelected, disabled: !canVoidSelected },
       ])}
-
       <EnhancedTable columns={columns} data={paged} onSort={toggleSort} sortKey={sortKey} sortDir={sortDir} tableId="recurring-bills" hasStickyActions={true} emptyMessage={loading ? 'Loading...' : 'No recurring bills found'} rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')} onColumnsChange={handleColumnsChange}
         enableRowSelection={true}
         selectedRows={table.selectedRows}

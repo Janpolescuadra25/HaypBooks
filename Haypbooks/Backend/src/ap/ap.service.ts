@@ -25,6 +25,7 @@ export class ApService {
     private normalizeVendor(v: any) {
         return {
             ...v,
+            id: v.contactId ?? v.id,
             name: v.contact?.displayName ?? v.name ?? '',
             displayName: v.contact?.displayName ?? v.name ?? '',
             email: v.contact?.contactEmails?.[0]?.email ?? v.email ?? '',
@@ -151,6 +152,17 @@ export class ApService {
         return this.normalizeBill(b)
     }
 
+    private async resolvePaymentTermId(workspaceId: string, value?: string | null) {
+        if (!value) return null
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (uuidRegex.test(value)) return value
+        const term = await this.prisma.paymentTerm.findFirst({
+            where: { workspaceId, name: value, isActive: true },
+            select: { id: true },
+        })
+        return term?.id ?? null
+    }
+
     async createBill(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
@@ -158,22 +170,45 @@ export class ApService {
         const lines = data.lines ?? data.items
         if (!lines?.length) throw new BadRequestException('At least one line item is required')
         const dueAt = data.dueAt ?? data.dueDate
-        const result = await this.repo.createBill({
-            workspaceId, companyId, createdById: userId,
-            vendorId: data.vendorId,
-            description: data.description,
-            currency: data.currency,
-            paymentTermId: data.paymentTermId,
-            dueAt: dueAt ? new Date(dueAt) : undefined,
-            lines: lines.map((l: any) => ({
-                description: l.description ?? '',
-                quantity: l.quantity ?? 1,
-                rate: l.rate ?? l.unitPrice ?? 0,
-                amount: l.amount ?? (Number(l.quantity ?? 1) * Number(l.rate ?? l.unitPrice ?? 0)),
-                accountId: l.accountId ?? null,
-                itemId: l.itemId ?? null,
-            })),
-        })
+        const paymentTermId = await this.resolvePaymentTermId(workspaceId, data.paymentTermId)
+        let result
+        try {
+            result = await this.repo.createBill({
+                workspaceId, companyId, createdById: userId,
+                vendorId: data.vendorId,
+                description: data.description,
+                currency: data.currency,
+                paymentTermId,
+                dueAt: dueAt ? new Date(dueAt) : undefined,
+                lines: lines.map((l: any) => ({
+                    description: l.description ?? '',
+                    quantity: l.quantity ?? 1,
+                    rate: l.rate ?? l.unitPrice ?? 0,
+                    amount: l.amount ?? (Number(l.quantity ?? 1) * Number(l.rate ?? l.unitPrice ?? 0)),
+                    accountId: l.accountId ?? null,
+                    itemId: l.itemId ?? null,
+                })),
+            })
+        } catch (error) {
+            console.error('Error creating bill', {
+                companyId,
+                workspaceId,
+                vendorId: data.vendorId,
+                dueAt,
+                currency: data.currency,
+                paymentTermId,
+                lines: lines.map((l: any) => ({
+                    description: l.description ?? '',
+                    quantity: l.quantity ?? 1,
+                    rate: l.rate ?? l.unitPrice ?? 0,
+                    amount: l.amount ?? (Number(l.quantity ?? 1) * Number(l.rate ?? l.unitPrice ?? 0)),
+                    accountId: l.accountId ?? null,
+                    itemId: l.itemId ?? null,
+                })),
+                error: error && error.stack ? error.stack : error,
+            })
+            throw error
+        }
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'CREATE', tableName: 'Bill', recordId: result.id, changes: { vendorId: data.vendorId, total: Number(result.total ?? 0) } },
         }).catch(() => { /* non-critical */ })
@@ -182,6 +217,9 @@ export class ApService {
 
     async updateBill(userId: string, companyId: string, billId: string, data: any) {
         await this.assertAccess(userId, companyId)
+        if (data.paymentTermId) {
+            data.paymentTermId = await this.resolvePaymentTermId(await this.getWorkspaceId(companyId), data.paymentTermId)
+        }
         const result = await this.repo.updateBill(companyId, billId, data, userId)
         if (!result) throw new BadRequestException('Bill not found or not editable (only DRAFT bills can be updated)')
         return result
@@ -200,7 +238,6 @@ export class ApService {
                 data: {
                     status: 'APPROVED',
                     postingStatus: 'POSTED',
-                    approvedAt: new Date(),
                     billNumber: bill.billNumber ?? `BILL-${Date.now()}`,
                 },
             })

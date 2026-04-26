@@ -19,11 +19,21 @@ const genId = () => Math.random().toString(36).slice(2, 9)
 
 interface Vendor {
   id: string
+  contactId?: string
   displayName: string
   email?: string
   phone?: string
   contact?: { displayName?: string }
 }
+
+const normalizeVendor = (vendor: any): Vendor => ({
+  id: String(vendor.id ?? vendor.contactId ?? vendor.contact?.id ?? ''),
+  contactId: vendor.contactId ?? vendor.contact?.id,
+  displayName: String(vendor.displayName ?? vendor.name ?? vendor.contact?.displayName ?? ''),
+  email: String(vendor.email ?? vendor.contact?.contactEmails?.[0]?.email ?? ''),
+  phone: String(vendor.phone ?? vendor.contact?.contactPhones?.[0]?.phone ?? ''),
+  contact: vendor.contact ? { displayName: String(vendor.contact.displayName ?? '') } : undefined,
+})
 
 interface LineItem {
   id: string
@@ -112,11 +122,9 @@ export default function BillForm({ mode, billId }: BillFormProps) {
       }
       const response = await expensesService.createVendor(companyId, payload)
       const saved = response.data ?? response
-      const createdVendor = {
-        id: String(saved.id),
-        displayName: saved.displayName ?? saved.name ?? newVendorName.trim(),
-        email: saved.email ?? newVendorEmail,
-        phone: saved.phone ?? newVendorPhone,
+      const createdVendor = normalizeVendor(saved)
+      if (!createdVendor.id) {
+        throw new Error('Created vendor response missing id')
       }
       setVendors((prev) => [createdVendor, ...prev])
       setVendorId(createdVendor.id)
@@ -153,7 +161,8 @@ export default function BillForm({ mode, billId }: BillFormProps) {
       try {
         const { data } = await expensesService.listVendors(companyIdValue)
         if (cancelled) return
-        setVendors(Array.isArray(data) ? data : data.data ?? [])
+        const list = Array.isArray(data) ? data : data.data ?? []
+        setVendors(list.map(normalizeVendor).filter((vendor: Vendor) => Boolean(vendor.id)))
       } catch {
         toast.error('Failed to load vendors')
       }

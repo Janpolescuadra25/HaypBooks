@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check } from 'lucide-react'
+import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check, Ban } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -113,6 +113,26 @@ export default function VendorCreditsPage() {
     } catch { showToast('Failed to apply credit') }
   }, [companyId])
 
+  const handleVoid = useCallback(async (id: string) => {
+    if (!companyId) return
+    if (!confirm('Void this vendor credit? This will preserve the audit trail.')) return
+    try {
+      await expensesService.updateVendorCredit(companyId, id, { status: 'VOID' })
+      setRows(p => p.map(r => r.id === id ? { ...r, status: 'VOID', availableAmount: 0 } : r))
+      showToast('Credit voided'); setActionMenuId(null); setMenuPos(null)
+    } catch { showToast('Failed to void credit') }
+  }, [companyId])
+
+  const handleDeleteCredit = useCallback(async (id: string) => {
+    if (!companyId) return
+    if (!confirm('Delete this vendor credit? This action cannot be undone.')) return
+    try {
+      await expensesService.deleteVendorCredit(companyId, id)
+      setRows(p => p.filter(r => r.id !== id))
+      showToast('Credit deleted'); setActionMenuId(null); setMenuPos(null)
+    } catch { showToast('Failed to delete credit') }
+  }, [companyId])
+
   const filtered = useMemo(() => {
     let list = rows
     if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
@@ -127,6 +147,30 @@ export default function VendorCreditsPage() {
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
   const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
   const table = useEnhancedTable<VendorCredit>({ data: paged, tableId: 'vendor-credits' })
+
+  const selectedRowsData = useMemo(
+    () => rows.filter((row) => table.selectedRows.includes(row.id)),
+    [rows, table.selectedRows],
+  )
+  const canVoidSelected = selectedRowsData.some((row) => (row.status ?? 'OPEN') !== 'VOID')
+
+  const handleVoidSelected = useCallback(async () => {
+    if (!companyId || table.selectedRows.length === 0) return
+    const voidable = selectedRowsData.filter((row) => (row.status ?? 'OPEN') !== 'VOID')
+    if (voidable.length === 0) {
+      showToast('No selected credits can be voided')
+      return
+    }
+    if (!confirm(`Void ${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''}?`)) return
+    try {
+      await Promise.all(voidable.map((row) => expensesService.updateVendorCredit(companyId, row.id, { status: 'VOID' })))
+      setRows((prev) => prev.map((row) => voidable.some((selected) => selected.id === row.id) ? { ...row, status: 'VOID', availableAmount: 0 } : row))
+      table.clearSelection()
+      showToast(`${voidable.length} selected credit${voidable.length !== 1 ? 's' : ''} voided`)
+    } catch {
+      showToast('Failed to void selected credits')
+    }
+  }, [companyId, selectedRowsData, table, showToast])
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
 
@@ -244,6 +288,7 @@ export default function VendorCreditsPage() {
       )}
 
       {table.renderBulkToolbar([
+        { label: 'Void Selected', variant: 'danger', onClick: () => handleVoidSelected(), disabled: !canVoidSelected },
         { label: 'Export Selected', onClick: () => table.exportSelectedToCsv(`vendor-credits-selected-${new Date().toISOString().slice(0, 10)}.csv`, ['Credit #','Vendor','Issue Date','Status','Amount','Remaining'], (row) => [row.creditNumber ?? '', row.vendorName ?? '', row.issueDate, row.status ?? '', String(row.amount), String(row.availableAmount ?? 0)] ) },
       ])}
 
@@ -291,6 +336,11 @@ export default function VendorCreditsPage() {
             <MenuBtn icon={<Eye size={13} />} label="Edit Credit" onClick={() => { router.push(`/expenses/bills-payments/vendor-credits/${row.id}/edit`); setActionMenuId(null) }} />
             {(row.status === 'OPEN' || row.status === 'PARTIALLY_USED') && (
               <MenuBtn icon={<Check size={13} />} label="Apply Credit" onClick={() => handleApply(row.id)} />
+            )}
+            {(row.status ?? 'OPEN') !== 'VOID' ? (
+              <MenuBtn icon={<Ban size={13} />} label="Void Credit" danger onClick={() => handleVoid(row.id)} />
+            ) : (
+              <MenuBtn icon={<X size={13} />} label="Delete Credit" danger onClick={() => handleDeleteCredit(row.id)} />
             )}
           </div>
         )
