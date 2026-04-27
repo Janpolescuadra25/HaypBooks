@@ -185,7 +185,7 @@ export default function BillPaymentsPage() {
       case 'vendorName':    return <span className="text-gray-700 truncate">{row.vendorName ?? '—'}</span>
       case 'date':          return <span className="text-gray-500">{fmtDate(row.date)}</span>
       case 'method':        return <span className="text-gray-600">{row.method ?? '—'}</span>
-      case 'status':        return <StatusPill status={row.status ?? 'PENDING'} />
+      case 'status':        return <StatusPill status={row.status ?? 'COMPLETED'} />
       case 'amount':        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.amount)}</span>
       default: return null
     }

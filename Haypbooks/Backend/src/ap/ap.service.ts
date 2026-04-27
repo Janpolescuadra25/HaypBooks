@@ -63,6 +63,7 @@ export class ApService {
             date: p.paymentDate ?? p.date,
             vendorName: p.bill?.vendor?.contact?.displayName ?? p.vendorName ?? '',
             method: p.method ?? '',
+            status: p.status ?? (p.journalEntryId ? 'COMPLETED' : 'PENDING'),
         }
     }
 
@@ -327,6 +328,10 @@ export class ApService {
     async recordBillPayment(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
+        if (data.bankAccountId) {
+            const bankAccount = await this.prisma.bankAccount.findFirst({ where: { id: data.bankAccountId, workspaceId, deletedAt: null } })
+            if (!bankAccount) throw new BadRequestException('Invalid payment account')
+        }
         if (!data.billId) throw new BadRequestException('billId is required')
         if (!data.amount || Number(data.amount) <= 0) throw new BadRequestException('amount must be greater than 0')
         const method = data.method ?? 'CASH'
@@ -358,6 +363,10 @@ export class ApService {
         if (amount > balance + 0.01) throw new BadRequestException('Payment amount cannot exceed outstanding balance')
 
         const workspaceId = await this.getWorkspaceId(companyId)
+        if (data.bankAccountId) {
+            const bankAccount = await this.prisma.bankAccount.findFirst({ where: { id: data.bankAccountId, workspaceId, deletedAt: null } })
+            if (!bankAccount) throw new BadRequestException('Invalid payment account')
+        }
         const paymentDate = data.paymentDate ? new Date(data.paymentDate) : new Date()
         const method = data.method ?? 'CASH'
         const result = await this.repo.recordBillPayment({

@@ -260,7 +260,7 @@ export class ApRepository {
                 const bill = await tx.bill.findUnique({ where: { id: app.billId } })
                 if (bill) {
                     const newBalance = Math.max(0, Number(bill.balance) - Number(app.amount))
-                    const newStatus = newBalance <= 0 ? 'PAID' : 'APPROVED'
+                    const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIALLY_PAID'
                     await tx.bill.update({ where: { id: app.billId }, data: { balance: newBalance, status: newStatus as any, paymentStatus: newBalance <= 0 ? 'PAID' : 'PARTIAL' as any } })
                 }
             }
@@ -573,7 +573,7 @@ export class ApRepository {
 
     async getApAging(companyId: string) {
         const bills = await this.prisma.bill.findMany({
-            where: { companyId, deletedAt: null, status: { in: ['APPROVED', 'OVERDUE'] as any }, balance: { gt: 0 } },
+            where: { companyId, deletedAt: null, status: { in: ['APPROVED', 'PARTIALLY_PAID', 'OVERDUE'] as any }, balance: { gt: 0 } },
             select: {
                 id: true, billNumber: true, issuedAt: true, dueAt: true, total: true, balance: true,
                 vendor: { select: { contact: { select: { id: true, displayName: true } } } },
