@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Edit2, Plus, Trash2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -137,6 +137,13 @@ export default function VendorDetailPage({ vendorId: vendorIdProp }: { vendorId?
   }
 
   const actions = [
+    {
+      label: 'New Vendor',
+      icon: <Plus size={14} />,
+      onClick: () => router.push('/expenses/procurement/vendors'),
+      variant: 'secondary' as const,
+      disabled: false,
+    },
     {
       label: 'Edit',
       icon: <Edit2 size={14} />,
