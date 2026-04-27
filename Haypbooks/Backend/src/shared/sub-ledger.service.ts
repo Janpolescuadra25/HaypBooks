@@ -529,7 +529,9 @@ export class SubLedgerService {
       }
     } catch (err: any) {
       const message = `[SubLedger] Failed to post bill ${billId}: ${err?.message ?? String(err)}`
-      this.logger.error(message)
+      this.logger.error(message, err?.stack ?? String(err))
+      console.error(message)
+      console.error(err)
       try {
         const logDir = path.join(process.cwd(), 'tmp')
         fs.mkdirSync(logDir, { recursive: true })

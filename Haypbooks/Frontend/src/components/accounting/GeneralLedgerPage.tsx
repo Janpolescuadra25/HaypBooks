@@ -94,8 +94,8 @@ function getSourceRoute(sourceType: SourceType, sourceId?: string): string | nul
   switch (sourceType) {
     case 'INVOICE':        return `/sales/billing/invoices/${sourceId}`
     case 'PAYMENT':        return `/sales/billing/invoices/${sourceId}`
-    case 'BILL':           return `/purchases/bills/${sourceId}`
-    case 'BILL_PAYMENT':   return `/purchases/bills/${sourceId}`
+    case 'BILL':           return `/expenses/bills-payments/bills/${sourceId}`
+    case 'BILL_PAYMENT':   return `/expenses/bills-payments/bill-payments/${sourceId}`
     case 'BANK_DEPOSIT':   return `/banking/transactions/${sourceId}`
     case 'REFUND':         return `/sales/billing/invoices/${sourceId}`
     case 'MANUAL_JOURNAL': return `/accounting/core-accounting/journal-entries/${sourceId}`
