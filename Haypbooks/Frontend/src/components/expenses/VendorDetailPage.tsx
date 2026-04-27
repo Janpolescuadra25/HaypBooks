@@ -141,7 +141,7 @@ export default function VendorDetailPage({ vendorId: vendorIdProp }: { vendorId?
       label: 'New Vendor',
       icon: <Plus size={14} />,
       onClick: () => router.push('/expenses/procurement/vendors'),
-      variant: 'secondary' as const,
+      variant: 'default' as const,
       disabled: false,
     },
     {

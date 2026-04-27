@@ -108,6 +108,14 @@ export default function BillForm({ mode, billId }: BillFormProps) {
 
   const vendor = useMemo(() => vendors.find(v => v.id === vendorId), [vendorId, vendors])
 
+  useEffect(() => {
+    if (mode === 'new') {
+      setVendorId('')
+      setVendorEmail('')
+      setVendorPhone('')
+    }
+  }, [mode])
+
   const handleCreateVendor = useCallback(async () => {
     if (!companyId) return
     if (!newVendorName.trim()) { setError('Vendor name is required'); return }
@@ -169,7 +177,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     }
     load()
     return () => { cancelled = true }
-  }, [companyId, toast])
+  }, [companyId, toast, mode])
 
   useEffect(() => {
     if (!companyId) return

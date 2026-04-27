@@ -274,6 +274,7 @@ export default function VendorsPage() {
           {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={fetchVendors} title="Refresh vendors" aria-label="Refresh vendors" className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
+            <button onClick={openNewVendor} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Plus size={14} /> New Vendor</button>
             <div className="relative">
               <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
               {showColToggle && (
@@ -305,7 +306,6 @@ export default function VendorsPage() {
           <input type="text" placeholder="Search vendors..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
             className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
-        <button onClick={openNewVendor} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Plus size={14} /> New Vendor</button>
         <div className="flex items-center gap-1.5">
           {STATUSES.map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }}

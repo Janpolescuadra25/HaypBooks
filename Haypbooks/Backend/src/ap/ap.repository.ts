@@ -265,9 +265,13 @@ export class ApRepository {
                 }
             }
 
-            // GL: Dr Accounts Payable, Cr Cash
+            // GL: Dr Accounts Payable, Cr Bank/Cash
             const apAcct   = await resolveAccount(tx, data.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
-            const cashAcct = await resolveAccount(tx, data.companyId, SYSTEM_ACCOUNTS.CASH)
+            const cashAcct = data.bankAccountId
+                ? await tx.account.findUnique({ where: { id: data.bankAccountId }, select: { id: true } })
+                : null
+            const bankAccountId = cashAcct?.id ?? (await resolveAccount(tx, data.companyId, SYSTEM_ACCOUNTS.CASH)).id
+
             const jeId = await createAndPostJE(tx, {
                 workspaceId: data.workspaceId,
                 companyId: data.companyId,
@@ -275,8 +279,8 @@ export class ApRepository {
                 description: `Bill payment – ${data.referenceNumber ?? payment.id}`,
                 createdById: data.createdById,
                 lines: [
-                    { accountId: apAcct.id,   debit: data.amount, credit: 0, description: 'AP settled' },
-                    { accountId: cashAcct.id,  debit: 0, credit: data.amount, description: 'Cash paid' },
+                    { accountId: apAcct.id, debit: data.amount, credit: 0, description: 'AP settled' },
+                    { accountId: bankAccountId, debit: 0, credit: data.amount, description: 'Bank/Cash paid' },
                 ],
             })
             return tx.billPayment.update({ where: { id: payment.id }, data: { journalEntryId: jeId } })

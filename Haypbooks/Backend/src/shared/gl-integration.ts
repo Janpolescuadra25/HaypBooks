@@ -40,7 +40,7 @@ export const SYSTEM_ACCOUNTS = {
     CASH:                 { code: '1000', name: 'Cash',                typeId: 1 },
     ACCOUNTS_RECEIVABLE:  { code: '1100', name: 'Accounts Receivable', typeId: 1 },
     UNDEPOSITED_FUNDS:    { code: '1050', name: 'Undeposited Funds',   typeId: 1 },
-    ACCOUNTS_PAYABLE:     { code: '2000', name: 'Accounts Payable',    typeId: 4 },
+    ACCOUNTS_PAYABLE:     { code: '2010', name: 'Accounts Payable',    typeId: 4 },
     SERVICE_REVENUE:      { code: '4000', name: 'Service Revenue',     typeId: 3 },
     OPERATING_EXPENSES:   { code: '5000', name: 'Operating Expenses',  typeId: 2 },
     RETAINED_EARNINGS:    { code: '3100', name: 'Retained Earnings',   typeId: 5 },
@@ -100,7 +100,8 @@ export async function createAndPostJE(
         companyId: string
         date: Date
         description: string
-        createdById: string
+        createdById?: string
+        entryNumber?: string
         currency?: string
         postingStatus?: 'DRAFT' | 'POSTED' | 'VOIDED'
         transactionSource?: string
@@ -170,7 +171,7 @@ export async function createAndPostJE(
         where: { id: je.id },
         data: {
             postingStatus: 'POSTED',
-            entryNumber: `JE-${Date.now()}`,
+            entryNumber: data.entryNumber ?? `JE-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
             approvedAt: new Date(),
         },
         select: { id: true },

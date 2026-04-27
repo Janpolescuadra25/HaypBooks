@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '../repositories/prisma/prisma.service'
-import { createAndPostJE } from './gl-integration'
+import { createAndPostJE, resolveAccount, SYSTEM_ACCOUNTS } from './gl-integration'
 
 /**
  * SubLedgerService — the bridge between the AR/AP sub-ledgers and the General Ledger.
@@ -13,7 +13,7 @@ import { createAndPostJE } from './gl-integration'
  *   1100 — Accounts Receivable
  *   2010 — Accounts Payable
  *   2050 — Output VAT Payable
- *   1200 — Input VAT (Input Tax)   [assets]
+ *   1130 — Input VAT (Input Tax)   [assets]
  *   2060 — EWT Payable
  *   4010 — Sales Revenue (fallback when line has no accountId)
  *   5010 — Cost of Goods Sold / Purchases (fallback for AP lines)
@@ -425,13 +425,14 @@ export class SubLedgerService {
       const db = tx ?? this.prisma
       const bill = await db.bill.findUnique({
         where: { id: billId },
-        include: { lines: true },
+        include: { lines: { include: { LineTax: true } } },
       })
       if (!bill) return
       if (bill.journalEntryId) return // already posted
 
-      const apAccountId = await this.findAccountByCode(bill.companyId, '2000', tx)
-      const vatInputAccountId = await this.findAccountByCode(bill.companyId, '1200', tx)
+      const apAccount = await resolveAccount(tx, bill.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
+      const apAccountId = apAccount?.id ?? null
+      const vatInputAccountId = await this.findAccountByCode(bill.companyId, '1130', tx)
       const ewtPayableAccountId = await this.findAccountByCode(bill.companyId, '2060', tx)
       const expenseFallbackId = await this.findAccountByCode(bill.companyId, '5010', tx)
 
@@ -444,21 +445,23 @@ export class SubLedgerService {
 
       const lines = bill.lines as any[]
       const debitLines: Array<{ accountId: string; debit: number; credit: number; memo?: string }> = []
-      let totalExpense = 0
       let totalVatInput = 0
 
       for (const line of lines) {
         const amount = Number(line.amount ?? 0)
-        const vatRate = Number(line.vatRate ?? 0)
-        const vatAmount = vatRate > 0 ? Math.round(amount * vatRate / (1 + vatRate) * 100) / 100 : 0
-        const netExpense = amount - vatAmount
+        const lineTaxAmount = Array.isArray(line.LineTax)
+          ? line.LineTax.reduce((sum: number, tax: any) => sum + Number(tax.amount ?? 0), 0)
+          : 0
+        const netExpense = Math.max(0, amount - lineTaxAmount)
 
         const expenseAccountId = await this.resolveAccount(bill.companyId, line.accountId, '5010', tx)
         if (!expenseAccountId) continue
 
-        debitLines.push({ accountId: expenseAccountId, debit: netExpense, credit: 0, memo: line.description })
-        totalExpense += netExpense
-        totalVatInput += vatAmount
+        if (netExpense > 0.005) {
+          debitLines.push({ accountId: expenseAccountId, debit: netExpense, credit: 0, memo: line.description })
+        }
+
+        totalVatInput += lineTaxAmount
       }
 
       // Input VAT debit line
@@ -495,7 +498,7 @@ export class SubLedgerService {
         })
 
         if (je) {
-          await tx.bill.update({ where: { id: billId }, data: { journalEntryId: je.id } })
+          await tx.bill.update({ where: { id: billId }, data: { journalEntryId: je } })
         }
       } else {
         await this.prisma.$transaction(async (txClient) => {
@@ -512,7 +515,7 @@ export class SubLedgerService {
           })
 
           if (je) {
-            await txClient.bill.update({ where: { id: billId }, data: { journalEntryId: je.id } })
+            await txClient.bill.update({ where: { id: billId }, data: { journalEntryId: je } })
           }
         })
       }
@@ -542,7 +545,7 @@ export class SubLedgerService {
       const companyId = payment.companyId
 
       const apAccountId = await this.findAccountByCode(companyId, '2010')
-      const cashAccountId = await this.resolveAccount(companyId, null, '1010')
+      const cashAccountId = await this.resolveAccount(companyId, payment.bankAccountId ?? null, '1010')
 
       if (!apAccountId || !cashAccountId) {
         this.logger.warn(`[SubLedger] Cannot post bill payment ${billPaymentId}: required accounts not found`)
