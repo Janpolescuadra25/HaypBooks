@@ -150,6 +150,30 @@ export class SubLedgerService {
     return created
   }
 
+  private async findExpenseAccount(companyId: string, tx?: any): Promise<string | null> {
+    const db = tx ?? this.prisma
+    const account = await db.account.findFirst({
+      where: {
+        companyId,
+        deletedAt: null,
+        isActive: true,
+        typeId: 2,
+      },
+      select: { id: true },
+      orderBy: { code: 'asc' },
+    })
+    return account?.id ?? null
+  }
+
+  private async findAccountById(companyId: string, accountId: string, tx?: any): Promise<string | null> {
+    const db = tx ?? this.prisma
+    const account = await db.account.findFirst({
+      where: { id: accountId, companyId, deletedAt: null, isActive: true },
+      select: { id: true },
+    })
+    return account?.id ?? null
+  }
+
   // ─── AR: Invoice Posted (DR: AR  CR: Revenue + Output VAT) ───────────────
 
   /**
@@ -436,16 +460,18 @@ export class SubLedgerService {
         include: { lines: { include: { LineTax: true } } },
       })
       if (!bill) return
-      if (bill.journalEntryId) return // already posted
+      if (bill.journalEntryId) return
 
-      const apAccount = await resolveAccount(tx, bill.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
+      const apAccount = await resolveAccount(db, bill.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
       const apAccountId = apAccount?.id ?? null
-      const vatInputAccountId = await this.findAccountByCode(bill.companyId, '1130', tx)
-      const ewtPayableAccountId = await this.findAccountByCode(bill.companyId, '2060', tx)
-      const expenseFallbackId = await this.findAccountByCode(bill.companyId, '5010', tx)
+      const vatInputAccountId = await this.findAccountByCode(bill.companyId, '1130', db)
+      const ewtPayableAccountId = await this.findAccountByCode(bill.companyId, '2060', db)
+      const expenseFallbackId = await this.findAccountByCode(bill.companyId, '5010', db)
+      const expenseDefaultId = expenseFallbackId ?? await this.findExpenseAccount(bill.companyId, db)
+      const resolvedExpenseAccountId = expenseDefaultId ?? (await resolveAccount(db, bill.companyId, { code: '5010', name: 'Cost of Goods Sold', typeId: 2 })).id
 
-      if (!apAccountId || !expenseFallbackId) {
-        const message = `[SubLedger] Cannot post bill ${billId}: AP or Expense account not found`
+      if (!apAccountId) {
+        const message = `[SubLedger] Cannot post bill ${billId}: Accounts Payable account (2010) not found`
         if (tx) throw new Error(message)
         this.logger.warn(message)
         return
@@ -455,15 +481,19 @@ export class SubLedgerService {
       const debitLines: Array<{ accountId: string; debit: number; credit: number; memo?: string }> = []
       let totalVatInput = 0
 
-      for (const line of lines) {
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index]
         const amount = Number(line.amount ?? 0)
         const lineTaxAmount = Array.isArray(line.LineTax)
           ? line.LineTax.reduce((sum: number, tax: any) => sum + Number(tax.amount ?? 0), 0)
           : 0
         const netExpense = Math.max(0, amount - lineTaxAmount)
 
-        const expenseAccountId = await this.resolveAccount(bill.companyId, line.accountId, '5010', tx)
-        if (!expenseAccountId) continue
+        const preferredExpenseAccountId = line.accountId ? await this.findAccountById(bill.companyId, line.accountId, tx) : null
+        const expenseAccountId = preferredExpenseAccountId || resolvedExpenseAccountId
+        if (!expenseAccountId) {
+          throw new Error(`No expense account on line item ${index + 1} and no default expense account (5010) found for this company`)
+        }
 
         if (netExpense > 0.005) {
           debitLines.push({ accountId: expenseAccountId, debit: netExpense, credit: 0, memo: line.description })
@@ -472,15 +502,16 @@ export class SubLedgerService {
         totalVatInput += lineTaxAmount
       }
 
-      // Input VAT debit line
+      if (totalVatInput > 0.005 && !vatInputAccountId) {
+        this.logger.warn(`[SubLedger] Bill ${billId} has VAT amount ${totalVatInput} but no Input VAT account (1130) found; VAT line skipped`)
+      }
+
       if (totalVatInput > 0.005 && vatInputAccountId) {
         debitLines.push({ accountId: vatInputAccountId, debit: totalVatInput, credit: 0, memo: 'Input VAT' })
       }
 
-      // EWT: read from bill-level ewt amount if stored
       const ewtAmount = Number((bill as any).ewtAmount ?? 0)
       const totalDebits = debitLines.reduce((s, l) => s + l.debit, 0)
-      // AP credit = total debits reduced by EWT (EWT is the net payable to vendor)
       const apCredit = totalDebits - ewtAmount
 
       const finalLines: Array<{ accountId: string; debit: number; credit: number; memo?: string }> = [
@@ -701,8 +732,10 @@ export class SubLedgerService {
       if (!refund) return
       if ((refund as any).journalEntryId) return
 
-      const apAccountId = await this.findAccountByCode(refund.companyId, '2010')
-      const expenseAccountId = await this.findAccountByCode(refund.companyId, '5010')
+      const apAccount = await resolveAccount(this.prisma, refund.companyId, SYSTEM_ACCOUNTS.ACCOUNTS_PAYABLE)
+      const apAccountId = apAccount?.id ?? null
+      const expenseAccount = await resolveAccount(this.prisma, refund.companyId, { code: '5010', name: 'Cost of Goods Sold', typeId: 2 })
+      const expenseAccountId = expenseAccount?.id ?? null
 
       if (!apAccountId || !expenseAccountId) {
         this.logger.warn(`[SubLedger] Cannot post vendor refund ${refundId}`)

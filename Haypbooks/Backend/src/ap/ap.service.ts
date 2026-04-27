@@ -182,6 +182,7 @@ export class ApService {
         if (!data.vendorId) throw new BadRequestException('vendorId is required')
         const lines = data.lines ?? data.items
         if (!lines?.length) throw new BadRequestException('At least one line item is required')
+        if (lines.some((l: any) => !l.accountId)) throw new BadRequestException('Each bill line item must have an expense account assigned')
         const dueAt = data.dueAt ?? data.dueDate
         const paymentTermId = await this.resolvePaymentTermId(workspaceId, data.paymentTermId) ?? undefined
         let result
@@ -230,6 +231,9 @@ export class ApService {
 
     async updateBill(userId: string, companyId: string, billId: string, data: any) {
         await this.assertAccess(userId, companyId)
+        if (data.lines && data.lines.some((l: any) => !l.accountId)) {
+            throw new BadRequestException('Each bill line item must have an expense account assigned')
+        }
         if (data.paymentTermId || data.paymentTerms) {
             data.paymentTermId = await this.resolvePaymentTermId(await this.getWorkspaceId(companyId), data.paymentTermId ?? data.paymentTerms)
         }

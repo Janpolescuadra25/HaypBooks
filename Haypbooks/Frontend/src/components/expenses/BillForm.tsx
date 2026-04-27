@@ -49,6 +49,7 @@ interface Account {
   id: string
   code?: string
   name?: string
+  type?: string
 }
 
 interface BillFormProps {
@@ -97,6 +98,13 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const [internalNotes, setInternalNotes] = useState('')
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const expenseAccounts = useMemo(
+    () => accounts.filter((a) => {
+      const type = a.type?.toLowerCase() ?? ''
+      return !a.type || type === 'expense' || type === 'asset'
+    }),
+    [accounts],
+  )
   const [discountType, setDiscountType] = useState<'pct' | 'flat'>('pct')
   const [discountValue, setDiscountValue] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -187,7 +195,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         if (!active) return
         const data = res.data ?? []
         const list = Array.isArray(data) ? data : data.data ?? []
-        setAccounts(list.map((a: any) => ({ id: a.id, code: a.code, name: a.name })))
+        setAccounts(list.map((a: any) => ({ id: a.id, code: a.code, name: a.name, type: a.type })))
       })
       .catch(() => {})
     return () => { active = false }
@@ -247,6 +255,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     if (!vendorId) { setError('Please choose a vendor'); return false }
     if (!lineItems.length) { setError('At least one line item is required'); return false }
     if (lineItems.some(line => !line.description.trim())) { setError('Each line item requires a description'); return false }
+    if (lineItems.some(line => !line.account?.trim())) { setError('Each line item must have an expense account assigned'); return false }
     if (lineItems.some(line => line.quantity <= 0)) { setError('Quantity must be at least 1'); return false }
     if (lineItems.some(line => line.unitPrice < 0)) { setError('Unit price cannot be negative'); return false }
     if (lineItems.some(line => line.taxRate < 0)) { setError('Tax percentage cannot be negative'); return false }
@@ -476,7 +485,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
                 <LineItemTable
                   columns={[
                     { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item or description', required: true },
-                    { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? '' })) },
+                    { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: expenseAccounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? '' })) },
                     { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
                     { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
                     { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },

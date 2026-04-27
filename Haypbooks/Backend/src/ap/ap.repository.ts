@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { resolveAccount, createAndPostJE, createReversingJE, SYSTEM_ACCOUNTS } from '../shared/gl-integration'
@@ -127,6 +127,9 @@ export class ApRepository {
         dueAt?: Date; paymentTermId?: string; currency?: string; description?: string
         createdById: string; lines: any[]
     }) {
+        if (data.lines.some((l: any) => !l.accountId)) {
+            throw new BadRequestException('Each bill line item must have an expense account assigned')
+        }
         const total = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? 0), 0)
         return this.prisma.bill.create({
             data: {
@@ -149,6 +152,9 @@ export class ApRepository {
     }
 
     async updateBill(companyId: string, billId: string, data: any, updatedById: string) {
+        if (data.lines && data.lines.some((l: any) => !l.accountId)) {
+            throw new BadRequestException('Each bill line item must have an expense account assigned')
+        }
         const bill = await this.prisma.bill.findFirst({ where: { id: billId, companyId, deletedAt: null } })
         if (!bill || bill.status !== 'DRAFT') return null
 
