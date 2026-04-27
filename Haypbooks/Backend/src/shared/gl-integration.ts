@@ -171,7 +171,6 @@ export async function createAndPostJE(
         where: { id: je.id },
         data: {
             postingStatus: 'POSTED',
-            entryNumber: data.entryNumber ?? `JE-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
             approvedAt: new Date(),
         },
         select: { id: true },

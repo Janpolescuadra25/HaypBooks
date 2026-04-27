@@ -198,7 +198,7 @@ export class TaxService {
      *
      * Uses Philippine standard COA codes:
      *   2050 — Output VAT Payable (credit balances = output VAT collected)
-     *   1200 — Input VAT / Input Tax (debit balances = VAT paid to suppliers)
+     *   1130 — Input VAT / Input Tax (debit balances = VAT paid to suppliers)
      *   4xxx — Revenue accounts (credit balances = gross taxable sales)
      */
     private async computeVatReturn2550(
@@ -229,7 +229,7 @@ export class TaxService {
         // Resolve account IDs for the relevant COA codes
         const [outputVatAcct, inputVatAcct, revenueAccts] = await Promise.all([
             this.prisma.account.findFirst({ where: { companyId, code: '2050', deletedAt: null }, select: { id: true } }),
-            this.prisma.account.findFirst({ where: { companyId, code: '1200', deletedAt: null }, select: { id: true } }),
+            this.prisma.account.findFirst({ where: { companyId, code: '1130', deletedAt: null }, select: { id: true } }),
             this.prisma.account.findMany({ where: { companyId, code: { startsWith: '4' }, deletedAt: null }, select: { id: true } }),
         ])
 
@@ -247,7 +247,7 @@ export class TaxService {
             })
             : { _sum: { credit: null } }
 
-        // Aggregate Input VAT: debits on account 1200 from POSTED JEs in period
+        // Aggregate Input VAT: debits on account 1130 from POSTED JEs in period
         const inputResult = inputVatAcct
             ? await this.prisma.journalEntryLine.aggregate({
                 _sum: { debit: true },

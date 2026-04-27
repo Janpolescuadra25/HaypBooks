@@ -16,6 +16,7 @@ export class ApRepository {
     // ─── Vendors ──────────────────────────────────────────────────────────────
 
     async findVendors(workspaceId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
+        const take = opts.limit && opts.limit > 0 ? Math.min(opts.limit, 200) : 200
         return this.prisma.vendor.findMany({
             where: {
                 workspaceId,
@@ -28,7 +29,7 @@ export class ApRepository {
                 contact: { select: { id: true, displayName: true, contactEmails: true, contactPhones: true } },
                 paymentTerm: true,
             },
-            take: opts.limit ?? 50,
+            take,
             skip: opts.offset ?? 0,
             orderBy: { contact: { displayName: 'asc' } },
         })

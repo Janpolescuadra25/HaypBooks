@@ -244,6 +244,7 @@ enum FilingStatus {
 enum BillStatus {
   DRAFT
   APPROVED
+  PARTIALLY_PAID
   PAID
   OVERDUE
   CANCELLED

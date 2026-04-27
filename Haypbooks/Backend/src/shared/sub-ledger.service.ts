@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
+import fs from 'fs'
+import path from 'path'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { createAndPostJE, resolveAccount, SYSTEM_ACCOUNTS } from './gl-integration'
 
@@ -73,8 +75,14 @@ export class SubLedgerService {
   // ─── Entry Number Generator ───────────────────────────────────────────────
 
   private async nextEntryNumber(companyId: string, prefix: string): Promise<string> {
-    const count = await this.prisma.journalEntry.count({ where: { companyId } })
-    return `${prefix}-${String(count + 1).padStart(6, '0')}`
+    const lastEntry = await this.prisma.journalEntry.findFirst({
+      where: { companyId, entryNumber: { startsWith: `${prefix}-` } },
+      orderBy: { entryNumber: 'desc' },
+      select: { entryNumber: true },
+    })
+    const lastNumber = lastEntry?.entryNumber?.match(new RegExp(`^${prefix}-(\\d+)$`))
+    const next = lastNumber ? Number(lastNumber[1]) + 1 : 1
+    return `${prefix}-${String(next).padStart(6, '0')}`
   }
 
   // ─── Core: create + immediately post a JE inside a transaction ────────────
@@ -520,7 +528,17 @@ export class SubLedgerService {
         })
       }
     } catch (err: any) {
-      this.logger.error(`[SubLedger] Failed to post bill ${billId}: ${err?.message}`)
+      const message = `[SubLedger] Failed to post bill ${billId}: ${err?.message ?? String(err)}`
+      this.logger.error(message)
+      try {
+        const logDir = path.join(process.cwd(), 'tmp')
+        fs.mkdirSync(logDir, { recursive: true })
+        const logPath = path.join(logDir, 'subledger-postbill-errors.log')
+        fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n${err?.stack ?? String(err)}\n\n`)
+      } catch {
+        /* ignore logging failures */
+      }
+      if (tx) throw err
     }
   }
 
