@@ -61,6 +61,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -147,7 +148,7 @@ export function VendorTable({
               checked={isAll ? true : isSome ? "indeterminate" as any : false}
               onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
               aria-label="Select all"
-              className="border-slate-300"
+              className="border-gray-400"
             />
           </div>
         );
@@ -158,14 +159,14 @@ export function VendorTable({
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
-            className="border-slate-300"
+            className="border-gray-400"
           />
         </div>
       ),
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
-      size: 40,
+      size: 48,
       minSize: 40,
     },
     {
@@ -240,11 +241,13 @@ export function VendorTable({
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 shadow-2xl border-slate-300 p-1 bg-white z-[100]">
-                <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground px-2 py-1.5">Vendor Options</DropdownMenuLabel>
-                <DropdownMenuSeparator className="opacity-50" />
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground px-2 py-1.5">Vendor Options</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="opacity-50" />
+                </DropdownMenuGroup>
                 
                 <DropdownMenuItem 
-                  className="text-xs py-2 cursor-pointer focus:bg-gray-800 focus:text-white transition-colors"
+                  className="text-xs py-2 cursor-pointer hover:bg-slate-100 focus:bg-slate-200 focus:text-slate-900 transition-colors"
                   onClick={() => onView(row.original.id)}
                 >
                   <Eye className="mr-2.5 h-4 w-4 opacity-70" /> 
