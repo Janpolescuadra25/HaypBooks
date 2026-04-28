@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useToast } from '@/components/ToastProvider'
@@ -166,7 +166,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
         </div>
       )}
 
-      <section className="pb-4 border-b border-slate-100 mb-4">
+      <section className="pb-4 border-b border-emerald-700 mb-4">
         <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Company Information</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
@@ -174,7 +174,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <input
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="Vendor name"
             />
           </div>
@@ -184,7 +184,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <select
               value={vendorType}
               onChange={(e) => setVendorType(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
             >
               {VENDOR_TYPES.map((type) => (
                 <option key={type} value={type}>{type}</option>
@@ -197,7 +197,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <input
               value={taxId}
               onChange={(e) => setTaxId(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="Tax ID"
             />
           </div>
@@ -207,7 +207,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <input
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="https://"
             />
           </div>
@@ -217,7 +217,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
             >
               {CURRENCIES.map((cur) => (
                 <option key={cur} value={cur}>{cur}</option>
@@ -227,7 +227,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
         </div>
       </section>
 
-      <section className="pb-4 border-b border-slate-100 mb-4">
+      <section className="pb-4 border-b border-emerald-700 mb-4">
         <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Contact Information</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
@@ -235,7 +235,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <input
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="Contact name"
             />
           </div>
@@ -245,7 +245,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="(123) 456-7890"
             />
           </div>
@@ -256,7 +256,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="email@example.com"
             />
           </div>
@@ -266,14 +266,14 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <input
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="(123) 456-7890"
             />
           </div>
         </div>
       </section>
 
-      <section className="pb-4 border-b border-slate-100 mb-4">
+      <section className="pb-4 border-b border-emerald-700 mb-4">
         <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Address</h3>
         <div className="space-y-4">
           <div>
@@ -281,7 +281,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <input
               value={billingAddress.line1}
               onChange={(e) => setBillingAddress((prev) => ({ ...prev, line1: e.target.value }))}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="Street address"
             />
           </div>
@@ -292,7 +292,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               <input
                 value={billingAddress.city}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, city: e.target.value }))}
-                className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
                 placeholder="City"
               />
             </div>
@@ -301,7 +301,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               <input
                 value={billingAddress.state}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, state: e.target.value }))}
-                className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
                 placeholder="State"
               />
             </div>
@@ -313,7 +313,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               <input
                 value={billingAddress.zip}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, zip: e.target.value }))}
-                className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
                 placeholder="ZIP"
               />
             </div>
@@ -322,7 +322,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               <input
                 value={billingAddress.country}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, country: e.target.value }))}
-                className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
                 placeholder="Country"
               />
             </div>
@@ -330,7 +330,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
         </div>
       </section>
 
-      <section className="pb-4 border-b border-slate-100 mb-4">
+      <section className="pb-4 border-b border-emerald-700 mb-4">
         <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Financial Details</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -338,7 +338,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
             <select
               value={paymentTerms}
               onChange={(e) => setPaymentTerms(e.target.value)}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
             >
               {PAYMENT_TERMS.map((term) => (
                 <option key={term} value={term}>{term}</option>
@@ -353,7 +353,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               min={0}
               value={creditLimit}
               onChange={(e) => setCreditLimit(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="0.00"
             />
           </div>
@@ -365,7 +365,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               min={0}
               value={openingBalance}
               onChange={(e) => setOpeningBalance(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="0.00"
             />
           </div>
@@ -381,7 +381,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
               rows={3}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="Notes for internal users"
             />
           </div>
@@ -392,7 +392,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               value={publicNotes}
               onChange={(e) => setPublicNotes(e.target.value)}
               rows={3}
-              className="w-full border border-slate-200 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
               placeholder="Notes visible to vendor"
             />
           </div>
@@ -403,3 +403,4 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
 })
 
 export default VendorForm
+
