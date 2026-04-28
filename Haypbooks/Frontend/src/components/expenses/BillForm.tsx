@@ -263,37 +263,54 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     return true
   }
 
+  const buildPayload = () => {
+    return {
+      vendorId,
+      dueAt: dueDate,
+      description: memo,
+      currency,
+      paymentTermId: paymentTerms,
+      lines: lineItems.map(line => {
+        const lineAmount = Number(line.quantity || 0) * Number(line.unitPrice || 0)
+        const taxAmount = Number(line.taxRate || 0) / 100 * lineAmount
+        return {
+          description: line.description,
+          accountId: line.account || null,
+          quantity: line.quantity,
+          rate: line.unitPrice,
+          amount: Number((lineAmount + taxAmount).toFixed(2)),
+        }
+      }),
+    }
+  }
+
   const handleSave = async (action: 'draft' | 'submit') => {
     if (!companyId) return
     if (!validate()) return
     setSubmitting(true)
     try {
-      const payload: any = {
-        vendorId,
-        dueAt: dueDate,
-        description: memo,
-        currency,
-        paymentTermId: paymentTerms,
-        lines: lineItems.map(line => {
-          const lineAmount = Number(line.quantity || 0) * Number(line.unitPrice || 0)
-          const taxAmount = Number(line.taxRate || 0) / 100 * lineAmount
-          return {
-            description: line.description,
-            accountId: line.account || null,
-            quantity: line.quantity,
-            rate: line.unitPrice,
-            amount: Number((lineAmount + taxAmount).toFixed(2)),
-          }
-        }),
-      }
+      const payload = buildPayload()
 
       if (mode === 'new') {
-        await expensesService.createBill(companyId, payload)
-        toast.success(action === 'submit' ? 'Bill submitted' : 'Draft saved')
+        const result = await expensesService.createBill(companyId, payload)
+        const billId = result.data?.id ?? (result as any)?.id
+        if (action === 'submit') {
+          if (!billId) throw new Error('Created bill id missing')
+          await expensesService.approveBill(companyId, billId)
+          toast.success('Bill submitted')
+        } else {
+          toast.success('Draft saved')
+        }
       } else if (billId) {
         await expensesService.updateBill(companyId, billId, payload)
-        toast.success(action === 'submit' ? 'Bill updated' : 'Draft updated')
+        if (action === 'submit' && status === 'DRAFT') {
+          await expensesService.approveBill(companyId, billId)
+          toast.success('Bill submitted')
+        } else {
+          toast.success(action === 'submit' ? 'Bill updated' : 'Draft updated')
+        }
       }
+
       router.push('/expenses/bills-payments/bills')
     } catch (err: any) {
       console.error(err)
@@ -313,7 +330,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   })
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+    <form onSubmit={(e) => { e.preventDefault(); handleSave('submit'); }} className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -545,7 +562,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
               className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Draft
             </button>
-            <button type="button" onClick={() => handleSave('submit')} disabled={submitting}
+            <button type="submit" disabled={submitting}
               className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Submit
             </button>
@@ -560,12 +577,12 @@ export default function BillForm({ mode, billId }: BillFormProps) {
       </div>
 
       {(error || submitting) && (
-        <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-lg">
             {error || 'Saving bill...'}
           </div>
         </div>
       )}
-    </div>
+    </form>
   )
 }
