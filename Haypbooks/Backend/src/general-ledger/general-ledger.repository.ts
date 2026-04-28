@@ -18,6 +18,8 @@ const JOURNAL_INCLUDE = {
             bankDeposits: { select: { id: true }, take: 1 },
             customerRefunds: { select: { id: true }, take: 1 },
             vendorRefunds: { select: { id: true }, take: 1 },
+            transactionSource: true,
+            sourceReferenceId: true,
         },
     },
     account: {
