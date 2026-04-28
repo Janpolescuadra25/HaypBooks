@@ -266,7 +266,7 @@ export class ApService {
                 data: {
                     status: 'APPROVED',
                     postingStatus: 'POSTED',
-                    billNumber: bill.billNumber ?? `BILL-${Date.now()}`,
+                    billNumber: bill.billNumber ?? this.repo.buildBillNumber(),
                 },
             })
         })

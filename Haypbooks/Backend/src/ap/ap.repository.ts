@@ -13,6 +13,19 @@ export class ApRepository {
         return company?.currency ?? 'PHP'
     }
 
+    buildBillNumber(): string {
+        return `BILL-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+    }
+
+    isBillNumberConflict(error: any): boolean {
+        const target = error?.meta?.target
+        return error?.code === 'P2002' && (
+            target === 'billNumber' ||
+            (Array.isArray(target) && target.includes('billNumber')) ||
+            (typeof target === 'string' && target.includes('billNumber'))
+        )
+    }
+
     // ─── Vendors ──────────────────────────────────────────────────────────────
 
     async findVendors(workspaceId: string, opts: { search?: string; limit?: number; offset?: number } = {}) {
@@ -124,6 +137,7 @@ export class ApRepository {
 
     async createBill(data: {
         workspaceId: string; companyId: string; vendorId: string
+        billNumber?: string
         dueAt?: Date; paymentTermId?: string; currency?: string; description?: string
         createdById: string; lines: any[]
     }) {
@@ -131,24 +145,39 @@ export class ApRepository {
             throw new BadRequestException('Each bill line item must have an expense account assigned')
         }
         const total = data.lines.reduce((s: number, l: any) => s + Number(l.amount ?? 0), 0)
-        return this.prisma.bill.create({
-            data: {
-                workspaceId: data.workspaceId, companyId: data.companyId, vendorId: data.vendorId,
-                status: 'DRAFT', postingStatus: 'DRAFT', total, balance: total,
-                currency: await this.resolveCurrency(data.companyId, data.currency), dueAt: data.dueAt ?? null,
-                paymentTermId: data.paymentTermId ?? null, description: data.description ?? null,
-                createdById: data.createdById,
-                lines: {
-                    create: data.lines.map((l: any) => ({
-                        companyId: data.companyId, workspaceId: data.workspaceId,
-                        description: l.description ?? '', quantity: l.quantity ?? 1,
-                        rate: l.rate ?? 0, amount: l.amount ?? Number(l.quantity ?? 1) * Number(l.rate ?? 0),
-                        accountId: l.accountId ?? null, itemId: l.itemId ?? null,
-                    })),
-                },
-            },
-            include: { lines: true },
-        })
+        let billNumber = data.billNumber?.toString().trim() || this.buildBillNumber()
+
+        const maxAttempts = 5
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            try {
+                return await this.prisma.bill.create({
+                    data: {
+                        workspaceId: data.workspaceId, companyId: data.companyId, vendorId: data.vendorId,
+                        billNumber,
+                        status: 'DRAFT', postingStatus: 'DRAFT', total, balance: total,
+                        currency: await this.resolveCurrency(data.companyId, data.currency), dueAt: data.dueAt ?? null,
+                        paymentTermId: data.paymentTermId ?? null, description: data.description ?? null,
+                        createdById: data.createdById,
+                        lines: {
+                            create: data.lines.map((l: any) => ({
+                                companyId: data.companyId, workspaceId: data.workspaceId,
+                                description: l.description ?? '', quantity: l.quantity ?? 1,
+                                rate: l.rate ?? 0, amount: l.amount ?? Number(l.quantity ?? 1) * Number(l.rate ?? 0),
+                                accountId: l.accountId ?? null, itemId: l.itemId ?? null,
+                            })),
+                        },
+                    },
+                    include: { lines: true },
+                })
+            } catch (err: any) {
+                if (!data.billNumber && this.isBillNumberConflict(err) && attempt < maxAttempts - 1) {
+                    billNumber = this.buildBillNumber()
+                    continue
+                }
+                throw err
+            }
+        }
+        throw new Error('Unable to create bill with a unique bill number')
     }
 
     async updateBill(companyId: string, billId: string, data: any, updatedById: string) {
@@ -285,6 +314,8 @@ export class ApRepository {
                 date: data.paymentDate,
                 description: `Bill payment – ${data.referenceNumber ?? payment.id}`,
                 createdById: data.createdById,
+                transactionSource: 'Bill Payment',
+                sourceReferenceId: payment.id,
                 lines: [
                     { accountId: apAcct.id, debit: data.amount, credit: 0, description: 'AP settled' },
                     { accountId: bankAccountId, debit: 0, credit: data.amount, description: 'Bank/Cash paid' },

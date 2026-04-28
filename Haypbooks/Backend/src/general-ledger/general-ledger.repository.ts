@@ -144,21 +144,52 @@ function buildCleanWhere(companyId: string, opts: GlQueryDto) {
         const st = opts.sourceType
         const existing = lineFilter['journal'] ?? {}
         if (st === 'INVOICE') {
-            lineFilter['journal'] = { ...existing, invoices: { some: {} } }
+            lineFilter['journal'] = {
+                ...existing,
+                OR: [
+                    { invoices: { some: {} } },
+                    { transactionSource: { contains: 'INVOICE', mode: 'insensitive' } },
+                ],
+            }
         } else if (st === 'BILL') {
-            lineFilter['journal'] = { ...existing, bills: { some: {} } }
+            lineFilter['journal'] = {
+                ...existing,
+                OR: [
+                    { bills: { some: {} } },
+                    { transactionSource: { contains: 'BILL', mode: 'insensitive' } },
+                ],
+            }
         } else if (st === 'PAYMENT') {
-            lineFilter['journal'] = { ...existing, paymentsReceived: { some: {} } }
+            lineFilter['journal'] = {
+                ...existing,
+                OR: [
+                    { paymentsReceived: { some: {} } },
+                    { transactionSource: { contains: 'PAYMENT', mode: 'insensitive' } },
+                ],
+            }
         } else if (st === 'BILL_PAYMENT') {
-            lineFilter['journal'] = { ...existing, billPayments: { some: {} } }
+            lineFilter['journal'] = {
+                ...existing,
+                OR: [
+                    { billPayments: { some: {} } },
+                    { transactionSource: { contains: 'BILL PAYMENT', mode: 'insensitive' } },
+                ],
+            }
         } else if (st === 'BANK_DEPOSIT') {
-            lineFilter['journal'] = { ...existing, bankDeposits: { some: {} } }
+            lineFilter['journal'] = {
+                ...existing,
+                OR: [
+                    { bankDeposits: { some: {} } },
+                    { transactionSource: { contains: 'BANK', mode: 'insensitive' } },
+                ],
+            }
         } else if (st === 'REFUND') {
             lineFilter['journal'] = {
                 ...existing,
                 OR: [
                     { customerRefunds: { some: {} } },
                     { vendorRefunds: { some: {} } },
+                    { transactionSource: { contains: 'REFUND', mode: 'insensitive' } },
                 ],
             }
         } else if (st === 'MANUAL_JOURNAL') {

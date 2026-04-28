@@ -288,18 +288,11 @@ export default function BillForm({ mode, billId }: BillFormProps) {
       }
 
       if (mode === 'new') {
-        const response = await expensesService.createBill(companyId, payload)
-        const created = response.data ?? response
-        if (action === 'submit') {
-          await expensesService.approveBill(companyId, created.id)
-        }
+        await expensesService.createBill(companyId, payload)
         toast.success(action === 'submit' ? 'Bill submitted' : 'Draft saved')
       } else if (billId) {
         await expensesService.updateBill(companyId, billId, payload)
-        if (action === 'submit' && status === 'DRAFT') {
-          await expensesService.approveBill(companyId, billId)
-        }
-        toast.success(action === 'submit' ? 'Bill updated and submitted' : 'Draft updated')
+        toast.success(action === 'submit' ? 'Bill updated' : 'Draft updated')
       }
       router.push('/expenses/bills-payments/bills')
     } catch (err: any) {

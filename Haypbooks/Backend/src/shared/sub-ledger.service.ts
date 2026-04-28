@@ -533,6 +533,8 @@ export class SubLedgerService {
           currency: bill.currency ?? undefined,
           createdById: postedById,
           entryNumber,
+          transactionSource: 'Bill',
+          sourceReferenceId: billId,
           lines: finalLines,
         })
 
@@ -550,6 +552,8 @@ export class SubLedgerService {
             currency: bill.currency ?? undefined,
             createdById: postedById,
             entryNumber,
+            transactionSource: 'Bill',
+            sourceReferenceId: billId,
             lines: finalLines,
           })
 

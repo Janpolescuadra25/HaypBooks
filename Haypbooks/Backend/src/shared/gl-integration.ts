@@ -105,6 +105,7 @@ export async function createAndPostJE(
         currency?: string
         postingStatus?: 'DRAFT' | 'POSTED' | 'VOIDED'
         transactionSource?: string
+        sourceReferenceId?: string
         lines: Array<{ accountId: string; debit: number; credit: number; description?: string }>
     },
 ): Promise<string> {
@@ -125,6 +126,7 @@ export async function createAndPostJE(
             currency: data.currency ?? await resolveCompanyCurrency(tx, data.companyId),
             postingStatus: data.postingStatus ?? 'DRAFT',
             transactionSource: data.transactionSource,
+            sourceReferenceId: data.sourceReferenceId,
             createdById: data.createdById,
             lines: {
                 create: data.lines.map(l => ({

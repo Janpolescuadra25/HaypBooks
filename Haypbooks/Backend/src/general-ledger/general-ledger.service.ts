@@ -45,6 +45,12 @@ export class GeneralLedgerService {
                 : j.billPayments?.length > 0 ? 'BILL_PAYMENT'
                 : j.bankDeposits?.length > 0 ? 'BANK_DEPOSIT'
                 : (j.customerRefunds?.length > 0 || j.vendorRefunds?.length > 0) ? 'REFUND'
+                : j.transactionSource?.toUpperCase().includes('BILL PAYMENT') ? 'BILL_PAYMENT'
+                : j.transactionSource?.toUpperCase().includes('BILL') ? 'BILL'
+                : j.transactionSource?.toUpperCase().includes('INVOICE') ? 'INVOICE'
+                : j.transactionSource?.toUpperCase().includes('PAYMENT') ? 'PAYMENT'
+                : j.transactionSource?.toUpperCase().includes('BANK') ? 'BANK_DEPOSIT'
+                : j.transactionSource?.toUpperCase().includes('REFUND') ? 'REFUND'
                 : 'MANUAL_JOURNAL'
             const sourceId =
                 j.invoices?.[0]?.id
@@ -54,6 +60,7 @@ export class GeneralLedgerService {
                 ?? j.bankDeposits?.[0]?.id
                 ?? j.customerRefunds?.[0]?.id
                 ?? j.vendorRefunds?.[0]?.id
+                ?? j.sourceReferenceId
                 ?? null
 
             return {

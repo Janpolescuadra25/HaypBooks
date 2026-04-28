@@ -89,6 +89,40 @@ describe('GeneralLedgerService', () => {
         expect(result.entries[0].debit).toBe(5000)
     })
 
+    test('falls back to transactionSource and sourceReferenceId when relations are not present', async () => {
+        const rawRow = {
+            id: 'l2',
+            accountId: 'a1',
+            description: null,
+            debit: 0,
+            credit: 1500,
+            journal: {
+                id: 'je2',
+                postingStatus: 'POSTED',
+                date: new Date('2025-01-16'),
+                entryNumber: 'JE-002',
+                description: 'Legacy bill entry',
+                transactionSource: 'Bill',
+                sourceReferenceId: 'legacy-bill-123',
+                createdBy: { name: 'Juan', email: 'juan@test.com' },
+            },
+            account: {
+                id: 'a1',
+                code: '2010',
+                name: 'Accounts Payable',
+                normalSide: undefined,
+                type: { category: 'LIABILITY', normalSide: 'CREDIT' },
+            },
+        }
+
+        mockRepo.findGlEntries.mockResolvedValue({ rows: [rawRow], total: 1 })
+
+        const result = await service.getGlEntries('u1', 'c1', {})
+
+        expect(result.entries[0].sourceType).toBe('BILL')
+        expect(result.entries[0].sourceId).toBe('legacy-bill-123')
+    })
+
     // ── Test 2 ────────────────────────────────────────────────────────────────
     test('calculates running balance for DEBIT-normal account', async () => {
         const rows = [
