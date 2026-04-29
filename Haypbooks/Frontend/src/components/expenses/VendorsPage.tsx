@@ -1,21 +1,20 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
-  CheckSquare, Square, X, ArrowUpDown, Trash2, Edit2, Eye, RefreshCw, Power,
-} from 'lucide-react'
+import { Plus, Download, Clock, Trash2, Edit2, Eye, List } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { cn } from '@/lib/utils'
 import CenteredModal from '@/components/shared/CenteredModal'
 import VendorForm, { type VendorFormHandle } from './VendorForm'
 import { csvDownload } from './_helpers'
 import { useRouter } from 'next/navigation'
-import { VendorTable } from './VendorTable'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import { Badge } from '@/components/ui/badge'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface Vendor {
   id: string
   name: string
@@ -24,27 +23,28 @@ interface Vendor {
   balance?: number
   status?: string
 }
+
 const STATUSES = ['ALL', 'ACTIVE', 'INACTIVE']
 
 export default function VendorsPage() {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]       = useState<Vendor[]>([])
+  const [rows, setRows] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [search, setSearch]   = useState('')
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [toast, setToast] = useState('')
   const [vendorPanelOpen, setVendorPanelOpen] = useState(false)
   const [openVendorId, setOpenVendorId] = useState<string | null>(null)
   const [openVendorMode, setOpenVendorMode] = useState<'new' | 'edit'>('new')
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }, [])
   const vendorFormRef = useRef<VendorFormHandle | null>(null)
-  const closeVendorPanel = () => { setVendorPanelOpen(false); setOpenVendorId(null); setOpenVendorMode('new') }
-  const openNewVendor = () => { setVendorPanelOpen(true); setOpenVendorMode('new'); setOpenVendorId(null) }
-  const openEditVendor = (id: string) => { setVendorPanelOpen(true); setOpenVendorMode('edit'); setOpenVendorId(id) }
+  const closeVendorPanel = useCallback(() => { setVendorPanelOpen(false); setOpenVendorId(null); setOpenVendorMode('new') }, [])
+  const openNewVendor = useCallback(() => { setVendorPanelOpen(true); setOpenVendorMode('new'); setOpenVendorId(null) }, [])
+  const openEditVendor = useCallback((id: string) => { setVendorPanelOpen(true); setOpenVendorMode('edit'); setOpenVendorId(id) }, [])
   const saveVendor = () => { vendorFormRef.current?.save() }
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
@@ -61,14 +61,14 @@ export default function VendorsPage() {
       setError('Failed to load vendors')
       showToast('Failed to load vendors')
     } finally { setLoading(false) }
-  }, [companyId])
+  }, [companyId, showToast])
 
   useEffect(() => { fetchVendors() }, [fetchVendors])
   const onVendorSaved = async () => { await fetchVendors(); closeVendorPanel() }
 
   const filtered = useMemo(() => {
     let list = rows
-    if (statusFilter !== 'ALL') list = list.filter(r => (r.status ?? 'ACTIVE') === statusFilter)
+    if (statusFilter !== 'ALL') list = list.filter((r) => (r.status ?? 'ACTIVE') === statusFilter)
     return list
   }, [rows, statusFilter])
 
@@ -77,9 +77,11 @@ export default function VendorsPage() {
     if (!confirm('Deactivate this vendor? This will retain the vendor record but mark it inactive.')) return
     try {
       await expensesService.updateVendor(companyId, id, { status: 'INACTIVE' })
-      setRows(p => p.map(r => r.id === id ? { ...r, status: 'INACTIVE' } : r))
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'INACTIVE' } : r)))
       showToast('Vendor deactivated')
-    } catch { showToast('Failed to deactivate vendor') }
+    } catch {
+      showToast('Failed to deactivate vendor')
+    }
   }, [companyId, showToast])
 
   const handleDelete = useCallback(async (id: string) => {
@@ -91,9 +93,11 @@ export default function VendorsPage() {
     }
     try {
       await expensesService.deleteVendor(companyId, id)
-      setRows(p => p.filter(r => r.id !== id))
+      setRows((prev) => prev.filter((r) => r.id !== id))
       showToast('Vendor deleted')
-    } catch { showToast('Failed to delete vendor') }
+    } catch {
+      showToast('Failed to delete vendor')
+    }
   }, [companyId, rows, showToast])
 
   const handleDeactivateSelected = useCallback(async (activeIds: string[]) => {
@@ -101,37 +105,172 @@ export default function VendorsPage() {
     if (!confirm(`Deactivate ${activeIds.length} selected vendor${activeIds.length !== 1 ? 's' : ''}?`)) return
     try {
       await Promise.all(activeIds.map((id) => expensesService.updateVendor(companyId, id, { status: 'INACTIVE' })))
-      setRows((prev) => prev.map((row) => activeIds.includes(row.id) ? { ...row, status: 'INACTIVE' } : row))
+      setRows((prev) => prev.map((row) => (activeIds.includes(row.id) ? { ...row, status: 'INACTIVE' } : row)))
       showToast(`${activeIds.length} selected vendor${activeIds.length !== 1 ? 's' : ''} deactivated`)
     } catch {
       showToast('Failed to deactivate selected vendors')
     }
-  }, [companyId])
+  }, [companyId, showToast])
 
   const handleDeleteSelected = useCallback(async (ids: string[]) => {
     if (!companyId || ids.length === 0) return
     if (!confirm(`Delete ${ids.length} selected vendor${ids.length !== 1 ? 's' : ''}?`)) return
     try {
-      await Promise.all(ids.map(id => expensesService.deleteVendor(companyId, id)))
-      setRows(p => p.filter(r => !ids.includes(r.id)))
-      showToast(`${ids.length} vendor${ids.length > 1 ? 's' : ''} deleted`)
-    } catch { showToast('Failed to delete selected vendors') }
-  }, [companyId])
+      await Promise.all(ids.map((id) => expensesService.deleteVendor(companyId, id)))
+      setRows((prev) => prev.filter((r) => !ids.includes(r.id)))
+      showToast(`${ids.length} vendor${ids.length !== 1 ? 's' : ''} deleted`)
+    } catch {
+      showToast('Failed to delete selected vendors')
+    }
+  }, [companyId, showToast])
 
-  const handleExportSelectedCSV = (selectedIds: string[]) => {
-    const selectedData = filtered.filter(v => selectedIds.includes(v.id))
+  const handleExportSelectedCSV = useCallback((selectedIds: string[]) => {
+    const selectedData = filtered.filter((v) => selectedIds.includes(v.id))
     csvDownload(`vendors-selected-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Name', 'Email', 'Phone', 'Status', 'Balance'],
-      selectedData.map(r => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)]))
+      selectedData.map((r) => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)]))
     showToast('CSV exported')
-  }
+  }, [filtered, showToast])
 
-  const handleExportCSV = () => {
+  const handleExportCSV = useCallback(() => {
     csvDownload(`vendors-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Name', 'Email', 'Phone', 'Status', 'Balance'],
-      filtered.map(r => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)]))
+      filtered.map((r) => [r.name, r.email ?? '', r.phone ?? '', r.status ?? '', String(r.balance ?? 0)]))
     showToast('CSV exported')
-  }
+  }, [filtered, showToast])
+
+  const columns: HaypColumn<Vendor>[] = useMemo(() => [
+    {
+      id: 'name',
+      header: 'Name',
+      accessorKey: 'name',
+      size: 240,
+      minSize: 150,
+      render: (val) => <span className="font-semibold text-gray-800 truncate">{val || '—'}</span>,
+    },
+    {
+      id: 'email',
+      header: 'Email',
+      accessorKey: 'email',
+      size: 220,
+      minSize: 120,
+      render: (val) => <span className="text-gray-500 text-xs truncate">{val || '—'}</span>,
+    },
+    {
+      id: 'phone',
+      header: 'Phone',
+      accessorKey: 'phone',
+      size: 150,
+      minSize: 100,
+      render: (val) => <span className="text-gray-500 text-xs truncate">{val || '—'}</span>,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'status',
+      size: 130,
+      minSize: 90,
+      render: (val) => {
+        const status = val || 'ACTIVE'
+        return (
+          <Badge
+            variant="outline"
+            className={cn(
+              'capitalize text-[10px] px-2 py-0 h-5 border-none font-bold tracking-tight',
+              status === 'ACTIVE' && 'bg-emerald-500/10 text-emerald-700',
+              status === 'INACTIVE' && 'bg-gray-500/10 text-gray-700',
+            )}
+          >
+            {status}
+          </Badge>
+        )
+      },
+    },
+    {
+      id: 'balance',
+      header: 'Balance',
+      accessorKey: 'balance',
+      size: 130,
+      minSize: 100,
+      align: 'right',
+      isSummable: true,
+      render: (val) => (
+        <div className="text-right font-mono font-medium text-xs text-gray-900 tabular-nums">
+          {formatCurrency(val ?? 0, currency)}
+        </div>
+      ),
+    },
+  ], [currency])
+
+  const filters = useMemo(() => [
+    { value: 'ALL', label: 'All Statuses' },
+    { value: 'ACTIVE', label: 'Active' },
+    { value: 'INACTIVE', label: 'Inactive' },
+  ], [])
+
+  const actions: HaypActionItem[] = useMemo(() => [
+    {
+      label: 'View Details',
+      icon: <Eye className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (id) => openEditVendor(id),
+    },
+    {
+      label: 'Edit Vendor',
+      icon: <Edit2 className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (id) => openEditVendor(id),
+    },
+    {
+      label: 'View Transactions',
+      icon: <List className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (id) => router.push(`/expenses/vendors/activity?vendorId=${id}`),
+    },
+    {
+      label: 'Export Vendor Data',
+      icon: <Download className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (id) => handleExportSelectedCSV([id]),
+    },
+    { divider: true, label: '', onClick: () => {} },
+    {
+      label: 'Deactivate Vendor',
+      icon: <Trash2 className="mr-2.5 h-4 w-4 opacity-70" />,
+      danger: true,
+      onClick: (id) => handleDeactivate(id),
+      show: (row) => (row.status ?? 'ACTIVE') === 'ACTIVE',
+    },
+    {
+      label: 'Delete Vendor',
+      icon: <Trash2 className="mr-2.5 h-4 w-4 opacity-70" />,
+      danger: true,
+      onClick: (id) => handleDelete(id),
+      show: (row) => (row.status ?? 'ACTIVE') !== 'ACTIVE',
+    },
+  ], [handleDeactivate, handleDelete, handleExportSelectedCSV, openEditVendor, router])
+
+  const bulkActions: HaypBulkAction[] = useMemo(() => [
+    {
+      label: 'Export',
+      icon: <Download className="mr-2.5 h-4 w-4 opacity-70" />,
+      variant: 'default',
+      onClick: (ids) => handleExportSelectedCSV(ids),
+    },
+    {
+      label: 'Deactivate',
+      icon: <Trash2 className="mr-2.5 h-4 w-4 opacity-70" />,
+      variant: 'danger',
+      onClick: (ids) => handleDeactivateSelected(ids),
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 className="mr-2.5 h-4 w-4 opacity-70" />,
+      variant: 'danger',
+      onClick: (ids) => handleDeleteSelected(ids),
+    },
+  ], [handleDeactivateSelected, handleDeleteSelected, handleExportSelectedCSV])
+
+  const totals: HaypTotalsConfig = useMemo(() => ({
+    enabled: true,
+    formatValue: (value) => formatCurrency(value, currency),
+  }), [currency])
 
   return (
     <div className="p-4 sm:p-6 space-y-4 w-full h-[calc(100vh-4rem)] flex flex-col">
@@ -144,29 +283,31 @@ export default function VendorsPage() {
           {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={openNewVendor} className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border border-transparent bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"><Plus size={14} /> New Vendor</button>
-            <button onClick={handleExportCSV} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-200 text-emerald-700 rounded-lg hover:bg-emerald-50 bg-white transition-colors"><Download size={14} /> Export</button>
-            <button onClick={() => router.push('/expenses/vendors/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-200 text-emerald-700 rounded-lg hover:bg-emerald-50 bg-white transition-colors font-medium"><Clock size={15} /> Activity Log</button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 min-w-0 pb-4">
-        <VendorTable
+        <HaypDataTable
           data={filtered}
-          currency={currency}
-          onRefresh={fetchVendors}
-          onExportSelected={handleExportSelectedCSV}
-          onDeactivateSelected={handleDeactivateSelected}
-          onDeleteSelected={handleDeleteSelected}
-          onView={(id) => openEditVendor(id)}
-          onEdit={(id) => openEditVendor(id)}
-          onDeactivate={handleDeactivate}
-          onDelete={handleDelete}
+          columns={columns}
+          tableId="vendors"
           globalFilter={search}
-          setGlobalFilter={setSearch}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          onViewTransactions={(id) => router.push(`/expenses/vendors/activity?vendorId=${id}`)}
+          onGlobalFilterChange={setSearch}
+          filters={filters}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="All Statuses"
+          actions={actions}
+          bulkActions={bulkActions}
+          totals={totals}
+          onRefresh={fetchVendors}
+          onExport={handleExportCSV}
+          exportLabel="Export"
+          onActivityLog={() => router.push('/expenses/vendors/activity')}
+          emptyTitle="No vendors found"
+          emptySubtitle="Adjust your search or filter to see results"
+          loading={loading}
         />
       </div>
 

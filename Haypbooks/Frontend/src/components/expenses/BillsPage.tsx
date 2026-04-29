@@ -3,15 +3,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock,
-  CheckSquare, Square, X, ArrowUpDown, RefreshCw, Eye, Check, Ban,
+  Plus, Download, X, Eye, Check, Ban,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
-import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypActionItem, HaypBulkAction, HaypColumn } from '@/components/shared/HaypDataTable.types'
+import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface Bill {
   id: string
@@ -26,7 +26,7 @@ interface Bill {
   amountPaid?: number
 }
 type SortKey = 'billNumber' | 'vendorName' | 'date' | 'dueDate' | 'status' | 'amountDue' | 'amountPaid' | 'total'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Bill>['align'] }
+type ColDef = { key: string; label: string; visible: boolean; width: number; align?: 'left' | 'center' | 'right' }
 
 const DEFAULT_COLS: ColDef[] = [
   { key: 'billNumber', label: 'Bill #',   visible: true, width: 130 },
@@ -69,13 +69,6 @@ export default function BillsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]   = useState<SortKey>('date')
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
-  const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 25
-  const [actionMenuId, setActionMenuId] = useState<string | null>(null)
-  const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
-  const [showExport, setShowExport]     = useState(false)
-  const [showAdvFilters, setShowAdvFilters] = useState(false)
-  const [showColToggle, setShowColToggle]   = useState(false)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo]     = useState('')
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
@@ -89,12 +82,6 @@ export default function BillsPage() {
 
   const visibleCols = cols.filter(c => c.visible)
 
-  const handleColumnsChange = (next: EnhancedColumn<Bill>[]) => {
-    saveCols(cols.map(col => {
-      const updated = next.find(c => c.key === col.key)
-      return updated ? { ...col, width: updated.width } : col
-    }))
-  }
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
   const fetchBills = useCallback(async () => {
@@ -117,10 +104,12 @@ export default function BillsPage() {
     if (!companyId) return
     try {
       await expensesService.approveBill(companyId, id)
-      setRows(p => p.map(r => r.id === id ? { ...r, status: 'APPROVED' } : r))
-      showToast('Bill approved'); setActionMenuId(null); setMenuPos(null)
-    } catch { showToast('Failed to approve bill') }
-  }, [companyId])
+      setRows((p) => p.map((r) => r.id === id ? { ...r, status: 'APPROVED' } : r))
+      showToast('Bill approved')
+    } catch {
+      showToast('Failed to approve bill')
+    }
+  }, [companyId, showToast])
 
   const isVoidableStatus = useCallback((status?: Bill['status']) => {
     return status === 'PENDING' || status === 'APPROVED' || status === 'PAID' || status === 'PARTIALLY_PAID'
@@ -131,149 +120,249 @@ export default function BillsPage() {
     if (!confirm('Delete this draft bill? This action cannot be undone.')) return
     try {
       await expensesService.deleteBill(companyId, id)
-      setRows(p => p.filter((r) => r.id !== id))
-      showToast('Draft bill deleted'); setActionMenuId(null); setMenuPos(null)
+      setRows((p) => p.filter((r) => r.id !== id))
+      showToast('Draft bill deleted')
     } catch {
       showToast('Failed to delete draft bill')
     }
-  }, [companyId])
+  }, [companyId, showToast])
 
   const handleVoid = useCallback(async (id: string) => {
     if (!companyId) return
     if (!confirm('Are you sure you want to void this bill?')) return
     try {
       await expensesService.voidBill(companyId, id)
-      setRows(p => p.map(r => r.id === id ? { ...r, status: 'VOIDED' } : r))
-      showToast('Bill voided'); setActionMenuId(null); setMenuPos(null)
-    } catch { showToast('Failed to void bill') }
-  }, [companyId])
+      setRows((p) => p.map((r) => r.id === id ? { ...r, status: 'VOIDED' } : r))
+      showToast('Bill voided')
+    } catch {
+      showToast('Failed to void bill')
+    }
+  }, [companyId, showToast])
 
   const filtered = useMemo(() => {
     let list = rows
-    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
-    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.billNumber ?? '').toLowerCase().includes(q) || (r.vendorName ?? '').toLowerCase().includes(q)) }
-    if (dateFrom) list = list.filter(r => r.date >= dateFrom)
-    if (dateTo)   list = list.filter(r => r.date <= dateTo)
+    if (statusFilter !== 'ALL') list = list.filter((r) => r.status === statusFilter)
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter((r) => (r.billNumber ?? '').toLowerCase().includes(q) || (r.vendorName ?? '').toLowerCase().includes(q))
+    }
+    if (dateFrom) list = list.filter((r) => r.date >= dateFrom)
+    if (dateTo) list = list.filter((r) => r.date <= dateTo)
     return list
   }, [rows, statusFilter, search, dateFrom, dateTo])
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
-  const paged = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
-  const table = useEnhancedTable<Bill>({ data: paged, tableId: 'bills' })
 
-  const toggleSort = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const selectedRowsData = useMemo(
-    () => rows.filter((row) => table.selectedRows.includes(row.id)),
-    [rows, table.selectedRows],
-  )
-
-  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
-  const canVoidSelected = selectedRowsData.some((row) => isVoidableStatus(row.status))
-  const voidableSelectedRows = selectedRowsData.filter((row) => isVoidableStatus(row.status))
-
-  const handleDeleteSelected = useCallback(async () => {
-    if (!companyId || table.selectedRows.length === 0) return
-    if (!canDeleteSelected) return
-    const count = table.selectedRows.length
+  const handleDeleteSelected = useCallback(async (selectedIds: string[]) => {
+    if (!companyId || selectedIds.length === 0) return
+    const selectedRows = rows.filter((row) => selectedIds.includes(row.id))
+    if (!selectedRows.every((row) => row.status === 'DRAFT')) return
+    const count = selectedIds.length
     if (!confirm(`Delete ${count} selected bill${count !== 1 ? 's' : ''}?`)) return
     try {
-      await Promise.all(table.selectedRows.map((id) => expensesService.deleteBill(companyId, id)))
-      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
+      await Promise.all(selectedIds.map((id) => expensesService.deleteBill(companyId, id)))
+      setRows((prev) => prev.filter((row) => !selectedIds.includes(row.id)))
       showToast(`${count} bill${count !== 1 ? 's' : ''} deleted`)
-      table.clearSelection()
     } catch {
       showToast('Failed to delete selected bills')
     }
-  }, [canDeleteSelected, companyId, table])
+  }, [companyId, rows, showToast])
 
-  const handleVoidSelected = useCallback(async () => {
-    if (!companyId || table.selectedRows.length === 0) return
-    if (!canVoidSelected) return
-    const voidCount = voidableSelectedRows.length
+  const handleVoidSelected = useCallback(async (selectedIds: string[]) => {
+    if (!companyId || selectedIds.length === 0) return
+    const voidableRows = rows.filter((row) => selectedIds.includes(row.id) && isVoidableStatus(row.status))
+    if (voidableRows.length === 0) return
+    const voidCount = voidableRows.length
     if (!confirm(`Void ${voidCount} selected bill${voidCount !== 1 ? 's' : ''}?`)) return
     try {
-      await Promise.all(
-        voidableSelectedRows.map((row) => expensesService.voidBill(companyId, row.id)),
-      )
-      setRows((prev) => prev.map((row) => voidableSelectedRows.some((selected) => selected.id === row.id) ? { ...row, status: 'VOIDED' } : row))
+      await Promise.all(voidableRows.map((row) => expensesService.voidBill(companyId, row.id)))
+      setRows((prev) => prev.map((row) => selectedIds.includes(row.id) && isVoidableStatus(row.status) ? { ...row, status: 'VOIDED' } : row))
       showToast(`${voidCount} selected bill${voidCount !== 1 ? 's' : ''} voided`)
-      table.clearSelection()
     } catch {
       showToast('Failed to void selected bills')
     }
-  }, [canVoidSelected, companyId, table, voidableSelectedRows])
+  }, [companyId, rows, isVoidableStatus, showToast])
 
-  const handleMarkPaidSelected = useCallback(async () => {
-    if (!companyId || table.selectedRows.length === 0) return
+  const handleMarkPaidSelected = useCallback(async (selectedIds: string[]) => {
+    if (!companyId || selectedIds.length === 0) return
     try {
-      await Promise.all(table.selectedRows.map((id) => expensesService.approveBill(companyId, id)))
-      setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'PAID' } : row))
-      showToast(`${table.selectedRows.length} selected bill${table.selectedRows.length !== 1 ? 's' : ''} marked as paid`)
-      table.clearSelection()
+      await Promise.all(selectedIds.map((id) => expensesService.approveBill(companyId, id)))
+      setRows((prev) => prev.map((row) => selectedIds.includes(row.id) ? { ...row, status: 'PAID' } : row))
+      showToast(`${selectedIds.length} selected bill${selectedIds.length !== 1 ? 's' : ''} marked as paid`)
     } catch {
       showToast('Failed to mark selected bills as paid')
     }
-  }, [companyId, table])
+  }, [companyId, showToast])
 
-  const handleExportSelected = () => {
-    table.exportSelectedToCsv(
+  const handleExportSelected = useCallback((selectedIds: string[], selectedRows: Bill[]) => {
+    csvDownload(
       `bills-selected-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Amount Due', 'Amount Paid', 'Total'],
-      (row) => [row.billNumber ?? '', row.vendorName ?? '', row.date, row.dueDate, row.status, String(row.amountDue ?? 0), String(row.amountPaid ?? 0), String(row.total)],
+      selectedRows.map((row) => [row.billNumber ?? '', row.vendorName ?? '', row.date, row.dueDate, row.status, String(row.amountDue ?? 0), String(row.amountPaid ?? 0), String(row.total)]),
     )
-  }
+    showToast('CSV exported')
+  }, [showToast])
 
-  const columns: EnhancedColumn<Bill>[] = [
-    ...visibleCols.map(c => ({
-      key: c.key,
-      header: c.label,
-      width: c.width,
-      sortable: true,
-      align: c.align ?? 'left',
-      render: (_value, row) => renderCell(row, c.key),
-    })),
-{
-      key: 'actions',
-      isAction: true,
-      header: '',
-      width: 52,
-      align: 'right',
-      render: (_value, row) => (
-        <button type="button" onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          actionMenuId === row.id ? (setActionMenuId(null), setMenuPos(null)) : (setActionMenuId(row.id), setMenuPos({ x: r.right, y: r.bottom }))
-        }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-          <MoreVertical size={14} />
-        </button>
-      ),
+  const actions: HaypActionItem[] = useMemo(() => [
+    {
+      label: 'View Bill',
+      icon: <Eye className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (id, row) => router.push(`/expenses/bills/${id}/edit`),
     },
-  ]
+    {
+      label: 'Edit Bill',
+      icon: <Eye className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (id, row) => router.push(`/expenses/bills/${id}/edit`),
+    },
+    {
+      label: 'Approve Bill',
+      icon: <Check size={14} className="mr-2.5 opacity-70" />,
+      onClick: (id, row) => handleApprove(id),
+      show: (row) => row.status === 'DRAFT' || row.status === 'PENDING',
+    },
+    {
+      label: 'Record Payment',
+      icon: <Check size={14} className="mr-2.5 opacity-70" />,
+      onClick: (id, row) => router.push(`/expenses/bills-payments/bill-payments/new?billId=${encodeURIComponent(id)}`),
+      show: (row) => row.status !== 'PAID' && row.status !== 'VOIDED' && (row.amountDue ?? 0) > 0,
+    },
+    { divider: true, label: '', onClick: () => {} },
+    {
+      label: 'Delete Bill',
+      icon: <X size={14} className="mr-2.5 opacity-70" />,
+      danger: true,
+      onClick: (id, row) => handleDeleteBill(id),
+      show: (row) => row.status === 'DRAFT',
+    },
+    {
+      label: 'Void Bill',
+      icon: <Ban size={14} className="mr-2.5 opacity-70" />,
+      danger: true,
+      onClick: (id, row) => handleVoid(id),
+      show: (row) => isVoidableStatus(row.status),
+    },
+  ], [handleApprove, handleDeleteBill, handleVoid, router, isVoidableStatus])
 
-  const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
+  const bulkActions: HaypBulkAction[] = useMemo(() => [
+    {
+      label: 'Delete Selected',
+      icon: <X className="mr-2.5 h-4 w-4 opacity-70" />,
+      variant: 'danger',
+      onClick: (selectedIds) => handleDeleteSelected(selectedIds),
+    },
+    {
+      label: 'Void Selected',
+      icon: <Ban className="mr-2.5 h-4 w-4 opacity-70" />,
+      variant: 'danger',
+      onClick: (selectedIds) => handleVoidSelected(selectedIds),
+    },
+    {
+      label: 'Mark as Paid',
+      icon: <Check className="mr-2.5 h-4 w-4 opacity-70" />,
+      variant: 'primary',
+      onClick: (selectedIds) => handleMarkPaidSelected(selectedIds),
+    },
+    {
+      label: 'Export Selected',
+      icon: <Download className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (selectedIds, selectedRows) => handleExportSelected(selectedIds, selectedRows),
+    },
+  ], [handleDeleteSelected, handleVoidSelected, handleMarkPaidSelected, handleExportSelected])
+
+  const columns = useMemo(() => visibleCols.map((c): HaypColumn<Bill> => {
+      switch (c.key) {
+        case 'billNumber':
+          return {
+            id: 'billNumber',
+            header: 'Bill #',
+            accessorKey: 'billNumber',
+            size: c.width,
+            minSize: 100,
+            render: (value) => <span className="font-semibold text-gray-800">{value ?? '—'}</span>,
+          }
+        case 'vendorName':
+          return {
+            id: 'vendorName',
+            header: 'Vendor',
+            accessorKey: 'vendorName',
+            size: c.width,
+            minSize: 140,
+            render: (value) => <span className="text-gray-700 truncate">{value ?? '—'}</span>,
+          }
+        case 'date':
+          return {
+            id: 'date',
+            header: 'Date',
+            accessorKey: 'date',
+            size: c.width,
+            minSize: 100,
+            render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
+          }
+        case 'dueDate':
+          return {
+            id: 'dueDate',
+            header: 'Due Date',
+            accessorKey: 'dueDate',
+            size: c.width,
+            minSize: 100,
+            render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
+          }
+        case 'status':
+          return {
+            id: 'status',
+            header: 'Status',
+            accessorKey: 'status',
+            size: c.width,
+            minSize: 110,
+            render: (value) => <StatusPill status={value as Bill['status']} />,
+          }
+        case 'amountDue':
+          return {
+            id: 'amountDue',
+            header: 'Amount Due',
+            accessorKey: 'amountDue',
+            size: c.width,
+            minSize: 100,
+            align: 'right',
+            render: (value) => <span className="font-semibold text-rose-700 tabular-nums">{fmt(value ?? 0)}</span>,
+          }
+        case 'amountPaid':
+          return {
+            id: 'amountPaid',
+            header: 'Amount Paid',
+            accessorKey: 'amountPaid',
+            size: c.width,
+            minSize: 100,
+            align: 'right',
+            render: (value) => <span className="font-semibold text-sky-700 tabular-nums">{fmt(value ?? 0)}</span>,
+          }
+        case 'total':
+          return {
+            id: 'total',
+            header: 'Total',
+            accessorKey: 'total',
+            size: c.width,
+            minSize: 110,
+            align: 'right',
+            render: (value) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(value ?? 0)}</span>,
+          }
+        default:
+          return {
+            id: c.key,
+            header: c.label,
+            accessorKey: c.key,
+            size: c.width,
+            minSize: c.width,
+            render: (value) => <span>{value ?? '—'}</span>,
+          }
+      }
+    }), [visibleCols, fmt])
 
   const handleExportCSV = () => {
-    setShowExport(false)
     csvDownload(`bills-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Amount Due', 'Amount Paid', 'Total'],
       sorted.map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.amountDue ?? 0), String(r.amountPaid ?? 0), String(r.total)]))
     showToast('CSV exported')
-  }
-
-  
-  const renderCell = (row: Bill, key: string) => {
-    switch (key) {
-      case 'billNumber': return <span className="font-semibold text-gray-800">{row.billNumber ?? '—'}</span>
-      case 'vendorName': return <span className="text-gray-700 truncate">{row.vendorName ?? '—'}</span>
-      case 'date':       return <span className="text-gray-500">{fmtDate(row.date)}</span>
-      case 'dueDate':    return <span className="text-gray-500">{fmtDate(row.dueDate)}</span>
-      case 'status':     return <StatusPill status={row.status} />
-      case 'amountDue':  return <span className="font-semibold text-rose-700 tabular-nums">{fmt(row.amountDue ?? 0)}</span>
-      case 'amountPaid': return <span className="font-semibold text-sky-700 tabular-nums">{fmt(row.amountPaid ?? 0)}</span>
-      case 'total':      return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.total)}</span>
-      default: return null
-    }
   }
 
   return (
@@ -281,154 +370,41 @@ export default function BillsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">Bills</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${sorted.length} bills`}</p>
+          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} bills`}</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
           {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
           <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={fetchBills} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
-          <div className="relative">
-            <button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>
-            {showColToggle && (
-              <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">
-                {cols.map(c => (
-                  <label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none">
-                    <input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>
-            {showExport && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
-                <button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button>
-                <button onClick={() => { setShowExport(false); showToast('PDF export coming soon') }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export PDF</button>
-              </div>
-            )}
-          </div>
-          <button onClick={() => router.push('/expenses/bills-payments/bills/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
-          <button onClick={() => router.push('/expenses/bills/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Bill</button>
+            <button onClick={() => router.push('/expenses/bills/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"><Plus size={15} /> New Bill</button>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input type="text" placeholder="Search bills..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {STATUSES.map(s => (
-            <button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
-              {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setShowAdvFilters(p => !p)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-          <Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}
-        </button>
-      </div>
-
-      {showAdvFilters && (
-        <div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Date From</label>
-            <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Date To</label>
-            <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button>
-        </div>
-      )}
-
-      {table.renderBulkToolbar([
-        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected(), disabled: !canDeleteSelected },
-        { label: 'Void Selected', variant: 'danger', onClick: () => handleVoidSelected(), disabled: !canVoidSelected },
-        { label: 'Mark as Paid', variant: 'primary', onClick: () => handleMarkPaidSelected(), disabled: table.selectedRows.length === 0 },
-        { label: 'Export Selected', onClick: () => handleExportSelected(), disabled: table.selectedRows.length === 0 },
-      ])}
-
-      <EnhancedTable
-        columns={columns}
-        data={paged}
-        onSort={toggleSort}
-        sortKey={sortKey}
-        sortDir={sortDir}
+      <HaypDataTable
         tableId="bills"
-        hasStickyActions={true}
-        enableRowSelection={true}
-        selectedRows={table.selectedRows}
-        toggleRowSelection={table.toggleRowSelection}
-        handleSelectAll={table.handleSelectAll}
-        isAllSelected={table.isAllSelected}
-        isIndeterminate={table.isIndeterminate}
-        selectAllRef={table.selectAllRef}
-        emptyMessage="No bills found"
-        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
-        onColumnsChange={handleColumnsChange}
+        columns={columns}
+        data={filtered}
+        globalFilter={search}
+        onGlobalFilterChange={setSearch}
+        actions={actions}
+        bulkActions={bulkActions}
+        filters={[
+          { value: 'all', label: 'All' },
+          { value: 'draft', label: 'Draft' },
+          { value: 'pending', label: 'Pending' },
+          { value: 'paid', label: 'Paid' },
+          { value: 'voided', label: 'Voided' },
+        ]}
+        activeFilter={statusFilter.toLowerCase()}
+        onFilterChange={(value) => setStatusFilter(value.toUpperCase() as typeof STATUSES[number])}
+        filterLabel={statusFilter === 'ALL' ? 'Status: All' : `Status: ${statusFilter.replace(/_/g, ' ')}`}
+        searchPlaceholder="Search bills..."
+        onExport={handleExportCSV}
+        exportLabel="Export"
+        onRefresh={fetchBills}
+        onActivityLog={() => router.push('/expenses/bills-payments/bills/activity')}
+        className="mt-4"
       />
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-gray-400">{sorted.length} total</span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button>
-            <span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span>
-            <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button>
-          </div>
-        </div>
-      )}
-
-      {/* Activity log moved to top toolbar button */}
-
-      {actionMenuId && menuPos && (() => {
-        const row = rows.find(r => r.id === actionMenuId)
-        if (!row) return null
-        const ml = Math.min(Math.max(4, menuPos.x - 208), (typeof window !== 'undefined' ? window.innerWidth : 800) - 212)
-        const mt = Math.min(menuPos.y + 4, (typeof window !== 'undefined' ? window.innerHeight : 600) - 160)
-        return (
-          <div style={{ position: 'fixed', top: mt, left: ml, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52">
-            <div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.billNumber ?? 'Bill'}</p></div>
-            <MenuBtn icon={<Eye size={13} />} label="View Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null); setMenuPos(null) }} />
-            <MenuBtn icon={<Check size={13} />} label="Edit Bill" onClick={() => { router.push(`/expenses/bills/${row.id}/edit`); setActionMenuId(null); setMenuPos(null) }} />
-            {(row.status === 'DRAFT' || row.status === 'PENDING') && <MenuBtn icon={<Check size={13} />} label="Approve Bill" onClick={() => handleApprove(row.id)} />}
-            {(row.status !== 'PAID' && row.status !== 'VOIDED' && (row.amountDue ?? 0) > 0) && (
-              <MenuBtn
-                icon={<Check size={13} />}
-                label="Record Payment"
-                onClick={() => {
-                  setActionMenuId(null)
-                  setMenuPos(null)
-                  router.push(`/expenses/bills-payments/bill-payments/new?billId=${encodeURIComponent(row.id)}`)
-                }}
-              />
-            )}
-            {row.status === 'DRAFT' ? (
-              <>
-                <div className="my-1 border-t border-gray-100" />
-                <MenuBtn icon={<X size={13} />} label="Delete Bill" danger onClick={() => handleDeleteBill(row.id)} />
-              </>
-            ) : isVoidableStatus(row.status) ? (
-              <>
-                <div className="my-1 border-t border-gray-100" />
-                <MenuBtn icon={<Ban size={13} />} label="Void Bill" danger onClick={() => handleVoid(row.id)} />
-              </>
-            ) : null}
-          </div>
-        )
-      })()}
-      {actionMenuId && <div className="fixed inset-0 z-[9998]" onClick={() => { setActionMenuId(null); setMenuPos(null) }} />}
-
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>
   )
 }

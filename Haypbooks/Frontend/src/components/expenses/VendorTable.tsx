@@ -309,7 +309,7 @@ export function VendorTable({
       enableSorting: false,
       enableHiding: false,
     },
-  ], [currency, onEdit, onView, onDeactivate, onDelete]);
+  ], [currency, onEdit, onView, onDeactivate, onDelete, onExportSelected, onViewTransactions]);
 
   // --- Save State to LocalStorage ---
   useEffect(() => {
@@ -367,11 +367,12 @@ export function VendorTable({
   });
 
   // Calculate totals
+  const filteredRowData = table.getFilteredRowModel().rows
   const totalBalance = useMemo(() => {
-    return table.getFilteredRowModel().rows.reduce((sum, row) => {
+    return filteredRowData.reduce((sum, row) => {
       return sum + (row.original.balance ?? 0);
     }, 0);
-  }, [table.getFilteredRowModel().rows]);
+  }, [filteredRowData]);
 
   // --- DND Logic ---
   const sensors = useSensors(
@@ -644,8 +645,7 @@ export function VendorTable({
                     }}
                   >
                     <span className="truncate">
-                      {isAmount && formatCurrency(totalBalance, currency)}
-                      {column.id === 'name' && 'TOTALS'}
+                      {isAmount ? formatCurrency(totalBalance, currency) : ''}
                     </span>
                   </div>
                 )

@@ -1,5 +1,8 @@
 'use client'
 
+// DEPRECATION NOTICE: EnhancedTable is deprecated in favor of the new HaypDataTable shared component.
+// This file is left intact for backwards compatibility and existing pages. Do not change its public API.
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpDown, GripVertical } from 'lucide-react'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
