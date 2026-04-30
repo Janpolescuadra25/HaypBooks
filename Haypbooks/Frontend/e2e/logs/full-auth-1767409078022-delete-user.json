@@ -1,8 +1,0 @@
-{
-  "status": 404,
-  "body": {
-    "message": "Cannot POST /api/test/delete-user",
-    "error": "Not Found",
-    "statusCode": 404
-  }
-}

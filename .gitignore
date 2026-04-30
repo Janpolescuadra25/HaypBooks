@@ -40,3 +40,9 @@ backups/
 docs/JP/
 db-studio/
 *.ps1
+debug-*.py
+debug-*.js
+tmp-debug-*.js
+test-suite-output.txt
+e2e/logs/
+e2e/screenshots/debug-*
