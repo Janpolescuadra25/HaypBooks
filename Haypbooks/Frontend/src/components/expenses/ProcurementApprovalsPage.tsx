@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Eye, Check, XCircle, RefreshCw, FileText, Clock, CheckCircle, X } from 'lucide-react'
+import { Plus, Eye, Check, XCircle, FileText, Clock, CheckCircle, X } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -293,19 +293,6 @@ export default function ProcurementApprovalsPage() {
           <h1 className="text-2xl font-bold text-emerald-900">Procurement Approvals</h1>
           <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} approvals`}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={fetchRows}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors"
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
-          <button
-            onClick={() => showToast('Coming soon')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
-          >
-            <Plus size={15} /> New Approval
-          </button>
         </div>
       </div>
 
@@ -348,10 +335,19 @@ export default function ProcurementApprovalsPage() {
         activeFilter={statusFilter.toLowerCase()}
         onFilterChange={(value) => setStatusFilter(String(value).toUpperCase() as (typeof STATUSES)[number])}
         filterLabel={filterLabel}
+        headerActions={
+          <button
+            onClick={() => showToast('Coming soon')}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
+          >
+            <Plus size={15} /> New Approval
+          </button>
+        }
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         stats={stats}
+        onRefresh={fetchRows}
         onExport={handleExportAll}
         onActivityLog={() => router.push('/expenses/procurement/approvals/activity')}
         emptyTitle="No approvals found"

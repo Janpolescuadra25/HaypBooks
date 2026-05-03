@@ -97,19 +97,20 @@ export default function MileagePage() {
     toast.success('Mileage log deleted')
   }, [toast])
 
-  const filtered = useMemo(() => {
+  const dateFiltered = useMemo(() => {
     return rows
-      .filter((row) => {
-        const q = search.toLowerCase()
-        return (
-          row.employee?.toLowerCase().includes(q) ||
-          row.purpose?.toLowerCase().includes(q) ||
-          row.route?.toLowerCase().includes(q)
-        )
-      })
       .filter((row) => (dateFrom ? row.date >= dateFrom : true))
       .filter((row) => (dateTo ? row.date <= dateTo : true))
-  }, [rows, search, dateFrom, dateTo])
+  }, [rows, dateFrom, dateTo])
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return dateFiltered.filter((row) => (
+      row.employee?.toLowerCase().includes(q) ||
+      row.purpose?.toLowerCase().includes(q) ||
+      row.route?.toLowerCase().includes(q)
+    ))
+  }, [dateFiltered, search])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -257,44 +258,24 @@ export default function MileagePage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Mileage</h1>
-          <p className="mt-2 text-sm text-emerald-600/70">Track mileage logs with amount totals.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={openNewMileage} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Log Mileage</button>
-          <button onClick={() => router.push('/expenses/employee-expenses/mileage/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
-          <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Download size={16} /> Refresh</button>
-        </div>
-      </div>
-
       {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-      <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
-        <div>
-          <label htmlFor="mileageFilterDateFrom" className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
-          <input id="mileageFilterDateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div>
-          <label htmlFor="mileageFilterDateTo" className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
-          <input id="mileageFilterDateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="flex items-end">
-          <button type="button" onClick={() => { setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear dates</button>
-        </div>
-      </div>
-
       <HaypDataTable
-        data={filtered}
+        data={dateFiltered}
         columns={columns}
         tableId="mileage"
+        title="Mileage"
+        description="Track mileage logs with amount totals."
+        headerActions={
+          <button onClick={openNewMileage} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Log Mileage</button>
+        }
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        filters={[]}
-        activeFilter=""
-        onFilterChange={() => {}}
-        filterLabel="All"
+        dateRange={{ start: dateFrom ? new Date(dateFrom) : new Date('1970-01-01'), end: dateTo ? new Date(dateTo) : new Date() }}
+        onDateRangeChange={({ start, end }) => {
+          setDateFrom(start.toISOString().slice(0, 10))
+          setDateTo(end.toISOString().slice(0, 10))
+        }}
         stats={stats}
         actions={actions}
         bulkActions={bulkActions}
@@ -302,6 +283,7 @@ export default function MileagePage() {
         onRefresh={handleRefresh}
         onExport={handleExportCSV}
         exportLabel="Export CSV"
+        onActivityLog={() => router.push('/expenses/employee-expenses/mileage/activity')}
         onRowClick={(row) => openEditMileage(row.id)}
         emptyTitle="No mileage logs found"
         emptySubtitle="Adjust your search or filters to see results"

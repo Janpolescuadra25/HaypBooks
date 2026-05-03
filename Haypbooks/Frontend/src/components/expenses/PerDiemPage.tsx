@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw, Pencil, Trash2, Calendar, CheckCircle, Wallet } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, Pencil, Trash2, Calendar, CheckCircle, Wallet } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -42,7 +42,6 @@ export default function PerDiemPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const [openMode, setOpenMode] = useState<'new' | 'edit'>('new')
   const [openId, setOpenId] = useState<string | null>(null)
@@ -92,20 +91,22 @@ export default function PerDiemPage() {
     toast.success('Per diem claim deleted')
   }, [toast])
 
-  const filtered = useMemo(() => {
+  const dateFiltered = useMemo(() => {
     return rows
-      .filter((row) => statusFilter === 'ALL' || row.status === statusFilter)
-      .filter((row) => {
-        const q = search.toLowerCase()
-        return (
-          row.perDiemNumber?.toLowerCase().includes(q) ||
-          row.employee?.toLowerCase().includes(q) ||
-          row.destination?.toLowerCase().includes(q)
-        )
-      })
       .filter((row) => (dateFrom ? row.startDate >= dateFrom : true))
       .filter((row) => (dateTo ? row.startDate <= dateTo : true))
-  }, [rows, statusFilter, search, dateFrom, dateTo])
+  }, [rows, dateFrom, dateTo])
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return dateFiltered
+      .filter((row) => statusFilter === 'ALL' || row.status === statusFilter)
+      .filter((row) => (
+        row.perDiemNumber?.toLowerCase().includes(q) ||
+        row.employee?.toLowerCase().includes(q) ||
+        row.destination?.toLowerCase().includes(q)
+      ))
+  }, [dateFiltered, statusFilter, search])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -279,57 +280,28 @@ export default function PerDiemPage() {
           <h1 className="text-2xl font-bold text-emerald-900">Per Diem</h1>
           <p className="mt-2 text-sm text-emerald-600/70">Manage per diem claims and totals.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setPanelOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
-          <button onClick={() => router.push('/expenses/employee-expenses/per-diem/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
-          <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        </div>
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search per diem claims" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          {STATUSES.map((status) => (
-            <button key={status} type="button" onClick={() => setStatusFilter(status)} className={`rounded-2xl px-3 py-2 text-xs font-semibold ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-              {status === 'ALL' ? 'All' : status}
-            </button>
-          ))}
-          <button type="button" onClick={() => setShowAdvancedFilters((prev) => !prev)} className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Filter size={14} /> Filters</button>
-        </div>
-      </div>
-
-      {showAdvancedFilters && (
-        <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor="perDiemFilterDateFrom" className="block text-xs font-medium text-slate-500 mb-1">Start From</label>
-            <input id="perDiemFilterDateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label htmlFor="perDiemFilterDateTo" className="block text-xs font-medium text-slate-500 mb-1">Start To</label>
-            <input id="perDiemFilterDateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div className="flex items-end">
-            <button type="button" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear all</button>
-          </div>
-        </div>
-      )}
 
       <HaypDataTable
-        data={filtered}
+        headerActions={
+          <button onClick={() => setPanelOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
+        }
+        data={dateFiltered}
         columns={columns}
         tableId="per-diem"
         title="Per Diem"
         description="Track employee per diem claims and reimbursements."
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        filters={[]}
-        activeFilter=""
-        onFilterChange={() => {}}
-        filterLabel="All"
+        filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
+        activeFilter={statusFilter}
+        onFilterChange={setStatusFilter}
+        filterLabel="Status"
+        dateRange={{ start: dateFrom ? new Date(dateFrom) : new Date('1970-01-01'), end: dateTo ? new Date(dateTo) : new Date('9999-12-31') }}
+        onDateRangeChange={({ start, end }) => {
+          setDateFrom(start.toISOString().slice(0, 10))
+          setDateTo(end.toISOString().slice(0, 10))
+        }}
         stats={stats}
         actions={actions}
         bulkActions={bulkActions}
@@ -337,6 +309,7 @@ export default function PerDiemPage() {
         onRefresh={handleRefresh}
         onExport={handleExportCSV}
         exportLabel="Export CSV"
+        onActivityLog={() => router.push('/expenses/employee-expenses/per-diem/activity')}
         onRowClick={(row) => {
           setPanelOpen(true)
           setOpenMode('edit')

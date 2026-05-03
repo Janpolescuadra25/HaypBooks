@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Download, RefreshCw, Eye, Printer, TrendingUp, Clock, AlertCircle, Ban } from 'lucide-react'
+import { Download, Eye, Printer, TrendingUp, Clock, AlertCircle, Ban } from 'lucide-react'
 import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -31,7 +31,6 @@ export default function ApAgingPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [activeFilter, setActiveFilter] = useState('ALL')
 
   const fetchAging = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -51,14 +50,13 @@ export default function ApAgingPage() {
 
   useEffect(() => { fetchAging() }, [fetchAging])
 
-  const filtered = useMemo(() => {
-    const base = activeFilter === 'ALL'
-      ? rows
-      : rows.filter((row) => (row.vendorName ?? '').toLowerCase().includes(activeFilter.toLowerCase()))
-    return base
-  }, [rows, activeFilter])
+  const filtered = useMemo(() => rows, [rows])
 
-  const filters = useMemo(() => [], [])
+  const exportRows = useMemo(() => {
+    const q = search.toLowerCase()
+    if (!q) return rows
+    return rows.filter((row) => (row.vendorName ?? '').toLowerCase().includes(q))
+  }, [rows, search])
 
   const columns = useMemo<HaypColumn<ApAgingRow>[]>(() => [
     {
@@ -178,7 +176,7 @@ export default function ApAgingPage() {
   const handleExportCSV = useCallback(() => {
     csvDownload(`ap-aging-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Vendor', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'],
-      rows.map((row) => [
+      exportRows.map((row) => [
         row.vendorName ?? '',
         String(row.current),
         String(row.days1To30),
@@ -189,7 +187,7 @@ export default function ApAgingPage() {
       ]),
     )
     toast.success('CSV exported')
-  }, [rows, toast])
+  }, [exportRows, toast])
 
   const bulkActions = useMemo<HaypBulkAction[]>(() => [
     {
@@ -221,27 +219,9 @@ export default function ApAgingPage() {
           <h1 className="text-2xl font-bold text-emerald-900">AP Aging</h1>
           <p className="mt-2 text-sm text-emerald-600/70">Track outstanding vendor balances and aging buckets.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={fetchAging} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"><RefreshCw size={16} /> Refresh</button>
         </div>
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search vendors..."
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">Status filter is unavailable for AP Aging</span>
-        </div>
-      </div>
+      {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
       <HaypDataTable
         data={filtered}
@@ -251,10 +231,6 @@ export default function ApAgingPage() {
         description="Monitor accounts payable aging balances by bucket."
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        filters={filters}
-        activeFilter=""
-        onFilterChange={() => {}}
-        filterLabel="All"
         stats={stats}
         actions={actions}
         bulkActions={bulkActions}

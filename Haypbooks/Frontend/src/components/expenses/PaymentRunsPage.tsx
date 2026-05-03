@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Download, Filter, Clock, RefreshCw, Eye, Trash2, FileText, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, Download, Filter, Eye, Trash2, FileText, AlertCircle, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -37,7 +37,6 @@ export default function PaymentRunsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   const fetchRows = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -57,8 +56,14 @@ export default function PaymentRunsPage() {
 
   useEffect(() => { fetchRows() }, [fetchRows])
 
-  const filtered = useMemo(() => {
+  const dateFiltered = useMemo(() => {
     return rows
+      .filter((run) => (dateFrom ? run.paymentDate >= dateFrom : true))
+      .filter((run) => (dateTo ? run.paymentDate <= dateTo : true))
+  }, [rows, dateFrom, dateTo])
+
+  const filtered = useMemo(() => {
+    return dateFiltered
       .filter((run) => statusFilter === 'ALL' || run.status === statusFilter)
       .filter((run) => {
         const q = search.toLowerCase()
@@ -67,9 +72,7 @@ export default function PaymentRunsPage() {
           run.method?.toLowerCase().includes(q)
         )
       })
-      .filter((run) => (dateFrom ? run.paymentDate >= dateFrom : true))
-      .filter((run) => (dateTo ? run.paymentDate <= dateTo : true))
-  }, [rows, statusFilter, search, dateFrom, dateTo])
+  }, [dateFiltered, statusFilter, search])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -209,43 +212,23 @@ export default function PaymentRunsPage() {
         )}
 
         <HaypDataTable
-          data={filtered}
+          data={dateFiltered}
           columns={columns}
           tableId="payment-runs"
           title="Payment Runs"
           description="Manage batch payment runs and review totals."
           stats={stats}
-          headerActions={
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => router.push('/expenses/bills-payments/payment-runs/activity')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <Clock size={16} /> Activity Log
-              </button>
-              <button
-                type="button"
-                onClick={handleRefresh}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <RefreshCw size={16} /> Refresh
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAdvancedFilters((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <Filter size={16} /> Filters
-              </button>
-            </div>
-          }
           globalFilter={search}
           onGlobalFilterChange={setSearch}
           filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
           activeFilter={statusFilter}
           onFilterChange={setStatusFilter}
           filterLabel="Status"
+          dateRange={{ start: dateFrom ? new Date(dateFrom) : new Date('1970-01-01'), end: dateTo ? new Date(dateTo) : new Date('9999-12-31') }}
+          onDateRangeChange={({ start, end }) => {
+            setDateFrom(start.toISOString().slice(0, 10))
+            setDateTo(end.toISOString().slice(0, 10))
+          }}
           actions={actions}
           bulkActions={bulkActions}
           totals={totals}
@@ -258,22 +241,6 @@ export default function PaymentRunsPage() {
           emptySubtitle="Use search or filters to find runs"
           loading={loading}
         />
-
-        {showAdvancedFilters && (
-          <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
-              <input title="Date from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
-              <input title="Date to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-            </div>
-            <div className="flex items-end">
-              <button type="button" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear all</button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
