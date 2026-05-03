@@ -214,13 +214,6 @@ export default function ApAgingPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">AP Aging</h1>
-          <p className="mt-2 text-sm text-emerald-600/70">Track outstanding vendor balances and aging buckets.</p>
-        </div>
-        </div>
-
       {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
       <HaypDataTable

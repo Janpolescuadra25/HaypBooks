@@ -288,44 +288,15 @@ export default function ProcurementApprovalsPage() {
 
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
-      <div className="p-4 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-emerald-900">Procurement Approvals</h1>
-            <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} approvals`}</p>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Date From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              aria-label="Date from"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Date To</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              aria-label="Date to"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-            />
-          </div>
-        </div>
-
-        {error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-        )}
-      </div>
-
       <div className="min-h-full min-w-0 overflow-visible">
         <HaypDataTable
+          title="Procurement Approvals"
+          description="Review and approve purchase requests."
+          dateRange={{ start: dateFrom ? new Date(dateFrom) : new Date('1970-01-01'), end: dateTo ? new Date(dateTo) : new Date('9999-12-31') }}
+          onDateRangeChange={({ start, end }) => {
+            setDateFrom(start.toISOString().slice(0, 10))
+            setDateTo(end.toISOString().slice(0, 10))
+          }}
           tableId="procurement-approvals"
           columns={columns}
           data={filtered}

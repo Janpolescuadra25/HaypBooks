@@ -254,6 +254,8 @@ export default function ReceiptsPage() {
     <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
       <div className="min-h-full min-w-0 overflow-visible">
         <HaypDataTable
+        title="Receipts"
+        description="Track and manage receipt records for expense reporting."
         data={filtered}
         columns={columns}
         tableId="receipts"
