@@ -25,7 +25,32 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
     const updatePosition = () => {
       if (!target || !menuRef.current) return
       const rect = target.getBoundingClientRect()
-      setMenuStyle({ position: 'absolute', left: rect.left + window.scrollX, top: rect.bottom + window.scrollY, width: matchWidth ? rect.width : undefined, zIndex: 9999 })
+      const viewportWidth = window.innerWidth
+      const panelWidth = matchWidth ? rect.width : menuRef.current?.offsetWidth || 0
+      const padding = 16
+
+      // Calculate initial left position
+      let left = rect.left + window.scrollX
+
+      // Check if panel would overflow right edge
+      if (left + panelWidth > viewportWidth - padding) {
+        // Shift left to keep panel within viewport with padding
+        left = Math.max(padding, viewportWidth - panelWidth - padding)
+      }
+
+      // On mobile, center the panel
+      const isMobile = viewportWidth < 640
+      if (isMobile) {
+        left = '1rem' as any
+      }
+
+      setMenuStyle({ 
+        position: 'absolute', 
+        left, 
+        top: rect.bottom + window.scrollY, 
+        width: isMobile ? `calc(100vw - 2rem)` : (matchWidth ? rect.width : undefined), 
+        zIndex: 9999 
+      })
     }
 
     // when open, compute initial position and attach resize/scroll listeners

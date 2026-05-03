@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Download, Filter, RefreshCw, Pencil, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -252,7 +252,6 @@ export default function ReceiptsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setReceiptPanelOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Receipt</button>
-          <button onClick={() => router.push('/expenses/receipts/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
           <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
         </div>
       </div>
@@ -306,7 +305,6 @@ export default function ReceiptsPage() {
         onExport={handleExportCSV}
         exportLabel="Export CSV"
         onRowClick={(row) => openEditReceipt(row.id)}
-        onActivityLog={() => router.push('/expenses/receipts/activity')}
         emptyTitle={loading ? 'Loading receipts…' : 'No receipts found'}
         emptySubtitle="Search or filter to locate receipts"
         loading={loading}
