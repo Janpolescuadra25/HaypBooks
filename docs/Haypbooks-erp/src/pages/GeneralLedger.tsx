@@ -114,36 +114,79 @@ export default function GeneralLedger() {
         </div>
       </div>
 
-      {/* General Ledger Intelligence Ribbon */}
-      <div className="glass-morphism rounded-[32px] border border-slate-200/50 shadow-xl shadow-brand-emerald/5 overflow-hidden bg-white/40 backdrop-blur-xl">
-        <div className="flex flex-col md:flex-row items-stretch">
-          {[
-            { label: 'Combined Cash Balance', value: '$98,229.29', color: 'brand-emerald', icon: CheckCircle2, desc: 'Verified Ledger Total' },
-            { label: 'Avg daily liquid movement', value: '$3,120', color: 'slate-300', icon: TrendingUp, desc: '30-day volatility' },
-            { label: 'Sync Status', value: 'Live', color: 'amber-500', icon: Database, desc: 'Real-time reconciliation' },
-          ].map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`flex-1 p-8 relative group transition-colors hover:bg-white/50 ${i !== 2 ? 'border-r border-slate-200/50' : ''}`}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="relative group mb-6"
+      >
+        <div className="glass-morphism rounded-[32px] border border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-sm overflow-hidden">
+          <motion.div 
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                  delayChildren: 0.2
+                }
+              }
+            }}
+            className="flex flex-col lg:flex-row items-stretch"
+          >
+            {/* Metric 1 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default relative"
             >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{stat.label}</span>
-                  <stat.icon size={14} className={i === 0 ? 'text-brand-emerald' : 'text-slate-300'} />
-                </div>
-                
-                <h3 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-2">{stat.value}</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-60">
-                  {stat.desc}
-                </p>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Combined Cash Balance</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">$98,229.29</h3>
+                <span className="text-[10px] font-black text-brand-emerald bg-brand-emerald/5 px-2 py-0.5 rounded shadow-sm border border-brand-emerald-100/50 uppercase tracking-widest">VERIFIED</span>
               </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Ledger Liquidity</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
             </motion.div>
-          ))}
+
+            <div className="hidden lg:block w-px bg-slate-200/60 my-6" />
+
+            {/* Metric 2 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default relative"
+            >
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Daily Flow Avg</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">$3,120</h3>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 py-0.5 bg-slate-50 rounded border border-slate-100 italic">30D AVG</span>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Asset Movement</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
+            </motion.div>
+
+            <div className="hidden lg:block w-px bg-slate-200/60 my-6" />
+
+            {/* Metric 3 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default border-t lg:border-t-0 border-slate-100 relative"
+            >
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Sync Status</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">LIVE</h3>
+                <span className="text-[10px] font-black text-brand-emerald uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 bg-brand-emerald/5 rounded border border-brand-emerald-100/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-emerald animate-ping" />
+                  HEALTHY
+                </span>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Real-time Continuity</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Filter Bar - QuickBooks Style */}
       <div className="bg-white border text-slate-900 border-slate-200 rounded-[24px] p-6 shadow-sm flex flex-wrap items-end gap-8">

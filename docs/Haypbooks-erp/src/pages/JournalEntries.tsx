@@ -96,41 +96,76 @@ export default function JournalEntries() {
         </div>
       </div>
 
-      {/* Corporate Ledger Metrics Ribbon */}
-      <div className="glass-morphism rounded-[32px] border border-slate-200/50 shadow-xl shadow-brand-emerald/5 overflow-hidden bg-white/40 backdrop-blur-xl">
-        <div className="flex flex-col md:flex-row items-stretch">
-          {[
-            { label: 'Unbalanced Drafts', value: '0', color: 'slate-300', icon: Clock, desc: 'Needs Attention' },
-            { label: 'Total Posted (MTD)', value: '$18,350', color: 'brand-emerald', icon: CheckCircle2, desc: 'Reconciled volume' },
-            { label: 'Pending Reviews', value: '1', color: 'amber-500', icon: Edit3, desc: 'Audit workflow' },
-          ].map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 }}
-              className={`flex-1 p-8 relative group transition-colors hover:bg-white/50 ${i !== 2 ? 'border-r border-slate-200/50' : ''}`}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="relative group mb-6"
+      >
+        <div className="glass-morphism rounded-[32px] border border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-sm overflow-hidden">
+          <motion.div 
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                  delayChildren: 0.2
+                }
+              }
+            }}
+            className="flex flex-col lg:flex-row items-stretch"
+          >
+            {/* Metric 1 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default relative"
             >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{stat.label}</span>
-                  </div>
-                  <stat.icon size={14} className={i === 1 ? 'text-brand-emerald' : 'text-slate-300'} />
-                </div>
-                
-                <h3 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-2">{stat.value}</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-60">
-                  {stat.desc}
-                </p>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Total Reconciled</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">$18,350.00</h3>
+                <span className="text-[10px] font-black text-brand-emerald bg-brand-emerald/5 px-2 py-0.5 rounded shadow-sm border border-brand-emerald-100/50">MTD</span>
               </div>
-
-              {/* Status bar at bottom of each section */}
-              <div className={`absolute bottom-0 left-0 h-1 transition-all group-hover:w-full ${i === 1 ? 'bg-brand-emerald w-1/3' : 'bg-slate-200 w-0'}`} />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Verified Assets</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
             </motion.div>
-          ))}
+
+            <div className="hidden lg:block w-px bg-slate-200/60 my-6" />
+
+            {/* Metric 2 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default relative"
+            >
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Open Drafts</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">0</h3>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 py-0.5 bg-slate-50 rounded border border-slate-100">BALANCED</span>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Ledger Status</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
+            </motion.div>
+
+            <div className="hidden lg:block w-px bg-slate-200/60 my-6" />
+
+            {/* Metric 3 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default border-t lg:border-t-0 border-slate-100 relative"
+            >
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Audit Queue</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">1</h3>
+                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">REVIEW REQ</span>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Compliance Check</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Table Container */}
       <div className="glass-morphism rounded-[40px] border border-slate-200/50 shadow-xl overflow-hidden bg-white/40 flex flex-col min-h-[500px]">

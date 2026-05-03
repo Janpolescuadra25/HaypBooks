@@ -9,6 +9,8 @@ import {
   ChevronDown, 
   ArrowUpRight, 
   ArrowDownRight,
+  TrendingUp,
+  Layers,
   User,
   ShieldCheck,
   AlertCircle,
@@ -229,50 +231,94 @@ export default function Vendors() {
         </div>
       </div>
 
-      {/* Strategic Intelligence Ribbon */}
-      <div className="glass-morphism rounded-[32px] border border-slate-200/50 shadow-xl shadow-brand-emerald/5 overflow-hidden bg-white/40 backdrop-blur-xl">
-        <div className="flex flex-col md:flex-row items-stretch">
-          {[
-            { label: 'Portfolio Value', value: '$412,850', trend: '+8.4%', icon: ArrowUpRight, desc: 'Portfolio Spend', color: 'emerald' },
-            { label: 'Active Partnerships', value: '142', trend: '+4', icon: ArrowUpRight, desc: 'Active Contracts', color: 'blue' },
-            { label: 'Compliance Health', value: '98.2%', trend: '-0.2%', icon: ArrowDownRight, desc: 'Risk Assessment', color: 'amber' }
-          ].map((metric, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`flex-1 p-8 relative group transition-colors hover:bg-white/50 ${i !== 2 ? 'border-r border-slate-200/50' : ''}`}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="relative group mt-2"
+      >
+        <div className="glass-morphism rounded-[32px] border border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-sm overflow-hidden">
+          <motion.div 
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                  delayChildren: 0.2
+                }
+              }
+            }}
+            className="flex flex-col lg:flex-row items-stretch"
+          >
+            {/* Metric 1 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default relative"
             >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${metric.color === 'emerald' ? 'bg-emerald-500' : metric.color === 'amber' ? 'bg-amber-500' : 'bg-blue-500'}`} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{metric.label}</span>
-                  </div>
-                  <metric.icon size={14} className={`${metric.trend.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'} opacity-50 group-hover:opacity-100 transition-opacity`} />
-                </div>
-                
-                <div className="flex items-baseline gap-3">
-                  <h3 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">{metric.value}</h3>
-                  <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black ${metric.trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                    {metric.trend}
-                  </div>
-                </div>
-                
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-4 opacity-60">
-                  {metric.desc}
-                </p>
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2"
+              >
+                Portfolio Value
+              </motion.span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">
+                  $412,850
+                </h3>
+                <motion.span 
+                  whileHover={{ scale: 1.05 }}
+                  className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded shadow-sm border border-emerald-100/50"
+                >
+                  +8.4%
+                </motion.span>
               </div>
-
-              {/* Decorative background number/shape */}
-              <div className="absolute right-4 bottom-4 text-slate-100/50 text-6xl font-black select-none pointer-events-none group-hover:text-brand-emerald/10 transition-colors">
-                {i + 1}
-              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Aggregate Spend</p>
+              
+              {/* Interaction underline */}
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
             </motion.div>
-          ))}
+
+            <div className="hidden lg:block w-px bg-slate-200/60 my-6" />
+
+            {/* Metric 2 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default relative"
+            >
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Partnerships</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">142</h3>
+                <span className="text-[10px] font-black text-brand-emerald uppercase tracking-widest">
+                  +4 NEW
+                </span>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Active Contracts</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
+            </motion.div>
+
+            <div className="hidden lg:block w-px bg-slate-200/60 my-6" />
+
+            {/* Metric 3 */}
+            <motion.div 
+              variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+              className="flex-1 p-8 lg:px-10 lg:py-8 transition-all hover:bg-white/40 group/item cursor-default border-t lg:border-t-0 border-slate-100 relative"
+            >
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Risk Rating</span>
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">98.2<span className="text-xl">%</span></h3>
+                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">STABLE</span>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 opacity-60 group-hover/item:text-brand-emerald transition-colors">Compliance Health</p>
+              <div className="absolute bottom-0 left-0 h-0.5 bg-brand-emerald w-0 group-hover/item:w-full transition-all duration-500" />
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Experience: Control Center */}
       <div className="glass-morphism rounded-[40px] border border-slate-200/50 shadow-xl overflow-hidden bg-white/40 flex flex-col min-h-[600px]" ref={tableContainerRef}>
