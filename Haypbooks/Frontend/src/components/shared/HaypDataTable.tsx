@@ -836,21 +836,21 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
     <div data-page-scroll={usePageScroll} className={cn('flex flex-col w-full max-w-full overflow-x-clip overflow-y-visible bg-slate-50/10 relative', className)}>
       <div className={cn(
         "flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-clip relative",
-        (title || stats) ? "p-4 sm:p-6 md:p-8" : "p-0",
+        (title || stats) ? "p-3 sm:p-4 md:p-5" : "p-0",
         "overflow-y-visible"
       )}>
         
         {/* Page Header Integration */}
         {(title || description || headerActions) && (
-          <div className="flex-shrink-0 flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 w-full animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex-shrink-0 flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4 w-full animate-in fade-in slide-in-from-top-4 duration-500">
             <div>
               {title && (
-                <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-2">
+                <h1 className="text-xl font-bold tracking-tight text-slate-900 mb-2">
                   {title}
                 </h1>
               )}
               {description && (
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 text-xs">
                   {description}
                 </p>
               )}
@@ -865,7 +865,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
 
         {/* Stats Strip Integration */}
         {stats && stats.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 w-full animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 w-full animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
             {stats.map((stat, i) => (
               <div key={i} className="glass-morphism p-6 rounded-[32px] border border-slate-200/50 flex items-center gap-5 group hover:border-emerald-500/20 transition-all shadow-sm bg-white/60">
                 <div className={cn(
@@ -897,7 +897,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
 
         {/* Redesigned Toolbar */}
         <div className={cn(
-          "flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 glass-morphism p-4 rounded-2xl border border-white/40 shadow-sm relative z-50 mb-4 bg-white/80 backdrop-blur-md",
+          "flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 glass-morphism p-4 rounded-2xl border border-white/40 shadow-sm relative z-50 mb-2 bg-white/80 backdrop-blur-md",
           !(title || stats) && "mx-4 mt-4"
         )}>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
