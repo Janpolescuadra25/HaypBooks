@@ -339,6 +339,7 @@ export default function PurchaseRequestsPage() {
         emptyTitle="No purchase requests found"
         emptySubtitle="Create a new purchase request to get started"
       />
+      </div>
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">
