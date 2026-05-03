@@ -202,7 +202,6 @@ export default function PaymentRunsPage() {
           <p className="mt-2 text-sm text-emerald-600/70">Manage batch payment runs and review totals.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => toast.info('Coming soon')} title="Coming soon" className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Run</button>
           <button onClick={() => router.push('/expenses/bills-payments/payment-runs/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
           <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
         </div>

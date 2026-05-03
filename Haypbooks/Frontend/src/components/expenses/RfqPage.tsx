@@ -219,8 +219,7 @@ export default function RfqPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button title="Refresh" onClick={fetchRows} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><RefreshCw size={14} /></button>
-          <button onClick={() => router.push('/expenses/procurement/rfq/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"> <Clock size={15} /> Activity Log</button>
-          <button onClick={() => toast.info('Coming soon')} title="Coming soon" className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New RFQ</button>
+          <button onClick={() => router.push('/expenses/procurement/rfq/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Clock size={15} /> Activity Log</button>
         </div>
       </div>
 
