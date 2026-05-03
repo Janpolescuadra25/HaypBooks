@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Download, Filter, Clock, Pencil, Trash2, Car, CheckCircle, CreditCard } from 'lucide-react'
+import { Plus, Download, Clock, Pencil, Trash2, Car, CheckCircle, CreditCard } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -26,9 +26,6 @@ interface MileageLog {
   status?: string
 }
 
-type StatusFilter = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
-const STATUSES: StatusFilter[] = ['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED']
-
 export default function MileagePage() {
   const router = useRouter()
   const { companyId } = useCompanyId()
@@ -38,10 +35,8 @@ export default function MileagePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [mileagePanelOpen, setMileagePanelOpen] = useState(false)
   const [openMileageId, setOpenMileageId] = useState<string | null>(null)
   const [openMileageMode, setOpenMileageMode] = useState<'new' | 'edit'>('new')
@@ -104,7 +99,6 @@ export default function MileagePage() {
 
   const filtered = useMemo(() => {
     return rows
-      .filter((row) => statusFilter === 'ALL' || row.status === statusFilter)
       .filter((row) => {
         const q = search.toLowerCase()
         return (
@@ -115,7 +109,7 @@ export default function MileagePage() {
       })
       .filter((row) => (dateFrom ? row.date >= dateFrom : true))
       .filter((row) => (dateTo ? row.date <= dateTo : true))
-  }, [rows, statusFilter, search, dateFrom, dateTo])
+  }, [rows, search, dateFrom, dateTo])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -275,42 +269,21 @@ export default function MileagePage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search mileage logs" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+      {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+
+      <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
+        <div>
+          <label htmlFor="mileageFilterDateFrom" className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
+          <input id="mileageFilterDateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          {STATUSES.map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setStatusFilter(status)}
-              className={`rounded-2xl px-3 py-2 text-xs font-semibold ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
-            >
-              {status === 'ALL' ? 'All' : status}
-            </button>
-          ))}
-          <button type="button" onClick={() => setShowAdvancedFilters((prev) => !prev)} className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Filter size={14} /> Filters</button>
+        <div>
+          <label htmlFor="mileageFilterDateTo" className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
+          <input id="mileageFilterDateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+        </div>
+        <div className="flex items-end">
+          <button type="button" onClick={() => { setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear dates</button>
         </div>
       </div>
-
-      {showAdvancedFilters && (
-        <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor="mileageFilterDateFrom" className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
-            <input id="mileageFilterDateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label htmlFor="mileageFilterDateTo" className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
-            <input id="mileageFilterDateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div className="flex items-end">
-            <button type="button" onClick={() => { setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear dates</button>
-          </div>
-        </div>
-      )}
 
       <HaypDataTable
         data={filtered}
