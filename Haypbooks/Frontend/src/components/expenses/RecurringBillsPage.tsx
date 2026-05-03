@@ -289,6 +289,7 @@ export default function RecurringBillsPage() {
         emptySubtitle="Use search and filters to locate templates"
         loading={loading}
       />
+      </div>
 
       <HaypModal
         open={panelOpen}

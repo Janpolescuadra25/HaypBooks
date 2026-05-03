@@ -231,6 +231,7 @@ export default function RfqPage() {
         emptySubtitle="Adjust filters or create a new RFQ"
         loading={loading}
       />
+      </div>
     </div>
   )
 }
