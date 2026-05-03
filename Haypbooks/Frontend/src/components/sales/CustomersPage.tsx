@@ -13,6 +13,7 @@ import DataPage from '@/components/shared/DataPage'
 import type { BulkAction } from '@/components/shared/BulkActionBar'
 import { StatusBadge } from '@/components/shared/StatusBadgeSet'
 import ModalForm from '@/components/shared/ModalForm'
+import HaypModal from '@/components/shared/HaypModal'
 import { ModalPortal } from '@/components/shared/ModalPortal'
 
 const PAGE_SIZE = 25
@@ -666,112 +667,98 @@ function CustomerFormModal({ companyId, customer, paymentTerms, onClose, onSaved
   }
 
   return (
-    <ModalPortal>
-      <div role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit Customer' : 'New Customer'} className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-        <div onClick={(e) => e.stopPropagation()} className="relative z-[10000] bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-          <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between sticky top-0 bg-white z-10">
-            <h2 className="text-lg font-bold text-emerald-900">{isEdit ? 'Edit Customer' : 'New Customer'}</h2>
-            <button onClick={onClose} aria-label="Close customer form" className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-500"><X size={18} /></button>
+    <HaypModal
+      open={true}
+      onClose={onClose}
+      title={isEdit ? 'Edit Customer' : 'New Customer'}
+      size="lg"
+    >
+      {modalTab === 'form' && (
+        <>
+          <div className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2">
+                <AlertCircle size={14} /> {error}
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-medium text-emerald-700 mb-1">Name *</label>
+              <input value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="Full name or business name"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">Email</label>
+                <input type="email" value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="customer@email.com"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">Phone</label>
+                <input type="tel" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="(555) 000-0000"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-emerald-700 mb-1">Street Address</label>
+              <input value={form.address} onChange={(e) => setField('address', e.target.value)} placeholder="Street address"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">City</label>
+                <input value={form.city} onChange={(e) => setField('city', e.target.value)} placeholder="City"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">State</label>
+                <input value={form.state} onChange={(e) => setField('state', e.target.value)} placeholder="State"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">ZIP</label>
+                <input value={form.zip} onChange={(e) => setField('zip', e.target.value)} placeholder="ZIP"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">Payment Terms</label>
+                <select aria-label="Payment Terms" value={form.paymentTermId} onChange={(e) => setField('paymentTermId', e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                  <option value="">— None —</option>
+                  {paymentTerms.map((term) => (
+                    <option key={term.id} value={term.id}>{term.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">Credit Limit</label>
+                <input type="number" min="0" step="0.01" value={form.creditLimit} onChange={(e) => setField('creditLimit', e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+              </div>
+            </div>
           </div>
-          {isEdit && (
-            <div className="flex border-b border-gray-200 bg-white px-4">
-              {(['form', 'activity'] as const).map((tab) => (
-                <button key={tab} onClick={() => setModalTab(tab)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${modalTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
-                  {tab === 'form' ? <Edit2 size={11} /> : <Clock size={11} />}
-                  {tab === 'form' ? 'Details' : 'Activity'}
-                </button>
-              ))}
-            </div>
-          )}
-          {modalTab === 'form' && (
-            <>
-              <div className="p-6 space-y-4">
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700 flex items-center gap-2">
-                    <AlertCircle size={14} /> {error}
-                  </div>
-                )}
-                <div>
-                  <label className="block text-xs font-medium text-emerald-700 mb-1">Name *</label>
-                  <input value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="Full name or business name"
-                    className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-1">Email</label>
-                    <input type="email" value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="customer@email.com"
-                      className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-1">Phone</label>
-                    <input type="tel" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="(555) 000-0000"
-                      className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-emerald-700 mb-1">Street Address</label>
-                  <input value={form.address} onChange={(e) => setField('address', e.target.value)} placeholder="Street address"
-                    className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-1">City</label>
-                    <input value={form.city} onChange={(e) => setField('city', e.target.value)} placeholder="City"
-                      className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-1">State</label>
-                    <input value={form.state} onChange={(e) => setField('state', e.target.value)} placeholder="State"
-                      className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-1">ZIP</label>
-                    <input value={form.zip} onChange={(e) => setField('zip', e.target.value)} placeholder="ZIP"
-                      className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-1">Payment Terms</label>
-                    <select aria-label="Payment Terms" value={form.paymentTermId} onChange={(e) => setField('paymentTermId', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white">
-                      <option value="">— None —</option>
-                      {paymentTerms.map((term) => (
-                        <option key={term.id} value={term.id}>{term.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-1">Credit Limit</label>
-                    <input type="number" min="0" step="0.01" value={form.creditLimit} onChange={(e) => setField('creditLimit', e.target.value)}
-                      placeholder="0.00"
-                      className="w-full px-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 py-4 border-t border-emerald-100 flex justify-end gap-2">
-                <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Cancel</button>
-                <button onClick={handleSave} disabled={saving}
-                  className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors font-semibold">
-                  {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Customer'}
-                </button>
-              </div>
-            </>
-          )}
-          {modalTab === 'activity' && (
-            <div className="p-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                <Clock size={14} className="text-emerald-600" /> Audit Log
-              </h3>
-              <ActivityLog entries={activityLog} loading={activityLoading} emptyMessage="No activity recorded yet." />
-              <div className="mt-4 flex justify-end">
-                <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Close</button>
-              </div>
-            </div>
-          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Cancel</button>
+            <button onClick={handleSave} disabled={saving}
+              className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors font-semibold">
+              {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Customer'}
+            </button>
+          </div>
+        </>
+      )}
+      {modalTab === 'activity' && (
+        <div className="p-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <Clock size={14} className="text-emerald-600" /> Audit Log
+          </h3>
+          <ActivityLog entries={activityLog} loading={activityLoading} emptyMessage="No activity recorded yet." />
+          <div className="mt-4 flex justify-end">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Close</button>
+          </div>
         </div>
-      </div>
-    </ModalPortal>
+      )}
+    </HaypModal>
   )
 }

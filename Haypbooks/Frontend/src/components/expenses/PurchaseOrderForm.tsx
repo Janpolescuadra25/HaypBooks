@@ -323,31 +323,31 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div>
-                <label htmlFor="poNumber" className="block text-sm font-semibold text-slate-900">PO Number</label>
-                <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly={lockIdFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+                <label htmlFor="poNumber" className="block text-[10px] font-bold text-slate-400 uppercase">PO Number</label>
+                <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly={lockIdFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" />
               </div>
               <div>
-                <label htmlFor="orderDate" className="block text-sm font-semibold text-slate-900">Order Date</label>
-                <input id="orderDate" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <label htmlFor="orderDate" className="block text-[10px] font-bold text-slate-400 uppercase">Order Date</label>
+                <input id="orderDate" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
               </div>
               <div>
-                <label htmlFor="expectedDate" className="block text-sm font-semibold text-slate-900">Expected Delivery</label>
-                <input id="expectedDate" type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <label htmlFor="expectedDate" className="block text-[10px] font-bold text-slate-400 uppercase">Expected Delivery</label>
+                <input id="expectedDate" type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
               </div>
               <div className="sm:col-span-2 xl:col-span-1">
-                <label htmlFor="vendorId" className="block text-sm font-semibold text-slate-900">Vendor</label>
+                <label htmlFor="vendorId" className="block text-[10px] font-bold text-slate-400 uppercase">Vendor</label>
                 <div className="mt-2 flex gap-2">
-                  <input id="vendorSearch" value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={lockIdFields} aria-label="Search vendors" placeholder="Search vendors" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  <button type="button" onClick={() => setVendorSearch('')} disabled={lockIdFields} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">Clear</button>
+                  <input id="vendorSearch" value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={lockIdFields} aria-label="Search vendors" placeholder="Search vendors" className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
+                  <button type="button" onClick={() => setVendorSearch('')} disabled={lockIdFields} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Clear</button>
                 </div>
-                <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={lockIdFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={lockIdFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all">
                   <option value="">Select vendor</option>
                   {filteredVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="status" className="block text-sm font-semibold text-slate-900">Status</label>
-                <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <label htmlFor="status" className="block text-[10px] font-bold text-slate-400 uppercase">Status</label>
+                <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all">
                   {STATUS_OPTIONS.map((option) => <option key={option.value + option.label} value={option.value}>{option.label}</option>)}
                 </select>
               </div>
@@ -357,16 +357,11 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
-                    <p className="text-sm text-slate-500">Add items and pricing for this purchase order.</p>
-                  </div>
-                  {!readonlyFields && (
-                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Row</button>
-                  )}
-                </div>
-                <div className="mt-6">
+                <div className="mb-4">
+                <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
+                <p className="text-sm text-slate-500">Add items and pricing for this purchase order.</p>
+              </div>
+              <div className="mt-6">
                   <LineItemTable
                     columns={lineItemColumns.map((column) => column.key === 'account'
                       ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} ${account.name}` : account.name ?? '' })) }
@@ -386,45 +381,56 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end border-t border-slate-200 pt-4">
-                <div className="text-sm text-slate-600">Subtotal: <span className="font-semibold text-slate-900">{formatCurrency(subtotal, currency)}</span></div>
-                <div className="text-sm text-slate-600">Tax: <span className="font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</span></div>
-                <div className="text-sm text-slate-600">Shipping: <span className="font-semibold text-slate-900">{formatCurrency(shippingCost, currency)}</span></div>
-                <div className="text-sm font-semibold text-slate-900">Total: <span>{formatCurrency(total, currency)}</span></div>
+              <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+                <div className="space-y-3">
+                  <div className="text-sm text-slate-600">Subtotal</div>
+                  <div className="text-2xl font-semibold text-slate-900">{formatCurrency(subtotal, currency)}</div>
+                  <div className="text-sm text-slate-600">Tax</div>
+                  <div className="text-lg font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</div>
+                  <div className="text-sm text-slate-600">Shipping</div>
+                  <div className="text-lg font-semibold text-slate-900">{formatCurrency(shippingCost, currency)}</div>
+                  <div className="text-sm text-slate-600">Total</div>
+                  <div className="text-3xl font-semibold text-slate-900">{formatCurrency(total, currency)}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label htmlFor="shippingCost" className="block text-[10px] font-bold text-slate-400 uppercase">Shipping Cost</label>
+                  <input id="shippingCost" type="number" min="0" value={shippingCost} onChange={(e) => setShippingCost(Number(e.target.value))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
+                  <div className="mt-4 text-sm text-slate-500">This value is included in the PO total and will update the order amount.</div>
+                </div>
               </div>
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Ship To</label>
-                <input value={shipTo.line1} onChange={(e) => setShipTo((prev) => ({ ...prev, line1: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Street address" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Ship To</label>
+                <input value={shipTo.line1} onChange={(e) => setShipTo((prev) => ({ ...prev, line1: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Street address" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">City</label>
-                <input value={shipTo.city} onChange={(e) => setShipTo((prev) => ({ ...prev, city: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="City" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">City</label>
+                <input value={shipTo.city} onChange={(e) => setShipTo((prev) => ({ ...prev, city: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="City" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">State</label>
-                <input value={shipTo.state} onChange={(e) => setShipTo((prev) => ({ ...prev, state: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="State" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">State</label>
+                <input value={shipTo.state} onChange={(e) => setShipTo((prev) => ({ ...prev, state: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="State" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Zip</label>
-                <input value={shipTo.zip} onChange={(e) => setShipTo((prev) => ({ ...prev, zip: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Zip" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Zip</label>
+                <input value={shipTo.zip} onChange={(e) => setShipTo((prev) => ({ ...prev, zip: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Zip" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Country</label>
-                <input value={shipTo.country} onChange={(e) => setShipTo((prev) => ({ ...prev, country: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Country" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Country</label>
+                <input value={shipTo.country} onChange={(e) => setShipTo((prev) => ({ ...prev, country: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Country" />
               </div>
               <div>
-                <label htmlFor="shippingMethod" className="block text-sm font-semibold text-slate-900">Shipping Method</label>
-                <select id="shippingMethod" value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <label htmlFor="shippingMethod" className="block text-[10px] font-bold text-slate-400 uppercase">Shipping Method</label>
+                <select id="shippingMethod" value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all">
                   {SHIPPING_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Tracking Number</label>
-                <input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Tracking number" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Tracking Number</label>
+                <input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Tracking number" />
               </div>
             </div>
           </section>
@@ -432,12 +438,12 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Notes</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readonlyFields} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Customer-facing notes" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Notes</label>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readonlyFields} rows={4} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Customer-facing notes" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-                <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readonlyFields} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Internal use only" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Internal Notes</label>
+                <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readonlyFields} rows={4} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Internal use only" />
               </div>
               </div>
             </section>
@@ -461,18 +467,9 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="grid gap-3 lg:grid-cols-[1fr_auto] items-end">
-            <div>
-              <label htmlFor="shippingCost" className="block text-sm font-semibold text-slate-900">Shipping Cost</label>
-              <input id="shippingCost" type="number" min="0" value={shippingCost} onChange={(e) => setShippingCost(Number(e.target.value))} disabled={readonlyFields} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-            </div>
             <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
-              {isEdit && (status === 'RECEIVED' || status === 'PARTIAL_RECEIVED' || status === 'APPROVED') && (
-                <button type="button" onClick={handleConvert} disabled={converting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {converting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} Convert to Bill
-                </button>
-              )}
-              <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
+              <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isEdit ? 'Update Status' : 'Save Draft'}
               </button>
             </div>

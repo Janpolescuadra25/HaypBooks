@@ -800,6 +800,71 @@ table,
   .glass-header { background-position: 0% 0% !important; }
 }
 
+/* Jbooks Premium Utilities */
+.glass-morphism {
+  @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+}
+
+.glass-morphism-emerald {
+  @apply bg-emerald-500/10 backdrop-blur-xl border border-emerald-500/20;
+}
+
+.bg-brand-emerald {
+  background-color: #10b981;
+}
+
+.text-brand-emerald {
+  color: #10b981;
+}
+
+.text-brand-emerald-dark {
+  color: #047857;
+}
+
+.shadow-brand-emerald {
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2), 0 4px 6px -4px rgba(16, 185, 129, 0.1);
+}
+
+.emerald-glow {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 40px rgba(16, 185, 129, 0.1);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-slate-200/50 rounded-full hover:bg-emerald-500/30 transition-colors;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+:root {
+  --brand-emerald: #10B981;
+  --brand-emerald-dark: #059669;
+}
+
+.bg-brand-emerald {
+  background-color: var(--brand-emerald);
+}
+
+.text-brand-emerald {
+  color: var(--brand-emerald);
+}
+
+.text-brand-emerald-dark {
+  color: var(--brand-emerald-dark);
+}
+
 /* Mobile sidebar animation */
 .sidebar-overlay { opacity: 0; transition: opacity 160ms ease; }
 .sidebar-overlay[data-open="true"] { opacity: 1; }

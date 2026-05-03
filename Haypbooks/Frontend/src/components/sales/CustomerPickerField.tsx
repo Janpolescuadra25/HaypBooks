@@ -94,7 +94,7 @@ export default function CustomerPickerField({
         placeholder={placeholder}
         autoComplete="off"
         disabled={disabled}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white disabled:bg-gray-50 disabled:text-gray-500"
+        className="w-full h-12 px-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/10 bg-slate-50 focus:bg-white focus:border-emerald-500/50 transition-all disabled:bg-gray-50 disabled:text-gray-500 shadow-sm"
       />
 
       {open && !disabled && (

@@ -62,7 +62,7 @@ export default function CenteredModal({
         {open && (
           <motion.div
             key="centered-modal-backdrop"
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -89,7 +89,7 @@ export default function CenteredModal({
               aria-modal="true"
               aria-labelledby="modal-title"
               onClick={(event) => event.stopPropagation()}
-              className={`relative z-10 w-full ${SIZE_CLASSES[size]} max-h-[90vh] flex flex-col rounded-xl bg-white shadow-2xl ${className}`.trim()}
+              className={`relative z-[2010] w-full ${SIZE_CLASSES[size]} max-h-[90vh] flex flex-col rounded-xl bg-white shadow-2xl ${className}`.trim()}
             >
               <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 shrink-0">
                 <div>

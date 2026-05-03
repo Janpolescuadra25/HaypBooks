@@ -97,7 +97,7 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
                 <p className="text-xs text-gray-400">Quick add — fill in details later</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+            <button onClick={onClose} aria-label="Close" title="Close" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -118,7 +118,7 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
                 onChange={e => set('name', e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSave()}
                 placeholder="Full name or business name"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -129,7 +129,7 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
                   value={form.email}
                   onChange={e => set('email', e.target.value)}
                   placeholder="customer@email.com"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Phone</label>
@@ -138,7 +138,7 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
                   value={form.phone}
                   onChange={e => set('phone', e.target.value)}
                   placeholder="(555) 000-0000"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
               </div>
             </div>
 
@@ -151,26 +151,26 @@ export default function QuickAddCustomerModal({ companyId, onClose, onCreated }:
                   value={form.address}
                   onChange={e => set('address', e.target.value)}
                   placeholder="Street address"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     type="text"
                     value={form.city}
                     onChange={e => set('city', e.target.value)}
                     placeholder="City"
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
                   <input
                     type="text"
                     value={form.state}
                     onChange={e => set('state', e.target.value)}
                     placeholder="State"
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
                   <input
                     type="text"
                     value={form.zip}
                     onChange={e => set('zip', e.target.value)}
                     placeholder="ZIP"
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
                 </div>
               </div>
             </div>

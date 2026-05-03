@@ -168,105 +168,188 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   }), [handleSave])
 
   return (
-    <div className="space-y-6 bg-slate-50 text-slate-900">
+    <div className="space-y-6 text-slate-900">
       <div className="overflow-y-auto">
-        <div className="px-4 py-6 pb-6">
+        <div className="mx-auto w-full max-w-4xl px-4 py-6">
           {error ? (
             <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
               {error}
             </div>
           ) : null}
-          <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Log Date</label>
-                <input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-              </div>
-            </div>
-          </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">Trip Details</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Date of Trip</label>
-                <input type="date" value={tripDate} onChange={(e) => setTripDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Purpose / Description</label>
-                <input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Purpose of trip" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Start Location</label>
-                <input value={startLocation} onChange={(e) => setStartLocation(e.target.value)} placeholder="Start address" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">End Location</label>
-                <input value={endLocation} onChange={(e) => setEndLocation(e.target.value)} placeholder="End address" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Distance</label>
-                <div className="mt-2 flex gap-2">
-                  <input type="number" value={distance} min={0} step="0.1" onChange={(e) => setDistance(Number(e.target.value))} className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  <select value={distanceUnit} onChange={(e) => setDistanceUnit(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {DISTANCE_UNITS.map((option) => <option key={option} value={option}>{option}</option>)}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 mb-4">Trip Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="mileageLogDate" className="text-[10px] font-bold uppercase text-slate-400">Log Date</label>
+                  <input
+                    id="mileageLogDate"
+                    type="date"
+                    value={logDate}
+                    onChange={(e) => setLogDate(e.target.value)}
+                    aria-label="Log Date"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mileageStatus" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
+                  <select
+                    id="mileageStatus"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    aria-label="Status"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                  >
+                    {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Rate per {distanceUnit === 'Miles' ? 'Mile' : 'Km'}</label>
-                <div className="mt-2 flex rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-                  <span className="inline-flex items-center px-4 text-sm text-slate-500">{currency}</span>
-                  <input type="number" value={rate} min={0} step="0.01" onChange={(e) => setRate(Number(e.target.value))} className="w-full rounded-none border-0 bg-transparent px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-              </div>
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-sm text-slate-600">Total Reimbursement</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{formatCurrency(amount, currency)}</div>
-              </div>
             </div>
-          </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">Vehicle & Expense Details</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Vehicle</label>
-                <input value={vehicle} onChange={(e) => setVehicle(e.target.value)} placeholder="Vehicle description" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div className="flex items-center gap-3 mt-4 sm:mt-0">
-                <input id="mileage-personal" type="checkbox" checked={personalVehicle} onChange={(e) => setPersonalVehicle(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-                <label htmlFor="mileage-personal" className="text-sm font-semibold text-slate-900">Personal Vehicle</label>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Account</label>
-                <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  <option value="">Select account</option>
-                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name}` : account.name}</option>)}
-                </select>
-              </div>
-              <div className="col-span-full">
-                <div className="flex items-center gap-3">
-                  <input id="mileage-billable" type="checkbox" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-                  <label htmlFor="mileage-billable" className="text-sm font-semibold text-slate-900">Billable to Client</label>
+            <div className="border-t border-slate-100 my-6" />
+
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 mb-4">Trip Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="mileageTripDate" className="text-[10px] font-bold uppercase text-slate-400">Date of Trip</label>
+                  <input
+                    id="mileageTripDate"
+                    type="date"
+                    value={tripDate}
+                    onChange={(e) => setTripDate(e.target.value)}
+                    aria-label="Trip Date"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                  />
                 </div>
-                {billable && (
-                  <input value={clientProject} onChange={(e) => setClientProject(e.target.value)} placeholder="Client / Project" className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                )}
-              </div>
-              <div className="col-span-full">
-                <label className="block text-sm font-semibold text-slate-900">Notes</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <div>
+                  <label htmlFor="mileagePurpose" className="text-[10px] font-bold uppercase text-slate-400">Purpose / Description</label>
+                  <input
+                    id="mileagePurpose"
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value)}
+                    placeholder="Purpose of trip"
+                    aria-label="Purpose"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mileageStartLocation" className="text-[10px] font-bold uppercase text-slate-400">Start Location</label>
+                  <input
+                    id="mileageStartLocation"
+                    value={startLocation}
+                    onChange={(e) => setStartLocation(e.target.value)}
+                    placeholder="Start address"
+                    aria-label="Start Location"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mileageEndLocation" className="text-[10px] font-bold uppercase text-slate-400">End Location</label>
+                  <input
+                    id="mileageEndLocation"
+                    value={endLocation}
+                    onChange={(e) => setEndLocation(e.target.value)}
+                    placeholder="End address"
+                    aria-label="End Location"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mileageDistance" className="text-[10px] font-bold uppercase text-slate-400">Distance</label>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      id="mileageDistance"
+                      type="text"
+                      inputMode="decimal"
+                      value={distance !== 0 ? distance : ''}
+                      onChange={(e) => setDistance(Number(e.target.value) || 0)}
+                      placeholder="0.0"
+                      aria-label="Distance"
+                      className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                    <select
+                      value={distanceUnit}
+                      onChange={(e) => setDistanceUnit(e.target.value)}
+                      aria-label="Distance unit"
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                    >
+                      {DISTANCE_UNITS.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
-          </section>
+
+            <div className="border-t border-slate-100 my-6" />
+
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 mb-4">Vehicle & Rate</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="mileageVehicle" className="text-[10px] font-bold uppercase text-slate-400">Vehicle</label>
+                  <input
+                    id="mileageVehicle"
+                    value={vehicle}
+                    onChange={(e) => setVehicle(e.target.value)}
+                    placeholder="Vehicle description"
+                    aria-label="Vehicle"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mileageRate" className="text-[10px] font-bold uppercase text-slate-400">Rate per {distanceUnit === 'Miles' ? 'Mile' : 'Km'}</label>
+                  <div className="mt-2 flex rounded-lg overflow-hidden">
+                    <span className="inline-flex items-center px-3 text-sm text-slate-500 bg-white border-r border-slate-200">{currency}</span>
+                    <input
+                      id="mileageRate"
+                      type="text"
+                      inputMode="decimal"
+                      value={rate !== 0 ? rate : ''}
+                      onChange={(e) => setRate(Number(e.target.value) || 0)}
+                      placeholder="0.00"
+                      aria-label="Rate"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-right text-sm font-mono font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="mileageAccount" className="text-[10px] font-bold uppercase text-slate-400">Account</label>
+                  <select
+                    id="mileageAccount"
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    aria-label="Account"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">Select account</option>
+                    {accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name}` : account.name}</option>)}
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <div className="rounded-lg bg-white border border-slate-200 p-4">
+                    <div className="text-sm text-slate-600">Total Reimbursement</div>
+                    <div className="mt-3 text-2xl font-semibold text-slate-900">{formatCurrency(amount, currency)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 my-6" />
+
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 mb-4">Notes</h3>
+              <textarea
+                id="mileageNotes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                placeholder="Enter notes..."
+                aria-label="Notes"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all resize-y"
+              />
+            </div>
           </div>
         </div>
       </div>

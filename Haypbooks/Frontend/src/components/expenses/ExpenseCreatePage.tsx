@@ -299,7 +299,7 @@ export default function ExpenseCreatePage() {
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">New Expense</h1>
+              <h1 className="text-xl font-semibold text-slate-900">New Expense Report</h1>
               <p className="mt-1 text-sm text-slate-500">Complete the expense form to create a new report.</p>
             </div>
             <div className="flex items-center gap-3">

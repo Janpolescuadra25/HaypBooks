@@ -154,88 +154,166 @@ const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function Rec
   useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
   return (
-    <div className="space-y-6 bg-slate-50 text-slate-900">
+    <div className="space-y-6 text-slate-900">
       <div className="overflow-y-auto">
-        <div className="px-4 py-6 pb-6">
-        <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Receipt Date</label>
-                <input type="date" value={receiptDate} onChange={(e) => { setReceiptDate(e.target.value); setExpenseDate(e.target.value) }} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option.replace(/_/g, ' ')}</option>)}
-                </select>
-              </div>
-            </div>
-          </section>
+        <div className="mx-auto w-full max-w-4xl px-4 py-6">
+          <div className="space-y-6">
+            {error && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+            )}
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Merchant / Vendor</label>
-                <input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Merchant name" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Category</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  {CATEGORIES.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Payment Method</label>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  {PAYMENT_METHODS.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Amount</label>
-                <div className="mt-2 flex rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-                  <span className="inline-flex items-center px-4 text-sm text-slate-500">{currency}</span>
-                  <input type="number" value={amount} min={0} step="0.01" onChange={(e) => setAmount(Number(e.target.value))} className="w-full rounded-none border-0 bg-transparent px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <h3 className="text-xs font-bold text-slate-900 mb-4">Receipt Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="receiptDate" className="text-[10px] font-bold uppercase text-slate-400">Receipt Date</label>
+                    <input
+                      id="receiptDate"
+                      type="date"
+                      value={receiptDate}
+                      onChange={(e) => { setReceiptDate(e.target.value); setExpenseDate(e.target.value) }}
+                      aria-label="Receipt Date"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="receiptStatus" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
+                    <select
+                      id="receiptStatus"
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      aria-label="Status"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                    >
+                      {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option.replace(/_/g, ' ')}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="merchantName" className="text-[10px] font-bold uppercase text-slate-400">Merchant / Vendor</label>
+                    <input
+                      id="merchantName"
+                      value={merchant}
+                      onChange={(e) => setMerchant(e.target.value)}
+                      placeholder="Merchant name"
+                      aria-label="Merchant / Vendor"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="receiptPaymentMethod" className="text-[10px] font-bold uppercase text-slate-400">Payment Method</label>
+                    <select
+                      id="receiptPaymentMethod"
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      aria-label="Payment Method"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                    >
+                      {PAYMENT_METHODS.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="receiptAmount" className="text-[10px] font-bold uppercase text-slate-400">Amount</label>
+                    <div className="mt-2 flex rounded-lg overflow-hidden">
+                      <span className="inline-flex items-center px-3 text-sm text-slate-500 bg-white border-r border-slate-200">{currency}</span>
+                      <input
+                        id="receiptAmount"
+                        type="text"
+                        inputMode="decimal"
+                        value={amount !== 0 ? amount : ''}
+                        onChange={(e) => setAmount(Number(e.target.value) || 0)}
+                        placeholder="0.00"
+                        aria-label="Amount"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-right text-sm font-mono font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="expenseDate" className="text-[10px] font-bold uppercase text-slate-400">Expense Date</label>
+                    <input
+                      id="expenseDate"
+                      type="date"
+                      value={expenseDate}
+                      onChange={(e) => setExpenseDate(e.target.value)}
+                      aria-label="Expense Date"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Reference Number</label>
-                <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Transaction ID" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-            </div>
-          </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="border-t border-slate-100 my-6" />
+
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Expense Date</label>
-                <input type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Account</label>
-                <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                  <option value="">Select account</option>
-                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name}` : account.name}</option>)}
-                </select>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input id="receipt-billable" type="checkbox" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-                  <label htmlFor="receipt-billable" className="text-sm font-semibold text-slate-900">Billable to Client</label>
+                <h3 className="text-xs font-bold text-slate-900 mb-4">Categories</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="receiptCategory" className="text-[10px] font-bold uppercase text-slate-400">Category</label>
+                    <select
+                      id="receiptCategory"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      aria-label="Category"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                    >
+                      {CATEGORIES.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="receiptAccount" className="text-[10px] font-bold uppercase text-slate-400">Account</label>
+                    <select
+                      id="receiptAccount"
+                      value={accountId}
+                      onChange={(e) => setAccountId(e.target.value)}
+                      aria-label="Account"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                    >
+                      <option value="">Select account</option>
+                      {accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name}` : account.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="receipt-billable"
+                        type="checkbox"
+                        checked={billable}
+                        onChange={(e) => setBillable(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <label htmlFor="receipt-billable" className="text-[10px] font-bold uppercase text-slate-400">Billable to Client</label>
+                    </div>
+                    {billable && (
+                      <input
+                        id="receiptClientProject"
+                        value={clientProject}
+                        onChange={(e) => setClientProject(e.target.value)}
+                        placeholder="Client / Project"
+                        aria-label="Client/Project"
+                        className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                      />
+                    )}
+                  </div>
                 </div>
-                {billable && (
-                  <input value={clientProject} onChange={(e) => setClientProject(e.target.value)} placeholder="Client / Project" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                )}
+              </div>
+
+              <div className="border-t border-slate-100 my-6" />
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 mb-4">Notes</h3>
+                <textarea
+                  id="receiptNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={4}
+                  placeholder="Enter notes..."
+                  aria-label="Notes"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all resize-y"
+                />
               </div>
             </div>
-            <div className="mt-6">
-              <label className="block text-sm font-semibold text-slate-900">Description / Notes</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-            </div>
-          </section>
+          </div>
         </div>
-      </div>
-
       </div>
     </div>
   )

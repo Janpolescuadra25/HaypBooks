@@ -199,14 +199,9 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
-          <p className="mt-1 text-sm text-slate-500">Add each expense line and the bill will update automatically.</p>
-        </div>
-        <button type="button" onClick={addRow} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-          <Plus size={16} /> {addRowLabel}
-        </button>
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
+        <p className="mt-1 text-sm text-slate-500">Add each expense line and the bill will update automatically.</p>
       </div>
       <div ref={containerRef} className={`mt-6 rounded-xl border border-slate-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
         {rows.length === 0 ? (
@@ -252,10 +247,10 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                     onDragEnd={onDragEnd}
                     className={`${isDragging ? 'opacity-50' : ''} border-t border-slate-200 ${overId === row.id ? 'bg-slate-50' : ''}`}
                   >
-                    <td className="px-4 py-3 border-r border-slate-200 text-center text-slate-500">
+                    <td className="w-12 px-2 py-3 border-r border-slate-200 text-center text-slate-500">
                       {showDragHandle ? (
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-grab active:cursor-grabbing">
-                          <GripVertical size={16} />
+                        <span className="inline-flex h-10 w-8 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-100 hover:text-slate-600 cursor-grab active:cursor-grabbing transition-all group active:scale-95">
+                          <GripVertical size={20} strokeWidth={2.5} className="group-active:text-emerald-600 transition-colors" />
                         </span>
                       ) : null}
                     </td>
@@ -270,7 +265,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                               value={String(value ?? '')}
                               placeholder={column.placeholder}
                               onChange={(event) => updateRow(row.id, column.key, event.target.value)}
-                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                              className="w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
                             />
                           )}
                           {column.type === 'number' && (
@@ -279,7 +274,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                               value={value === undefined || value === null ? '' : value}
                               placeholder={column.placeholder}
                               onChange={(event) => updateRow(row.id, column.key, event.target.value === '' ? 0 : Number(event.target.value))}
-                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                              className="w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
                             />
                           )}
                           {column.type === 'select' && (
@@ -296,7 +291,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                                   onItemSelect?.(row.id, selected)
                                 }
                               }}
-                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                              className="w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
                             >
                               <option value="">Select</option>
                               {column.options?.map((option) => (
@@ -305,7 +300,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                             </select>
                           )}
                           {column.type === 'calculated' && (
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900">
+                            <div className="flex items-center w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 tabular-nums">
                               {typeof value === 'number' ? formatCurrency(value, currency) : String(value ?? '—')}
                             </div>
                           )}
@@ -315,13 +310,13 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {showCopyButton && (
-                          <button type="button" title="Duplicate row" aria-label="Duplicate row" onClick={() => duplicateRow(row.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 hover:bg-slate-200">
-                            <Copy size={16} />
+                          <button type="button" title="Duplicate row" aria-label="Duplicate row" onClick={() => duplicateRow(row.id)} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-200">
+                            <Copy size={18} />
                           </button>
                         )}
                         {showDeleteButton && (
-                          <button type="button" title="Delete row" aria-label="Delete row" onClick={() => deleteRow(row.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 hover:bg-slate-200">
-                            <Trash2 size={16} />
+                          <button type="button" title="Delete row" aria-label="Delete row" onClick={() => deleteRow(row.id)} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all border border-slate-200">
+                            <Trash2 size={18} />
                           </button>
                         )}
                       </div>
@@ -333,6 +328,12 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
           </table>
         )}
       </div>
+      <div className="mt-4 flex justify-end">
+        <button type="button" onClick={addRow} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-50">
+          <Plus size={18} /> {addRowLabel}
+        </button>
+      </div>
+      <style jsx>{`
       <style jsx>{`
         .line-col-handle { width: 48px; min-width: 48px; max-width: 48px; }
         .line-col-actions { width: 98px; min-width: 98px; max-width: 98px; }

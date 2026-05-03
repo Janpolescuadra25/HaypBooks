@@ -6,6 +6,7 @@ import { Plus, Search, Edit2, Trash2, RefreshCw, Download, Users, ChevronLeft, C
 import apiClient from '@/lib/api-client'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
+import HaypModal from '@/components/shared/HaypModal'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 
 const PAGE_SIZE = 25
@@ -69,41 +70,41 @@ function GroupFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">{mode === 'create' ? 'New Customer Group' : 'Edit Group'}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100"><X size={16} /></button>
+    <HaypModal
+      open={true}
+      onClose={onClose}
+      title={mode === 'create' ? 'New Customer Group' : 'Edit Group'}
+      subtitle={mode === 'create' ? 'Create a group to organize customers into segments.' : undefined}
+      size="sm"
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Group Name <span className="text-red-500">*</span></label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="e.g. Wholesale"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+          />
         </div>
-        <form onSubmit={submit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Group Name <span className="text-red-500">*</span></label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Wholesale"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Optional description"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">
-              {saving ? 'Saving…' : mode === 'create' ? 'Create Group' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+            placeholder="Optional description"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none"
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">
+            {saving ? 'Saving…' : mode === 'create' ? 'Create Group' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </HaypModal>
   )
 }
 
@@ -343,6 +344,8 @@ export default function CustomerGroupsPage() {
           <button
             onClick={() => setSelectedIds(new Set())}
             className="p-1.5 rounded-lg hover:bg-white/20"
+            aria-label="Clear selection"
+            title="Clear selection"
           >
             <X size={14} />
           </button>
@@ -357,18 +360,18 @@ export default function CustomerGroupsPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="w-10 px-3 py-3">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" />
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="accent-blue-600" aria-label="Select all customer groups" title="Select all customer groups" />
                   </th>
-                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" style={{ width: colWidths.name, minWidth: colWidths.name, maxWidth: colWidths.name }} title="Name">
+                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" title="Name">
                     <span className="block truncate pr-3">Name</span><ResizeHandle col="name" />
                   </th>
-                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }} title="Description">
+                  <th className="relative group text-left px-4 py-3 text-gray-600 font-semibold overflow-hidden" title="Description">
                     <span className="block truncate pr-3">Description</span><ResizeHandle col="description" />
                   </th>
-                  <th className="relative group text-right px-4 py-3 text-gray-600 font-semibold overflow-hidden" style={{ width: colWidths.count, minWidth: colWidths.count, maxWidth: colWidths.count }} title="Customers">
+                  <th className="relative group text-right px-4 py-3 text-gray-600 font-semibold overflow-hidden" title="Customers">
                     <span className="block truncate pr-3">Customers</span><ResizeHandle col="count" />
                   </th>
-                  <th className="text-right px-4 py-3 text-gray-600 font-semibold" style={{ width: colWidths.actions }}>Actions</th>
+                  <th className="text-right px-4 py-3 text-gray-600 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -399,9 +402,9 @@ export default function CustomerGroupsPage() {
                       className={`border-t border-gray-100 hover:bg-blue-50/30 transition-colors ${selectedIds.has(group.id) ? 'bg-blue-50/20' : ''}`}
                     >
                       <td className="px-3 py-3 text-center">
-                        <input type="checkbox" checked={selectedIds.has(group.id)} onChange={() => toggleOne(group.id)} className="accent-blue-600" />
+                        <input type="checkbox" checked={selectedIds.has(group.id)} onChange={() => toggleOne(group.id)} className="accent-blue-600" aria-label={`Select group ${group.name}`} title={`Select group ${group.name}`} />
                       </td>
-                      <td className="px-4 py-3 font-medium truncate" style={{ width: colWidths.name, maxWidth: colWidths.name }}>
+                      <td className="px-4 py-3 font-medium truncate">
                         <button
                           onClick={() => router.push(`/sales/customers/groups/${group.id}`)}
                           className="text-emerald-600 hover:text-emerald-800 hover:underline text-left w-full truncate"
@@ -409,13 +412,13 @@ export default function CustomerGroupsPage() {
                           {group.name}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-gray-500 truncate" style={{ width: colWidths.description, maxWidth: colWidths.description }}>
+                      <td className="px-4 py-3 text-gray-500 truncate">
                         {group.description || <span className="italic text-gray-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700 font-medium" style={{ width: colWidths.count }}>
+                      <td className="px-4 py-3 text-right text-gray-700 font-medium">
                         {group.customerCount}
                       </td>
-                      <td className="px-4 py-3 text-right" style={{ width: colWidths.actions }}>
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setModal({ mode: 'edit', group })}
@@ -449,6 +452,8 @@ export default function CustomerGroupsPage() {
                   onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={page === 0}
                   className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+                  aria-label="Previous page"
+                  title="Previous page"
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -457,6 +462,8 @@ export default function CustomerGroupsPage() {
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                   className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+                  aria-label="Next page"
+                  title="Next page"
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -507,7 +514,7 @@ export default function CustomerGroupsPage() {
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-200 overflow-y-auto max-h-[85vh]">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-base font-semibold">Customer Groups Help</h2>
-              <button onClick={() => setHelpOpen(false)} className="p-1 rounded hover:bg-gray-100"><X size={16} /></button>
+              <button onClick={() => setHelpOpen(false)} className="p-1 rounded hover:bg-gray-100" aria-label="Close help" title="Close help"><X size={16} /></button>
             </div>
             <div className="p-4 text-sm text-gray-700 space-y-3">
               <p>Customer Groups let you segment your customers for reporting, pricing rules, and targeted workflows.</p>

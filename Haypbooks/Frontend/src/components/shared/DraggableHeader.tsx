@@ -12,9 +12,11 @@ import { cn } from '@/lib/utils'
 
 interface DraggableHeaderProps<TData, TValue> {
   header: Header<TData, TValue>
+  isLastDataColumn?: boolean
+  isDefaultSizing?: boolean
 }
 
-export function DraggableHeader<TData, TValue>({ header }: DraggableHeaderProps<TData, TValue>) {
+export function DraggableHeader<TData, TValue>({ header, isLastDataColumn, isDefaultSizing }: DraggableHeaderProps<TData, TValue>) {
   const isNonDraggable = header.id === 'select' || header.id === 'actions'
   const [isMounted, setIsMounted] = useState(false)
 
@@ -43,16 +45,26 @@ export function DraggableHeader<TData, TValue>({ header }: DraggableHeaderProps<
   const isResizable = header.column.getCanResize()
   const sorted = header.column.getIsSorted()
   const isSortable = header.column.getCanSort()
+  const isActionColumn = header.column.id === 'actions'
+  const isSelectColumn = header.column.id === 'select'
+  const columnSize = header.getSize()
+  const useFlexGrow = !isActionColumn && !isSelectColumn && isDefaultSizing
+  const dragTransform = CSS.Translate.toString(transform)
+  const resolvedTransform = dragTransform
 
   const style: CSSProperties = {
     opacity: isNonDraggable ? 1 : 1,
-    transform: CSS.Translate.toString(transform),
+    transform: resolvedTransform,
     transition,
-    width: header.getSize(),
-    flex: isResizable ? `${header.getSize()} 0 ${header.getSize()}px` : `0 0 ${header.getSize()}px`,
-    minWidth: header.column.columnDef.minSize,
+    width: useFlexGrow ? undefined : columnSize,
+    flex: useFlexGrow ? `${columnSize} 1 0` : `0 0 ${columnSize}px`,
+    minWidth: header.column.columnDef.minSize || 60,
     maxWidth: header.column.columnDef.maxSize,
-    zIndex: isNonDraggable ? 0 : 1,
+    position: isActionColumn ? 'sticky' : undefined,
+    right: isActionColumn ? 0 : undefined,
+    zIndex: isActionColumn ? 30 : isNonDraggable ? 0 : 1,
+    marginLeft: isActionColumn ? 'auto' : undefined,
+    overflow: isActionColumn ? 'visible' : undefined,
   }
 
   const content = header.isPlaceholder
@@ -64,8 +76,9 @@ export function DraggableHeader<TData, TValue>({ header }: DraggableHeaderProps<
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group relative flex items-center h-11 border-r border-slate-200 bg-slate-50 px-3 text-left align-middle font-bold uppercase tracking-tight text-slate-900 last:border-r-0 select-none',
-        !isNonDraggable && 'hover:bg-slate-100',
+        'group relative box-border flex items-center h-12 border-r border-slate-100 bg-white px-3 text-left align-middle font-bold uppercase tracking-tight text-slate-900 last:border-r-0 select-none transition-colors',
+        !isNonDraggable && 'hover:bg-slate-50/80',
+        isActionColumn && 'sticky right-0 z-30 !bg-white overflow-visible shadow-[-4px_0_12px_-4px_rgba(0,0,0,0.1)] border-l border-slate-100',
       )}
       role="columnheader"
     >
@@ -74,7 +87,7 @@ export function DraggableHeader<TData, TValue>({ header }: DraggableHeaderProps<
           {...buttonAttributes}
           {...listeners}
           type="button"
-          className="absolute left-1.5 top-1/2 -translate-y-1/2 cursor-grab p-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-emerald-700 transition-opacity z-10"
+          className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab p-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-emerald-600 transition-opacity z-10"
           aria-label="Drag to reorder"
         >
           <GripVertical className="h-3.5 w-3.5" />
@@ -84,17 +97,17 @@ export function DraggableHeader<TData, TValue>({ header }: DraggableHeaderProps<
       <div
         onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
         className={cn(
-          'flex flex-1 items-center gap-1 overflow-hidden h-full w-full',
+          'flex flex-1 items-center gap-1.5 h-full w-full',
           isSortable ? 'cursor-pointer' : 'cursor-default',
           isNonDraggable ? 'justify-center' : 'justify-start',
-          !isNonDraggable && 'pl-4',
+          !isNonDraggable && 'pl-3',
         )}
       >
-        <span className="truncate text-[10px] font-bold uppercase tracking-tight">
+        <span className="whitespace-nowrap text-[10px] font-black uppercase tracking-wide text-slate-500 group-hover:text-slate-900 transition-colors">
           {content}
         </span>
         {isSortable && (
-          <ArrowUpDown className={cn('h-3.5 w-3.5 transition-colors', sorted ? 'text-emerald-600' : 'opacity-0 group-hover:opacity-60')} />
+          <ArrowUpDown className={cn('h-3 w-3 transition-all', sorted ? 'text-emerald-600 scale-110' : 'opacity-0 group-hover:opacity-40')} />
         )}
       </div>
 
@@ -103,8 +116,8 @@ export function DraggableHeader<TData, TValue>({ header }: DraggableHeaderProps<
           onMouseDown={header.getResizeHandler()}
           onTouchStart={header.getResizeHandler()}
           className={cn(
-            'absolute right-[-2px] top-0 h-full w-1.5 cursor-col-resize hover:bg-slate-300 transition-colors z-20',
-            header.column.getIsResizing() ? 'bg-slate-300' : 'bg-transparent',
+            'absolute right-[-2px] top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-500/20 transition-colors z-20',
+            header.column.getIsResizing() ? 'bg-emerald-500/40' : 'bg-transparent',
           )}
         />
       )}

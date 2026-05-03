@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Download, Clock, Trash2, Edit2, Eye, List } from 'lucide-react'
+import { Plus, Download, Clock, Trash2, Edit2, Eye, List, Banknote } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { cn } from '@/lib/utils'
-import CenteredModal from '@/components/shared/CenteredModal'
-import VendorForm, { type VendorFormHandle } from './VendorForm'
+import HaypVendorModal from '@/components/shared/HaypVendorModal'
 import { csvDownload } from './_helpers'
 import { useRouter } from 'next/navigation'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
@@ -41,11 +40,9 @@ export default function VendorsPage() {
   const [openVendorMode, setOpenVendorMode] = useState<'new' | 'edit'>('new')
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }, [])
-  const vendorFormRef = useRef<VendorFormHandle | null>(null)
   const closeVendorPanel = useCallback(() => { setVendorPanelOpen(false); setOpenVendorId(null); setOpenVendorMode('new') }, [])
   const openNewVendor = useCallback(() => { setVendorPanelOpen(true); setOpenVendorMode('new'); setOpenVendorId(null) }, [])
   const openEditVendor = useCallback((id: string) => { setVendorPanelOpen(true); setOpenVendorMode('edit'); setOpenVendorId(id) }, [])
-  const saveVendor = () => { vendorFormRef.current?.save() }
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -144,8 +141,8 @@ export default function VendorsPage() {
       id: 'name',
       header: 'Name',
       accessorKey: 'name',
-      size: 240,
-      minSize: 150,
+      size: 220,
+      minSize: 90,
       render: (val) => <span className="font-semibold text-gray-800 truncate">{val || '—'}</span>,
     },
     {
@@ -153,7 +150,7 @@ export default function VendorsPage() {
       header: 'Email',
       accessorKey: 'email',
       size: 220,
-      minSize: 120,
+      minSize: 90,
       render: (val) => <span className="text-gray-500 text-xs truncate">{val || '—'}</span>,
     },
     {
@@ -161,7 +158,7 @@ export default function VendorsPage() {
       header: 'Phone',
       accessorKey: 'phone',
       size: 150,
-      minSize: 100,
+      minSize: 90,
       render: (val) => <span className="text-gray-500 text-xs truncate">{val || '—'}</span>,
     },
     {
@@ -190,8 +187,8 @@ export default function VendorsPage() {
       id: 'balance',
       header: 'Balance',
       accessorKey: 'balance',
-      size: 130,
-      minSize: 100,
+      size: 140,
+      minSize: 90,
       align: 'right',
       isSummable: true,
       render: (val) => (
@@ -272,26 +269,32 @@ export default function VendorsPage() {
     formatValue: (value) => formatCurrency(value, currency),
   }), [currency])
 
-  return (
-    <div className="p-4 sm:p-6 space-y-4 w-full h-[calc(100vh-4rem)] flex flex-col">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Vendors</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} vendors`}</p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
-          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={openNewVendor} className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border border-transparent bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"><Plus size={14} /> New Vendor</button>
-          </div>
-        </div>
-      </div>
+  const stats = useMemo(() => [
+    { icon: List, label: 'Total Vendors', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Active Vendors', value: rows.filter(r => (r.status ?? 'ACTIVE') === 'ACTIVE').length, color: 'emerald' },
+    { icon: Trash2, label: 'Inactive Vendors', value: rows.filter(r => r.status === 'INACTIVE').length, color: 'amber' },
+    { icon: Banknote, label: 'Total Balance', value: formatCurrency(rows.reduce((acc, curr) => acc + (curr.balance ?? 0), 0), currency), color: 'rose' },
+  ], [rows, currency])
 
-      <div className="flex-1 min-h-0 min-w-0 pb-4">
+  return (
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
         <HaypDataTable
           data={filtered}
           columns={columns}
           tableId="vendors"
+          title="Vendors"
+          description="Manage your suppliers, service providers, and expense categories in one place."
+          stats={stats}
+          headerActions={
+            <button 
+              onClick={openNewVendor} 
+              className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Plus size={18} />
+              New Vendor
+            </button>
+          }
           globalFilter={search}
           onGlobalFilterChange={setSearch}
           filters={filters}
@@ -305,43 +308,29 @@ export default function VendorsPage() {
           onExport={handleExportCSV}
           exportLabel="Export"
           onActivityLog={() => router.push('/expenses/vendors/activity')}
+          onRowClick={(row) => openEditVendor(row.id)}
           emptyTitle="No vendors found"
           emptySubtitle="Adjust your search or filter to see results"
           loading={loading}
         />
       </div>
 
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <CenteredModal
-        open={vendorPanelOpen}
-        onClose={closeVendorPanel}
-        title={openVendorMode === 'new' ? 'New Vendor' : 'Edit Vendor'}
-        footer={
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={closeVendorPanel}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={saveVendor}
-              className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-            >
-              Save
-            </button>
+      {toast && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-slate-900 text-white text-xs font-bold px-6 py-3 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-3">
+             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+             {toast}
           </div>
-        }
-      >
-        <VendorForm
-          ref={vendorFormRef}
-          mode={openVendorMode}
-          vendorId={openVendorId ?? undefined}
-          onSaved={onVendorSaved}
-        />
-      </CenteredModal>
+        </div>
+      )}
+
+      <HaypVendorModal
+        isOpen={vendorPanelOpen}
+        onClose={closeVendorPanel}
+        mode={openVendorMode}
+        vendorId={openVendorId ?? undefined}
+        onSaved={onVendorSaved}
+      />
     </div>
   )
 }

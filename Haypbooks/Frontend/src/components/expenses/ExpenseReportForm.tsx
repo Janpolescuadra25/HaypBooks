@@ -9,8 +9,6 @@ import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
-import ActivityLog from '@/components/ui/ActivityLog'
-import { useActivityLog } from '@/hooks/useActivityLog'
 
 interface ExpenseReportFormProps {
   mode: 'new' | 'edit'
@@ -75,14 +73,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
 
   const isEdit = mode === 'edit'
   const readOnly = isEdit && status !== 'DRAFT'
-
-  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
-
-  const { entries: activityEntries, loading: activityLoading } = useActivityLog({
-    companyId: activeTab === 'activity' ? companyId : null,
-    pageSize: 30,
-    initialFilters: activeTab === 'activity' && expenseId ? { tableName: 'ExpenseReport', recordId: expenseId } : undefined,
-  })
 
   useEffect(() => {
     if (!companyId) return
@@ -269,32 +259,26 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
-            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !expenseId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-          </div>
-        </div>
-        <div className={activeTab !== 'details' ? 'hidden' : ''}>
+        <div>
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
           <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="block text-sm font-semibold text-slate-900">Report Name</label>
-                <input value={reportName} onChange={(e) => setReportName(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Report title" />
+                <label htmlFor="report-name" className="block text-sm font-semibold text-slate-900">Report Name</label>
+                <input id="report-name" value={reportName} onChange={(e) => setReportName(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Report title" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">From Date</label>
-                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <label htmlFor="report-from-date" className="block text-sm font-semibold text-slate-900">From Date</label>
+                <input id="report-from-date" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report start date" title="Report start date" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900">To Date</label>
-                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <label htmlFor="report-to-date" className="block text-sm font-semibold text-slate-900">To Date</label>
+                <input id="report-to-date" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report end date" title="Report end date" />
               </div>
               <div className="sm:col-span-2 lg:col-span-1">
-                <label className="block text-sm font-semibold text-slate-900">Employee</label>
-                <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
+                <label htmlFor="report-employee" className="block text-sm font-semibold text-slate-900">Employee</label>
+                <select id="report-employee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Select employee" title="Select employee">
                   <option value="">Select employee</option>
                   {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.displayName}</option>)}
                 </select>
@@ -328,13 +312,13 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                 <tbody>
                   {lines.map((line) => (
                     <tr key={line.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="px-4 py-3"><input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
-                      <td className="px-4 py-3"><input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Description" /></td>
-                      <td className="px-4 py-3"><select value={line.accountId} onChange={(e) => updateLine(line.id, 'accountId', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"><option value="">Select account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} • ${account.name}` : account.name}</option>)}</select></td>
-                      <td className="px-4 py-3 text-right"><input type="number" min="0" step="0.01" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" /></td>
-                      <td className="px-4 py-3"><input value={line.receiptName} onChange={(e) => updateLine(line.id, 'receiptName', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Receipt link" /></td>
-                      <td className="px-4 py-3 text-center"><input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 text-emerald-600" /></td>
-                      {!readOnly && <td className="px-4 py-3 text-right"><button type="button" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"><X size={14} /></button></td>}
+                      <td className="px-4 py-3"><input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense line date" title="Expense line date" /></td>
+                      <td className="px-4 py-3"><input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Description" aria-label="Expense line description" title="Expense line description" /></td>
+                      <td className="px-4 py-3"><select value={line.accountId} onChange={(e) => updateLine(line.id, 'accountId', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense account" title="Expense account"><option value="">Select account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} • ${account.name}` : account.name}</option>)}</select></td>
+                      <td className="px-4 py-3 text-right"><input type="number" min="0" step="0.01" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense amount" title="Expense amount" /></td>
+                      <td className="px-4 py-3"><input value={line.receiptName} onChange={(e) => updateLine(line.id, 'receiptName', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Receipt link" aria-label="Expense receipt link" title="Expense receipt link" /></td>
+                      <td className="px-4 py-3 text-center"><input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 text-emerald-600" aria-label="Billable expense" title="Billable expense" /></td>
+                      {!readOnly && <td className="px-4 py-3 text-right"><button type="button" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100" aria-label="Remove expense line" title="Remove expense line"><X size={14} /></button></td>}
                     </tr>
                   ))}
                 </tbody>
@@ -350,7 +334,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </div>
               <div className="rounded-3xl bg-slate-50 p-4">
                 <div className="text-sm text-slate-600">Advance Payment</div>
-                <input type="number" min="0" step="0.01" value={advancePayment} onChange={(e) => setAdvancePayment(Number(e.target.value))} disabled={readOnly} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <input type="number" min="0" step="0.01" value={advancePayment} onChange={(e) => setAdvancePayment(Number(e.target.value))} disabled={readOnly} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Advance payment amount" title="Advance payment amount" />
               </div>
               <div className="rounded-3xl bg-slate-50 p-4">
                 <div className="text-sm text-slate-600">Net Amount Owed</div>
@@ -371,18 +355,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </div>
             </div>
           </section>
-            </div>
-          </div>
-        </div>
-        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
-                <div className="mt-4">
-                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this expense report yet." />
-                </div>
-              </section>
             </div>
           </div>
         </div>

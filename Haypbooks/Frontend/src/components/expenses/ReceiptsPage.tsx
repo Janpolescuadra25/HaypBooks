@@ -1,78 +1,50 @@
 'use client'
 
-import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
-import { Plus, Search, MoreVertical, Download, Filter, SlidersHorizontal, Clock, CheckSquare, Square, X, ArrowUpDown, Eye } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Plus, Search, Download, Filter, Clock, RefreshCw } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
-import EnhancedTable, { type Column as EnhancedColumn, useEnhancedTable } from '@/components/shared/EnhancedTable'
 import { expensesService } from '@/services/expenses.service'
-import CenteredModal from '@/components/shared/CenteredModal'
+import { useToast } from '@/components/ToastProvider'
+import { HaypDataTable } from '@/components/shared/HaypDataTable'
+import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import HaypModal from '@/components/shared/HaypModal'
 import ReceiptForm, { type ReceiptFormHandle } from './ReceiptForm'
-import { fmtDate, csvDownload, MenuBtn, StatusPill } from './_helpers'
+import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
-interface Receipt { id: string; receiptNumber?: string; merchant?: string; date: string; category?: string; amount: number; status?: string }
-type SortKey = 'receiptNumber' | 'merchant' | 'date' | 'category' | 'amount' | 'status'
-type ColDef = { key: string; label: string; visible: boolean; width: number; align?: EnhancedColumn<Receipt>['align'] }
-
-const DEFAULT_COLS: ColDef[] = [
-  { key: 'receiptNumber', label: 'Receipt #', visible: true, width: 130 },
-  { key: 'merchant',      label: 'Merchant',  visible: true, width: 180 },
-  { key: 'date',          label: 'Date',      visible: true, width: 115 },
-  { key: 'category',      label: 'Category',  visible: true, width: 150 },
-  { key: 'amount',        label: 'Amount',    visible: true, width: 120, align: 'right' },
-  { key: 'status',        label: 'Status',    visible: true, width: 130 },
-]
-const STORAGE_KEY = 'receipts-cols-v4'
-function loadCols(): ColDef[] { try { const s = localStorage.getItem(STORAGE_KEY); if (s) { const saved = JSON.parse(s) as ColDef[]; return DEFAULT_COLS.map(d => { const sc = saved.find(c => c.key === d.key); return sc ? { ...d, width: sc.width, visible: sc.visible } : d }) } } catch {} return DEFAULT_COLS }
-
-function compare(a: Receipt, b: Receipt, key: SortKey, dir: 'asc' | 'desc'): number {
-  if (key === 'amount') { const d = a.amount - b.amount; return dir === 'asc' ? d : -d }
-  const al = String(a[key] ?? '').toLowerCase(); const bl = String(b[key] ?? '').toLowerCase()
-  return dir === 'asc' ? al.localeCompare(bl) : bl.localeCompare(al)
+interface Receipt {
+  id: string
+  receiptNumber?: string
+  merchant?: string
+  date: string
+  category?: string
+  amount: number
+  status?: string
 }
-const STATUSES = ['ALL', 'DRAFT', 'UNMATCHED', 'MATCHED', 'ATTACHED']
+
+type StatusFilter = 'ALL' | 'DRAFT' | 'UNMATCHED' | 'MATCHED' | 'ATTACHED'
+const STATUSES: StatusFilter[] = ['ALL', 'DRAFT', 'UNMATCHED', 'MATCHED', 'ATTACHED']
 
 export default function ReceiptsPage() {
   const router = useRouter()
-  const { companyId, loading: cidLoading } = useCompanyId()
+  const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
-  const [rows, setRows]                 = useState<Receipt[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState('')
-  const [search, setSearch]             = useState('')
-  const [statusFilter, setStatusFilter] = useState('ALL')
-  const [sortKey, setSortKey]           = useState<SortKey>('date')
-  const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc')
-  const [currentPage, setCurrentPage]   = useState(1); const pageSize = 25
-  const [actionMenuId, setActionMenuId] = useState<string | null>(null)
-  const [menuPos, setMenuPos]           = useState<{ x: number; y: number } | null>(null)
-  const [showExport, setShowExport]     = useState(false)
-  const [showAdvFilters, setShowAdvFilters] = useState(false)
-  const [showColToggle, setShowColToggle]   = useState(false)
-  const [dateFrom, setDateFrom]         = useState('')
-  const [dateTo, setDateTo]             = useState('')
-  const [cols, setCols]                 = useState<ColDef[]>(() => loadCols())
-  const [toast, setToast]               = useState('')
+  const toast = useToast()
+  const [rows, setRows] = useState<Receipt[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [receiptPanelOpen, setReceiptPanelOpen] = useState(false)
-  const [openReceiptId, setOpenReceiptId] = useState<string | null>(null)
   const [openReceiptMode, setOpenReceiptMode] = useState<'new' | 'edit'>('new')
+  const [openReceiptId, setOpenReceiptId] = useState<string | null>(null)
   const receiptFormRef = useRef<ReceiptFormHandle | null>(null)
-
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
-  const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
-  const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-  const handleColumnsChange = (next: EnhancedColumn<Receipt>[]) => {
-    saveCols(cols.map(col => {
-      const updated = next.find(c => c.key === col.key)
-      return updated ? { ...col, width: updated.width } : col
-    }))
-  }
-  const closeReceiptPanel = () => { setReceiptPanelOpen(false); setOpenReceiptId(null); setOpenReceiptMode('new') }
-  const openNewReceipt = () => { setReceiptPanelOpen(true); setOpenReceiptMode('new'); setOpenReceiptId(null) }
-  const openEditReceipt = (id: string) => { setReceiptPanelOpen(true); setOpenReceiptMode('edit'); setOpenReceiptId(id) }
-  const saveReceipt = () => { receiptFormRef.current?.save() }
+  const saveAndNewRef = useRef(false)
 
   const fetchReceipts = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -84,196 +56,258 @@ export default function ReceiptsPage() {
       setRows(Array.isArray(data) ? data : data.receipts ?? [])
     } catch {
       setError('Failed to load receipts')
-      showToast('Failed to load receipts')
-    } finally { setLoading(false) }
-  }, [companyId])
+      toast.error('Failed to load receipts')
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId, toast])
 
   useEffect(() => { fetchReceipts() }, [fetchReceipts])
-  const onReceiptSaved = async () => { await fetchReceipts(); closeReceiptPanel() }
-  const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
+
+  const handleClose = useCallback(() => {
+    saveAndNewRef.current = false
+    setReceiptPanelOpen(false)
+    setOpenReceiptId(null)
+    setOpenReceiptMode('new')
+  }, [])
+
+  const handleSaved = useCallback(async () => {
+    await fetchReceipts()
+    if (saveAndNewRef.current) {
+      saveAndNewRef.current = false
+      setOpenReceiptMode('new')
+      setOpenReceiptId(null)
+    } else {
+      setReceiptPanelOpen(false)
+      setOpenReceiptId(null)
+    }
+  }, [fetchReceipts])
 
   const filtered = useMemo(() => {
-    let list = rows
-    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
-    if (search) { const q = search.toLowerCase(); list = list.filter(r => (r.receiptNumber ?? '').toLowerCase().includes(q) || (r.merchant ?? '').toLowerCase().includes(q)) }
-    if (dateFrom) list = list.filter(r => r.date >= dateFrom)
-    if (dateTo)   list = list.filter(r => r.date <= dateTo)
-    return list
+    return rows
+      .filter((row) => statusFilter === 'ALL' || row.status === statusFilter)
+      .filter((row) => {
+        const q = search.toLowerCase()
+        return (
+          row.receiptNumber?.toLowerCase().includes(q) ||
+          row.merchant?.toLowerCase().includes(q)
+        )
+      })
+      .filter((row) => (dateFrom ? row.date >= dateFrom : true))
+      .filter((row) => (dateTo ? row.date <= dateTo : true))
   }, [rows, statusFilter, search, dateFrom, dateTo])
 
-  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
-  const paged  = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage])
-  const table = useEnhancedTable<Receipt>({ data: paged, tableId: 'receipts' })
+  const totals = useMemo<HaypTotalsConfig>(() => ({
+    enabled: true,
+    sumColumns: ['amount'],
+    formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
+  }), [currency])
 
-  const selectedRowsData = useMemo(
-    () => rows.filter((row) => table.selectedRows.includes(row.id)),
-    [rows, table.selectedRows],
-  )
-  const canDeleteSelected = selectedRowsData.length > 0 && selectedRowsData.every((row) => row.status === 'DRAFT')
-
-  const toggleSort   = (key: SortKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc') } }
-  const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
-  const handleExportCSV = useCallback(() => {
-    setShowExport(false)
-    csvDownload(`receipts-${new Date().toISOString().slice(0,10)}.csv`, ['Receipt #','Merchant','Date','Category','Amount','Status'], sorted.map(r => [r.receiptNumber ?? '', r.merchant ?? '', r.date, r.category ?? '', String(r.amount), r.status ?? '']))
-    showToast('CSV exported')
-  }, [sorted, showToast])
-
-  const handleExportSelected = useCallback(() => {
-    if (table.selectedRows.length === 0) return
-    csvDownload(`receipts-selected-${new Date().toISOString().slice(0,10)}.csv`, ['Receipt #','Merchant','Date','Category','Amount','Status'], sorted.filter((r) => table.selectedRows.includes(r.id)).map(r => [r.receiptNumber ?? '', r.merchant ?? '', r.date, r.category ?? '', String(r.amount), r.status ?? '']))
-    showToast('Selected receipts exported')
-  }, [sorted, table.selectedRows, showToast])
-
-  const handleDeleteSelected = useCallback(async () => {
-    if (!companyId || table.selectedRows.length === 0) return
-    if (!canDeleteSelected) {
-      showToast('Only draft receipts can be deleted')
-      return
-    }
-    const count = table.selectedRows.length
-    if (!confirm(`Delete ${count} selected receipt${count !== 1 ? 's' : ''}?`)) return
-    try {
-      await Promise.all(table.selectedRows.map((id) => expensesService.deleteReceipt(companyId, id)))
-      setRows((prev) => prev.filter((row) => !table.selectedRows.includes(row.id)))
-      table.clearSelection()
-      showToast(`${count} receipt${count !== 1 ? 's' : ''} deleted`)
-    } catch {
-      showToast('Failed to delete selected receipts')
-    }
-  }, [canDeleteSelected, companyId, table, showToast])
-
-  const handleMatchSelected = useCallback(() => {
-    if (table.selectedRows.length === 0) return
-    const count = table.selectedRows.length
-    setRows((prev) => prev.map((row) => table.selectedRows.includes(row.id) ? { ...row, status: 'MATCHED' } : row))
-    table.clearSelection()
-    showToast(`${count} selected receipt${count !== 1 ? 's' : ''} marked as matched`)
-  }, [table, showToast])
-
-  const visibleCols = cols.filter(c => c.visible)
-
-  const renderCell = useCallback((row: Receipt, key: string) => {
-    switch (key) {
-      case 'receiptNumber': return <span className="font-semibold text-gray-800">{row.receiptNumber ?? '—'}</span>
-      case 'merchant':      return <span className="text-gray-700 truncate">{row.merchant ?? '—'}</span>
-      case 'date':          return <span className="text-gray-500">{fmtDate(row.date)}</span>
-      case 'category':      return <span className="text-gray-600 text-xs">{row.category ?? '—'}</span>
-      case 'amount':        return <span className="font-semibold text-emerald-800 tabular-nums">{fmt(row.amount)}</span>
-      case 'status':        return <StatusPill status={row.status ?? 'DRAFT'} />
-      default: return null
-    }
-  }, [fmt])
-
-  const tableColumns: EnhancedColumn<Receipt>[] = useMemo(() => [
-    ...visibleCols.map((col) => ({
-      key: col.key,
-      header: col.label,
-      width: col.width,
-      minWidth: col.width,
-      sortable: true,
-      align: col.align,
-      render: (_value, row) => renderCell(row, col.key),
-    })),
-{
-      key: 'actions',
-      isAction: true,
-      header: '',
-      width: 52,
-      minWidth: 52,
-      sortable: false,
-      align: 'right',
-      render: (_value, row) => (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation()
-            const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
-            if (actionMenuId === row.id) {
-              setActionMenuId(null)
-              setMenuPos(null)
-            } else {
-              setActionMenuId(row.id)
-              setMenuPos({ x: rect.right, y: rect.bottom })
-            }
-          }}
-          title="Receipt actions"
-          aria-label="Receipt actions"
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
-        >
-          <MoreVertical size={14} />
-        </button>
-      ),
+  const columns = useMemo<HaypColumn<Receipt>[]>(() => [
+    {
+      id: 'receiptNumber',
+      header: 'Receipt #',
+      accessorKey: 'receiptNumber',
+      size: 130,
+      minSize: 110,
+      render: (value) => <span className="font-semibold text-gray-900">{value ?? '—'}</span>,
     },
-  ], [visibleCols, actionMenuId, renderCell])
+    {
+      id: 'merchant',
+      header: 'Merchant',
+      accessorKey: 'merchant',
+      size: 180,
+      minSize: 140,
+      render: (value) => <span className="text-gray-700 truncate">{value ?? '—'}</span>,
+    },
+    {
+      id: 'date',
+      header: 'Date',
+      accessorKey: 'date',
+      size: 115,
+      minSize: 100,
+      render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
+    },
+    {
+      id: 'category',
+      header: 'Category',
+      accessorKey: 'category',
+      size: 150,
+      minSize: 130,
+      render: (value) => <span className="text-gray-600 text-xs">{value ?? '—'}</span>,
+    },
+    {
+      id: 'amount',
+      header: 'Amount',
+      accessorKey: 'amount',
+      size: 120,
+      minSize: 100,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className="font-semibold text-emerald-800 tabular-nums">{formatCurrency(value ?? 0, currency)}</span>,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'status',
+      size: 130,
+      minSize: 110,
+      render: (value) => <StatusPill status={value ?? 'DRAFT'} />,
+    },
+  ], [currency])
+
+  const handleExportCSV = useCallback(() => {
+    csvDownload(`receipts-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Receipt #', 'Merchant', 'Date', 'Category', 'Amount', 'Status'],
+      filtered.map((row) => [row.receiptNumber ?? '', row.merchant ?? '', row.date, row.category ?? '', String(row.amount), row.status ?? '']),
+    )
+    toast.success('CSV exported')
+  }, [filtered, toast])
+
+  const bulkActions = useMemo<HaypBulkAction[]>(() => [
+    {
+      label: 'Delete selected',
+      variant: 'danger',
+      onClick: (_ids, selectedRows) => {
+        const deletable = selectedRows.filter((row) => row.status === 'DRAFT')
+        if (deletable.length === 0) {
+          toast.error('Only draft receipts can be deleted')
+          return
+        }
+        if (!confirm(`Delete ${deletable.length} selected receipt${deletable.length !== 1 ? 's' : ''}?`)) return
+        Promise.all(deletable.map((row) => expensesService.deleteReceipt(companyId ?? '', row.id)))
+          .then(() => {
+            setRows((prev) => prev.filter((row) => !deletable.some((deleted) => deleted.id === row.id)))
+            toast.success(`${deletable.length} selected receipt${deletable.length !== 1 ? 's' : ''} deleted`)
+          })
+          .catch(() => toast.error('Failed to delete selected receipts'))
+      },
+    },
+    {
+      label: 'Mark selected matched',
+      onClick: (_ids, selectedRows) => {
+        if (selectedRows.length === 0) return
+        setRows((prev) => prev.map((row) => selectedRows.some((selected) => selected.id === row.id) ? { ...row, status: 'MATCHED' } : row))
+        toast.success(`${selectedRows.length} selected receipt${selectedRows.length !== 1 ? 's' : ''} marked as matched`)
+      },
+    },
+    {
+      label: 'Export selected',
+      icon: <Download className="mr-2.5 h-4 w-4 opacity-70" />,
+      onClick: (_ids, selectedRows) => {
+        if (selectedRows.length === 0) return
+        csvDownload(`receipts-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+          ['Receipt #', 'Merchant', 'Date', 'Category', 'Amount', 'Status'],
+          selectedRows.map((row) => [row.receiptNumber ?? '', row.merchant ?? '', row.date, row.category ?? '', String(row.amount), row.status ?? '']),
+        )
+        toast.success('Selected receipts exported')
+      },
+    },
+  ], [companyId, toast])
+
+  const handleRefresh = useCallback(() => {
+    fetchReceipts()
+  }, [fetchReceipts])
+
+  const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
+
+  const openEditReceipt = useCallback((id: string) => {
+    setReceiptPanelOpen(true)
+    setOpenReceiptMode('edit')
+    setOpenReceiptId(id)
+  }, [])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div><h1 className="text-2xl font-bold text-emerald-900">Receipts</h1><p className="text-sm text-emerald-600/70 mt-0.5">{`${sorted.length} receipts`}</p></div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative"><button onClick={() => setShowColToggle(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><SlidersHorizontal size={14} /> Columns</button>{showColToggle && (<div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-20">{cols.map(c => (<label key={c.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer select-none"><input type="checkbox" checked={c.visible} onChange={() => toggleCol(c.key)} className="rounded" />{c.label}</label>))}</div>)}</div>
-          <div className="relative"><button onClick={() => setShowExport(p => !p)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50"><Download size={14} /> Export</button>{showExport && (<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20"><button onClick={handleExportCSV} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Export CSV</button></div>)}</div>
-          <button onClick={() => router.push('/expenses/receipts/activity')} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors font-medium"><Clock size={15} /> Activity Log</button>
-          <button onClick={openNewReceipt} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Add Receipt</button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-emerald-900">Receipts</h1>
+          <p className="mt-2 text-sm text-emerald-600/70">Capture and match receipts with expense claims.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setReceiptPanelOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Receipt</button>
+          <button onClick={() => router.push('/expenses/receipts/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
+          <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-emerald-100 p-3 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[180px]"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" /><input type="text" placeholder="Search receipts..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1) }} className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div>
-        <div className="flex items-center gap-1.5 flex-wrap">{STATUSES.map(s => (<button key={s} onClick={() => { setStatusFilter(s); setCurrentPage(1) }} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${statusFilter === s ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>{s === 'ALL' ? 'All' : s}</button>))}</div>
-        <button onClick={() => setShowAdvFilters(p => !p)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${showAdvFilters || activeFilterCount > 0 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}><Filter size={13} /> Filters {activeFilterCount > 0 && <span className="bg-emerald-600 text-white rounded-full px-1.5 py-px text-[10px] font-bold">{activeFilterCount}</span>}</button>
-      </div>
-      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-      {showAdvFilters && (<div className="bg-white rounded-xl border border-emerald-100 p-4 flex flex-wrap gap-4 items-end"><div><label htmlFor="dateFrom" className="block text-xs font-medium text-gray-500 mb-1">Date From</label><input id="dateFrom" type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><div><label htmlFor="dateTo" className="block text-xs font-medium text-gray-500 mb-1">Date To</label><input id="dateTo" type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30" /></div><button onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="text-xs text-emerald-600 hover:underline">Clear all</button></div>)}
-      {table.renderBulkToolbar([
-        { label: 'Delete Selected', variant: 'danger', onClick: () => handleDeleteSelected(), disabled: !canDeleteSelected },
-        { label: 'Mark Selected as Matched', onClick: () => handleMatchSelected(), disabled: table.selectedRows.length === 0 },
-        { label: 'Export Selected', onClick: () => handleExportSelected(), disabled: table.selectedRows.length === 0 },
-      ])}
-      <EnhancedTable
-        columns={tableColumns}
-        data={paged}
-        onSort={toggleSort}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        tableId="receipts"
-        hasStickyActions={true}
-        enableRowSelection={true}
-        selectedRows={table.selectedRows}
-        toggleRowSelection={table.toggleRowSelection}
-        handleSelectAll={table.handleSelectAll}
-        isAllSelected={table.isAllSelected}
-        isIndeterminate={table.isIndeterminate}
-        selectAllRef={table.selectAllRef}
-        emptyMessage="No receipts found"
-        rowClassName={(row) => (table.selectedRows.includes(row.id) ? 'bg-blue-50/20' : '')}
-        onColumnsChange={handleColumnsChange}
-        fixedWidth={96}
-      />
-      {totalPages>1&&(<div className="flex items-center justify-between px-1"><span className="text-xs text-gray-400">{sorted.length} total</span><div className="flex items-center gap-2"><button onClick={()=>setCurrentPage(p=>p-1)} disabled={currentPage===1} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Previous</button><span className="text-xs font-semibold text-gray-600">Page {currentPage} of {totalPages}</span><button onClick={()=>setCurrentPage(p=>p+1)} disabled={currentPage===totalPages} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button></div></div>)}
 
-      {/* Activity log available via top toolbar button */}
-      {actionMenuId&&menuPos&&(()=>{const row=rows.find(r=>r.id===actionMenuId);if(!row)return null;return(<div className="fixed right-4 top-24 z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-52"><div className="px-3 py-1.5 border-b border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{row.receiptNumber??'Receipt'}</p></div><MenuBtn icon={<Eye size={13}/>} label="Edit Receipt" onClick={()=>{openEditReceipt(row.id);setActionMenuId(null)}}/></div>)})()}
-      {actionMenuId&&<div className="fixed inset-0 z-[9998]" onClick={()=>{setActionMenuId(null);setMenuPos(null)}}/>}
-      {toast&&<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
-      <CenteredModal
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
+        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+        <div className="relative">
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search receipts" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          {STATUSES.map((status) => (
+            <button key={status} type="button" onClick={() => setStatusFilter(status)} className={`rounded-2xl px-3 py-2 text-xs font-semibold ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+              {status === 'ALL' ? 'All' : status}
+            </button>
+          ))}
+          <button type="button" onClick={() => setShowAdvancedFilters((prev) => !prev)} className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Filter size={14} /> Filters</button>
+        </div>
+      </div>
+
+      {showAdvancedFilters && (
+        <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
+            <input type="date" aria-label="Date from" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
+            <input type="date" aria-label="Date to" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+          </div>
+          <div className="flex items-end">
+            <button type="button" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear all</button>
+          </div>
+        </div>
+      )}
+
+      <HaypDataTable
+        data={filtered}
+        columns={columns}
+        tableId="receipts"
+        globalFilter={search}
+        onGlobalFilterChange={setSearch}
+        filters={[]}
+        activeFilter=""
+        onFilterChange={() => { }}
+        filterLabel="All"
+        bulkActions={bulkActions}
+        totals={totals}
+        onRefresh={handleRefresh}
+        onExport={handleExportCSV}
+        exportLabel="Export CSV"
+        onRowClick={(row) => openEditReceipt(row.id)}
+        onActivityLog={() => router.push('/expenses/receipts/activity')}
+        emptyTitle={loading ? 'Loading receipts…' : 'No receipts found'}
+        emptySubtitle="Search or filter to locate receipts"
+        loading={loading}
+      />
+
+      <HaypModal
         open={receiptPanelOpen}
-        onClose={closeReceiptPanel}
+        onClose={handleClose}
         title={openReceiptMode === 'new' ? 'New Receipt' : 'Edit Receipt'}
         footer={
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={closeReceiptPanel}
+              onClick={handleClose}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="button"
-              onClick={saveReceipt}
+              onClick={() => { saveAndNewRef.current = true; receiptFormRef.current?.save() }}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Save and new
+            </button>
+            <button
+              type="button"
+              onClick={() => { saveAndNewRef.current = false; receiptFormRef.current?.save() }}
               className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
             >
               Save
@@ -282,16 +316,14 @@ export default function ReceiptsPage() {
         }
       >
         <ReceiptForm
+          key={`${openReceiptMode}-${openReceiptId ?? 'new'}`}
           ref={receiptFormRef}
           mode={openReceiptMode}
           receiptId={openReceiptId ?? undefined}
-          onClose={closeReceiptPanel}
-          onSaved={onReceiptSaved}
+          onClose={handleClose}
+          onSaved={handleSaved}
         />
-      </CenteredModal>
+      </HaypModal>
     </div>
   )
 }
-
-
-

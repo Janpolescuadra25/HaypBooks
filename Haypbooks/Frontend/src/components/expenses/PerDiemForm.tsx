@@ -142,83 +142,143 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
     return (
-      <div className="space-y-6 bg-slate-50 text-slate-900">
+      <div className="space-y-6 text-slate-900">
         <div className="overflow-y-auto">
-          <div className="px-4 py-6 space-y-6">
+          <div className="mx-auto w-full max-w-4xl px-4 py-6 space-y-6">
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
             )}
 
-            {/* Employee & Status */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Employee <span className="text-rose-500">*</span></label>
-                  <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    <option value="">Select employee</option>
-                    {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.displayName}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Status</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Destination <span className="text-rose-500">*</span></label>
-                  <input value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="City, Country" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Purpose</label>
-                  <input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Reason for travel" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-              </div>
-            </section>
-
-            {/* Travel dates & rate */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900 mb-4">Travel Period & Rate</h2>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Start Date <span className="text-rose-500">*</span></label>
-                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">End Date <span className="text-rose-500">*</span></label>
-                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Daily Rate <span className="text-rose-500">*</span></label>
-                  <div className="mt-2 flex rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-                    <span className="inline-flex items-center px-4 text-sm text-slate-500">{currency}</span>
-                    <input type="number" value={dailyRate} min={0} step="0.01" onChange={(e) => setDailyRate(Number(e.target.value))} className="w-full rounded-none border-0 bg-transparent px-4 py-3 text-sm text-slate-900 focus:outline-none" />
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 mb-4">Trip Info</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="perDiemEmployee" className="text-[10px] font-bold uppercase text-slate-400">Employee</label>
+                    <select
+                      id="perDiemEmployee"
+                      value={employeeId}
+                      onChange={(e) => setEmployeeId(e.target.value)}
+                      aria-label="Employee"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                    >
+                      <option value="">Select employee</option>
+                      {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.displayName}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="perDiemDestination" className="text-[10px] font-bold uppercase text-slate-400">Destination</label>
+                    <input
+                      id="perDiemDestination"
+                      value={destination}
+                      onChange={(e) => setDestination(e.target.value)}
+                      placeholder="City, Country"
+                      aria-label="Destination"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="perDiemPurpose" className="text-[10px] font-bold uppercase text-slate-400">Purpose</label>
+                    <input
+                      id="perDiemPurpose"
+                      value={purpose}
+                      onChange={(e) => setPurpose(e.target.value)}
+                      placeholder="Reason for travel"
+                      aria-label="Purpose"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="perDiemStatus" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
+                    <select
+                      id="perDiemStatus"
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      aria-label="Status"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                    >
+                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
 
-              {/* Auto-calculated summary */}
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-center">
-                  <p className="text-xs text-slate-500">Days</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{days}</p>
+              <div className="border-t border-slate-100 my-6" />
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 mb-4">Dates & Rate</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="perDiemStartDate" className="text-[10px] font-bold uppercase text-slate-400">Start Date</label>
+                    <input
+                      id="perDiemStartDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      aria-label="Start Date"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="perDiemEndDate" className="text-[10px] font-bold uppercase text-slate-400">End Date</label>
+                    <input
+                      id="perDiemEndDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      aria-label="End Date"
+                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="perDiemDailyRate" className="text-[10px] font-bold uppercase text-slate-400">Daily Rate</label>
+                    <div className="mt-2 flex rounded-lg overflow-hidden">
+                      <span className="inline-flex items-center px-3 text-sm text-slate-500 bg-white border-r border-slate-200">{currency}</span>
+                      <input
+                        id="perDiemDailyRate"
+                        type="text"
+                        inputMode="decimal"
+                        value={dailyRate !== 0 ? dailyRate : ''}
+                        onChange={(e) => setDailyRate(Number(e.target.value) || 0)}
+                        placeholder="0.00"
+                        aria-label="Daily Rate"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-right text-sm font-mono font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-center">
-                  <p className="text-xs text-slate-500">Daily Rate</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{formatCurrency(dailyRate, currency)}</p>
-                </div>
-                <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-center">
-                  <p className="text-xs text-emerald-600">Total Amount</p>
-                  <p className="mt-1 text-2xl font-bold text-emerald-800">{formatCurrency(totalAmount, currency)}</p>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg bg-white border border-slate-200 p-4 text-center">
+                    <p className="text-xs text-slate-500">Days</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900">{days}</p>
+                  </div>
+                  <div className="rounded-lg bg-white border border-slate-200 p-4 text-center">
+                    <p className="text-xs text-slate-500">Daily Rate</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900">{formatCurrency(dailyRate, currency)}</p>
+                  </div>
+                  <div className="rounded-lg bg-white border border-emerald-200 p-4 text-center">
+                    <p className="text-xs text-emerald-600">Total Amount</p>
+                    <p className="mt-1 text-2xl font-bold text-emerald-800">{formatCurrency(totalAmount, currency)}</p>
+                  </div>
                 </div>
               </div>
-            </section>
 
-            {/* Notes */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <label className="block text-sm font-semibold text-slate-900">Notes</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-            </section>
+              <div className="border-t border-slate-100 my-6" />
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 mb-4">Notes</h3>
+                <textarea
+                  id="perDiemNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Enter notes..."
+                  aria-label="Notes"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all resize-y"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -330,24 +330,40 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   })
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave('submit'); }} className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/bills-payments/bills')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to bills
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        handleSave('submit')
+      }}
+      className="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden"
+    >
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="mx-auto max-w-7xl px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button" 
+                onClick={() => router.push('/expenses/bills-payments/bills')} 
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all active:scale-95"
+              >
+                <ArrowLeft size={20} />
               </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h1>
-                <p className="mt-1 text-sm text-slate-500">Create or edit a bill with vendor details, line items, and totals.</p>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
+                <p className="text-xs text-slate-500 font-medium">Drafting bill for expense management</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                {status}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pb-28">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
@@ -357,221 +373,303 @@ export default function BillForm({ mode, billId }: BillFormProps) {
           )}
         </div>
         <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-            <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <label htmlFor="billNumber" className="block text-sm font-semibold text-slate-900">Bill #</label>
-                    <input id="billNumber" value={billNumber || 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
-                  </div>
-                  <div>
-                    <label htmlFor="billDate" className="block text-sm font-semibold text-slate-900">Bill Date</label>
-                    <input id="billDate" type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label htmlFor="dueDate" className="block text-sm font-semibold text-slate-900">Due Date</label>
-                    <input id="dueDate" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  </div>
+          <div className="mx-auto max-w-7xl px-6 py-6 space-y-8">
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Bill Information</h2>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-3 p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="space-y-1.5">
+                  <label htmlFor="billNumber" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill #</label>
+                  <input 
+                    id="billNumber" 
+                    value={billNumber || 'Auto-generated'} 
+                    readOnly 
+                    className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none shadow-inner" 
+                  />
                 </div>
-              </section>
-
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Vendor</h2>
-                    <p className="mt-1 text-sm text-slate-500">Select a vendor for this bill.</p>
-                  </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="billDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill Date</label>
+                  <input 
+                    id="billDate" 
+                    type="date" 
+                    value={date} 
+                    onChange={e => setDate(e.target.value)} 
+                    className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
+                  />
                 </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="dueDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Due Date</label>
+                  <input 
+                    id="dueDate" 
+                    type="date" 
+                    value={dueDate} 
+                    onChange={e => setDueDate(e.target.value)} 
+                    className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
+                  />
+                </div>
+              </div>
+            </section>
 
-                <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_160px]">
-                  <div>
-                    <CustomerPickerField
-                      label="Vendor"
-                      value={vendorId}
-                      customers={vendorOptions}
-                      placeholder="Search vendors by name or email…"
-                      createLabel="+ New Vendor"
-                      onChange={(id) => {
-                        setVendorId(id)
-                        setShowVendorModal(false)
-                      }}
-                      onCreateNew={() => {
-                        setShowVendorModal(true)
-                        setNewVendorName('')
-                        setNewVendorEmail('')
-                        setNewVendorPhone('')
-                      }}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Vendor</h2>
+              </div>
+              <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                <div className="grid gap-6 sm:grid-cols-[2fr_1fr]">
+                  <CustomerPickerField
+                    label="Select Vendor"
+                    value={vendorId}
+                    customers={vendorOptions}
+                    placeholder="Search vendors by name or email…"
+                    createLabel="+ New Vendor"
+                    onChange={(id) => {
+                      setVendorId(id)
+                      setShowVendorModal(false)
+                    }}
+                    onCreateNew={() => {
+                      setShowVendorModal(true)
+                      setNewVendorName('')
+                      setNewVendorEmail('')
+                      setNewVendorPhone('')
+                    }}
+                  />
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Terms</label>
+                    <input 
+                      value={paymentTerms} 
+                      onChange={e => setPaymentTerms(e.target.value)} 
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
+                      placeholder="Net 30" 
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">Payment Terms</label>
-                    <input value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Net 30" />
-                  </div>
                 </div>
-
-                {showVendorModal && (
-                  <ModalPortal>
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-                      <div className="absolute inset-0 bg-black/60" onClick={() => setShowVendorModal(false)} />
-                      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                          <div>
-                            <h2 className="text-lg font-semibold text-slate-900">New Vendor</h2>
-                            <p className="text-sm text-slate-500">Create a vendor and select it for this bill.</p>
-                          </div>
-                          <button type="button" aria-label="Close vendor modal" onClick={() => setShowVendorModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">
-                            <X size={18} />
-                          </button>
-                        </div>
-                        <div className="space-y-4 px-6 py-6">
-                          {error && (
-                            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
-                          )}
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Name</label>
-                            <input
-                              autoFocus
-                              value={newVendorName}
-                              onChange={(e) => setNewVendorName(e.target.value)}
-                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
-                              placeholder="Vendor name"
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                              <input
-                                type="email"
-                                value={newVendorEmail}
-                                onChange={(e) => setNewVendorEmail(e.target.value)}
-                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
-                                placeholder="email@example.com"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                              <input
-                                value={newVendorPhone}
-                                onChange={(e) => setNewVendorPhone(e.target.value)}
-                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
-                                placeholder="(123) 456-7890"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
-                          <button type="button" onClick={() => setShowVendorModal(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-                            Cancel
-                          </button>
-                          <button type="button" onClick={handleCreateVendor} disabled={creatingVendor} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
-                            {creatingVendor ? <Loader2 size={16} className="animate-spin" /> : 'Save'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </ModalPortal>
-                )}
 
                 {vendor && (
-                  <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <div className="pt-6 border-t border-slate-50 grid gap-4 sm:grid-cols-3">
                     <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Vendor</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{vendor.displayName}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor</p>
+                      <p className="mt-1 text-sm font-bold text-slate-900">{vendor.displayName}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Email</p>
-                      <p className="mt-2 text-sm text-slate-700">{vendorEmail || '—'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p>
+                      <p className="mt-1 text-sm font-medium text-slate-700">{vendorEmail || '—'}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Phone</p>
-                      <p className="mt-2 text-sm text-slate-700">{vendorPhone || '—'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone</p>
+                      <p className="mt-1 text-sm font-medium text-slate-700">{vendorPhone || '—'}</p>
                     </div>
                   </div>
                 )}
-              </section>
+              </div>
 
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <LineItemTable
-                  columns={[
-                    { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item or description', required: true },
-                    { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: expenseAccounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? '' })) },
-                    { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
-                    { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
-                    { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
-                    { key: 'amount', label: 'Amount', type: 'calculated', width: 120, minWidth: 110 },
-                  ]}
-                  rows={lineItems}
-                  onChange={handleLineItemsChange}
-                  currency={currency ?? 'USD'}
-                  calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
-                />
-              </section>
-
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end border-t border-slate-200 pt-4">
-                  <div className="text-sm text-slate-600">Subtotal: <span className="font-semibold text-slate-900">{formatCurrency(subtotal, currency)}</span></div>
-                  <div className="text-sm text-slate-600">Tax: <span className="font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</span></div>
-                  <div className="text-sm text-slate-600">Total: <span className="font-semibold text-slate-900">{formatCurrency(total, currency)}</span></div>
-                </div>
-              </section>
-
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="terms" className="block text-sm font-semibold text-slate-900">Terms & Conditions</label>
-                    <textarea id="terms" value={terms} onChange={e => setTerms(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+              {showVendorModal && (
+                <ModalPortal>
+                  <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60" onClick={() => setShowVendorModal(false)} />
+                    <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+                      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">New Vendor</h2>
+                          <p className="text-sm text-slate-500">Create a vendor and select it for this bill.</p>
+                        </div>
+                        <button type="button" aria-label="Close vendor modal" onClick={() => setShowVendorModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <div className="space-y-4 px-6 py-6">
+                        {error && (
+                          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Name</label>
+                          <input
+                            autoFocus
+                            value={newVendorName}
+                            onChange={(e) => setNewVendorName(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                            placeholder="Vendor name"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                            <input
+                              type="email"
+                              value={newVendorEmail}
+                              onChange={(e) => setNewVendorEmail(e.target.value)}
+                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                              placeholder="email@example.com"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                            <input
+                              value={newVendorPhone}
+                              onChange={(e) => setNewVendorPhone(e.target.value)}
+                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                              placeholder="(123) 456-7890"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+                        <button type="button" onClick={() => setShowVendorModal(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                          Cancel
+                        </button>
+                        <button type="button" onClick={handleCreateVendor} disabled={creatingVendor} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                          {creatingVendor ? <Loader2 size={16} className="animate-spin" /> : 'Save'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label htmlFor="internalNotes" className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-                    <textarea id="internalNotes" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={7} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                </ModalPortal>
+              )}
+            </section>
+
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Line Items</h2>
+              </div>
+              <LineItemTable
+                columns={[
+                  { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item or description', required: true },
+                  { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: expenseAccounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? '' })) },
+                  { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
+                  { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
+                  { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
+                  { key: 'amount', label: 'Amount', type: 'calculated', width: 120, minWidth: 110 },
+                ]}
+                rows={lineItems}
+                onChange={handleLineItemsChange}
+                currency={currency ?? 'USD'}
+                calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+              />
+            </section>
+
+            <section className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end divide-x divide-slate-100">
+                <div className="px-6 text-sm font-medium text-slate-500">Subtotal: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(subtotal, currency)}</span></div>
+                <div className="px-6 text-sm font-medium text-slate-500">Tax: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(taxTotal, currency)}</span></div>
+                <div className="px-6 text-sm font-medium text-slate-500">Total: <span className="ml-2 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(total, currency)}</span></div>
+              </div>
+            </section>
+
+            <section className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Terms & Notes</h2>
+                </div>
+                <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                  <div className="space-y-1.5">
+                    <label htmlFor="terms" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms & Conditions</label>
+                    <textarea 
+                      id="terms" 
+                      value={terms} 
+                      onChange={e => setTerms(e.target.value)} 
+                      rows={3} 
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500/50 transition-all outline-none" 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="memo" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Public Notes (Memo)</label>
+                    <textarea 
+                      id="memo" 
+                      value={memo} 
+                      onChange={e => setMemo(e.target.value)} 
+                      rows={3} 
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500/50 transition-all outline-none" 
+                    />
                   </div>
                 </div>
-              </section>
-
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <label htmlFor="memo" className="block text-sm font-semibold text-slate-900">Notes</label>
-                <textarea id="memo" value={memo} onChange={e => setMemo(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </section>
-            </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-6 bg-rose-400 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Internal Use</h2>
+                </div>
+                <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                  <div className="space-y-1.5">
+                    <label htmlFor="internalNotes" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Private Internal Notes</label>
+                    <textarea 
+                      id="internalNotes" 
+                      value={internalNotes} 
+                      onChange={e => setInternalNotes(e.target.value)} 
+                      rows={9} 
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 transition-all outline-none" 
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
         <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
-                  <div className="mt-4">
-                    <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill yet." />
-                  </div>
-                </section>
+          <div className="mx-auto max-w-7xl px-6 py-6 space-y-8">
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-6 bg-blue-500 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity Log</h2>
               </div>
-            </div>
+              <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill yet." />
+              </div>
+            </section>
           </div>
         </div>
       </div>
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={() => router.push('/expenses/bills-payments/bills')} disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
-              Cancel
-            </button>
-            <button type="button" onClick={() => handleSave('draft')} disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Draft
-            </button>
-            <button type="submit" disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Submit
-            </button>
-            {mode === 'edit' && status === 'DRAFT' && (
-              <button type="button" onClick={() => handleSave('submit')} disabled={submitting}
-                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-600 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50">
-                <Check size={16} /> Approve
+      <div className="shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)] z-30">
+        <div className="mx-auto max-w-7xl px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>Total:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(total, currency)}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                type="button" 
+                onClick={() => router.push('/expenses/bills-payments/bills')} 
+                disabled={submitting}
+                className="h-12 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Cancel
               </button>
-            )}
+              <button 
+                type="button" 
+                onClick={() => handleSave('draft')} 
+                disabled={submitting}
+                className="h-12 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Save size={18} className="text-slate-400" />}
+                Save Draft
+              </button>
+              <button 
+                type="submit" 
+                disabled={submitting}
+                className="h-12 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                Submit
+              </button>
+              {mode === 'edit' && status === 'DRAFT' && (
+                <button 
+                  type="button" 
+                  onClick={() => handleSave('submit')} 
+                  disabled={submitting}
+                  className="h-12 px-8 rounded-xl border-2 border-emerald-600 bg-white text-sm font-bold text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Check size={18} /> Approve
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

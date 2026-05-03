@@ -49,7 +49,7 @@ const RecurringBillForm = forwardRef<RecurringBillFormHandle, RecurringBillFormP
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
 
-    const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+    const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'notes' | 'activity'>('schedule')
 
     const { entries: activityEntries, loading: activityLoading } = useActivityLog({
       companyId: activeTab === 'activity' ? companyId : null,
@@ -165,129 +165,209 @@ const RecurringBillForm = forwardRef<RecurringBillFormHandle, RecurringBillFormP
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
     return (
-      <div className="space-y-6 bg-slate-50 text-slate-900">
+      <div className="space-y-6 text-slate-900">
         <div className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-4xl px-4 py-6 text-slate-900">
-            <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900">{mode === 'new' ? 'New Recurring Bill Template' : 'Edit Recurring Bill Template'}</h2>
-                    <p className="mt-1 text-sm text-slate-500">Create a clean recurring bill template with schedule and payment details.</p>
-                  </div>
+          <div className="mx-auto w-full max-w-4xl px-4 py-6">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">{mode === 'new' ? 'New Recurring Bill Template' : 'Edit Recurring Bill Template'}</h2>
+                  <p className="mt-1 text-sm text-slate-500">Create a clean recurring bill template with schedule and payment details.</p>
+                </div>
+                <div className="inline-flex flex-wrap rounded-lg border border-slate-200 bg-white p-1">
+                  {(['schedule', 'details', 'notes'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-3 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === tab ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                    >
+                      {tab === 'schedule' ? 'Schedule' : tab === 'details' ? 'Details' : 'Notes'}
+                    </button>
+                  ))}
                   {mode !== 'new' && (
-                    <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
-                      <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-                      <button type="button" onClick={() => setActiveTab('activity')} disabled={!billId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('activity')}
+                      className={`px-3 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                    >
+                      Activity
+                    </button>
                   )}
                 </div>
               </div>
 
-              <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-                <div className="p-6 space-y-6">
-                  {error && (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
-                  )}
+              <div className="space-y-6">
+                {error && (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+                )}
 
-                  <section className="space-y-4 pb-6 border-b border-slate-200">
-                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Vendor & Details</h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="recurringVendor" className="block text-sm font-medium text-slate-700 mb-1">Vendor <span className="text-rose-500">*</span></label>
-                        <select id="recurringVendor" value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                          <option value="">Select vendor</option>
-                          {vendors.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="recurringStatus" className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                        <select id="recurringStatus" value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Description / Template Name <span className="text-rose-500">*</span></label>
-                        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Monthly SaaS subscription" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="space-y-4 pb-6 border-b border-slate-200">
-                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Schedule</h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="recurringFrequency" className="block text-sm font-medium text-slate-700 mb-1">Frequency</label>
-                        <select id="recurringFrequency" value={frequency} onChange={(e) => setFrequency(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                          {FREQUENCIES.map((f) => <option key={f} value={f}>{f.replace('_', '-')}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="recurringStartDate" className="block text-sm font-medium text-slate-700 mb-1">Start Date <span className="text-rose-500">*</span></label>
-                        <input id="recurringStartDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                      </div>
-                      <div>
-                        <label htmlFor="recurringEndDate" className="block text-sm font-medium text-slate-700 mb-1">End Date <span className="text-slate-400 font-normal">(optional)</span></label>
-                        <input id="recurringEndDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                      </div>
-                      {nextDueDate && (
-                        <div className="sm:col-span-2">
-                          <p className="text-sm text-slate-500">Next bill will be generated on <strong className="text-slate-700">{nextDueDate}</strong></p>
+                {activeTab === 'schedule' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900 mb-4">Schedule</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="recurringFrequency" className="text-[10px] font-bold uppercase text-slate-400">Frequency</label>
+                          <select
+                            id="recurringFrequency"
+                            value={frequency}
+                            onChange={(e) => setFrequency(e.target.value)}
+                            aria-label="Frequency"
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                          >
+                            {FREQUENCIES.map((f) => <option key={f} value={f}>{f.replace('_', '-')}</option>)}
+                          </select>
                         </div>
-                      )}
+                        <div>
+                          <label htmlFor="recurringStartDate" className="text-[10px] font-bold uppercase text-slate-400">Start Date</label>
+                          <input
+                            id="recurringStartDate"
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            aria-label="Start Date"
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="recurringEndDate" className="text-[10px] font-bold uppercase text-slate-400">End Date</label>
+                          <input
+                            id="recurringEndDate"
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            aria-label="End Date"
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                          />
+                        </div>
+                        {nextDueDate && (
+                          <div className="md:col-span-2">
+                            <p className="text-sm text-slate-500">Next bill will be generated on <strong className="text-slate-700">{nextDueDate}</strong></p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </section>
+                  </div>
+                )}
 
-                  <section className="space-y-4 pb-6 border-b border-slate-200">
-                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Line Items</h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="recurringAmount" className="block text-sm font-medium text-slate-700 mb-1">Amount <span className="text-rose-500">*</span></label>
-                        <div className="mt-2 flex rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-                          <span className="inline-flex items-center px-4 text-sm text-slate-500">{currency}</span>
-                          <input id="recurringAmount" type="number" value={amount} min={0} step="0.01" onChange={(e) => setAmount(Number(e.target.value))} className="w-full rounded-none border-0 bg-transparent px-4 py-3 text-sm text-slate-900 focus:outline-none" />
+                {activeTab === 'details' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900 mb-4">Vendor & Details</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="recurringVendor" className="text-[10px] font-bold uppercase text-slate-400">Vendor</label>
+                          <select
+                            id="recurringVendor"
+                            value={vendorId}
+                            onChange={(e) => setVendorId(e.target.value)}
+                            aria-label="Vendor"
+                            className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                          >
+                            <option value="">Select vendor</option>
+                            {vendors.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="recurringStatus" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
+                          <select
+                            id="recurringStatus"
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            aria-label="Status"
+                            className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                          >
+                            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="recurringDescription" className="text-[10px] font-bold uppercase text-slate-400">Description / Template Name</label>
+                          <input
+                            id="recurringDescription"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="e.g. Monthly SaaS subscription"
+                            aria-label="Description"
+                            className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                          />
                         </div>
                       </div>
-                      <div>
-                        <label htmlFor="recurringAccount" className="block text-sm font-medium text-slate-700 mb-1">Expense Account</label>
-                        <select id="recurringAccount" value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                          <option value="">Select account</option>
-                          {accounts.map((a) => <option key={a.id} value={a.id}>{a.code ? `${a.code} — ${a.name}` : a.name}</option>)}
-                        </select>
+                    </div>
+
+                    <div className="border-t border-slate-100" />
+
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900 mb-4">Line Item</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="recurringAmount" className="text-[10px] font-bold uppercase text-slate-400">Amount</label>
+                          <div className="mt-2 flex rounded-lg overflow-hidden">
+                            <span className="inline-flex items-center px-3 text-sm text-slate-500 bg-white border-r border-slate-200">{currency}</span>
+                            <input
+                              id="recurringAmount"
+                              type="text"
+                              inputMode="decimal"
+                              value={amount !== 0 ? amount : ''}
+                              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+                              placeholder="0.00"
+                              aria-label="Amount"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-right text-sm font-mono font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor="recurringAccount" className="text-[10px] font-bold uppercase text-slate-400">Expense Account</label>
+                          <select
+                            id="recurringAccount"
+                            value={accountId}
+                            onChange={(e) => setAccountId(e.target.value)}
+                            aria-label="Expense Account"
+                            className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                          >
+                            <option value="">Select account</option>
+                            {accounts.map((a) => <option key={a.id} value={a.id}>{a.code ? `${a.code} — ${a.name}` : a.name}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="recurringPaymentTerms" className="text-[10px] font-bold uppercase text-slate-400">Payment Terms</label>
+                          <select
+                            id="recurringPaymentTerms"
+                            value={paymentTerms}
+                            onChange={(e) => setPaymentTerms(e.target.value)}
+                            aria-label="Payment Terms"
+                            className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                          >
+                            {PAYMENT_TERMS.map((term) => <option key={term} value={term}>{term}</option>)}
+                          </select>
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="text-sm text-slate-600">Subtotal</div>
-                        <div className="text-sm text-slate-600">Tax</div>
-                        <div className="text-sm text-slate-600">Total</div>
-                      </div>
-                      <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm font-semibold text-slate-900">
-                        <div>{currency} {amount.toFixed(2)}</div>
-                        <div>{currency} 0.00</div>
-                        <div>{currency} {amount.toFixed(2)}</div>
-                      </div>
-                    </div>
-                  </section>
+                  </div>
+                )}
 
-                  <section className="space-y-4">
-                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Notes</h3>
-                    <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={4} className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Internal notes (not shown on bills)" />
-                  </section>
-                </div>
-              </div>
-            </div>
+                {activeTab === 'notes' && (
+                  <div className="space-y-6">
+                    <h3 className="text-xs font-bold text-slate-900 mb-4">Notes</h3>
+                    <textarea
+                      id="recurringInternalNotes"
+                      value={internalNotes}
+                      onChange={(e) => setInternalNotes(e.target.value)}
+                      rows={4}
+                      placeholder="Internal notes (not shown on bills)"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all resize-y"
+                    />
+                  </div>
+                )}
 
-            {mode !== 'new' && activeTab === 'activity' && (
-              <div className="mx-auto w-full max-w-4xl px-4 py-6">
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Activity</h3>
-                  <div className="mt-4">
+                {activeTab === 'activity' && mode !== 'new' && (
+                  <div className="space-y-6">
+                    <h3 className="text-xs font-bold text-slate-900 mb-4">Activity</h3>
                     <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this recurring bill yet." />
                   </div>
-                </section>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

@@ -27,6 +27,12 @@ export interface HaypFilterOption {
   label: string
 }
 
+export interface AdvancedFilter {
+  columnId: string
+  operator: 'contains' | 'equals' | 'startsWith' | 'greaterThan' | 'lessThan'
+  value: string
+}
+
 export interface HaypActionItem {
   label: string
   icon?: React.ReactNode
@@ -41,7 +47,7 @@ export interface HaypBulkAction {
   label: string
   icon?: React.ReactNode
   variant?: 'danger' | 'primary' | 'default'
-  disabled?: boolean
+  disabled?: boolean | ((selectedIds: string[], selectedRows: any[]) => boolean)
   onClick: (selectedIds: string[], selectedRows: any[]) => void
 }
 
@@ -53,18 +59,38 @@ export interface HaypTotalsConfig {
   formatValue?: (value: number, columnId: string) => string
 }
 
+export interface HaypStat {
+  icon: LucideIcon | React.ReactNode
+  label: string
+  value: string | number
+  color: 'blue' | 'emerald' | 'amber' | 'rose' | 'slate' | string
+}
+
 export interface HaypDataTableProps<T = any> {
   data: T[]
   columns: HaypColumn<T>[]
   tableId: string
+  title?: string
+  description?: string
+  stats?: HaypStat[]
+  headerActions?: React.ReactNode
   getRowId?: (row: T) => string
   searchPlaceholder?: string
-  globalFilter: string
-  onGlobalFilterChange: (value: string) => void
+  globalFilter?: string
+  onGlobalFilterChange?: (value: string) => void
   filters?: HaypFilterOption[]
-  activeFilter: string
-  onFilterChange: (value: string) => void
+  activeFilter?: string
+  onFilterChange?: (value: string) => void
   filterLabel?: string
+  dateRangeLabel?: string
+  dateRangeMenuItems?: Array<{ label: string; onClick: () => void; active?: boolean }>
+  dateRange?: { start: Date; end: Date }
+  onDateRangeChange?: (range: { start: Date; end: Date }) => void
+  onCustomize?: () => void
+  customizeLabel?: string
+  customizeBadge?: string | number
+  advancedFilters?: AdvancedFilter[]
+  onAdvancedFiltersChange?: (filters: AdvancedFilter[]) => void
   actions?: HaypActionItem[]
   bulkActions?: HaypBulkAction[]
   totals?: HaypTotalsConfig
@@ -72,19 +98,10 @@ export interface HaypDataTableProps<T = any> {
   onExport?: () => void
   exportLabel?: string
   onActivityLog?: () => void
+  onRowClick?: (row: T) => void
   emptyTitle?: string
   emptySubtitle?: string
   className?: string
   loading?: boolean
-}
-
-export interface UseHaypTableReturn {
-  globalFilter: string
-  setGlobalFilter: (val: string) => void
-  activeFilter: string
-  setActiveFilter: (val: string) => void
-  selectedRowIds: string[]
-  selectedRows: any[]
-  clearSelection: () => void
-  resetLayout: () => void
+  usePageScroll?: boolean
 }

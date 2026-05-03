@@ -43,7 +43,16 @@ const config: Config = {
       borderRadius: {
         xl: '1rem',
         '2xl': '1.25rem'
-      }
+      },
+      keyframes: {
+        toastIn: {
+          '0%': { opacity: '0', transform: 'translateX(100%) scale(0.95)' },
+          '100%': { opacity: '1', transform: 'translateX(0) scale(1)' },
+        },
+      },
+      animation: {
+        toastIn: 'toastIn 0.25s ease-out',
+      },
     },
   },
   plugins: [],
