@@ -69,18 +69,9 @@ export default function BillsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortKey, setSortKey]   = useState<SortKey>('date')
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo]     = useState('')
-  const [cols, setCols] = useState<ColDef[]>(() => loadCols())
-  const colsRef = useRef(cols)
   const [toast, setToast] = useState('')
 
-  useEffect(() => { colsRef.current = cols }, [cols])
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
-  const saveCols  = (next: ColDef[]) => { setCols(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {} }
-  const toggleCol = (key: string)   => saveCols(cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
-
-  const visibleCols = cols.filter(c => c.visible)
 
   const fmt = useCallback((n: number) => formatCurrency(n, currency), [currency])
 
@@ -142,16 +133,8 @@ export default function BillsPage() {
   const filtered = useMemo(() => {
     let list = rows
     if (statusFilter !== 'ALL') list = list.filter((r) => r.status === statusFilter)
-    if (search) {
-      const q = search.toLowerCase()
-      list = list.filter((r) => (r.billNumber ?? '').toLowerCase().includes(q) || (r.vendorName ?? '').toLowerCase().includes(q))
-    }
-    if (dateFrom) list = list.filter((r) => r.date >= dateFrom)
-    if (dateTo) list = list.filter((r) => r.date <= dateTo)
     return list
-  }, [rows, statusFilter, search, dateFrom, dateTo])
-
-  const sorted = useMemo(() => [...filtered].sort((a, b) => compare(a, b, sortKey, sortDir)), [filtered, sortKey, sortDir])
+  }, [rows, statusFilter])
 
   const handleDeleteSelected = useCallback(async (selectedIds: string[]) => {
     if (!companyId || selectedIds.length === 0) return
@@ -269,94 +252,78 @@ export default function BillsPage() {
     },
   ], [handleDeleteSelected, handleVoidSelected, handleMarkPaidSelected, handleExportSelected])
 
-  const columns = useMemo(() => visibleCols.map((c): HaypColumn<Bill> => {
-      switch (c.key) {
-        case 'billNumber':
-          return {
-            id: 'billNumber',
-            header: 'Bill #',
-            accessorKey: 'billNumber',
-            size: c.width,
-            minSize: 100,
-            render: (value) => <span className="font-semibold text-gray-800">{value ?? '—'}</span>,
-          }
-        case 'vendorName':
-          return {
-            id: 'vendorName',
-            header: 'Vendor',
-            accessorKey: 'vendorName',
-            size: c.width,
-            minSize: 140,
-            render: (value) => <span className="text-gray-700 truncate">{value ?? '—'}</span>,
-          }
-        case 'date':
-          return {
-            id: 'date',
-            header: 'Date',
-            accessorKey: 'date',
-            size: c.width,
-            minSize: 100,
-            render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
-          }
-        case 'dueDate':
-          return {
-            id: 'dueDate',
-            header: 'Due Date',
-            accessorKey: 'dueDate',
-            size: c.width,
-            minSize: 100,
-            render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
-          }
-        case 'status':
-          return {
-            id: 'status',
-            header: 'Status',
-            accessorKey: 'status',
-            size: c.width,
-            minSize: 110,
-            render: (value) => <StatusPill status={value as Bill['status']} />,
-          }
-        case 'amountDue':
-          return {
-            id: 'amountDue',
-            header: 'Amount Due',
-            accessorKey: 'amountDue',
-            size: c.width,
-            minSize: 100,
-            align: 'right',
-            render: (value) => <span className="font-semibold text-rose-700 tabular-nums">{fmt(value ?? 0)}</span>,
-          }
-        case 'amountPaid':
-          return {
-            id: 'amountPaid',
-            header: 'Amount Paid',
-            accessorKey: 'amountPaid',
-            size: c.width,
-            minSize: 100,
-            align: 'right',
-            render: (value) => <span className="font-semibold text-sky-700 tabular-nums">{fmt(value ?? 0)}</span>,
-          }
-        case 'total':
-          return {
-            id: 'total',
-            header: 'Total',
-            accessorKey: 'total',
-            size: c.width,
-            minSize: 110,
-            align: 'right',
-            render: (value) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(value ?? 0)}</span>,
-          }
-        default:
-          return {
-            id: c.key,
-            header: c.label,
-            accessorKey: c.key,
-            size: c.width,
-            minSize: c.width,
-            render: (value) => <span>{value ?? '—'}</span>,
-          }
-      }
-    }), [visibleCols, fmt])
+  const columns: HaypColumn<Bill>[] = useMemo(() => [
+    {
+      id: 'billNumber',
+      header: 'Bill #',
+      accessorKey: 'billNumber',
+      size: 130,
+      minSize: 100,
+      render: (value) => <span className="font-semibold text-gray-800">{value ?? '—'}</span>,
+    },
+    {
+      id: 'vendorName',
+      header: 'Vendor',
+      accessorKey: 'vendorName',
+      size: 200,
+      minSize: 140,
+      render: (value) => <span className="text-gray-700 truncate">{value ?? '—'}</span>,
+    },
+    {
+      id: 'date',
+      header: 'Date',
+      accessorKey: 'date',
+      size: 115,
+      minSize: 100,
+      render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
+    },
+    {
+      id: 'dueDate',
+      header: 'Due Date',
+      accessorKey: 'dueDate',
+      size: 115,
+      minSize: 100,
+      render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'status',
+      size: 130,
+      minSize: 110,
+      render: (value) => <StatusPill status={value as Bill['status']} />,
+    },
+    {
+      id: 'amountDue',
+      header: 'Amount Due',
+      accessorKey: 'amountDue',
+      size: 120,
+      minSize: 100,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className="font-semibold text-rose-700 tabular-nums">{fmt(value ?? 0)}</span>,
+    },
+    {
+      id: 'amountPaid',
+      header: 'Amount Paid',
+      accessorKey: 'amountPaid',
+      size: 120,
+      minSize: 100,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className="font-semibold text-sky-700 tabular-nums">{fmt(value ?? 0)}</span>,
+    },
+    {
+      id: 'total',
+      header: 'Total',
+      accessorKey: 'total',
+      size: 130,
+      minSize: 110,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className="font-semibold text-emerald-800 tabular-nums">{fmt(value ?? 0)}</span>,
+    },
+  ], [fmt])
 
   const totals = useMemo<HaypTotalsConfig>(() => ({
     enabled: true,
@@ -364,54 +331,75 @@ export default function BillsPage() {
     formatValue: (value) => fmt(Number(value ?? 0)),
   }), [fmt])
 
-  const handleExportCSV = () => {
+  const handleExportCSV = useCallback(() => {
     csvDownload(`bills-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Amount Due', 'Amount Paid', 'Total'],
-      sorted.map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.amountDue ?? 0), String(r.amountPaid ?? 0), String(r.total)]))
+      filtered.map(r => [r.billNumber ?? '', r.vendorName ?? '', r.date, r.dueDate, r.status, String(r.amountDue ?? 0), String(r.amountPaid ?? 0), String(r.total)]))
     showToast('CSV exported')
-  }
+  }, [filtered, showToast])
+
+  const stats = useMemo(() => [
+    { icon: List, label: 'Total Bills', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Draft Bills', value: rows.filter(r => r.status === 'DRAFT').length, color: 'amber' },
+    { icon: Check, label: 'Paid Bills', value: rows.filter(r => r.status === 'PAID').length, color: 'emerald' },
+    { icon: X, label: 'Voided Bills', value: rows.filter(r => r.status === 'VOIDED').length, color: 'rose' },
+  ], [rows])
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Bills</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} bills`}</p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
-          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => router.push('/expenses/bills/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"><Plus size={15} /> New Bill</button>
-          </div>
-        </div>
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
+          data={filtered}
+          columns={columns}
+          tableId="bills"
+          title="Bills"
+          description="Manage your vendor bills and track payment status."
+          stats={stats}
+          headerActions={
+            <button
+              onClick={() => router.push('/expenses/bills/new')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Plus size={18} />
+              New Bill
+            </button>
+          }
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          filters={[
+            { value: 'ALL', label: 'All Statuses' },
+            { value: 'DRAFT', label: 'Draft' },
+            { value: 'PENDING', label: 'Pending' },
+            { value: 'APPROVED', label: 'Approved' },
+            { value: 'PARTIALLY_PAID', label: 'Partially Paid' },
+            { value: 'PAID', label: 'Paid' },
+            { value: 'VOIDED', label: 'Voided' },
+          ]}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="All Statuses"
+          actions={actions}
+          bulkActions={bulkActions}
+          totals={totals}
+          onRefresh={fetchBills}
+          onExport={handleExportCSV}
+          exportLabel="Export"
+          onActivityLog={() => router.push('/expenses/bills-payments/bills/activity')}
+          onRowClick={(row) => router.push(`/expenses/bills/${row.id}/edit`)}
+          emptyTitle="No bills found"
+          emptySubtitle="Adjust your search or filter to see results"
+          loading={loading}
+        />
       </div>
 
-      <HaypDataTable
-        tableId="bills"
-        columns={columns}
-        data={filtered}
-        globalFilter={search}
-        onGlobalFilterChange={setSearch}
-        actions={actions}
-        bulkActions={bulkActions}
-        filters={[
-          { value: 'all', label: 'All' },
-          { value: 'draft', label: 'Draft' },
-          { value: 'pending', label: 'Pending' },
-          { value: 'paid', label: 'Paid' },
-          { value: 'voided', label: 'Voided' },
-        ]}
-        activeFilter={statusFilter.toLowerCase()}
-        onFilterChange={(value) => setStatusFilter(value.toUpperCase() as typeof STATUSES[number])}
-        filterLabel={statusFilter === 'ALL' ? 'Status: All' : `Status: ${statusFilter.replace(/_/g, ' ')}`}
-        totals={totals}
-        searchPlaceholder="Search bills..."
-        onExport={handleExportCSV}
-        exportLabel="Export"
-        onRefresh={fetchBills}
-        onActivityLog={() => router.push('/expenses/bills-payments/bills/activity')}
-        className="mt-4"
-      />
+      {toast && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-slate-900 text-white text-xs font-bold px-6 py-3 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-3">
+             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+             {toast}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

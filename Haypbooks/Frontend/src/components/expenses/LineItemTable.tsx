@@ -334,7 +334,6 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
         </button>
       </div>
       <style jsx>{`
-      <style jsx>{`
         .line-col-handle { width: 48px; min-width: 48px; max-width: 48px; }
         .line-col-actions { width: 98px; min-width: 98px; max-width: 98px; }
         ${columns.map((column) => `

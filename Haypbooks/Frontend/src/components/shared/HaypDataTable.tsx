@@ -54,6 +54,7 @@ import {
 import { useTablePersistence } from '@/hooks/useTablePersistence'
 import { DraggableHeader } from './DraggableHeader'
 import HaypDateRangePicker from './HaypDateRangePicker'
+import Popover from '@/components/Popover'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -368,9 +369,33 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
   }, [columns])
 
   const filteredData = useMemo(() => {
-    if (activeAdvancedFilters.length === 0) return data
+    let list = data
 
-    return data.filter((row) => {
+    const filterKey = activeFilter?.trim() ?? ''
+    if (filters.length > 0 && filterKey && filterKey.toLowerCase() !== 'all') {
+      const normalizedFilterKey = filterKey.toLowerCase()
+      list = list.filter((row) =>
+        Object.values(row).some((value) =>
+          String(value ?? '').toLowerCase().includes(normalizedFilterKey),
+        ),
+      )
+    }
+
+    const searchText = globalFilter?.trim() ?? ''
+    if (searchText) {
+      const normalizedSearch = searchText.toLowerCase()
+      list = list.filter((row) =>
+        columns.some((column) => {
+          if (!column.accessorKey) return false
+          const rawValue = row[column.accessorKey as keyof T]
+          return String(rawValue ?? '').toLowerCase().includes(normalizedSearch)
+        }),
+      )
+    }
+
+    if (activeAdvancedFilters.length === 0) return list
+
+    return list.filter((row) => {
       return activeAdvancedFilters.every((filter) => {
         const rawValue = row[filter.columnId as keyof T]
         const filterValue = String(filter.value ?? '').trim()
@@ -402,7 +427,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
         }
       })
     })
-  }, [activeAdvancedFilters, data])
+  }, [activeAdvancedFilters, data, filters, activeFilter, globalFilter, columns])
 
   useEffect(() => {
     if (hasUserResizedColumns) return
@@ -643,133 +668,149 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
     setActiveAdvancedFilters(activeAdvancedFilters.filter((_, i) => i !== index))
   }
 
+  const customizeButtonRef = useRef<HTMLButtonElement | null>(null)
+
   const customizeButton = (
-    <DropdownMenu open={customizeOpen} onOpenChange={setCustomizeOpen}>
-      <DropdownMenuTrigger
+    <>
+      <button
+        ref={customizeButtonRef}
+        type="button"
+        onClick={() => setCustomizeOpen((prev) => !prev)}
         className={cn(
-          "inline-flex items-center justify-center rounded-xl text-sm font-bold transition-all border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 h-10 gap-2 px-3 shadow-sm group focus:outline-none outline-none data-[state=open]:ring-2 data-[state=open]:ring-emerald-500/20 data-[state=open]:border-emerald-500",
+          "inline-flex items-center justify-center rounded-xl text-sm font-bold transition-all border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 h-10 gap-2 px-3 shadow-sm focus:outline-none outline-none",
           (customizeBadge != null || activeAdvancedFilters.length > 0) && "ring-2 ring-emerald-500/20 border-emerald-500 text-emerald-700 bg-emerald-50/10"
         )}
       >
-        <SlidersHorizontal className="h-4 w-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+        <SlidersHorizontal className="h-4 w-4 text-slate-400 hover:text-emerald-500 transition-colors" />
         <span className="text-[13px]">{customizeLabel || 'Customize'}</span>
         {(customizeBadge != null || activeAdvancedFilters.length > 0) && (
           <span className="rounded-full bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 shadow-sm shadow-emerald-500/20 ml-1">
             {activeAdvancedFilters.length || customizeBadge}
           </span>
         )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-[450px] md:w-[600px] !bg-white !opacity-100 border border-slate-200 rounded-[32px] shadow-2xl z-[9999] p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 !backdrop-blur-none">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Filter size={16} className="text-emerald-500" />
-                Filter Conditions
-              </h3>
-              <p className="text-[10px] text-slate-400 font-medium ml-6">Match <span className="text-emerald-700 font-black">ALL</span> of the filters below</p>
+      </button>
+      <Popover
+        open={customizeOpen}
+        anchorRef={customizeButtonRef}
+        onClose={() => setCustomizeOpen(false)}
+        matchWidth={false}
+        className="!z-[9999]"
+      >
+        <div className="w-[calc(100vw-2rem)] sm:w-[450px] md:w-[600px] bg-white border border-slate-200 rounded-[32px] shadow-2xl p-6 overflow-hidden">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Filter size={16} className="text-emerald-500" />
+                  Filter Conditions
+                </h3>
+                <p className="text-[10px] text-slate-400 font-medium ml-6">Match <span className="text-emerald-700 font-black">ALL</span> of the filters below</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedColForFilter}
+                  onChange={(e) => setSelectedColForFilter(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                >
+                  {columns.map(col => (
+                    <option key={col.id} value={col.id}>{col.header}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={addAdvancedFilter}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:scale-105 active:scale-95 transition-all shadow-md shadow-emerald-500/10"
+                >
+                  <Plus size={14} /> Add Condition
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <select 
-                value={selectedColForFilter}
-                onChange={(e) => setSelectedColForFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+
+            {activeAdvancedFilters.length === 0 ? (
+              <div className="py-8 text-center border-2 border-dashed border-slate-100 rounded-2xl">
+                <p className="text-xs text-slate-400 font-medium">No filters applied. Add a condition to refine your data.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                {activeAdvancedFilters.map((filter, idx) => {
+                  const colLabel = columns.find(c => c.id === filter.columnId)?.header
+                  return (
+                    <div key={idx} className="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border border-slate-100 rounded-2xl shadow-sm transition-all">
+                      <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest px-2 py-1 bg-emerald-50 rounded-md min-w-[100px] text-center">
+                        {colLabel}
+                      </span>
+                      <select
+                        value={filter.operator}
+                        onChange={(e) => {
+                          const newFilters = [...activeAdvancedFilters]
+                          newFilters[idx].operator = e.target.value as AdvancedFilter['operator']
+                          setActiveAdvancedFilters(newFilters)
+                        }}
+                        className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                        aria-label="Filter operator"
+                      >
+                        <option value="contains">contains</option>
+                        <option value="equals">is exactly</option>
+                        <option value="startsWith">starts with</option>
+                        <option value="greaterThan">is greater than</option>
+                        <option value="lessThan">is less than</option>
+                      </select>
+
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={filter.value}
+                          onChange={(e) => {
+                            const newFilters = [...activeAdvancedFilters]
+                            newFilters[idx].value = e.target.value
+                            setActiveAdvancedFilters(newFilters)
+                          }}
+                          placeholder="Value..."
+                          className="bg-white border border-slate-200 rounded-lg px-4 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 transition-all w-32 shadow-sm"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeAdvancedFilter(idx)}
+                        className="ml-auto p-1.5 text-slate-300 hover:text-rose-500 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveAdvancedFilters([])
+                  setCustomizeOpen(false)
+                  onCustomize?.()
+                }}
+                className="px-4 py-2 text-xs font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors"
               >
-                {columns.map(col => (
-                  <option key={col.id} value={col.id}>{col.header}</option>
-                ))}
-              </select>
-              <button 
-                onClick={addAdvancedFilter}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:scale-105 active:scale-95 transition-all shadow-md shadow-emerald-500/10"
+                Clear All
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomizeOpen(false)
+                  onCustomize?.()
+                }}
+                className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-lg"
               >
-                <Plus size={14} /> Add Condition
+                Apply Filters
               </button>
             </div>
           </div>
-
-          {activeAdvancedFilters.length === 0 ? (
-            <div className="py-8 text-center border-2 border-dashed border-slate-100 rounded-2xl">
-              <p className="text-xs text-slate-400 font-medium">No filters applied. Add a condition to refine your data.</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-              {activeAdvancedFilters.map((filter, idx) => {
-                const colLabel = columns.find(c => c.id === filter.columnId)?.header;
-                return (
-                  <div key={idx} className="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border border-slate-100 rounded-2xl shadow-sm transition-all group/filter animate-in fade-in slide-in-from-left-2">
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest px-2 py-1 bg-emerald-50 rounded-md min-w-[100px] text-center">
-                      {colLabel}
-                    </span>
-                    
-                    <select 
-                      value={filter.operator}
-                      onChange={(e) => {
-                        const newFilters = [...activeAdvancedFilters]
-                        newFilters[idx].operator = e.target.value as AdvancedFilter['operator']
-                        setActiveAdvancedFilters(newFilters)
-                      }}
-                      className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
-                      aria-label="Filter operator"
-                    >
-                      <option value="contains">contains</option>
-                      <option value="equals">is exactly</option>
-                      <option value="startsWith">starts with</option>
-                      <option value="greaterThan">is greater than</option>
-                      <option value="lessThan">is less than</option>
-                    </select>
-
-                    <div className="flex gap-2 items-center">
-                      <input 
-                        type="text" 
-                        value={filter.value}
-                        onChange={(e) => {
-                          const newFilters = [...activeAdvancedFilters]
-                          newFilters[idx].value = e.target.value
-                          setActiveAdvancedFilters(newFilters)
-                        }}
-                        placeholder="Value..."
-                        className="bg-white border border-slate-200 rounded-lg px-4 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 transition-all w-32 shadow-sm"
-                      />
-                    </div>
-
-                    <button 
-                      onClick={() => removeAdvancedFilter(idx)}
-                      className="ml-auto p-1.5 text-slate-300 hover:text-rose-500 transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button 
-              onClick={() => {
-                setActiveAdvancedFilters([])
-                setCustomizeOpen(false)
-                onCustomize?.()
-              }}
-              className="px-4 py-2 text-xs font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors"
-            >
-              Clear All
-            </button>
-            <button 
-              onClick={() => {
-                setCustomizeOpen(false)
-                onCustomize?.()
-              }}
-              className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-lg"
-            >
-              Apply Filters
-            </button>
-          </div>
         </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+      </Popover>
+    </>
+  )
 
   const exportButton = onExport ? (
     <button
