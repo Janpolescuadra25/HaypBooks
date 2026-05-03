@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Download, Clock, Trash2, Edit2, Eye, List, Banknote } from 'lucide-react'
+import { Plus, Download, Clock, Trash2, Edit2, Eye, ListOrdered, Banknote } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -218,7 +218,7 @@ export default function VendorsPage() {
     },
     {
       label: 'View Transactions',
-      icon: <List className="mr-2.5 h-4 w-4 opacity-70" />,
+      icon: <ListOrdered className="mr-2.5 h-4 w-4 opacity-70" />,
       onClick: (id) => router.push(`/expenses/vendors/activity?vendorId=${id}`),
     },
     {
@@ -270,7 +270,7 @@ export default function VendorsPage() {
   }), [currency])
 
   const stats = useMemo(() => [
-    { icon: List, label: 'Total Vendors', value: rows.length, color: 'blue' },
+    { icon: ListOrdered, label: 'Total Vendors', value: rows.length, color: 'blue' },
     { icon: Clock, label: 'Active Vendors', value: rows.filter(r => (r.status ?? 'ACTIVE') === 'ACTIVE').length, color: 'emerald' },
     { icon: Trash2, label: 'Inactive Vendors', value: rows.filter(r => r.status === 'INACTIVE').length, color: 'amber' },
     { icon: Banknote, label: 'Total Balance', value: formatCurrency(rows.reduce((acc, curr) => acc + (curr.balance ?? 0), 0), currency), color: 'rose' },

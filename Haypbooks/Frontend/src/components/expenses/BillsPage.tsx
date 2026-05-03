@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Download, X, Eye, Check, Ban,
+  Plus, Download, X, Eye, Check, Ban, ListOrdered,
 } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
@@ -339,7 +339,7 @@ export default function BillsPage() {
   }, [filtered, showToast])
 
   const stats = useMemo(() => [
-    { icon: List, label: 'Total Bills', value: rows.length, color: 'blue' },
+    { icon: ListOrdered, label: 'Total Bills', value: rows.length, color: 'blue' },
     { icon: Clock, label: 'Draft Bills', value: rows.filter(r => r.status === 'DRAFT').length, color: 'amber' },
     { icon: Check, label: 'Paid Bills', value: rows.filter(r => r.status === 'PAID').length, color: 'emerald' },
     { icon: X, label: 'Voided Bills', value: rows.filter(r => r.status === 'VOIDED').length, color: 'rose' },

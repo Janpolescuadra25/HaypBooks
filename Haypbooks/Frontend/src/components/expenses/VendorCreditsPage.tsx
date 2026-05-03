@@ -315,7 +315,6 @@ export default function VendorCreditsPage() {
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
-        actions={actions}
         emptyTitle="No credits found"
         emptySubtitle="Adjust your search or filter to see results"
         className="mt-4"
