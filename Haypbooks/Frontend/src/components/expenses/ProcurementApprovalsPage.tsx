@@ -287,73 +287,76 @@ export default function ProcurementApprovalsPage() {
   const filterLabel = statusFilter === 'ALL' ? 'Status' : `Status: ${statusFilter}`
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Procurement Approvals</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} approvals`}</p>
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="p-4 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-emerald-900">Procurement Approvals</h1>
+            <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} approvals`}</p>
+          </div>
         </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Date From</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              aria-label="Date from"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Date To</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              aria-label="Date to"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            />
+          </div>
         </div>
+
+        {error && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+        )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Date From</label>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            aria-label="Date from"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Date To</label>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            aria-label="Date to"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-          />
-        </div>
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
+          tableId="procurement-approvals"
+          columns={columns}
+          data={filtered}
+          loading={loading}
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          searchPlaceholder="Search approvals..."
+          filters={filterOptions}
+          activeFilter={statusFilter.toLowerCase()}
+          onFilterChange={(value) => setStatusFilter(String(value).toUpperCase() as (typeof STATUSES)[number])}
+          filterLabel={filterLabel}
+          headerActions={
+            <button
+              onClick={() => showToast('Coming soon')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
+            >
+              <Plus size={15} /> New Approval
+            </button>
+          }
+          actions={actions}
+          bulkActions={bulkActions}
+          totals={totals}
+          stats={stats}
+          onRefresh={fetchRows}
+          onExport={handleExportAll}
+          onActivityLog={() => router.push('/expenses/procurement/approvals/activity')}
+          emptyTitle="No approvals found"
+          emptySubtitle="Approval items will appear here when submitted"
+          className="mt-4"
+        />
       </div>
-
-      {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-      )}
-
-      <HaypDataTable
-        tableId="procurement-approvals"
-        columns={columns}
-        data={filtered}
-        loading={loading}
-        globalFilter={search}
-        onGlobalFilterChange={setSearch}
-        searchPlaceholder="Search approvals..."
-        filters={filterOptions}
-        activeFilter={statusFilter.toLowerCase()}
-        onFilterChange={(value) => setStatusFilter(String(value).toUpperCase() as (typeof STATUSES)[number])}
-        filterLabel={filterLabel}
-        headerActions={
-          <button
-            onClick={() => showToast('Coming soon')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
-          >
-            <Plus size={15} /> New Approval
-          </button>
-        }
-        actions={actions}
-        bulkActions={bulkActions}
-        totals={totals}
-        stats={stats}
-        onRefresh={fetchRows}
-        onExport={handleExportAll}
-        onActivityLog={() => router.push('/expenses/procurement/approvals/activity')}
-        emptyTitle="No approvals found"
-        emptySubtitle="Approval items will appear here when submitted"
-        className="mt-4"
-      />
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">
