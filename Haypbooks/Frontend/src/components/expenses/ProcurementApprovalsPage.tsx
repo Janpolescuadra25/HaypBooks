@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Eye, Check, XCircle, RefreshCw } from 'lucide-react'
+import { Plus, Eye, Check, XCircle, RefreshCw, FileText, Clock, CheckCircle, X } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -276,6 +276,13 @@ export default function ProcurementApprovalsPage() {
     [showToast],
   )
 
+  const stats = useMemo(() => [
+    { icon: FileText, label: 'Total', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending Approval', value: rows.filter(r => r.status === 'PENDING').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Approved', value: rows.filter(r => r.status === 'APPROVED').length, color: 'emerald' },
+    { icon: X, label: 'Rejected', value: rows.filter(r => r.status === 'REJECTED').length, color: 'rose' },
+  ], [rows])
+
   const filterOptions = STATUSES.map((status) => ({ value: status.toLowerCase(), label: status === 'ALL' ? 'All' : status }))
   const filterLabel = statusFilter === 'ALL' ? 'Status' : `Status: ${statusFilter}`
 
@@ -344,6 +351,7 @@ export default function ProcurementApprovalsPage() {
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
+        stats={stats}
         onExport={handleExportAll}
         onActivityLog={() => router.push('/expenses/procurement/approvals/activity')}
         emptyTitle="No approvals found"

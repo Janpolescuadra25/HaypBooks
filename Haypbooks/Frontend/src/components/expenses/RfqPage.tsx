@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, RefreshCw, FileText, ArrowUpRight, CheckCircle, XCircle } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -201,6 +201,13 @@ export default function RfqPage() {
 
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
+  const stats = useMemo(() => [
+    { icon: FileText, label: 'Total RFQs', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Open', value: rows.filter(r => r.status === 'SENT').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Awarded', value: rows.filter(r => r.status === 'AWARDED').length, color: 'emerald' },
+    { icon: XCircle, label: 'Closed', value: rows.filter(r => r.status === 'CLOSED').length, color: 'rose' },
+  ], [rows])
+
   const toggleSort = useCallback((key: typeof sortKey) => {
     if (sortKey === key) {
       setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
@@ -262,6 +269,7 @@ export default function RfqPage() {
         activeFilter=""
         onFilterChange={() => {} }
         totals={totals}
+        stats={stats}
         filterLabel="All"
         bulkActions={[
           {

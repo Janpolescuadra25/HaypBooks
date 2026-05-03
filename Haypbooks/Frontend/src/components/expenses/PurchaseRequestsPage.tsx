@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Edit2, Send, X } from 'lucide-react'
+import { Plus, Eye, ArrowUpRight, X, ListOrdered, Clock, Check, FileText, CheckCircle, XCircle } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -236,13 +236,13 @@ export default function PurchaseRequestsPage() {
     () => [
       {
         label: 'Edit Request',
-        icon: <Edit2 size={14} />,
+        icon: <Eye size={14} />,
         onClick: (id) => router.push(`/expenses/procurement/purchase-requests/${id}/edit`),
       },
       { divider: true, label: '', onClick: () => {} },
       {
         label: 'Submit for Approval',
-        icon: <Send size={14} />,
+        icon: <ArrowUpRight size={14} />,
         show: (row) => row.status === 'DRAFT',
         onClick: (id) => handleSubmitRequest(id),
       },
@@ -260,7 +260,7 @@ export default function PurchaseRequestsPage() {
       },
       {
         label: 'Submit Selected',
-        icon: <Send size={14} />,
+        icon: <ArrowUpRight size={14} />,
         onClick: handleSubmitSelected,
       },
       {
@@ -282,6 +282,13 @@ export default function PurchaseRequestsPage() {
 
   const filterOptions = STATUSES.map((status) => ({ value: status.toLowerCase(), label: status === 'ALL' ? 'All' : status }))
   const filterLabel = statusFilter === 'ALL' ? 'Status' : `Status: ${statusFilter}`
+
+  const stats = useMemo(() => [
+    { icon: FileText, label: 'Total Requests', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending', value: rows.filter(r => r.status === 'PENDING').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Approved', value: rows.filter(r => r.status === 'APPROVED').length, color: 'emerald' },
+    { icon: XCircle, label: 'Rejected', value: rows.filter(r => r.status === 'REJECTED').length, color: 'rose' },
+  ], [rows])
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -342,6 +349,7 @@ export default function PurchaseRequestsPage() {
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
+        stats={stats}
         onRefresh={fetchRows}
         onExport={handleExportAll}
         onActivityLog={() => router.push('/expenses/procurement/requests/activity')}

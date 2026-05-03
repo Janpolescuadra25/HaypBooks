@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw, Eye, X } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, RefreshCw, Eye, X, FileText, PauseCircle, PlayCircle, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -241,6 +241,13 @@ export default function RecurringBillsPage() {
     setPanelOpen(true)
   }, [])
 
+  const stats = useMemo(() => [
+    { icon: FileText, label: 'Total Active', value: rows.length, color: 'blue' },
+    { icon: PlayCircle, label: 'Draft', value: rows.filter(r => r.status === 'DRAFT').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Active', value: rows.filter(r => r.status === 'ACTIVE').length, color: 'emerald' },
+    { icon: PauseCircle, label: 'Paused', value: rows.filter(r => r.status === 'PAUSED').length, color: 'rose' },
+  ], [rows])
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -300,6 +307,7 @@ export default function RecurringBillsPage() {
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
+        stats={stats}
         onRefresh={fetchRows}
         onExport={handleExportCSV}
         exportLabel="Export CSV"

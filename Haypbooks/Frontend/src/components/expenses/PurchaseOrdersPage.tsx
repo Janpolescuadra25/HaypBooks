@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Eye, FileText, Check, X } from 'lucide-react'
+import { Plus, Eye, FileText, Check, X, ListOrdered, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -288,6 +288,13 @@ export default function PurchaseOrdersPage() {
     [handleDeleteSelected, handleApproveSelected, handleConvertSelected, toast],
   )
 
+  const stats = useMemo(() => [
+    { icon: ListOrdered, label: 'Total Orders', value: rows.length, color: 'blue' },
+    { icon: AlertCircle, label: 'Pending', value: rows.filter(r => r.status === 'SUBMITTED').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Partially Received', value: rows.filter(r => r.status === 'PARTIAL_RECEIVED').length, color: 'emerald' },
+    { icon: Check, label: 'Received', value: rows.filter(r => r.status === 'RECEIVED').length, color: 'rose' },
+  ], [rows])
+
   const filterOptions = STATUSES.map((status) => ({ value: status.toLowerCase(), label: status === 'ALL' ? 'All' : status }))
   const filterLabel = statusFilter === 'ALL' ? 'Status' : `Status: ${statusFilter}`
 
@@ -350,6 +357,7 @@ export default function PurchaseOrdersPage() {
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
+        stats={stats}
         onRefresh={fetchRows}
         onExport={handleExportAll}
         onActivityLog={() => router.push('/expenses/procurement/orders/activity')}

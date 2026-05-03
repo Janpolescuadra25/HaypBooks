@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download } from 'lucide-react'
+import { Plus, Search, Download, Receipt, Clock, CheckCircle, CreditCard } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -88,6 +88,13 @@ export default function ExpensesPage() {
     sumColumns: ['totalAmount'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const stats = useMemo(() => [
+    { icon: Receipt, label: 'Total Expenses', value: reports.length, color: 'blue' },
+    { icon: Clock, label: 'Pending', value: reports.filter((report) => report.status === 'PENDING').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Approved', value: reports.filter((report) => report.status === 'APPROVED').length, color: 'emerald' },
+    { icon: CreditCard, label: 'Reimbursed', value: reports.filter((report) => report.status === 'PAID').length, color: 'rose' },
+  ], [reports])
 
   const columns = useMemo<HaypColumn<ExpenseReport>[]>(() => [
     {
@@ -224,6 +231,7 @@ export default function ExpensesPage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        stats={stats}
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}

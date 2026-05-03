@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw, Eye, Trash2 } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, RefreshCw, Eye, Trash2, FileText, AlertCircle, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -191,6 +191,13 @@ export default function PaymentRunsPage() {
   const handleRefresh = useCallback(() => {
     fetchRows()
   }, [fetchRows])
+
+  const stats = useMemo(() => [
+    { icon: FileText, label: 'Total Runs', value: rows.length, color: 'blue' },
+    { icon: AlertCircle, label: 'Draft', value: rows.filter(r => r.status === 'DRAFT').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Completed', value: rows.filter(r => r.status === 'COMPLETED').length, color: 'emerald' },
+    { icon: AlertCircle, label: 'Failed', value: rows.filter(r => r.status === 'FAILED').length, color: 'rose' },
+  ], [rows])
 
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 

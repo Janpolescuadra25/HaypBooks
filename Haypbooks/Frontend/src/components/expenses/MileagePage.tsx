@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, Download, Filter, Clock, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, Pencil, Trash2, Car, CheckCircle, CreditCard } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -122,6 +122,13 @@ export default function MileagePage() {
     sumColumns: ['amount'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const stats = useMemo(() => [
+    { icon: Car, label: 'Total Trips', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT' || row.status === 'SUBMITTED').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Approved', value: rows.filter((row) => row.status === 'APPROVED').length, color: 'emerald' },
+    { icon: CreditCard, label: 'Reimbursed', value: rows.filter((row) => row.status === 'REJECTED').length, color: 'rose' },
+  ], [rows])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -315,6 +322,7 @@ export default function MileagePage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        stats={stats}
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}

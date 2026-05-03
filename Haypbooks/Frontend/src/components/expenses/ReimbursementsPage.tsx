@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Clock, RefreshCw, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Download, Clock, RefreshCw, Pencil, Trash2, Wallet, CheckCircle, ArrowUpRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -78,6 +78,13 @@ export default function ReimbursementsPage() {
     sumColumns: ['totalAmount'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const stats = useMemo(() => [
+    { icon: Wallet, label: 'Total Claims', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT' || row.status === 'SUBMITTED').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Approved', value: rows.filter((row) => row.status === 'APPROVED').length, color: 'emerald' },
+    { icon: ArrowUpRight, label: 'Paid', value: rows.filter((row) => row.status === 'REIMBURSED').length, color: 'rose' },
+  ], [rows])
 
   const handleDeleteReimbursement = useCallback((id: string) => {
     if (!confirm('Delete this reimbursement?')) return
@@ -216,6 +223,7 @@ export default function ReimbursementsPage() {
         activeFilter=""
         onFilterChange={() => {} }
         filterLabel="All"
+        stats={stats}
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}

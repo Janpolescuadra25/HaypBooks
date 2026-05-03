@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, RefreshCw, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Download, Filter, RefreshCw, Pencil, Trash2, FileText, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -102,6 +102,13 @@ export default function ReceiptsPage() {
     sumColumns: ['amount'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const stats = useMemo(() => [
+    { icon: FileText, label: 'Total Receipts', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Matched', value: rows.filter((row) => row.status === 'MATCHED').length, color: 'emerald' },
+    { icon: XCircle, label: 'Unmatched', value: rows.filter((row) => row.status === 'UNMATCHED').length, color: 'rose' },
+  ], [rows])
 
   const columns = useMemo<HaypColumn<Receipt>[]>(() => [
     {
@@ -298,6 +305,7 @@ export default function ReceiptsPage() {
         activeFilter=""
         onFilterChange={() => { }}
         filterLabel="All"
+        stats={stats}
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}

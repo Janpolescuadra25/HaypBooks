@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Download, RefreshCw, Eye, Printer } from 'lucide-react'
+import { Search, Download, RefreshCw, Eye, Printer, TrendingUp, Clock, AlertCircle, Ban } from 'lucide-react'
 import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -155,6 +155,13 @@ export default function ApAgingPage() {
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
 
+  const stats = useMemo(() => [
+    { icon: TrendingUp, label: 'Current', value: rows.filter((row) => row.current > 0).length, color: 'emerald' },
+    { icon: Clock, label: '31-60 Days', value: rows.filter((row) => row.days31To60 > 0).length, color: 'amber' },
+    { icon: AlertCircle, label: '61-90 Days', value: rows.filter((row) => row.days61To90 > 0).length, color: 'orange' },
+    { icon: Ban, label: 'Over 90 Days', value: rows.filter((row) => row.over90 > 0).length, color: 'rose' },
+  ], [rows])
+
   const actions = useMemo<HaypActionItem[]>(() => [
     {
       label: 'View Details',
@@ -246,6 +253,7 @@ export default function ApAgingPage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        stats={stats}
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, RefreshCw, Pencil, Trash2, Calendar, CheckCircle, Wallet } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -112,6 +112,13 @@ export default function PerDiemPage() {
     sumColumns: ['total'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const stats = useMemo(() => [
+    { icon: Calendar, label: 'Total Entries', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT' || row.status === 'SUBMITTED').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Approved', value: rows.filter((row) => row.status === 'APPROVED').length, color: 'emerald' },
+    { icon: Wallet, label: 'Reimbursed', value: rows.filter((row) => row.status === 'REJECTED').length, color: 'rose' },
+  ], [rows])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -321,6 +328,7 @@ export default function PerDiemPage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        stats={stats}
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}

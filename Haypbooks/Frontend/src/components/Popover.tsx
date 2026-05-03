@@ -32,16 +32,12 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
       // Calculate initial left position
       let left = rect.left + window.scrollX
 
-      // Check if panel would overflow right edge
-      if (left + panelWidth > viewportWidth - padding) {
-        // Shift left to keep panel within viewport with padding
-        left = Math.max(padding, viewportWidth - panelWidth - padding)
-      }
-
-      // On mobile, center the panel
       const isMobile = viewportWidth < 640
       if (isMobile) {
-        left = '1rem' as any
+        left = padding
+      } else {
+        // Clamp left inside viewport with padding
+        left = Math.max(padding, Math.min(left, viewportWidth - panelWidth - padding))
       }
 
       setMenuStyle({ 
