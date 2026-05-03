@@ -30,7 +30,7 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
       const padding = 16
 
       // Calculate initial left position
-      let left = rect.left + window.scrollX
+      let left = rect.left
 
       const isMobile = viewportWidth < 640
       if (isMobile) {
@@ -41,9 +41,9 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
       }
 
       setMenuStyle({ 
-        position: 'absolute', 
+        position: 'fixed', 
         left, 
-        top: rect.bottom + window.scrollY, 
+        top: rect.bottom, 
         width: isMobile ? `calc(100vw - 2rem)` : (matchWidth ? rect.width : undefined), 
         zIndex: 9999 
       })
