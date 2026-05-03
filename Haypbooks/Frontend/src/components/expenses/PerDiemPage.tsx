@@ -274,8 +274,9 @@ export default function PerDiemPage() {
   }, [])
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <HaypDataTable
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
         headerActions={
           <button onClick={() => setPanelOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
         }
@@ -312,6 +313,7 @@ export default function PerDiemPage() {
         emptySubtitle="Use search or filters to locate claims"
         loading={loading}
       />
+      </div>
 
       <HaypModal
         open={panelOpen}

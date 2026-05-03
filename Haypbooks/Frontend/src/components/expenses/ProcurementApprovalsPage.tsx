@@ -325,7 +325,6 @@ export default function ProcurementApprovalsPage() {
           onActivityLog={() => router.push('/expenses/procurement/approvals/activity')}
           emptyTitle="No approvals found"
           emptySubtitle="Approval items will appear here when submitted"
-          className="mt-4"
         />
       </div>
 

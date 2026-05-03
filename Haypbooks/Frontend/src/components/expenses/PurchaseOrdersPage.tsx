@@ -304,12 +304,13 @@ export default function PurchaseOrdersPage() {
   const filterLabel = statusFilter === 'ALL' ? 'Status' : `Status: ${statusFilter}`
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-      )}
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        {error && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+        )}
 
-      <HaypDataTable
+        <HaypDataTable
         tableId="purchase-orders"
         title="Purchase Orders"
         description="Manage purchase orders, approvals, and vendor deliveries."
@@ -345,8 +346,8 @@ export default function PurchaseOrdersPage() {
         onActivityLog={() => router.push('/expenses/procurement/orders/activity')}
         emptyTitle="No purchase orders found"
         emptySubtitle="Create a new purchase order to get started"
-        className="mt-4"
       />
+      </div>
 
       {toastMessage && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">

@@ -257,10 +257,11 @@ export default function MileagePage() {
   }, [fetchMileage])
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-      <HaypDataTable
+        <HaypDataTable
         data={dateFiltered}
         columns={columns}
         tableId="mileage"
@@ -289,6 +290,7 @@ export default function MileagePage() {
         emptySubtitle="Adjust your search or filters to see results"
         loading={loading}
       />
+      </div>
 
       <HaypModal
         open={mileagePanelOpen}
