@@ -9,7 +9,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import HaypModal from '@/components/shared/HaypModal'
 import RecurringBillForm, { type RecurringBillFormHandle } from './RecurringBillForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -160,6 +160,30 @@ export default function RecurringBillsPage() {
     toast.success('CSV exported')
   }, [filtered, toast])
 
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'Edit Template',
+      icon: <Eye size={14} />,
+      onClick: (id) => openEdit(id),
+    },
+    {
+      label: '',
+      onClick: () => {},
+      divider: true,
+    },
+    {
+      label: 'Delete Template',
+      icon: <X size={14} />,
+      variant: 'danger',
+      show: (row) => row.status === 'DRAFT',
+      onClick: (id) => {
+        if (!confirm('Delete this recurring bill template?')) return
+        setRows((prev) => prev.filter((row) => row.id !== id))
+        toast.success('Recurring bill template deleted')
+      },
+    },
+  ], [openEdit, toast])
+
   const bulkActions = useMemo<HaypBulkAction[]>(() => [
     {
       label: 'Delete selected',
@@ -273,6 +297,7 @@ export default function RecurringBillsPage() {
         activeFilter=""
         onFilterChange={() => {} }
         filterLabel="All"
+        actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         onRefresh={fetchRows}

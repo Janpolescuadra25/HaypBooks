@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, Download, Filter, Clock } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, Pencil, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -9,7 +9,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import HaypModal from '@/components/shared/HaypModal'
 import MileageForm, { type MileageFormHandle } from './MileageForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -96,6 +96,12 @@ export default function MileagePage() {
     setOpenMileageId(id)
   }, [])
 
+  const handleDeleteMileage = useCallback((id: string) => {
+    if (!confirm('Delete this mileage log?')) return
+    setRows((prev) => prev.filter((row) => row.id !== id))
+    toast.success('Mileage log deleted')
+  }, [toast])
+
   const filtered = useMemo(() => {
     return rows
       .filter((row) => statusFilter === 'ALL' || row.status === statusFilter)
@@ -116,6 +122,20 @@ export default function MileagePage() {
     sumColumns: ['amount'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'Edit',
+      icon: <Pencil size={14} />,
+      onClick: (_id, row) => openEditMileage(row.id),
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: (_id, row) => handleDeleteMileage(row.id),
+    },
+  ], [handleDeleteMileage, openEditMileage])
 
   const columns = useMemo<HaypColumn<MileageLog>[]>(() => [
     {
@@ -295,6 +315,7 @@ export default function MileagePage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         onRefresh={handleRefresh}

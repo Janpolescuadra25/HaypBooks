@@ -10,7 +10,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypActionItem, HaypBulkAction, HaypColumn } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface Bill {
@@ -358,6 +358,12 @@ export default function BillsPage() {
       }
     }), [visibleCols, fmt])
 
+  const totals = useMemo<HaypTotalsConfig>(() => ({
+    enabled: true,
+    sumColumns: ['amountDue', 'amountPaid', 'total'],
+    formatValue: (value) => fmt(Number(value ?? 0)),
+  }), [fmt])
+
   const handleExportCSV = () => {
     csvDownload(`bills-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Bill #', 'Vendor', 'Date', 'Due Date', 'Status', 'Amount Due', 'Amount Paid', 'Total'],
@@ -398,6 +404,7 @@ export default function BillsPage() {
         activeFilter={statusFilter.toLowerCase()}
         onFilterChange={(value) => setStatusFilter(value.toUpperCase() as typeof STATUSES[number])}
         filterLabel={statusFilter === 'ALL' ? 'Status: All' : `Status: ${statusFilter.replace(/_/g, ' ')}`}
+        totals={totals}
         searchPlaceholder="Search bills..."
         onExport={handleExportCSV}
         exportLabel="Export"

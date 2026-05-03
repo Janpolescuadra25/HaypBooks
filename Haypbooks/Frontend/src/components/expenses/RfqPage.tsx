@@ -4,10 +4,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, Download, Filter, Clock, RefreshCw } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
+import { formatCurrency } from '@/lib/format'
+import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypActionItem, HaypBulkAction, HaypColumn } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { csvDownload, fmtDate, StatusPill } from './_helpers'
 
 interface Rfq {
@@ -26,6 +28,7 @@ type StatusFilter = typeof STATUSES[number]
 
 export default function RfqPage() {
   const { companyId } = useCompanyId()
+  const { currency } = useCompanyCurrency()
   const router = useRouter()
   const toast = useToast()
   const [rows, setRows] = useState<Rfq[]>([])
@@ -112,6 +115,7 @@ export default function RfqPage() {
       header: 'RFQ #',
       accessorKey: 'rfqNumber',
       size: 130,
+      minSize: 150,
       render: (value) => <span className="font-semibold text-gray-800">{value ?? '—'}</span>,
     },
     {
@@ -119,6 +123,7 @@ export default function RfqPage() {
       header: 'Subject',
       accessorKey: 'subject',
       size: 220,
+      minSize: 200,
       render: (value) => <span className="text-gray-700 truncate">{value ?? '—'}</span>,
     },
     {
@@ -126,6 +131,7 @@ export default function RfqPage() {
       header: 'Vendors',
       accessorKey: 'vendorCount',
       size: 100,
+      minSize: 90,
       align: 'right',
       render: (value) => <span className="font-medium text-gray-700 tabular-nums">{value ?? 0}</span>,
     },
@@ -134,6 +140,7 @@ export default function RfqPage() {
       header: 'Date Sent',
       accessorKey: 'dateSent',
       size: 115,
+      minSize: 120,
       render: (value) => <span className="text-gray-500">{value ? fmtDate(value) : '—'}</span>,
     },
     {
@@ -141,6 +148,7 @@ export default function RfqPage() {
       header: 'Closing Date',
       accessorKey: 'closingDate',
       size: 115,
+      minSize: 120,
       render: (value) => <span className="text-gray-500">{value ? fmtDate(value) : '—'}</span>,
     },
     {
@@ -148,9 +156,21 @@ export default function RfqPage() {
       header: 'Status',
       accessorKey: 'status',
       size: 130,
+      minSize: 100,
       render: (value) => <StatusPill status={value ?? 'DRAFT'} />,
     },
-  ], [])
+    {
+      id: 'amount',
+      header: 'Amount',
+      accessorKey: 'amount',
+      size: 130,
+      minSize: 120,
+      enableSorting: true,
+      align: 'right',
+      isSummable: true,
+      render: (value) => <span className="font-semibold text-emerald-800 tabular-nums">{formatCurrency(value ?? 0, currency)}</span>,
+    },
+  ], [currency])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -164,6 +184,12 @@ export default function RfqPage() {
       disabled: sendingId !== null,
     },
   ], [router, sendRfq, sendingId])
+
+  const totals = useMemo<HaypTotalsConfig>(() => ({
+    enabled: true,
+    sumColumns: ['amount'],
+    formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
+  }), [currency])
 
   const handleExportCSV = useCallback(() => {
     csvDownload(`rfq-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -236,6 +262,7 @@ export default function RfqPage() {
         filters={[]}
         activeFilter=""
         onFilterChange={() => {} }
+        totals={totals}
         filterLabel="All"
         bulkActions={[
           {

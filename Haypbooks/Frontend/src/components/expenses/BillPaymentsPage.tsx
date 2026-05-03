@@ -8,7 +8,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypColumn, HaypActionItem, HaypBulkAction } from '@/components/shared/HaypDataTable.types'
+import type { HaypColumn, HaypActionItem, HaypBulkAction, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface BillPayment {
@@ -87,12 +87,19 @@ export default function BillPaymentsPage() {
     return list
   }, [rows, statusFilter, search])
 
+  const totals = useMemo<HaypTotalsConfig>(() => ({
+    enabled: true,
+    sumColumns: ['amount'],
+    formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
+  }), [currency])
+
   const columns = useMemo<HaypColumn<BillPayment>[]>(() => [
     {
       id: 'paymentNumber',
       accessorKey: 'paymentNumber',
       header: 'Payment #',
       size: 140,
+      minSize: 150,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'paymentNumber'),
@@ -102,6 +109,7 @@ export default function BillPaymentsPage() {
       accessorKey: 'vendorName',
       header: 'Vendor',
       size: 200,
+      minSize: 150,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'vendorName'),
@@ -111,6 +119,7 @@ export default function BillPaymentsPage() {
       accessorKey: 'date',
       header: 'Date',
       size: 115,
+      minSize: 120,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'date'),
@@ -120,6 +129,7 @@ export default function BillPaymentsPage() {
       accessorKey: 'method',
       header: 'Method',
       size: 140,
+      minSize: 150,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'method'),
@@ -129,6 +139,7 @@ export default function BillPaymentsPage() {
       accessorKey: 'status',
       header: 'Status',
       size: 130,
+      minSize: 100,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'status'),
@@ -138,6 +149,7 @@ export default function BillPaymentsPage() {
       accessorKey: 'amount',
       header: 'Amount',
       size: 130,
+      minSize: 120,
       enableSorting: true,
       align: 'right',
       render: (value) => renderCell(value, 'amount'),
@@ -232,6 +244,7 @@ export default function BillPaymentsPage() {
         activeFilter={statusFilter.toLowerCase()}
         onFilterChange={(value: any) => setStatusFilter(String(value).toUpperCase() as (typeof STATUSES)[number])}
         filterLabel={filterLabel}
+        totals={totals}
         onRefresh={fetchPayments}
         onExport={handleExportCSV}
         onActivityLog={() => router.push('/expenses/bills-payments/activity')}

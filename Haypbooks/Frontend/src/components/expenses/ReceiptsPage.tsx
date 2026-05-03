@@ -2,14 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, RefreshCw, Pencil, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import HaypModal from '@/components/shared/HaypModal'
 import ReceiptForm, { type ReceiptFormHandle } from './ReceiptForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -217,6 +217,32 @@ export default function ReceiptsPage() {
     setOpenReceiptId(id)
   }, [])
 
+  const handleDeleteReceipt = useCallback(async (id: string) => {
+    if (!companyId) return
+    if (!confirm('Delete this receipt? This action cannot be undone.')) return
+    try {
+      await expensesService.deleteReceipt(companyId, id)
+      setRows((prev) => prev.filter((row) => row.id !== id))
+      toast.success('Receipt deleted')
+    } catch {
+      toast.error('Failed to delete receipt')
+    }
+  }, [companyId, toast])
+
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'Edit',
+      icon: <Pencil size={14} />,
+      onClick: (_id, row) => openEditReceipt(row.id),
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: (_id, row) => handleDeleteReceipt(row.id),
+    },
+  ], [handleDeleteReceipt, openEditReceipt])
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -273,6 +299,7 @@ export default function ReceiptsPage() {
         activeFilter=""
         onFilterChange={() => { }}
         filterLabel="All"
+        actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         onRefresh={handleRefresh}

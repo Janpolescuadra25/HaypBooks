@@ -2,14 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, RefreshCw, Pencil, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import HaypModal from '@/components/shared/HaypModal'
 import PerDiemForm, { type PerDiemFormHandle } from './PerDiemForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -86,6 +86,12 @@ export default function PerDiemPage() {
     }
   }, [fetchRows])
 
+  const handleDeletePerDiem = useCallback((id: string) => {
+    if (!confirm('Delete this per diem claim?')) return
+    setRows((prev) => prev.filter((row) => row.id !== id))
+    toast.success('Per diem claim deleted')
+  }, [toast])
+
   const filtered = useMemo(() => {
     return rows
       .filter((row) => statusFilter === 'ALL' || row.status === statusFilter)
@@ -106,6 +112,24 @@ export default function PerDiemPage() {
     sumColumns: ['total'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'Edit',
+      icon: <Pencil size={14} />,
+      onClick: (_id, row) => {
+        setPanelOpen(true)
+        setOpenMode('edit')
+        setOpenId(row.id)
+      },
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: (_id, row) => handleDeletePerDiem(row.id),
+    },
+  ], [handleDeletePerDiem])
 
   const columns = useMemo<HaypColumn<PerDiem>[]>(() => [
     {
@@ -297,6 +321,7 @@ export default function PerDiemPage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         onRefresh={handleRefresh}

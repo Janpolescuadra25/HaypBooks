@@ -8,7 +8,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypColumn, HaypActionItem, HaypBulkAction } from '@/components/shared/HaypDataTable.types'
+import type { HaypColumn, HaypActionItem, HaypBulkAction, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface VendorCredit {
@@ -119,6 +119,7 @@ export default function VendorCreditsPage() {
       accessorKey: 'creditNumber',
       header: 'Credit #',
       size: 140,
+      minSize: 140,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'creditNumber'),
@@ -128,6 +129,7 @@ export default function VendorCreditsPage() {
       accessorKey: 'vendorName',
       header: 'Vendor',
       size: 200,
+      minSize: 150,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'vendorName'),
@@ -137,6 +139,7 @@ export default function VendorCreditsPage() {
       accessorKey: 'issueDate',
       header: 'Issue Date',
       size: 115,
+      minSize: 120,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'issueDate'),
@@ -146,6 +149,7 @@ export default function VendorCreditsPage() {
       accessorKey: 'status',
       header: 'Status',
       size: 130,
+      minSize: 100,
       enableSorting: true,
       align: 'left',
       render: (value) => renderCell(value, 'status'),
@@ -155,6 +159,7 @@ export default function VendorCreditsPage() {
       accessorKey: 'amount',
       header: 'Amount',
       size: 130,
+      minSize: 120,
       enableSorting: true,
       align: 'right',
       render: (value) => renderCell(value, 'amount'),
@@ -164,11 +169,18 @@ export default function VendorCreditsPage() {
       accessorKey: 'availableAmount',
       header: 'Remaining',
       size: 130,
+      minSize: 120,
       enableSorting: true,
       align: 'right',
       render: (value) => renderCell(value, 'availableAmount'),
     },
   ], [fmt])
+
+  const totals = useMemo<HaypTotalsConfig>(() => ({
+    enabled: true,
+    sumColumns: ['amount', 'availableAmount'],
+    formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
+  }), [currency])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -302,6 +314,8 @@ export default function VendorCreditsPage() {
         onActivityLog={() => router.push('/expenses/bills-payments/vendor-credits/activity')}
         actions={actions}
         bulkActions={bulkActions}
+        totals={totals}
+        actions={actions}
         emptyTitle="No credits found"
         emptySubtitle="Adjust your search or filter to see results"
         className="mt-4"

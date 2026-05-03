@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Download, RefreshCw } from 'lucide-react'
+import { Search, Download, RefreshCw, Eye, Printer } from 'lucide-react'
 import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -9,7 +9,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { csvDownload } from './_helpers'
 
 interface ApAgingRow {
@@ -155,6 +155,19 @@ export default function ApAgingPage() {
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
 
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'View Details',
+      icon: <Eye size={14} />,
+      onClick: () => toast.info('Coming soon'),
+    },
+    {
+      label: 'Print Report',
+      icon: <Printer size={14} />,
+      onClick: () => window.print(),
+    },
+  ], [toast])
+
   const handleExportCSV = useCallback(() => {
     csvDownload(`ap-aging-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Vendor', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'],
@@ -233,6 +246,7 @@ export default function ApAgingPage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         onRefresh={fetchAging}

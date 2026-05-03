@@ -9,7 +9,7 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypActionItem, HaypBulkAction, HaypColumn } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface PurchaseOrder {
@@ -174,6 +174,7 @@ export default function PurchaseOrdersPage() {
         accessorKey: 'poNumber',
         header: 'PO #',
         size: 130,
+        minSize: 150,
         enableSorting: true,
         render: (value) => <span className="font-semibold text-gray-800">{value ?? '—'}</span>,
       },
@@ -182,6 +183,7 @@ export default function PurchaseOrdersPage() {
         accessorKey: 'vendorName',
         header: 'Vendor',
         size: 200,
+        minSize: 150,
         enableSorting: true,
         render: (value) => <span className="text-gray-700 truncate">{value ?? '—'}</span>,
       },
@@ -190,6 +192,7 @@ export default function PurchaseOrdersPage() {
         accessorKey: 'date',
         header: 'Date',
         size: 115,
+        minSize: 120,
         enableSorting: true,
         render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
       },
@@ -198,6 +201,7 @@ export default function PurchaseOrdersPage() {
         accessorKey: 'expectedDelivery',
         header: 'Expected Delivery',
         size: 130,
+        minSize: 120,
         enableSorting: true,
         render: (value) => <span className="text-gray-500">{value ? fmtDate(value) : '—'}</span>,
       },
@@ -206,6 +210,7 @@ export default function PurchaseOrdersPage() {
         accessorKey: 'status',
         header: 'Status',
         size: 130,
+        minSize: 100,
         enableSorting: true,
         render: (value) => <StatusPill status={value ?? 'DRAFT'} />,
       },
@@ -214,6 +219,7 @@ export default function PurchaseOrdersPage() {
         accessorKey: 'total',
         header: 'Total',
         size: 130,
+        minSize: 120,
         enableSorting: true,
         align: 'right',
         isSummable: true,
@@ -222,6 +228,12 @@ export default function PurchaseOrdersPage() {
     ],
     [currency],
   )
+
+  const totals = useMemo<HaypTotalsConfig>(() => ({
+    enabled: true,
+    sumColumns: ['total'],
+    formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
+  }), [currency])
 
   const actions = useMemo<HaypActionItem[]>(
     () => [
@@ -337,6 +349,7 @@ export default function PurchaseOrdersPage() {
         filterLabel={filterLabel}
         actions={actions}
         bulkActions={bulkActions}
+        totals={totals}
         onRefresh={fetchRows}
         onExport={handleExportAll}
         onActivityLog={() => router.push('/expenses/procurement/orders/activity')}

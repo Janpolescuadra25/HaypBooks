@@ -8,7 +8,7 @@ import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypActionItem, HaypBulkAction, HaypColumn } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface ProcurementApproval {
@@ -167,6 +167,7 @@ export default function ProcurementApprovalsPage() {
         accessorKey: 'type',
         header: 'Type',
         size: 100,
+        minSize: 100,
         enableSorting: true,
         render: (value) => (
           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${TYPE_STYLES[value ?? ''] ?? 'bg-gray-50 text-gray-600'}`}>
@@ -179,6 +180,7 @@ export default function ProcurementApprovalsPage() {
         accessorKey: 'referenceNumber',
         header: 'Reference #',
         size: 150,
+        minSize: 150,
         enableSorting: true,
         render: (value) => <span className="font-semibold text-gray-800">{value ?? '—'}</span>,
       },
@@ -187,6 +189,7 @@ export default function ProcurementApprovalsPage() {
         accessorKey: 'submittedBy',
         header: 'Submitted By',
         size: 170,
+        minSize: 150,
         enableSorting: true,
         render: (value) => <span className="text-gray-700">{value ?? '—'}</span>,
       },
@@ -195,6 +198,7 @@ export default function ProcurementApprovalsPage() {
         accessorKey: 'date',
         header: 'Date',
         size: 115,
+        minSize: 120,
         enableSorting: true,
         render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
       },
@@ -203,6 +207,7 @@ export default function ProcurementApprovalsPage() {
         accessorKey: 'status',
         header: 'Status',
         size: 130,
+        minSize: 100,
         enableSorting: true,
         render: (value) => <StatusPill status={value ?? 'PENDING'} />,
       },
@@ -211,6 +216,7 @@ export default function ProcurementApprovalsPage() {
         accessorKey: 'amount',
         header: 'Amount',
         size: 130,
+        minSize: 120,
         enableSorting: true,
         align: 'right',
         isSummable: true,
@@ -219,6 +225,12 @@ export default function ProcurementApprovalsPage() {
     ],
     [currency],
   )
+
+  const totals = useMemo<HaypTotalsConfig>(() => ({
+    enabled: true,
+    sumColumns: ['amount'],
+    formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
+  }), [currency])
 
   const actions = useMemo<HaypActionItem[]>(
     () => [
@@ -331,6 +343,7 @@ export default function ProcurementApprovalsPage() {
         filterLabel={filterLabel}
         actions={actions}
         bulkActions={bulkActions}
+        totals={totals}
         onExport={handleExportAll}
         onActivityLog={() => router.push('/expenses/procurement/approvals/activity')}
         emptyTitle="No approvals found"

@@ -2,14 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Clock, RefreshCw } from 'lucide-react'
+import { Plus, Search, Download, Clock, RefreshCw, Pencil, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { csvDownload } from './_helpers'
 
 interface Reimbursement {
@@ -79,12 +79,33 @@ export default function ReimbursementsPage() {
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
 
+  const handleDeleteReimbursement = useCallback((id: string) => {
+    if (!confirm('Delete this reimbursement?')) return
+    setRows((prev) => prev.filter((row) => row.id !== id))
+    toast.success('Reimbursement deleted')
+  }, [toast])
+
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'Edit',
+      icon: <Pencil size={14} />,
+      onClick: (id) => router.push(`/expenses/employee-expenses/reimbursements/${id}/edit`),
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: (_id, row) => handleDeleteReimbursement(row.id),
+    },
+  ], [handleDeleteReimbursement, router])
+
   const columns = useMemo<HaypColumn<Reimbursement>[]>(() => [
     {
       id: 'reimbursementNumber',
       header: 'Reimbursement',
       accessorKey: 'reimbursementNumber',
       size: 180,
+      minSize: 150,
       render: (value) => <span className="font-semibold text-slate-900">{value ?? '—'}</span>,
     },
     {
@@ -92,6 +113,7 @@ export default function ReimbursementsPage() {
       header: 'Employee',
       accessorKey: 'employeeName',
       size: 170,
+      minSize: 150,
       render: (value) => <span className="text-slate-700">{value ?? '—'}</span>,
     },
     {
@@ -99,6 +121,7 @@ export default function ReimbursementsPage() {
       header: 'Submitted',
       accessorKey: 'submittedAt',
       size: 140,
+      minSize: 120,
       render: (value) => <span className="text-gray-500">{fmtDate(value)}</span>,
     },
     {
@@ -107,6 +130,7 @@ export default function ReimbursementsPage() {
       accessorKey: 'totalAmount',
       align: 'right',
       size: 120,
+      minSize: 120,
       isSummable: true,
       render: (value) => <span className="font-semibold text-emerald-800 tabular-nums">{formatCurrency(value ?? 0, currency)}</span>,
     },
@@ -115,6 +139,7 @@ export default function ReimbursementsPage() {
       header: 'Status',
       accessorKey: 'status',
       size: 120,
+      minSize: 100,
       render: (value) => <span className="text-slate-600 uppercase tracking-wide text-[11px] font-semibold">{value ?? 'PENDING'}</span>,
     },
   ], [currency])
@@ -191,6 +216,7 @@ export default function ReimbursementsPage() {
         activeFilter=""
         onFilterChange={() => {} }
         filterLabel="All"
+        actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         onRefresh={fetchRows}

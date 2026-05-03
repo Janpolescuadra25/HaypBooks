@@ -2,14 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw } from 'lucide-react'
+import { Plus, Search, Download, Filter, Clock, RefreshCw, Eye, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
-import type { HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
+import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface PaymentRun {
@@ -76,6 +76,26 @@ export default function PaymentRunsPage() {
     sumColumns: ['totalAmount'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
+
+  const handleDeletePaymentRun = useCallback((id: string) => {
+    if (!confirm('Delete this payment run?')) return
+    setRows((prev) => prev.filter((run) => run.id !== id))
+    toast.success('Payment run deleted')
+  }, [toast])
+
+  const actions = useMemo<HaypActionItem[]>(() => [
+    {
+      label: 'View Details',
+      icon: <Eye size={14} />,
+      onClick: (id) => router.push(`/expenses/bills-payments/payment-runs/${id}/edit`),
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: (_id, row) => handleDeletePaymentRun(row.id),
+    },
+  ], [handleDeletePaymentRun, router])
 
   const columns = useMemo<HaypColumn<PaymentRun>[]>(() => [
     {
@@ -208,11 +228,11 @@ export default function PaymentRunsPage() {
         <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+            <input title="Date from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+            <input title="Date to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
           </div>
           <div className="flex items-end">
             <button type="button" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear all</button>
@@ -230,6 +250,7 @@ export default function PaymentRunsPage() {
         activeFilter=""
         onFilterChange={() => {}}
         filterLabel="All"
+        actions={actions}
         bulkActions={bulkActions}
         totals={totals}
         onRefresh={handleRefresh}
