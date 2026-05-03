@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Download, Eye, Ban } from 'lucide-react'
+import { Plus, Download, Eye, Ban, ListOrdered, Banknote, Clock, CheckCircle } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -201,6 +201,13 @@ export default function BillPaymentsPage() {
     showToast('CSV exported')
   }, [filtered, showToast])
 
+  const stats = useMemo(() => [
+    { icon: ListOrdered, label: 'Total Payments', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending Payments', value: rows.filter((row) => row.status === 'PENDING').length, color: 'emerald' },
+    { icon: CheckCircle, label: 'Completed Payments', value: rows.filter((row) => row.status === 'COMPLETED').length, color: 'amber' },
+    { icon: Banknote, label: 'Total Paid', value: formatCurrency(rows.reduce((sum, row) => sum + Number(row.amount || 0), 0), currency), color: 'rose' },
+  ], [rows, currency])
+
   const renderCell = useCallback((value: any, key: string) => {
     switch (key) {
       case 'paymentNumber':
@@ -221,21 +228,24 @@ export default function BillPaymentsPage() {
   }, [fmt])
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Payments</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} payments`}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => router.push('/expenses/bills-payments/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> Record Payment</button>
-        </div>
-      </div>
-
-      <HaypDataTable
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
         tableId="bill-payments"
-        columns={columns}
         data={filtered}
+        columns={columns}
+        title="Bill Payments"
+        description="Track all payments made to vendors and manage payment history."
+        stats={stats}
+        headerActions={
+          <button
+            onClick={() => router.push('/expenses/bills-payments/new')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={18} />
+            Record Payment
+          </button>
+        }
         loading={loading || cidLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
@@ -252,9 +262,8 @@ export default function BillPaymentsPage() {
         bulkActions={bulkActions}
         emptyTitle="No payments found"
         emptySubtitle="Adjust your search or filter to see results"
-        className="mt-4"
       />
-
+      </div>
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>
   )

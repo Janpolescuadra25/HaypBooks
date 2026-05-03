@@ -344,6 +344,8 @@ export default function PurchaseOrdersPage() {
 
       <HaypDataTable
         tableId="purchase-orders"
+        title="Purchase Orders"
+        description="Manage purchase orders, approvals, and vendor deliveries."
         columns={columns}
         data={filtered}
         loading={loading || cidLoading}

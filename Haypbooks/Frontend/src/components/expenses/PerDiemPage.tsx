@@ -322,6 +322,8 @@ export default function PerDiemPage() {
         data={filtered}
         columns={columns}
         tableId="per-diem"
+        title="Per Diem"
+        description="Track employee per diem claims and reimbursements."
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         filters={[]}

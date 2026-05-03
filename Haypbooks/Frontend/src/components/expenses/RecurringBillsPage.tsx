@@ -160,6 +160,12 @@ export default function RecurringBillsPage() {
     toast.success('CSV exported')
   }, [filtered, toast])
 
+  const openEdit = useCallback((id: string) => {
+    setOpenMode('edit')
+    setOpenId(id)
+    setPanelOpen(true)
+  }, [])
+
   const actions = useMemo<HaypActionItem[]>(() => [
     {
       label: 'Edit Template',
@@ -235,12 +241,6 @@ export default function RecurringBillsPage() {
     },
   ], [companyId, toast])
 
-  const openEdit = useCallback((id: string) => {
-    setOpenMode('edit')
-    setOpenId(id)
-    setPanelOpen(true)
-  }, [])
-
   const stats = useMemo(() => [
     { icon: FileText, label: 'Total Active', value: rows.length, color: 'blue' },
     { icon: PlayCircle, label: 'Draft', value: rows.filter(r => r.status === 'DRAFT').length, color: 'amber' },
@@ -298,6 +298,8 @@ export default function RecurringBillsPage() {
         data={filtered}
         columns={columns}
         tableId="recurring-bills"
+        title="Recurring Bills"
+        description="Manage recurring bill templates and payment schedules."
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         filters={[]}

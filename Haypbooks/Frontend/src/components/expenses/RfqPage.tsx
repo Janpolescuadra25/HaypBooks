@@ -263,6 +263,8 @@ export default function RfqPage() {
         data={paged}
         columns={columns}
         tableId="rfq"
+        title="Requests for Quote"
+        description="Manage RFQs and track vendor responses."
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         filters={[]}

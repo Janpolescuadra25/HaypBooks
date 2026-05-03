@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Download, Eye, Check, Ban, X } from 'lucide-react'
+import { Plus, Download, Eye, Check, Ban, X, ListOrdered, CheckCircle, Clock, Banknote } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
@@ -266,6 +266,13 @@ export default function VendorCreditsPage() {
     showToast('CSV exported')
   }, [filtered, showToast])
 
+  const stats = useMemo(() => [
+    { icon: ListOrdered, label: 'Total Credits', value: rows.length, color: 'blue' },
+    { icon: CheckCircle, label: 'Open Credits', value: rows.filter((row) => row.status === 'OPEN').length, color: 'emerald' },
+    { icon: Clock, label: 'Applied Credits', value: rows.filter((row) => row.status === 'APPLIED').length, color: 'amber' },
+    { icon: Banknote, label: 'Total Credit Value', value: formatCurrency(rows.reduce((sum, row) => sum + Number(row.amount || 0), 0), currency), color: 'rose' },
+  ], [rows, currency])
+
   const renderCell = useCallback((value: any, key: string) => {
     switch (key) {
       case 'creditNumber':
@@ -286,21 +293,24 @@ export default function VendorCreditsPage() {
   }, [fmt])
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Vendor Credits</h1>
-          <p className="text-sm text-emerald-600/70 mt-0.5">{loading ? 'Loading...' : `${filtered.length} credits`}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => router.push('/expenses/bills-payments/vendor-credits/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"><Plus size={15} /> New Credit</button>
-        </div>
-      </div>
-
-      <HaypDataTable
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
         tableId="vendor-credits"
-        columns={columns}
         data={filtered}
+        columns={columns}
+        title="Vendor Credits"
+        description="Manage credits from vendors and apply them to bills."
+        stats={stats}
+        headerActions={
+          <button
+            onClick={() => router.push('/expenses/bills-payments/vendor-credits/new')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={18} />
+            New Vendor Credit
+          </button>
+        }
         loading={loading || cidLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
@@ -319,7 +329,7 @@ export default function VendorCreditsPage() {
         emptySubtitle="Adjust your search or filter to see results"
         className="mt-4"
       />
-
+      </div>
       {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>

@@ -247,6 +247,8 @@ export default function ApAgingPage() {
         data={filtered}
         columns={columns}
         tableId="ap-aging"
+        title="A/P Aging"
+        description="Monitor accounts payable aging balances by bucket."
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         filters={filters}

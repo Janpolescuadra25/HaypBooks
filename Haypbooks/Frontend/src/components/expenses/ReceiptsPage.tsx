@@ -251,61 +251,28 @@ export default function ReceiptsPage() {
   ], [handleDeleteReceipt, openEditReceipt])
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Receipts</h1>
-          <p className="mt-2 text-sm text-emerald-600/70">Capture and match receipts with expense claims.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setReceiptPanelOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Receipt</button>
-          <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search receipts" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          {STATUSES.map((status) => (
-            <button key={status} type="button" onClick={() => setStatusFilter(status)} className={`rounded-2xl px-3 py-2 text-xs font-semibold ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-              {status === 'ALL' ? 'All' : status}
-            </button>
-          ))}
-          <button type="button" onClick={() => setShowAdvancedFilters((prev) => !prev)} className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Filter size={14} /> Filters</button>
-        </div>
-      </div>
-
-      {showAdvancedFilters && (
-        <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
-            <input type="date" aria-label="Date from" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
-            <input type="date" aria-label="Date to" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div className="flex items-end">
-            <button type="button" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear all</button>
-          </div>
-        </div>
-      )}
-
-      <HaypDataTable
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
         data={filtered}
         columns={columns}
         tableId="receipts"
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        filters={[]}
-        activeFilter=""
-        onFilterChange={() => { }}
-        filterLabel="All"
+        filters={STATUSES.map((status) => ({ value: status.toLowerCase(), label: status === 'ALL' ? 'All' : status }))}
+        activeFilter={statusFilter.toLowerCase()}
+        onFilterChange={(value: any) => setStatusFilter(String(value).toUpperCase() as (typeof STATUSES)[number])}
+        filterLabel="Status"
         stats={stats}
+        headerActions={
+          <button
+            onClick={() => setReceiptPanelOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={18} />
+            Add Receipt
+          </button>
+        }
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
@@ -317,7 +284,7 @@ export default function ReceiptsPage() {
         emptySubtitle="Search or filter to locate receipts"
         loading={loading}
       />
-
+      </div>
       <HaypModal
         open={receiptPanelOpen}
         onClose={handleClose}

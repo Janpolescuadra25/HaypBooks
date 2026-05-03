@@ -336,6 +336,8 @@ export default function PurchaseRequestsPage() {
 
       <HaypDataTable
         tableId="purchase-requests"
+        title="Purchase Requests"
+        description="Track purchase requests through review and approval."
         columns={columns}
         data={filtered}
         loading={loading || cidLoading}

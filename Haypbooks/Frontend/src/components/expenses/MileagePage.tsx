@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, Download, Filter, Clock, Pencil, Trash2, Car, CheckCircle, CreditCard } from 'lucide-react'
+import { Plus, Download, Filter, Clock, Pencil, Trash2, Car, CheckCircle, CreditCard } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'

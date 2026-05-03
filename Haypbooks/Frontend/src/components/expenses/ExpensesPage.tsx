@@ -194,53 +194,40 @@ export default function ExpensesPage() {
   }, [fetchReports])
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Expenses</h1>
-          <p className="mt-2 text-sm text-slate-600">Create and manage expense reports.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => router.push('/expenses/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Expense Report</button>
-          <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Download size={16} /> Refresh</button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" placeholder="Search expense reports" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {STATUSES.map((status) => (
-            <button key={status} onClick={() => setStatusFilter(status)} className={`rounded-2xl px-3 py-2 text-xs font-semibold ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-              {status === 'ALL' ? 'All' : status}
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
+          data={filtered}
+          columns={columns}
+          tableId="expense-reports"
+          title="Expenses"
+          description="Track and manage all business expenses in one place."
+          stats={stats}
+          headerActions={
+            <button
+              onClick={() => router.push('/expenses/new')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Plus size={18} />
+              New Expense
             </button>
-          ))}
-        </div>
+          }
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All Statuses' : status }))}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="Status"
+          actions={actions}
+          bulkActions={bulkActions}
+          totals={totals}
+          onRefresh={handleRefresh}
+          onRowClick={(row) => router.push(`/expenses/${row.id}/edit`)}
+          emptyTitle={loading ? 'Loading expense reports…' : 'No expense reports found'}
+          emptySubtitle="Use search or status filters to locate reports"
+          loading={loading}
+        />
       </div>
-
-      <HaypDataTable
-        data={filtered}
-        columns={columns}
-        tableId="expense-reports"
-        globalFilter={search}
-        onGlobalFilterChange={setSearch}
-        filters={[]}
-        activeFilter=""
-        onFilterChange={() => {}}
-        filterLabel="All"
-        stats={stats}
-        actions={actions}
-        bulkActions={bulkActions}
-        totals={totals}
-        onRefresh={handleRefresh}
-        onRowClick={(row) => router.push(`/expenses/${row.id}/edit`)}
-        emptyTitle={loading ? 'Loading expense reports…' : 'No expense reports found'}
-        emptySubtitle="Use search or status filters to locate reports"
-        loading={loading}
-      />
     </div>
   )
 }

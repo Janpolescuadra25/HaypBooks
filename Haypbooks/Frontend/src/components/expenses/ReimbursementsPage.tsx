@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Clock, RefreshCw, Pencil, Trash2, Wallet, CheckCircle, ArrowUpRight } from 'lucide-react'
+import { Plus, Clock, Pencil, Trash2, CheckCircle, ListOrdered, Banknote } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -78,13 +78,6 @@ export default function ReimbursementsPage() {
     sumColumns: ['totalAmount'],
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
-
-  const stats = useMemo(() => [
-    { icon: Wallet, label: 'Total Claims', value: rows.length, color: 'blue' },
-    { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT' || row.status === 'SUBMITTED').length, color: 'amber' },
-    { icon: CheckCircle, label: 'Approved', value: rows.filter((row) => row.status === 'APPROVED').length, color: 'emerald' },
-    { icon: ArrowUpRight, label: 'Paid', value: rows.filter((row) => row.status === 'REIMBURSED').length, color: 'rose' },
-  ], [rows])
 
   const handleDeleteReimbursement = useCallback((id: string) => {
     if (!confirm('Delete this reimbursement?')) return
@@ -164,6 +157,13 @@ export default function ReimbursementsPage() {
     toast.success('CSV exported')
   }, [filtered, toast])
 
+  const stats = useMemo(() => [
+    { icon: ListOrdered, label: 'Total Claims', value: rows.length, color: 'blue' },
+    { icon: Clock, label: 'Pending', value: rows.filter((row) => row.status === 'DRAFT' || row.status === 'SUBMITTED').length, color: 'amber' },
+    { icon: CheckCircle, label: 'Approved', value: rows.filter((row) => row.status === 'APPROVED').length, color: 'emerald' },
+    { icon: Banknote, label: 'Total Amount', value: formatCurrency(rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0), currency), color: 'rose' },
+  ], [rows, currency])
+
   const bulkActions = useMemo<HaypBulkAction[]>(() => [
     {
       label: 'Export selected',
@@ -182,48 +182,32 @@ export default function ReimbursementsPage() {
     },
   ], [toast])
 
-  const activeFilterCount = [statusFilter !== 'ALL'].filter(Boolean).length
-
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Reimbursements</h1>
-          <p className="mt-2 text-sm text-slate-600">Manage employee reimbursements and payouts.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={fetchRows} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-          <button onClick={() => router.push('/expenses/employee-expenses/reimbursements/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
-          <button onClick={() => toast.info('Coming soon')} title="Coming soon" className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Reimbursement</button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search reimbursements" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          {STATUSES.map((status) => (
-            <button key={status} type="button" onClick={() => setStatusFilter(status)} className={`rounded-2xl px-3 py-2 text-xs font-semibold ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-              {status === 'ALL' ? 'All' : status}
-            </button>
-          ))}
-          <button type="button" onClick={() => setStatusFilter('ALL')} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Clear</button>
-        </div>
-      </div>
-
-      <HaypDataTable
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="min-h-full min-w-0 overflow-visible">
+        <HaypDataTable
         data={filtered}
         columns={columns}
         tableId="reimbursements"
+        title="Reimbursements"
+        description="Process employee expense reimbursements and track approvals."
+        stats={stats}
+        headerActions={
+          <button
+            onClick={() => toast.info('Coming soon')}
+            title="Coming soon"
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={18} />
+            New Reimbursement
+          </button>
+        }
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        filters={[]}
-        activeFilter=""
-        onFilterChange={() => {} }
-        filterLabel="All"
-        stats={stats}
+        filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
+        activeFilter={statusFilter}
+        onFilterChange={setStatusFilter}
+        filterLabel="Status"
         actions={actions}
         bulkActions={bulkActions}
         totals={totals}
@@ -237,5 +221,6 @@ export default function ReimbursementsPage() {
         loading={loading}
       />
     </div>
+  </div>
   )
 }

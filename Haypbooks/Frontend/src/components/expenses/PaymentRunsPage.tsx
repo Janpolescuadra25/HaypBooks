@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Download, Filter, Clock, RefreshCw, Eye, Trash2, FileText, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, Download, Filter, Clock, RefreshCw, Eye, Trash2, FileText, AlertCircle, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -199,74 +199,82 @@ export default function PaymentRunsPage() {
     { icon: AlertCircle, label: 'Failed', value: rows.filter(r => r.status === 'FAILED').length, color: 'rose' },
   ], [rows])
 
-  const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
-
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-emerald-900">Payment Runs</h1>
-          <p className="mt-2 text-sm text-emerald-600/70">Manage batch payment runs and review totals.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => router.push('/expenses/bills-payments/payment-runs/activity')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Clock size={16} /> Activity Log</button>
-          <button onClick={handleRefresh} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        </div>
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
+      <div className="space-y-4">
+        {error && (
+          <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {error}
+          </div>
+        )}
+
+        <HaypDataTable
+          data={filtered}
+          columns={columns}
+          tableId="payment-runs"
+          title="Payment Runs"
+          description="Manage batch payment runs and review totals."
+          stats={stats}
+          headerActions={
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => router.push('/expenses/bills-payments/payment-runs/activity')}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Clock size={16} /> Activity Log
+              </button>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <RefreshCw size={16} /> Refresh
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Filter size={16} /> Filters
+              </button>
+            </div>
+          }
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="Status"
+          actions={actions}
+          bulkActions={bulkActions}
+          totals={totals}
+          onRefresh={handleRefresh}
+          onExport={handleExportCSV}
+          exportLabel="Export CSV"
+          onActivityLog={() => router.push('/expenses/bills-payments/payment-runs/activity')}
+          onRowClick={(row) => router.push(`/expenses/bills-payments/payment-runs/${row.id}/edit`)}
+          emptyTitle={loading ? 'Loading payment runs…' : 'No payment runs found'}
+          emptySubtitle="Use search or filters to find runs"
+          loading={loading}
+        />
+
+        {showAdvancedFilters && (
+          <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
+              <input title="Date from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
+              <input title="Date to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+            </div>
+            <div className="flex items-end">
+              <button type="button" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear all</button>
+            </div>
+          </div>
+        )}
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-center rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-        {error && <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search runs..." className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-        </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          {STATUSES.map((status) => (
-            <button key={status} type="button" onClick={() => setStatusFilter(status)} className={`rounded-2xl px-3 py-2 text-xs font-semibold ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-              {status === 'ALL' ? 'All' : status}
-            </button>
-          ))}
-          <button type="button" onClick={() => setShowAdvancedFilters((prev) => !prev)} className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Filter size={14} /> Filters</button>
-        </div>
-      </div>
-
-      {showAdvancedFilters && (
-        <div className="bg-white rounded-3xl border border-emerald-100 p-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Date From</label>
-            <input title="Date from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Date To</label>
-            <input title="Date to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-          </div>
-          <div className="flex items-end">
-            <button type="button" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo('') }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear all</button>
-          </div>
-        </div>
-      )}
-
-      <HaypDataTable
-        data={filtered}
-        columns={columns}
-        tableId="payment-runs"
-        globalFilter={search}
-        onGlobalFilterChange={setSearch}
-        filters={[]}
-        activeFilter=""
-        onFilterChange={() => {}}
-        filterLabel="All"
-        actions={actions}
-        bulkActions={bulkActions}
-        totals={totals}
-        onRefresh={handleRefresh}
-        onExport={handleExportCSV}
-        exportLabel="Export CSV"
-        onRowClick={(row) => router.push(`/expenses/bills-payments/payment-runs/${row.id}/edit`)}
-        emptyTitle={loading ? 'Loading payment runs…' : 'No payment runs found'}
-        emptySubtitle="Use search or filters to find runs"
-        loading={loading}
-      />
     </div>
   )
 }
