@@ -70,7 +70,7 @@ export default function CenteredModal({
             onClick={closeOnOverlayClick ? onClose : undefined}
           >
             <motion.div
-              className="fixed inset-0 bg-black/60"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
               aria-hidden="true"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -89,9 +89,9 @@ export default function CenteredModal({
               aria-modal="true"
               aria-labelledby="modal-title"
               onClick={(event) => event.stopPropagation()}
-              className={`relative z-[2010] w-full ${SIZE_CLASSES[size]} max-h-[90vh] flex flex-col rounded-xl bg-white shadow-2xl ${className}`.trim()}
+              className={`relative z-[2010] w-full ${SIZE_CLASSES[size]} max-h-[90vh] flex flex-col rounded-[24px] bg-white shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)] ${className}`.trim()}
             >
-              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 shrink-0">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4 shrink-0">
                 <div>
                   <h2 id="modal-title" className="text-lg font-semibold text-slate-900">
                     {title}
@@ -108,10 +108,10 @@ export default function CenteredModal({
                 </button>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto p-6">{children}</div>
+              <div className="flex-1 min-h-0 overflow-y-auto p-8">{children}</div>
 
               {footer ? (
-                <div className="shrink-0 border-t border-slate-200 px-6 py-4">
+                <div className="shrink-0 border-t border-slate-100 px-6 py-4">
                   {footer}
                 </div>
               ) : null}

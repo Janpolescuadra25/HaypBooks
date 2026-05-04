@@ -70,7 +70,7 @@ export default function HaypModal({
             transition={{ duration: 0.18 }}
           >
             <motion.div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
               aria-hidden="true"
               onClick={closeOnOverlayClick ? onClose : undefined}
               initial={{ opacity: 0 }}
@@ -83,14 +83,14 @@ export default function HaypModal({
               role="dialog"
               aria-modal="true"
               aria-labelledby="hayp-modal-title"
-              className={`relative z-[2010] w-full ${SIZE_CLASSES[size]} max-h-[90vh] flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
+              className={`relative z-[2010] w-full ${SIZE_CLASSES[size]} max-h-[90vh] flex flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)]`}
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.18 }}
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 px-6 py-4">
                 <div>
                   <h2 id="hayp-modal-title" className="text-lg font-semibold text-slate-900">{title}</h2>
                   {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
@@ -105,10 +105,10 @@ export default function HaypModal({
                 </button>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto p-6">{children}</div>
+              <div className="flex-1 min-h-0 overflow-y-auto p-8">{children}</div>
 
               {footer ? (
-                <div className="shrink-0 border-t border-slate-200 px-6 py-4 bg-white">{footer}</div>
+                <div className="shrink-0 border-t border-slate-100 px-6 py-4 bg-white">{footer}</div>
               ) : null}
             </motion.div>
           </motion.div>

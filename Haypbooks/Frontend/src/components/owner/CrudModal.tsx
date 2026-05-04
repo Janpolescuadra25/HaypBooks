@@ -206,7 +206,7 @@ export default function CrudModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -220,12 +220,12 @@ export default function CrudModal({
           >
             <div
               data-testid="crud-modal-container"
-              className={`bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col`}
+              className={`bg-white rounded-[24px] shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)] border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col`}
               style={{ pointerEvents: 'auto' }}
               onClick={e => e.stopPropagation()}
             >
               {/* ── Header ── */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                     isDelete ? 'bg-rose-100' : isView ? 'bg-slate-100' : 'bg-emerald-100'
@@ -259,7 +259,7 @@ export default function CrudModal({
               )}
 
               {/* ── Body ── */}
-              <div data-testid="crud-form" className="flex-1 overflow-y-auto px-6 py-4" style={{ pointerEvents: 'auto' }}>
+              <div data-testid="crud-form" className="flex-1 overflow-y-auto p-8" style={{ pointerEvents: 'auto' }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {visibleFields.map(field => (
                     <div

@@ -288,7 +288,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -311,7 +311,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
           {mode !== 'new' && (
-            <div className="inline-flex rounded-xl bg-white/50 p-1 border border-slate-100">
+            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
               <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
               <button type="button" onClick={() => setActiveTab('activity')} disabled={!poId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
             </div>

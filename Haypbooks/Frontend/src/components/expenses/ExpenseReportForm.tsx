@@ -238,7 +238,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
 
   return (
     <div className="min-h-full flex min-h-[100vh] flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">

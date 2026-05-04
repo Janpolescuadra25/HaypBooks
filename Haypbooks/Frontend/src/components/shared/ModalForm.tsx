@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { X, Loader2 } from 'lucide-react'
+import { ModalPortal } from '@/components/shared/ModalPortal'
 
 interface ModalFormProps {
   isOpen: boolean
@@ -118,23 +119,24 @@ export default function ModalForm({
   const isActionDisabled = disabled || isSubmitting
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        data-testid="modal-overlay"
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
-        onClick={closeOnOverlayClick && !isActionDisabled ? onClose : undefined}
-        aria-hidden="true"
-      />
+    <ModalPortal>
+      <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+        <div
+          data-testid="modal-overlay"
+          className="fixed inset-0 z-[2000] bg-slate-900/60 backdrop-blur-sm"
+          onClick={closeOnOverlayClick && !isActionDisabled ? onClose : undefined}
+          aria-hidden="true"
+        />
 
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        ref={contentRef}
-        className={`relative z-50 w-full ${SIZE_CLASSES[size]} max-h-[90vh] overflow-hidden rounded-xl bg-white shadow-2xl animate-in zoom-in-95 duration-200 ease-out ${className}`.trim()}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-6">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          ref={contentRef}
+          className={`relative z-[2000] w-full ${SIZE_CLASSES[size]} max-h-[90vh] overflow-hidden rounded-[24px] bg-white shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)] animate-in zoom-in-95 duration-200 ease-out ${className}`.trim()}
+          onClick={(event) => event.stopPropagation()}
+        >
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-8">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
             {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
@@ -150,10 +152,10 @@ export default function ModalForm({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">{children}</div>
+        <div className="p-8 overflow-y-auto flex-1">{children}</div>
 
         {showFooter && (
-          <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 border-t border-slate-200 bg-slate-50 p-6">
+          <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 border-t border-slate-100 bg-slate-50 p-8">
             <button
               type="button"
               onClick={!isActionDisabled ? onClose : undefined}
@@ -183,5 +185,6 @@ export default function ModalForm({
         )}
       </div>
     </div>
+    </ModalPortal>
   )
 }
