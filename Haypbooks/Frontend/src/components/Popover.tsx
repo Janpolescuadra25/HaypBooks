@@ -10,11 +10,12 @@ export interface PopoverProps {
   style?: React.CSSProperties
   closeOnScroll?: boolean
   disablePortal?: boolean
+  align?: 'start' | 'center' | 'end'
   children?: React.ReactNode
 }
 
 function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
-  const { open, anchorRef, onClose, matchWidth = true, className, style, closeOnScroll = true, disablePortal = false, children } = props
+  const { open, anchorRef, onClose, matchWidth = true, className, style, closeOnScroll = true, disablePortal = false, align = 'start', children } = props
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null)
 
@@ -30,13 +31,20 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
       const padding = 16
       const offset = 8
 
-      // Calculate initial left position
+      // Calculate initial left position based on alignment
       let left = rect.left
 
       const isMobile = viewportWidth < 640
       if (isMobile) {
         left = padding
       } else {
+        // Adjust left position based on alignment
+        if (align === 'center') {
+          left = rect.left + (rect.width / 2) - (panelWidth / 2)
+        } else if (align === 'end') {
+          left = rect.right - panelWidth
+        }
+
         // Clamp left inside viewport with padding
         left = Math.max(padding, Math.min(left, viewportWidth - panelWidth - padding))
       }
@@ -50,8 +58,12 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
       })
     }
 
-    // when open, compute initial position and attach resize/scroll listeners
-    updatePosition()
+    let rafId1: number | null = null
+    let rafId2: number | null = null
+    rafId1 = requestAnimationFrame(() => {
+      rafId2 = requestAnimationFrame(updatePosition)
+    })
+
     window.addEventListener('resize', updatePosition)
 
     // Optionally close on scroll (user-requested behaviour).
@@ -78,6 +90,8 @@ function PopoverInner(props: PopoverProps, ref: ForwardedRef<HTMLDivElement>) {
     for (const sp of scrollParents) sp.addEventListener('scroll', handleScroll as EventListener, { passive: true })
 
     return () => {
+      if (rafId1 !== null) cancelAnimationFrame(rafId1)
+      if (rafId2 !== null) cancelAnimationFrame(rafId2)
       window.removeEventListener('resize', updatePosition)
       for (const sp of scrollParents) sp.removeEventListener('scroll', handleScroll as EventListener)
     }
