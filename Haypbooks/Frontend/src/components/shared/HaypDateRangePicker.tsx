@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import Popover from '@/components/Popover'
 import { 
   format, 
   addMonths, 
@@ -58,6 +59,7 @@ export default function HaypDateRangePicker({ range, onChange, onClose }: DateRa
   const [viewDate, setViewDate] = useState(new Date())
   const [tempRange, setTempRange] = useState<DateRange>(range)
   const [activePreset, setActivePreset] = useState('Today')
+  const triggerRef = useRef<HTMLDivElement | null>(null)
   
   // Auto-close on scroll (only if main window scrolls, not internal lists)
   useEffect(() => {
@@ -179,6 +181,7 @@ export default function HaypDateRangePicker({ range, onChange, onClose }: DateRa
         </button>
         
         <div 
+          ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-3 px-3 py-1.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-emerald-500/30 transition-all shadow-sm min-w-[260px] h-10"
         >
@@ -202,15 +205,17 @@ export default function HaypDateRangePicker({ range, onChange, onClose }: DateRa
         </button>
       </div>
 
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <div className="fixed inset-0 z-[110]" onClick={() => setIsOpen(false)} />
+      {isOpen && (
+        <Popover open anchorRef={triggerRef} onClose={() => setIsOpen(false)} matchWidth={false} className="!z-[9999]">
+          <AnimatePresence>
             <motion.div
-              className="absolute top-full right-0 lg:left-0 mt-2 !bg-white !opacity-100 border border-slate-200 rounded-[24px] shadow-2xl z-[9999] flex flex-col md:flex-row min-w-[640px] max-w-[95vw] overflow-hidden ring-1 ring-black/5 !backdrop-blur-none"
+              className="!bg-white !opacity-100 border border-slate-200 rounded-[24px] shadow-2xl z-[9999] flex flex-col md:flex-row min-w-[640px] max-w-[95vw] overflow-hidden ring-1 ring-black/5 !backdrop-blur-none"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
             >
               {/* Presets Sidebar */}
-              <div className="w-40 border-r border-slate-100 py-5 bg-slate-50/50 flex flex-col h-[360px]">
+              <div className="w-40 border-r border-slate-100 py-5 bg-slate-50 flex flex-col h-[360px]">
                 <div className="px-5 mb-3 text-[8px] font-black text-slate-400 uppercase tracking-[0.1em] shrink-0">
                   Quick Select
                 </div>
@@ -319,9 +324,9 @@ export default function HaypDateRangePicker({ range, onChange, onClose }: DateRa
                 </div>
               </div>
             </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+          </AnimatePresence>
+        </Popover>
+      )}
     </div>
   )
 }

@@ -174,7 +174,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
           <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all bg-transparent border border-transparent hover:border-slate-300 cursor-pointer focus:outline-none">
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 shadow-2xl border-slate-300 p-1 bg-white z-[100] rounded-xl">
+          <DropdownMenuContent align="end" className="w-48 shadow-2xl border-slate-300 p-1 bg-white z-[9999] rounded-xl">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground px-2 py-1.5 tracking-widest">Actions</DropdownMenuLabel>
               <DropdownMenuSeparator className="opacity-50" />
@@ -696,7 +696,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
         matchWidth={false}
         className="!z-[9999]"
       >
-        <div className="w-[calc(100vw-2rem)] sm:w-[450px] md:w-[600px] bg-white border border-slate-200 rounded-[32px] shadow-2xl p-6 overflow-hidden">
+        <div className="w-[calc(100vw-2rem)] sm:w-[450px] md:w-[600px] bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 overflow-hidden">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
@@ -735,7 +735,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                 {activeAdvancedFilters.map((filter, idx) => {
                   const colLabel = columns.find(c => c.id === filter.columnId)?.header
                   return (
-                    <div key={idx} className="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border border-slate-100 rounded-2xl shadow-sm transition-all">
+                    <div key={idx} className="flex flex-wrap items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all">
                       <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest px-2 py-1 bg-emerald-50 rounded-md min-w-[100px] text-center">
                         {colLabel}
                       </span>
@@ -867,7 +867,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
         {stats && stats.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 w-full animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
             {stats.map((stat, i) => (
-              <div key={i} className="glass-morphism p-6 rounded-[32px] border border-slate-200/50 flex items-center gap-5 group hover:border-emerald-500/20 transition-all shadow-sm bg-white/60">
+              <div key={i} className="p-6 rounded-[32px] border border-slate-200/50 flex items-center gap-5 group hover:border-emerald-500/20 transition-all shadow-sm bg-white">
                 <div className={cn(
                   "w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner",
                   stat.color === 'blue' && "bg-blue-50 text-blue-600",
@@ -897,7 +897,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
 
         {/* Redesigned Toolbar */}
         <div className={cn(
-          "flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 glass-morphism p-4 rounded-2xl border border-white/40 shadow-sm relative z-50 mb-2 bg-white/80 backdrop-blur-md",
+          "flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-200 shadow-sm relative z-50 mb-2 bg-white",
           !(title || stats) && "mx-4 mt-4"
         )}>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
@@ -908,7 +908,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                 placeholder={searchPlaceholder} 
                 value={globalFilter ?? ''}
                 onChange={(e) => onGlobalFilterChange?.(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all h-10"
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all h-10"
               />
             </div>
             
@@ -954,7 +954,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                 <Settings2 size={16} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 !bg-white !opacity-100 shadow-2xl border border-slate-200 p-0 overflow-hidden rounded-[24px] z-[9999] animate-in fade-in zoom-in-95 duration-200 !backdrop-blur-none">
-                <div className="flex items-center justify-between px-4 py-4 bg-slate-50/80 border-b border-slate-200/70 backdrop-blur-sm">
+                <div className="flex items-center justify-between px-4 py-4 bg-slate-50 border-b border-slate-200">
                   <div>
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Column Settings</h3>
                   </div>
@@ -1226,7 +1226,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
 
                   {totals?.enabled && (
                     <div
-                      className="bg-slate-50/90 backdrop-blur-md border-t border-slate-200 flex shadow-[0_-4px_12px_rgba(0,0,0,0.03)]"
+                      className="bg-slate-50 border-t border-slate-200 flex shadow-[0_-4px_12px_rgba(0,0,0,0.03)]"
                       role="row"
                     >
                       {visibleLeafColumns.map((column) => {
@@ -1285,7 +1285,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
           {tableContentWidth > containerWidth && (
             <div
               ref={scrollbarRef}
-              className="sticky bottom-0 z-[50] flex-shrink-0 bg-white/80 backdrop-blur-sm border-t border-slate-100"
+              className="sticky bottom-0 z-[50] flex-shrink-0 bg-white border-t border-slate-100"
               style={{
                 overflowX: 'auto',
                 overflowY: 'hidden',
@@ -1305,7 +1305,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
           )}
 
           {/* Pagination Controls */}
-          <div className="p-4 border-t border-slate-100 bg-slate-50/50 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-6 order-2 sm:order-1">
                <div className="flex items-center gap-3">
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Rows</p>
