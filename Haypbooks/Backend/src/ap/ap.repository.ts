@@ -138,6 +138,11 @@ export class ApRepository {
     async createBill(data: {
         workspaceId: string; companyId: string; vendorId: string
         billNumber?: string
+        billType?: string | null
+        purchaseOrderId?: string | null
+        memo?: string | null
+        terms?: string | null
+        internalNotes?: string | null
         dueAt?: Date; paymentTermId?: string; currency?: string; description?: string
         createdById: string; lines: any[]
     }) {
@@ -154,6 +159,11 @@ export class ApRepository {
                     data: {
                         workspaceId: data.workspaceId, companyId: data.companyId, vendorId: data.vendorId,
                         billNumber,
+                        billType: data.billType ?? null,
+                        purchaseOrderId: data.purchaseOrderId ?? null,
+                        memo: data.memo ?? null,
+                        terms: data.terms ?? null,
+                        internalNotes: data.internalNotes ?? null,
                         status: 'DRAFT', postingStatus: 'DRAFT', total, balance: total,
                         currency: await this.resolveCurrency(data.companyId, data.currency), dueAt: data.dueAt ?? null,
                         paymentTermId: data.paymentTermId ?? null, description: data.description ?? null,
@@ -193,7 +203,13 @@ export class ApRepository {
             return tx.bill.update({
                 where: { id: billId },
                 data: {
-                    vendorId: data.vendorId, dueAt: data.dueAt ? new Date(data.dueAt) : undefined,
+                    vendorId: data.vendorId,
+                    billType: data.billType ?? null,
+                    purchaseOrderId: data.purchaseOrderId ?? null,
+                    memo: data.memo ?? null,
+                    terms: data.terms ?? null,
+                    internalNotes: data.internalNotes ?? null,
+                    dueAt: data.dueAt ? new Date(data.dueAt) : undefined,
                     paymentTermId: data.paymentTermId, currency: data.currency, description: data.description,
                     total, balance: total, updatedById,
                     ...(data.lines ? {
@@ -276,16 +292,22 @@ export class ApRepository {
     async recordBillPayment(data: {
         workspaceId: string; companyId: string; billId: string
         amount: number; paymentDate: Date; method: string
-        referenceNumber?: string; bankAccountId?: string; currency?: string
+        referenceNumber?: string; memo?: string | null; attachments?: any | null; bankAccountId?: string; currency?: string
         createdById: string; applications: Array<{ billId: string; amount: number }>
     }) {
         return this.prisma.$transaction(async (tx) => {
             const payment = await tx.billPayment.create({
                 data: {
-                    workspaceId: data.workspaceId, companyId: data.companyId, billId: data.billId,
-                    amount: data.amount, paymentDate: data.paymentDate, method: data.method,
-                    referenceNumber: data.referenceNumber ?? null, bankAccountId: data.bankAccountId ?? null,
-                    currency: await this.resolveCurrency(data.companyId, data.currency), createdById: data.createdById,
+                    workspaceId: data.workspaceId,
+                    companyId: data.companyId,
+                    billId: data.billId,
+                    amount: data.amount,
+                    paymentDate: data.paymentDate,
+                    method: data.method,
+                    referenceNumber: data.referenceNumber ?? null,
+                    memo: data.memo ?? null,
+                    attachments: data.attachments ?? null,
+                    bankAccountId: data.bankAccountId ?? null,
                 },
             })
 
@@ -386,9 +408,12 @@ export class ApRepository {
             payload.lines = { create: (data as any).lines.map((l: any) => ({
                 purchaseRequestId: id,
                 itemId: l.itemId ?? null,
+                accountId: l.accountId ?? null,
                 description: l.description ?? '',
                 quantity: l.quantity ?? 1,
-                estimatedUnitPrice: l.estimatedUnitPrice ?? null,
+                estimatedUnitPrice: l.unitPrice ?? l.estimatedUnitPrice ?? null,
+                taxRate: l.taxRate ?? null,
+                amount: l.amount ?? 0,
                 workspaceId: pr.workspaceId,
                 companyId,
             })) }
@@ -529,6 +554,39 @@ export class ApRepository {
 
     async deleteMileageLog(companyId: string, id: string) {
         return this.prisma.mileageLog.delete({ where: { id } })
+    }
+
+    // ─── Per Diem Claims ──────────────────────────────────────────────────────────────
+
+    async findPerDiemClaims(companyId: string, opts: { status?: string; limit?: number; offset?: number } = {}) {
+        const db = this.prisma as any
+        return db.perDiemClaim.findMany({
+            where: {
+                companyId,
+                ...(opts.status ? { status: opts.status } : {}),
+            },
+            include: { employee: true },
+            orderBy: { createdAt: 'desc' },
+            take: opts.limit ?? 50,
+            skip: opts.offset ?? 0,
+        })
+    }
+
+    async findPerDiemClaimById(companyId: string, id: string) {
+        const db = this.prisma as any
+        return db.perDiemClaim.findFirst({ where: { id, companyId }, include: { employee: true } })
+    }
+
+    async createPerDiemClaim(data: any) {
+        const db = this.prisma as any
+        return db.perDiemClaim.create({ data })
+    }
+
+    async updatePerDiemClaim(companyId: string, id: string, data: any) {
+        const db = this.prisma as any
+        const claim = await db.perDiemClaim.findFirst({ where: { id, companyId } })
+        if (!claim) return null
+        return db.perDiemClaim.update({ where: { id }, data })
     }
 
     // ─── Purchase Orders ──────────────────────────────────────────────────────────────

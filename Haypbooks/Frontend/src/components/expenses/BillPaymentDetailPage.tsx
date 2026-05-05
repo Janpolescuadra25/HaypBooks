@@ -66,7 +66,6 @@ export default function BillPaymentDetailPage({ paymentId: paymentIdProp }: { pa
         const data = res.data ?? res
         setPayment(data as BillPaymentDetail)
       } catch (err) {
-        console.error(err)
         if (!active) return
         setError('Unable to load payment details')
       } finally {

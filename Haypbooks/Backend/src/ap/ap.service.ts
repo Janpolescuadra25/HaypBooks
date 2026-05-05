@@ -190,7 +190,13 @@ export class ApService {
             result = await this.repo.createBill({
                 workspaceId, companyId, createdById: userId,
                 vendorId: data.vendorId,
-                description: data.description,
+                billNumber: data.billNumber?.trim() || undefined,
+                billType: data.billType ?? null,
+                purchaseOrderId: data.purchaseOrderId ?? null,
+                description: data.description ?? null,
+                memo: data.memo ?? null,
+                terms: data.terms ?? null,
+                internalNotes: data.internalNotes ?? null,
                 currency: data.currency,
                 ...(paymentTermId ? { paymentTermId } : {}),
                 dueAt: dueAt ? new Date(dueAt) : undefined,
@@ -208,9 +214,14 @@ export class ApService {
                 companyId,
                 workspaceId,
                 vendorId: data.vendorId,
+                billType: data.billType,
+                purchaseOrderId: data.purchaseOrderId,
                 dueAt,
                 currency: data.currency,
                 paymentTermId,
+                internalNotes: data.internalNotes,
+                memo: data.memo,
+                terms: data.terms,
                 lines: lines.map((l: any) => ({
                     description: l.description ?? '',
                     quantity: l.quantity ?? 1,
@@ -237,7 +248,14 @@ export class ApService {
         if (data.paymentTermId || data.paymentTerms) {
             data.paymentTermId = await this.resolvePaymentTermId(await this.getWorkspaceId(companyId), data.paymentTermId ?? data.paymentTerms)
         }
-        const result = await this.repo.updateBill(companyId, billId, data, userId)
+        const result = await this.repo.updateBill(companyId, billId, {
+            ...data,
+            billType: data.billType ?? null,
+            purchaseOrderId: data.purchaseOrderId ?? null,
+            memo: data.memo ?? null,
+            terms: data.terms ?? null,
+            internalNotes: data.internalNotes ?? null,
+        }, userId)
         if (!result) throw new BadRequestException('Bill not found or not editable (only DRAFT bills can be updated)')
         return result
     }
@@ -336,18 +354,23 @@ export class ApService {
             const bankAccount = await this.prisma.bankAccount.findFirst({ where: { id: data.bankAccountId, workspaceId, deletedAt: null } })
             if (!bankAccount) throw new BadRequestException('Invalid payment account')
         }
+        const bills = Array.isArray(data.bills) ? data.bills.map((b: any) => ({ billId: b.billId, amount: Number(b.paymentAmount ?? b.amount ?? 0) })) : undefined
+        const applications = data.applications ?? bills ?? []
+        if (!data.billId && applications.length > 0) {
+            data.billId = applications[0].billId
+        }
         if (!data.billId) throw new BadRequestException('billId is required')
         if (!data.amount || Number(data.amount) <= 0) throw new BadRequestException('amount must be greater than 0')
         const method = data.method ?? 'CASH'
         const paymentDate = data.paymentDate ?? data.date
-        const totalApplied = (data.applications ?? []).reduce((s: number, a: any) => s + Number(a.amount ?? 0), 0)
+        const totalApplied = applications.reduce((s: number, a: any) => s + Number(a.amount ?? 0), 0)
         if (totalApplied > Number(data.amount) + 0.01) throw new BadRequestException(`Applied (${totalApplied}) exceeds payment amount (${data.amount})`)
         const result = await this.repo.recordBillPayment({
             workspaceId, companyId, billId: data.billId,
             amount: data.amount, paymentDate: new Date(paymentDate ?? Date.now()),
             method, referenceNumber: data.referenceNumber ?? data.reference,
             bankAccountId: data.bankAccountId, currency: data.currency,
-            createdById: userId, applications: data.applications ?? [{ billId: data.billId, amount: data.amount }],
+            createdById: userId, applications,
         })
         // Post bill payment to the General Ledger (DR: Accounts Payable, CR: Cash/Bank)
         await this.subLedger.postBillPaymentToGL(result.id, userId)
@@ -477,18 +500,29 @@ export class ApService {
         const payload: any = {
             workspaceId,
             companyId,
+            requestNumber: data.requestNumber ?? null,
             requesterId: data.requesterId,
+            vendorId: data.vendorId ?? null,
             status: data.status ?? 'DRAFT',
             requestDate: data.requestDate ? new Date(data.requestDate) : new Date(),
             requiredDate: data.requiredDate ? new Date(data.requiredDate) : undefined,
+            priority: data.priority ?? null,
+            departmentId: data.departmentId ?? null,
+            locationId: data.locationId ?? null,
+            reason: data.reason ?? null,
+            notes: data.notes ?? null,
+            internalNotes: data.internalNotes ?? null,
             totalAmount,
             purchaseOrderId: data.purchaseOrderId ?? null,
             lines: {
                 create: data.lines.map((line: any) => ({
                     itemId: line.itemId ?? null,
+                    accountId: line.accountId ?? null,
                     description: line.description ?? '',
                     quantity: Number(line.quantity ?? 1),
-                    estimatedUnitPrice: line.estimatedUnitPrice ?? null,
+                    estimatedUnitPrice: line.unitPrice ?? line.estimatedUnitPrice ?? null,
+                    taxRate: line.taxRate ?? null,
+                    amount: line.amount ?? null,
                     workspaceId,
                     companyId,
                 })),
@@ -561,6 +595,11 @@ export class ApService {
             companyId,
             vendorId: data.vendorId,
             creditNumber: data.creditNumber ?? null,
+            creditType: data.creditType ?? null,
+            referenceBillNumber: data.referenceBillNumber ?? null,
+            memo: data.memo ?? null,
+            notes: data.notes ?? null,
+            attachments: data.attachments ?? null,
             total,
             balance: total,
             issuedAt: data.issuedAt ? new Date(data.issuedAt) : new Date(),
@@ -587,7 +626,15 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const existing = await this.repo.findVendorCreditById(companyId, creditId)
         if (!existing) throw new NotFoundException('Vendor credit not found')
-        const payload: any = { ...data }
+        const payload: any = {
+            ...data,
+            vendorId: data.vendorId ?? null,
+            creditType: data.creditType ?? null,
+            referenceBillNumber: data.referenceBillNumber ?? null,
+            memo: data.memo ?? null,
+            notes: data.notes ?? null,
+            attachments: data.attachments ?? null,
+        }
         if (data.lines?.length) {
             const total = Number(data.lines.reduce((sum: number, line: any) => sum + Number(line.amount ?? 0), 0))
             payload.total = total
@@ -700,12 +747,20 @@ export class ApService {
 
     async listMileageLogs(userId: string, companyId: string, opts: any) {
         await this.assertAccess(userId, companyId)
-        return this.repo.findMileageLogs(companyId, {
+        const logs = await this.repo.findMileageLogs(companyId, {
             from: opts.from ? new Date(opts.from) : undefined,
             to: opts.to ? new Date(opts.to) : undefined,
             limit: opts.limit ? parseInt(opts.limit) : 50,
             offset: opts.offset ? parseInt(opts.offset) : 0,
         })
+        return (logs as any[]).map((log: any) => ({
+            ...log,
+            date: log.logDate?.toISOString(),
+            route: [log.fromLocation, log.toLocation].filter(Boolean).join(' → '),
+            distanceKm: Number(log.miles ?? 0),
+            rate: Number(log.ratePerMile ?? 0),
+            tripDate: log.tripDate?.toISOString(),
+        }))
     }
 
     async getMileageLog(userId: string, companyId: string, logId: string) {
@@ -727,7 +782,9 @@ export class ApService {
             companyId,
             userId: data.userId ?? userId,
             employeeId: data.employeeId ?? null,
+            logNumber: data.logNumber ?? null,
             logDate: new Date(data.logDate),
+            tripDate: data.tripDate ? new Date(data.tripDate) : null,
             fromLocation: data.fromLocation ?? null,
             toLocation: data.toLocation ?? null,
             miles: Number(data.miles),
@@ -735,8 +792,12 @@ export class ApService {
             amount,
             purpose: data.purpose ?? null,
             isBillable: data.isBillable ?? false,
-            customerId: data.customerId ?? null,
+            distanceUnit: data.distanceUnit ?? null,
+            vehicle: data.vehicle ?? null,
+            personalVehicle: data.personalVehicle ?? false,
+            accountId: data.accountId ?? null,
             projectId: data.projectId ?? null,
+            notes: data.notes ?? null,
             status: data.status ?? 'draft',
         }
         const result = await this.repo.createMileageLog(payload)
@@ -750,20 +811,27 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const existing = await this.repo.findMileageLogById(companyId, logId)
         if (!existing) throw new NotFoundException('Mileage log not found')
+        const existingAny = existing as any
         const payload: any = {
-            employeeId: data.employeeId ?? existing.employeeId,
-            userId: data.userId ?? existing.userId,
-            logDate: data.logDate ? new Date(data.logDate) : existing.logDate,
-            fromLocation: data.fromLocation ?? existing.fromLocation,
-            toLocation: data.toLocation ?? existing.toLocation,
-            miles: data.miles !== undefined ? Number(data.miles) : Number(existing.miles),
-            ratePerMile: data.ratePerMile !== undefined ? Number(data.ratePerMile) : Number(existing.ratePerMile),
-            amount: data.amount !== undefined ? Number(data.amount) : Number(existing.amount),
-            purpose: data.purpose ?? existing.purpose,
-            isBillable: data.isBillable ?? existing.isBillable,
-            customerId: data.customerId ?? existing.customerId,
-            projectId: data.projectId ?? existing.projectId,
-            status: data.status ?? existing.status,
+            employeeId: data.employeeId ?? existingAny.employeeId,
+            userId: data.userId ?? existingAny.userId,
+            logNumber: data.logNumber ?? existingAny.logNumber,
+            logDate: data.logDate ? new Date(data.logDate) : existingAny.logDate,
+            tripDate: data.tripDate ? new Date(data.tripDate) : existingAny.tripDate,
+            fromLocation: data.fromLocation ?? existingAny.fromLocation,
+            toLocation: data.toLocation ?? existingAny.toLocation,
+            miles: data.miles !== undefined ? Number(data.miles) : Number(existingAny.miles),
+            ratePerMile: data.ratePerMile !== undefined ? Number(data.ratePerMile) : Number(existingAny.ratePerMile),
+            amount: data.amount !== undefined ? Number(data.amount) : Number(existingAny.amount),
+            purpose: data.purpose ?? existingAny.purpose,
+            isBillable: data.isBillable ?? existingAny.isBillable,
+            distanceUnit: data.distanceUnit ?? existingAny.distanceUnit,
+            vehicle: data.vehicle ?? existingAny.vehicle,
+            personalVehicle: data.personalVehicle ?? existingAny.personalVehicle,
+            accountId: data.accountId ?? existingAny.accountId,
+            projectId: data.projectId ?? existingAny.projectId,
+            notes: data.notes ?? existingAny.notes,
+            status: data.status ?? existingAny.status,
         }
         const result = await this.repo.updateMileageLog(companyId, logId, payload)
         const workspaceId = await this.getWorkspaceId(companyId)
@@ -771,6 +839,93 @@ export class ApService {
             data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'MileageLog', recordId: logId, changes: payload },
         }).catch(() => { /* non-critical */ })
         return result
+    }
+
+    async listPerDiem(userId: string, companyId: string, query: any) {
+        await this.assertAccess(userId, companyId)
+        const where: any = { companyId }
+        if (query?.status) where.status = query.status
+        const claims = await this.repo.findPerDiemClaims(companyId, {
+            status: query?.status,
+            limit: query?.limit ? parseInt(query.limit) : 100,
+            offset: query?.offset ? parseInt(query.offset) : 0,
+        })
+        return claims.map((claim) => ({
+            ...claim,
+            employee: claim.employee ? `${claim.employee.firstName} ${claim.employee.lastName}`.trim() : '',
+            total: Number(claim.totalAmount ?? 0),
+            dailyRate: Number(claim.dailyRate ?? 0),
+            startDate: claim.startDate?.toISOString(),
+            endDate: claim.endDate?.toISOString(),
+        }))
+    }
+
+    async getPerDiem(userId: string, companyId: string, perDiemId: string) {
+        await this.assertAccess(userId, companyId)
+        const claim = await this.repo.findPerDiemClaimById(companyId, perDiemId)
+        if (!claim) throw new NotFoundException('Per diem claim not found')
+        return {
+            ...claim,
+            employee: claim.employee ? `${claim.employee.firstName} ${claim.employee.lastName}`.trim() : '',
+            total: Number(claim.totalAmount ?? 0),
+            dailyRate: Number(claim.dailyRate ?? 0),
+            startDate: claim.startDate?.toISOString(),
+            endDate: claim.endDate?.toISOString(),
+        }
+    }
+
+    async createPerDiem(userId: string, companyId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const workspaceId = await this.getWorkspaceId(companyId)
+        if (!data.employeeId) throw new BadRequestException('Employee is required')
+        if (!data.destination) throw new BadRequestException('Destination is required')
+        if (!data.startDate || !data.endDate) throw new BadRequestException('Start and end dates are required')
+        if (data.dailyRate === undefined) throw new BadRequestException('Daily rate is required')
+        const totalAmount = data.totalAmount !== undefined ? Number(data.totalAmount) : Number(data.days ?? 0) * Number(data.dailyRate)
+        const payload: any = {
+            workspaceId,
+            companyId,
+            employeeId: data.employeeId,
+            perDiemNumber: data.perDiemNumber ?? null,
+            destination: data.destination,
+            purpose: data.purpose ?? null,
+            startDate: new Date(data.startDate),
+            endDate: new Date(data.endDate),
+            days: Number(data.days ?? 0),
+            dailyRate: Number(data.dailyRate),
+            totalAmount,
+            currency: data.currency ?? 'PHP',
+            status: data.status ?? 'DRAFT',
+            notes: data.notes ?? null,
+            submittedAt: data.status === 'SUBMITTED' ? new Date() : null,
+            approvedAt: data.status === 'APPROVED' ? new Date() : null,
+            reimbursedAt: data.status === 'PAID' ? new Date() : null,
+        }
+        return this.repo.createPerDiemClaim(payload)
+    }
+
+    async updatePerDiem(userId: string, companyId: string, perDiemId: string, data: any) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.repo.findPerDiemClaimById(companyId, perDiemId)
+        if (!existing) throw new NotFoundException('Per diem claim not found')
+        const payload: any = {
+            employeeId: data.employeeId ?? existing.employeeId,
+            perDiemNumber: data.perDiemNumber ?? existing.perDiemNumber,
+            destination: data.destination ?? existing.destination,
+            purpose: data.purpose ?? existing.purpose,
+            startDate: data.startDate ? new Date(data.startDate) : existing.startDate,
+            endDate: data.endDate ? new Date(data.endDate) : existing.endDate,
+            days: data.days !== undefined ? Number(data.days) : existing.days,
+            dailyRate: data.dailyRate !== undefined ? Number(data.dailyRate) : existing.dailyRate,
+            totalAmount: data.totalAmount !== undefined ? Number(data.totalAmount) : existing.totalAmount,
+            currency: data.currency ?? existing.currency,
+            status: data.status ?? existing.status,
+            notes: data.notes ?? existing.notes,
+            submittedAt: data.status === 'SUBMITTED' ? new Date() : existing.submittedAt,
+            approvedAt: data.status === 'APPROVED' ? new Date() : existing.approvedAt,
+            reimbursedAt: data.status === 'PAID' ? new Date() : existing.reimbursedAt,
+        }
+        return this.repo.updatePerDiemClaim(companyId, perDiemId, payload)
     }
 
     async deleteMileageLog(userId: string, companyId: string, logId: string) {

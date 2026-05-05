@@ -215,7 +215,7 @@ export default function ApAgingPage() {
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden bg-slate-50/30 custom-scrollbar">
       <div className="min-h-full min-w-0 overflow-visible">
-        {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+        {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
         <HaypDataTable
         data={filtered}

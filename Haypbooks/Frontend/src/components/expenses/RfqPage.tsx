@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, Download, Filter, Clock, FileText, ArrowUpRight, CheckCircle, XCircle } from 'lucide-react'
 import { expensesService } from '@/services/expenses.service'
@@ -155,7 +156,7 @@ export default function RfqPage() {
   const actions = useMemo<HaypActionItem[]>(() => [
     {
       label: 'Edit RFQ',
-      onClick: (id) => router.push(`/expenses/procurement/rfq/${id}/edit`),
+      onClick: (id) => router.push(`/expenses/procurement/rfqs/${id}/edit`),
     },
     {
       label: 'Send to vendors',
@@ -199,6 +200,15 @@ export default function RfqPage() {
         tableId="rfq"
         title="Requests for Quote"
         description="Manage RFQs and track vendor responses."
+        headerActions={
+          <Link
+            href="/expenses/procurement/rfqs/new"
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={18} />
+            New RFQ
+          </Link>
+        }
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
@@ -226,7 +236,7 @@ export default function RfqPage() {
         onExport={handleExportCSV}
         exportLabel="Export CSV"
         onActivityLog={() => router.push('/expenses/procurement/rfq/activity')}
-        onRowClick={(row) => router.push(`/expenses/procurement/rfq/${row.id}/edit`)}
+        onRowClick={(row) => router.push(`/expenses/procurement/rfqs/${row.id}/edit`)}
         emptyTitle={loading ? 'Loading...' : 'No RFQs found'}
         emptySubtitle="Adjust filters or create a new RFQ"
         loading={loading}

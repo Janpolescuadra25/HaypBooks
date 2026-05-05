@@ -194,8 +194,7 @@ export default function ReimbursementsPage() {
         stats={stats}
         headerActions={
           <button
-            onClick={() => toast.info('Coming soon')}
-            title="Coming soon"
+            onClick={() => router.push('/expenses/expense-capture/reimbursements/new')}
             className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
           >
             <Plus size={18} />

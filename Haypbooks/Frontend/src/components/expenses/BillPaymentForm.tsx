@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Save, Loader2, X } from 'lucide-react'
+import { Save, Loader2, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -10,7 +10,11 @@ import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import { bankingService } from '@/services/banking.service'
 import ActivityLog from '@/components/ui/ActivityLog'
+import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
 import { useActivityLog } from '@/hooks/useActivityLog'
+import CustomerPickerField from '@/components/sales/CustomerPickerField'
+import { NewVendorModal } from '@/components/shared/NewVendorModal'
+import HaypSelect from '@/components/shared/HaypSelect'
 
 interface BillPaymentFormProps {
   mode: 'new' | 'edit'
@@ -32,6 +36,7 @@ interface OutstandingBill {
   billNumber?: string
   date: string
   dueDate: string
+  originalAmount: number
   amountDue: number
   vendorId: string
   vendorName: string
@@ -75,6 +80,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   const { currency } = useCompanyCurrency()
   const toast = useToast()
 
+  const [vendors, setVendors] = useState<Vendor[]>([])
   const [vendorId, setVendorId] = useState('')
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [bankAccountId, setBankAccountId] = useState('')
@@ -82,11 +88,12 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
   const [referenceNumber, setReferenceNumber] = useState('')
   const [memo, setMemo] = useState('')
+  const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [showOverdue, setShowOverdue] = useState(false)
   const [bills, setBills] = useState<OutstandingBill[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'memo' | 'attachments' | 'activity'>('details')
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
@@ -113,6 +120,20 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   }, [companyId, toast])
 
   useEffect(() => {
+    if (!companyId) return
+    let active = true
+    expensesService.listVendors(companyId)
+      .then((res) => {
+        if (!active) return
+        const data = res.data ?? []
+        const vendors = Array.isArray(data) ? data : data.data ?? []
+        setVendors(vendors)
+      })
+      .catch(() => toast.error('Failed to load vendors'))
+    return () => { active = false }
+  }, [companyId, toast])
+
+  useEffect(() => {
     if (!bankAccountId && bankAccounts.length > 0) {
       setBankAccountId(bankAccounts[0].id)
     }
@@ -120,11 +141,14 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
 
   useEffect(() => {
     if (!companyId || mode !== 'new') return
+    if (!vendorId && !queryBillId) {
+      setBills([])
+      return
+    }
+
     let active = true
     const listQuery: Record<string, any> = { status: 'APPROVED', limit: 100 }
-    if (queryBillId) {
-      // load all bills in order to find the preselected bill and vendor
-    } else if (vendorId) {
+    if (vendorId) {
       listQuery.vendorId = vendorId
     }
 
@@ -137,11 +161,13 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
           .filter((item: any) => item.status !== 'PAID' && item.status !== 'VOIDED')
           .map((item: any) => {
             const bill = item as ApiBill
+            const original = Number(bill.total ?? bill.amountDue ?? 0)
             return {
               id: bill.id,
               billNumber: bill.billNumber ?? '',
               date: bill.date ?? '',
               dueDate: bill.dueDate ?? '',
+              originalAmount: original,
               amountDue: Number(bill.amountDue ?? bill.total ?? 0),
               vendorId: String(bill.vendorId ?? bill.vendor?.id ?? ''),
               vendorName: String(bill.vendorName ?? bill.vendor?.displayName ?? bill.vendor?.name ?? ''),
@@ -228,6 +254,8 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
 
   const selectedBills = useMemo(() => bills.filter((bill) => bill.selected), [bills])
   const totalPayment = useMemo(() => selectedBills.reduce((sum, bill) => sum + Number(bill.paymentAmount || 0), 0), [selectedBills])
+  const vendorOptions = useMemo(() => vendors.map((v) => ({ id: v.id, name: v.displayName })), [vendors])
+  const [showVendorModal, setShowVendorModal] = useState(false)
 
   const validate = () => {
     if (!companyId) { setError('Company not loaded'); return false }
@@ -247,6 +275,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
       const firstBill = selectedBills[0]
       const selectedVendorIds = Array.from(new Set(selectedBills.map((bill) => bill.vendorId).filter((id) => Boolean(id))))
       const payloadVendorId = selectedVendorIds.length === 1 ? selectedVendorIds[0] : undefined
+      const billsPayload = selectedBills.map((bill) => ({ billId: bill.id, paymentAmount: bill.paymentAmount }))
       const payload = {
         billId: firstBill.id,
         amount: totalPayment,
@@ -255,32 +284,22 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
         referenceNumber,
         bankAccountId: bankAccountId || null,
         currency,
+        bills: billsPayload,
         applications: selectedBills.map((bill) => ({ billId: bill.id, amount: bill.paymentAmount, memo: bill.memo || null })),
         memo,
+        attachments: attachments.length ? attachments : undefined,
         ...(payloadVendorId ? { vendorId: payloadVendorId } : {}),
       }
       await expensesService.recordBillPayment(companyId, payload)
       toast.success('Payment recorded')
       router.push('/expenses/bills-payments/bill-payments')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to record payment')
       toast.error('Unable to record payment')
     } finally {
       setSubmitting(false)
     }
   }
-
-  const vendorOptions = useMemo(() => {
-    const map = new Map<string, string>()
-    bills.forEach((bill) => {
-      if (!bill.vendorId) return
-      if (!map.has(bill.vendorId)) {
-        map.set(bill.vendorId, bill.vendorName || bill.vendorId)
-      }
-    })
-    return Array.from(map.entries()).map(([id, displayName]) => ({ id, displayName }))
-  }, [bills])
 
   const selectedBill = useMemo(() => bills.find((bill) => bill.id === queryBillId), [bills, queryBillId])
   const pageTitle = mode === 'new'
@@ -292,15 +311,11 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/bills-payments/bill-payments')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to bill payments
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{pageTitle}</h1>
-                <p className="mt-1 text-sm text-slate-500">Record vendor payments and apply them to outstanding bills.</p>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{pageTitle}</h1>
               </div>
             </div>
           </div>
@@ -308,15 +323,19 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
-          <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
-            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !paymentId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-          </div>
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
+          {mode !== 'new' ? (
+            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
+              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+              <button type="button" onClick={() => setActiveTab('memo')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'memo' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Memo</button>
+              <button type="button" onClick={() => setActiveTab('attachments')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'attachments' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Attachments</button>
+              <button type="button" onClick={() => setActiveTab('activity')} disabled={!paymentId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+            </div>
+          ) : null}
 
-          <div className={activeTab !== 'details' ? 'hidden' : ''}>
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="grid gap-4 lg:grid-cols-3">
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Payment Number</label>
                   <input value={paymentId ? paymentId : 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
@@ -327,16 +346,47 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Payment Method</label>
-                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
-                  </select>
+                  <HaypSelect
+                    value={paymentMethod}
+                    onChange={setPaymentMethod}
+                    options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
+                    disabled={mode === 'edit'}
+                    className="mt-2 rounded-2xl bg-slate-50 px-4 py-3"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Payment From</label>
-                  <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    <option value="">Select account</option>
-                    {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.displayName}</option>)}
-                  </select>
+                  <HaypSelect
+                    value={bankAccountId}
+                    onChange={setBankAccountId}
+                    options={bankAccounts.map((a) => ({ value: a.id, label: a.displayName }))}
+                    placeholder="Select account"
+                    disabled={mode === 'edit'}
+                    className="mt-2 rounded-2xl bg-slate-50 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <CustomerPickerField
+                    label="Vendor"
+                    value={vendorId}
+                    customers={vendorOptions}
+                    placeholder="Search vendors…"
+                    createLabel="+ New Vendor"
+                    disabled={mode === 'edit'}
+                    onChange={setVendorId}
+                    onCreateNew={() => setShowVendorModal(true)}
+                  />
+                  {companyId && (
+                    <NewVendorModal
+                      open={showVendorModal}
+                      companyId={companyId}
+                      onClose={() => setShowVendorModal(false)}
+                      onCreated={(v) => {
+                        setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
+                        setVendorId(v.id)
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900">
                   <input type="checkbox" checked={showOverdue} disabled={mode === 'edit'} onChange={(e) => setShowOverdue(e.target.checked)} className="h-4 w-4 text-emerald-600" />
@@ -345,67 +395,54 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
               </div>
             </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <div>
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <div>
-                      <h2 className="text-lg font-semibold text-slate-900">Bills to Pay</h2>
-                      <p className="mt-1 text-sm text-slate-500">Choose outstanding bills and enter payment amounts.</p>
-                      <div className="mt-4">
-                        <label className="block text-sm font-semibold text-slate-900">Vendor Filter</label>
-                        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                          <option value="">All Vendors</option>
-                          {vendorOptions.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    {mode === 'new' && <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Total: {formatCurrency(totalPayment, currency)}</div>}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
+              <div>
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Bills to Pay</h2>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-left text-sm">
-                      <thead className="border-b border-slate-200 text-slate-500">
-                        <tr>
-                          <th className="px-4 py-3 w-12" />
-                          <th className="px-4 py-3">Bill #</th>
-                          <th className="px-4 py-3">Bill Date</th>
-                          <th className="px-4 py-3">Due Date</th>
-                          <th className="px-4 py-3 text-right">Amount Due</th>
-                          <th className="px-4 py-3 text-right">Payment</th>
-                          <th className="px-4 py-3">Memo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {visibleBills.length === 0 ? (
-                          <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
-                        ) : visibleBills.map((bill) => (
-                          <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
-                            <td className="px-4 py-3"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
-                            <td className="px-4 py-3 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
-                            <td className="px-4 py-3 text-slate-500">{bill.date}</td>
-                            <td className="px-4 py-3 text-slate-500">{bill.dueDate}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
-                            <td className="px-4 py-3 text-right">
-                              <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                            </td>
-                            <td className="px-4 py-3"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Total: {formatCurrency(totalPayment, currency)}</div>
                 </div>
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-                  <div className="space-y-3">
-                    <div className="text-sm font-semibold text-slate-900">Payment summary</div>
-                    <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
-                    <div className="flex items-center justify-between text-sm text-slate-600"><span>Total payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
-                  </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="border-b border-slate-200 text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3 w-12" />
+                        <th className="px-4 py-3">Bill #</th>
+                        <th className="px-4 py-3">Bill Date</th>
+                        <th className="px-4 py-3">Due Date</th>
+                        <th className="px-4 py-3 text-right">Original Amount</th>
+                        <th className="px-4 py-3 text-right">Amount Due</th>
+                        <th className="px-4 py-3 text-right">Payment</th>
+                        <th className="px-4 py-3">Memo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleBills.length === 0 ? (
+                        <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
+                      ) : visibleBills.map((bill) => (
+                        <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
+                          <td className="px-4 py-3"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
+                          <td className="px-4 py-3 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
+                          <td className="px-4 py-3 text-slate-500">{bill.date}</td>
+                          <td className="px-4 py-3 text-slate-500">{bill.dueDate}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(bill.originalAmount, currency)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
+                          <td className="px-4 py-3 text-right">
+                            <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                          </td>
+                          <td className="px-4 py-3"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </section>
+          </div>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
+          <div className={mode === 'new' || activeTab === 'memo' ? '' : 'hidden'}>
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Reference / Check #</label>
@@ -419,8 +456,27 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
             </section>
           </div>
 
+          <div className={mode === 'new' || activeTab === 'attachments' ? '' : 'hidden'}>
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
+              <div className="mt-4">
+                <HaypFileUpload attachments={attachments} onChange={setAttachments} />
+              </div>
+            </section>
+          </div>
+
+          <div className={mode === 'new' || activeTab !== 'activity' ? '' : 'hidden'}>
+            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6 mt-6">
+              <div className="space-y-3">
+                <div className="text-sm font-semibold text-slate-900">Payment summary</div>
+                <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
+                <div className="flex items-center justify-between text-sm text-slate-600"><span>Total payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
+              </div>
+            </section>
+          </div>
+
           <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
               <div className="mt-4">
                 <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill payment yet." />

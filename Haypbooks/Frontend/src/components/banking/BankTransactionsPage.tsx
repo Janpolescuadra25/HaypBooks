@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { Fragment, useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -471,7 +471,7 @@ export default function BankTransactionsPage() {
 
       {/* ── Transfer Funds Modal ── */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowTransferModal(false)}>
+        <div className="fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4" onClick={() => setShowTransferModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <div className="flex items-center gap-2">
@@ -594,7 +594,7 @@ export default function BankTransactionsPage() {
       {/* ── Activity Log Drawer ── */}
       {showActivityDrawer && (
         <div className="fixed inset-0 z-[100] flex justify-end">
-          <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm" onClick={() => setShowActivityDrawer(false)} />
+          <div className="fixed inset-0 z-[90] bg-black/80" onClick={() => setShowActivityDrawer(false)} />
           <div className="relative bg-white w-full max-w-md shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <div>

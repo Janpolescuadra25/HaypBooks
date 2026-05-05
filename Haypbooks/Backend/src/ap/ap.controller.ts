@@ -252,6 +252,28 @@ export class ApController {
         return this.svc.deleteMileageLog(req.user.userId, cid, logId)
     }
 
+    // ─── Per Diem Claims ───────────────────────────────────────────────────────────
+
+    @Get('per-diem')
+    listPerDiem(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listPerDiem(req.user.userId, cid, q)
+    }
+
+    @Post('per-diem')
+    createPerDiem(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createPerDiem(req.user.userId, cid, body)
+    }
+
+    @Get('per-diem/:id')
+    getPerDiem(@Req() req: any, @Param('companyId') cid: string, @Param('id') id: string) {
+        return this.svc.getPerDiem(req.user.userId, cid, id)
+    }
+
+    @Put('per-diem/:id')
+    updatePerDiem(@Req() req: any, @Param('companyId') cid: string, @Param('id') id: string, @Body() body: any) {
+        return this.svc.updatePerDiem(req.user.userId, cid, id, body)
+    }
+
     // ─── AP Aging Report ──────────────────────────────────────────────────────
 
     @Get('reports/aging')

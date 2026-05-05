@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
@@ -224,7 +224,7 @@ export default function GetStartedPlansPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setViewingFeatures(null)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/80"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}

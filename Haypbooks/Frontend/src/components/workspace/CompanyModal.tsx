@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -37,7 +37,7 @@ export default function CompanyModal({ company, onClose, onSuccess }: any) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
       <div aria-labelledby="company-modal-title" aria-modal="true" role="dialog" className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>

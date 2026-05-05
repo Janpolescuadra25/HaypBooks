@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Copy, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { Columns, Copy, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
+import HaypSelect from '@/components/shared/HaypSelect'
 
 export interface Column {
   key: string
@@ -32,6 +33,8 @@ export interface LineItemTableProps<Row extends LineItemBase = LineItemBase> {
   showDragHandle?: boolean
   showCopyButton?: boolean
   showDeleteButton?: boolean
+  showSplitButton?: boolean
+  onSplit?: (rowId: string) => void
   addRowLabel?: string
 }
 
@@ -49,6 +52,8 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
   showDragHandle = true,
   showCopyButton = true,
   showDeleteButton = true,
+  showSplitButton = false,
+  onSplit,
   addRowLabel = 'Add Line',
 }: LineItemTableProps<Row>) {
   const [widths, setWidths] = useState<Record<string, number>>(() => {
@@ -87,13 +92,16 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
 
   useEffect(() => {
     setWidths((prev) => {
-      const next = { ...prev }
+      let next = { ...prev }
+      let hasChanges = false
       columns.forEach((column) => {
-        if (!(column.key in next)) {
-          next[column.key] = column.width ?? 120
+        const desired = column.width ?? 120
+        if (next[column.key] !== desired) {
+          next = { ...next, [column.key]: desired }
+          hasChanges = true
         }
       })
-      return next
+      return hasChanges ? next : prev
     })
   }, [columns])
 
@@ -166,13 +174,19 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
     return columns.reduce((acc, column) => {
       acc[column.key] = column.type === 'number' || column.type === 'calculated' ? 0 : ''
       return acc
-    }, { id: makeId() } as Record<string, any>) as Row
+    }, { id: makeId(), splits: [] } as Record<string, any>) as Row
   }, [columns])
 
   const duplicateRow = useCallback((id: string) => {
     const index = rows.findIndex((row) => row.id === id)
     if (index === -1) return
-    const duplicate = { ...rows[index], id: makeId() }
+    const duplicate = {
+      ...rows[index],
+      id: makeId(),
+      splits: Array.isArray(rows[index].splits)
+        ? rows[index].splits.map((split: any) => ({ ...split }))
+        : [],
+    }
     const nextRows = [...rows]
     nextRows.splice(index + 1, 0, duplicate)
     onChange(nextRows)
@@ -198,12 +212,8 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
   }, [])
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
-        <p className="mt-1 text-sm text-slate-500">Add each expense line and the bill will update automatically.</p>
-      </div>
-      <div ref={containerRef} className={`mt-6 rounded-xl border border-slate-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div ref={containerRef} className={`rounded-xl border border-slate-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
         {rows.length === 0 ? (
           <div className="min-w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-20 text-center text-sm text-slate-500">
             Add line items to get started
@@ -271,18 +281,16 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                           {column.type === 'number' && (
                             <input
                               type="number"
-                              value={value === undefined || value === null ? '' : value}
+                              value={value == null || value === 0 ? '' : value}
                               placeholder={column.placeholder}
                               onChange={(event) => updateRow(row.id, column.key, event.target.value === '' ? 0 : Number(event.target.value))}
                               className="w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
                             />
                           )}
                           {column.type === 'select' && (
-                            <select
-                              aria-label={column.label}
+                            <HaypSelect
                               value={String(value ?? '')}
-                              onChange={(event) => {
-                                const selected = event.target.value
+                              onChange={(selected) => {
                                 updateRow(row.id, column.key, selected)
                                 if (column.key === 'account') {
                                   onAccountSelect?.(row.id, selected)
@@ -291,13 +299,9 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                                   onItemSelect?.(row.id, selected)
                                 }
                               }}
-                              className="w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
-                            >
-                              <option value="">Select</option>
-                              {column.options?.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                              ))}
-                            </select>
+                              options={column.options ?? []}
+                              placeholder="Select"
+                            />
                           )}
                           {column.type === 'calculated' && (
                             <div className="flex items-center w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 tabular-nums">
@@ -309,6 +313,14 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                     })}
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {showSplitButton && (
+                          <button type="button" title="Split this line across accounts" aria-label="Split this line across accounts" onClick={() => onSplit?.(row.id)} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-200">
+                            <Columns size={18} />
+                          </button>
+                        )}
+                        {row.splits?.length ? (
+                          <span className="inline-flex whitespace-nowrap rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">{row.splits.length} split</span>
+                        ) : null}
                         {showCopyButton && (
                           <button type="button" title="Duplicate row" aria-label="Duplicate row" onClick={() => duplicateRow(row.id)} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-200">
                             <Copy size={18} />

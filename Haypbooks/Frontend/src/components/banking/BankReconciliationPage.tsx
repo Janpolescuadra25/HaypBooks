@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useMemo, useState } from 'react'
 import {
@@ -413,7 +413,7 @@ export default function BankReconciliationPage() {
 
       {/* ── Unbalanced modal ──────────────────────────────────────────────── */}
       {modal === 'unbalanced' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-3">
               <AlertTriangle size={20} className="text-amber-500 flex-shrink-0" />
@@ -444,7 +444,7 @@ export default function BankReconciliationPage() {
 
       {/* ── Balanced modal ────────────────────────────────────────────────── */}
       {modal === 'success' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-3">
               <CheckCircle2 size={20} className="text-emerald-600 flex-shrink-0" />

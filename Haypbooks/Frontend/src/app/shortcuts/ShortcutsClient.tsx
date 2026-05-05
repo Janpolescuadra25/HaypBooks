@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -240,7 +240,7 @@ export default function ShortcutsClient() {
         {/* ── Keyboard Shortcuts Modal ── */}
         {showKb && typeof window !== 'undefined' && createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
             onClick={() => setShowKb(false)}
           >
             <div

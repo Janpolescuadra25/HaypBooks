@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Plus, Bell, HelpCircle, ChevronDown, LayoutGrid, ListChecks } from 'lucide-react'
@@ -95,7 +95,10 @@ export default function OwnerTopBar() {
           <div className="hidden md:flex items-center bg-emerald-900/40 px-4 py-2 rounded-xl border border-white/10 hover:bg-emerald-900/60 transition-all cursor-pointer group">
             <LayoutGrid size={16} className="text-emerald-400 mr-2.5 group-hover:rotate-90 transition-transform duration-500" />
             <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-              {companyLoading ? 'My Company' : (company?.name || company?.id || 'My Company')} <ChevronDown size={12} className="text-emerald-400" />
+              <span className="truncate max-w-[200px]" title={company?.name}>
+                {companyLoading ? 'My Company' : (company?.name || company?.id || 'My Company')}
+              </span>
+              <ChevronDown size={12} className="text-emerald-400" />
             </div>
           </div>
         </div>
@@ -173,7 +176,7 @@ export default function OwnerTopBar() {
 
       {/* Logout confirmation modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80">
           <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4">
             <h3 className="text-lg font-black text-emerald-950 mb-1">Sign out?</h3>
             <p className="text-sm text-emerald-600/80 mb-6">You will be redirected to the login page.</p>

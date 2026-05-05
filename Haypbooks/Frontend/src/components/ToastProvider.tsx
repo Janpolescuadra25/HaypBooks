@@ -14,7 +14,7 @@ interface Toast {
 }
 
 interface ToastContextValue {
-  push: (toast: Omit<Toast, 'id' | 'createdAt' | 'expiresAt'>) => void
+  push: (toast: Omit<Toast, 'id' | 'createdAt' | 'expiresAt' | 'ttl'> & { ttl?: number }) => void
   success: (message: string, ttl?: number) => void
   error: (message: string, ttl?: number) => void
   info: (message: string, ttl?: number) => void
@@ -39,20 +39,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [now, setNow] = useState(() => Date.now())
 
-  const push = useCallback((toast: Omit<Toast, 'id' | 'createdAt' | 'expiresAt'>) => {
+  const push = useCallback((toast: Omit<Toast, 'id' | 'createdAt' | 'expiresAt'> & { ttl?: number }) => {
     setToasts((prev) => {
+      const ttl = toast.ttl ?? DEFAULT_TTL
       const existingIndex = prev.findIndex((item) => item.type === toast.type && item.message === toast.message)
       const createdAt = Date.now()
-      const expiresAt = createdAt + toast.ttl
+      const expiresAt = createdAt + ttl
 
       if (existingIndex >= 0) {
         const next = [...prev]
-        next[existingIndex] = { ...next[existingIndex], ttl: toast.ttl, createdAt, expiresAt }
+        next[existingIndex] = { ...next[existingIndex], ttl, createdAt, expiresAt }
         return next
       }
 
       const id = Math.random().toString(36).slice(2, 10)
-      return [...prev, { id, ...toast, createdAt, expiresAt }]
+      return [...prev, { id, ...toast, ttl, createdAt, expiresAt }]
     })
   }, [])
 

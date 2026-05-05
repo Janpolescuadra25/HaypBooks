@@ -2,13 +2,15 @@
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
+import CustomerPickerField from '@/components/sales/CustomerPickerField'
+import HaypSelect from '@/components/shared/HaypSelect'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 
 const today = new Date().toISOString().slice(0, 10)
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED']
@@ -56,6 +58,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [showAccountModal, setShowAccountModal] = useState(false)
 
   useEffect(() => {
     if (!companyId) return
@@ -83,16 +86,16 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
         setStatus(data.status ?? 'DRAFT')
         setTripDate(data.tripDate?.slice(0, 10) ?? today)
         setPurpose(data.purpose ?? '')
-        setStartLocation(data.startLocation ?? '')
-        setEndLocation(data.endLocation ?? '')
-        setDistance(Number(data.distance ?? 0))
+        setStartLocation(data.fromLocation ?? data.startLocation ?? '')
+        setEndLocation(data.toLocation ?? data.endLocation ?? '')
+        setDistance(Number(data.miles ?? data.distance ?? 0))
         setDistanceUnit(data.distanceUnit ?? 'Miles')
-        setRate(Number(data.rate ?? 0))
+        setRate(Number(data.ratePerMile ?? data.rate ?? 0))
         setVehicle(data.vehicle ?? '')
         setPersonalVehicle(Boolean(data.personalVehicle))
         setAccountId(data.accountId ?? '')
-        setBillable(Boolean(data.billable))
-        setClientProject(data.clientProject ?? '')
+        setBillable(Boolean(data.isBillable ?? data.billable))
+        setClientProject(data.projectId ?? data.clientProject ?? '')
         setNotes(data.notes ?? '')
       })
       .catch(() => toast.error('Failed to load mileage log'))
@@ -104,6 +107,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   }, [billable])
 
   const amount = useMemo(() => Math.max(0, Number(distance || 0) * Number(rate || 0)), [distance, rate])
+  const accountOptions = useMemo(() => accounts.map((a) => ({ id: a.id, name: a.code ? `${a.code} — ${a.name}` : a.name ?? a.id })), [accounts])
 
   const validate = useCallback(() => {
     if (!companyId) { setError('Company not loaded'); return false }
@@ -119,23 +123,24 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   }, [companyId, tripDate, purpose, startLocation, endLocation, distance, rate, billable, clientProject])
 
   const payload = useMemo(() => ({
+    logNumber: logNumber || null,
     logDate,
     status,
     tripDate,
     purpose,
-    startLocation,
-    endLocation,
-    distance,
+    fromLocation: startLocation,
+    toLocation: endLocation,
+    miles: distance,
     distanceUnit,
-    rate,
+    ratePerMile: rate,
     amount,
     vehicle,
     personalVehicle,
     accountId: accountId || null,
-    billable,
-    clientProject: billable ? clientProject : null,
+    isBillable: billable,
+    projectId: billable ? clientProject : null,
     notes,
-  }), [logDate, status, tripDate, purpose, startLocation, endLocation, distance, distanceUnit, rate, amount, vehicle, personalVehicle, accountId, billable, clientProject, notes])
+  }), [logDate, status, tripDate, purpose, startLocation, endLocation, distance, distanceUnit, rate, amount, vehicle, personalVehicle, accountId, billable, clientProject, notes, logNumber])
 
   const handleSave = useCallback(async () => {
     if (!companyId) return
@@ -155,7 +160,6 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
         router.push('/expenses/employee-expenses/mileage')
       }
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save mileage log')
       toast.error('Unable to save mileage log')
     } finally {
@@ -180,7 +184,18 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
           <div className="space-y-6">
             <div>
               <h3 className="text-xs font-bold text-slate-900 mb-4">Trip Overview</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="mileageLogNumber" className="text-[10px] font-bold uppercase text-slate-400">Log Number</label>
+                  <input
+                    id="mileageLogNumber"
+                    value={logNumber}
+                    onChange={(e) => setLogNumber(e.target.value)}
+                    placeholder="Auto-generated"
+                    aria-label="Log Number"
+                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
+                  />
+                </div>
                 <div>
                   <label htmlFor="mileageLogDate" className="text-[10px] font-bold uppercase text-slate-400">Log Date</label>
                   <input
@@ -194,15 +209,12 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 </div>
                 <div>
                   <label htmlFor="mileageStatus" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
-                  <select
+                  <HaypSelect
                     id="mileageStatus"
                     value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    aria-label="Status"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
-                  >
-                    {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
+                    onChange={setStatus}
+                    options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+                  />
                 </div>
               </div>
             </div>
@@ -269,14 +281,11 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                       aria-label="Distance"
                       className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
                     />
-                    <select
+                    <HaypSelect
                       value={distanceUnit}
-                      onChange={(e) => setDistanceUnit(e.target.value)}
-                      aria-label="Distance unit"
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
-                    >
-                      {DISTANCE_UNITS.map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
+                      onChange={setDistanceUnit}
+                      options={DISTANCE_UNITS.map((o) => ({ value: o, label: o }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -315,17 +324,26 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="mileageAccount" className="text-[10px] font-bold uppercase text-slate-400">Account</label>
-                  <select
-                    id="mileageAccount"
+                  <CustomerPickerField
+                    label="Account"
                     value={accountId}
-                    onChange={(e) => setAccountId(e.target.value)}
-                    aria-label="Account"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
-                  >
-                    <option value="">Select account</option>
-                    {accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name}` : account.name}</option>)}
-                  </select>
+                    customers={accountOptions}
+                    placeholder="Search accounts…"
+                    createLabel="+ New Account"
+                    onChange={setAccountId}
+                    onCreateNew={() => setShowAccountModal(true)}
+                  />
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => setShowAccountModal(false)}
+                      onCreated={(a) => {
+                        setAccounts((prev) => [{ id: a.id, code: a.code, name: a.name }, ...prev])
+                        setAccountId(a.id)
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <div className="rounded-lg bg-white border border-slate-200 p-4">

@@ -166,19 +166,19 @@ function createBaseItem(resource: string, payload: any) {
     case 'bill-payments':
       return { id: genId('pay'), status: 'COMPLETED', paymentDate: payload.date || now, amount: payload.amount || 0, ...payload }
     case 'purchase-orders':
-      return { id: genId('po'), status: payload.status || 'OPEN', date: payload.date || now, lines: payload.lines || [], ...payload }
+      return { id: genId('po'), status: payload.status || 'OPEN', date: payload.date || now, lines: payload.lines || payload.lineItems || [], ...payload }
     case 'purchase-requests':
-      return { id: genId('pr'), status: payload.status || 'NEW', requestDate: payload.requestDate || payload.date || now, lines: payload.lines || [], ...payload }
+      return { id: genId('pr'), status: payload.status || 'NEW', requestDate: payload.requestDate || payload.date || now, lines: payload.lines || payload.lineItems || [], ...payload }
     case 'vendor-credits':
-      return { id: genId('vc'), status: payload.status || 'OPEN', date: payload.date || payload.creditDate || now, lines: payload.lines || [], ...payload }
+      return { id: genId('vc'), status: payload.status || 'OPEN', date: payload.date || payload.creditDate || now, lines: payload.lines || payload.lineItems || [], ...payload }
     case 'receipts':
       return { id: genId('rct'), status: payload.status || 'RECEIVED', date: payload.date || payload.receiptDate || now, amount: payload.amount || 0, ...payload }
     case 'mileage':
       return { id: genId('mil'), status: payload.status || 'DRAFT', date: payload.date || payload.logDate || payload.tripDate || now, amount: payload.amount || 0, ...payload }
     case 'rfqs':
-      return { id: genId('rfq'), status: payload.status || 'DRAFT', date: payload.date || now, lines: payload.lines || [], ...payload }
+      return { id: genId('rfq'), status: payload.status || 'DRAFT', date: payload.date || now, lines: payload.lines || payload.lineItems || [], ...payload }
     case 'recurring-bills':
-      return { id: genId('rb'), status: payload.status || 'ACTIVE', date: payload.date || now, lines: payload.lines || [], ...payload }
+      return { id: genId('rb'), status: payload.status || 'ACTIVE', date: payload.date || now, lines: payload.lines || payload.lineItems || [], ...payload }
     case 'payment-runs':
       return { id: genId('run'), status: payload.status || 'CREATED', date: payload.date || now, bills: payload.bills || [], total: payload.total || 0, ...payload }
     case 'per-diem':
@@ -347,8 +347,24 @@ function routeExpenses(method: string, segments: string[], state: CompanyState, 
     return routeCollection(method, 'expenses', 'reimbursements', action, extra, state, req)
   }
 
+  if (resource === 'expenses' && id === 'reports') {
+    return routeCollection(method, 'expenses', 'expenses', action, extra, state, req)
+  }
+
+  if (resource === 'expenses' && id === 'receipts') {
+    return routeCollection(method, 'expenses', 'receipts', action, extra, state, req)
+  }
+
   if (resource === 'reimbursements') {
     return routeCollection(method, 'expenses', 'reimbursements', id, action, state, req)
+  }
+
+  if (resource === 'reports') {
+    return routeCollection(method, 'expenses', 'expenses', id, action, state, req)
+  }
+
+  if (resource === 'receipts') {
+    return routeCollection(method, 'expenses', 'receipts', id, action, state, req)
   }
 
   if (resource === 'expenses') {

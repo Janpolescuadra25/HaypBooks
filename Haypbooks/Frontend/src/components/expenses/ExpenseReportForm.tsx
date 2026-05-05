@@ -1,14 +1,17 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Loader2, Plus, X } from 'lucide-react'
+import { Save, Loader2, Plus, X, Upload, FileText } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
-import { expensesService } from '@/services/expenses.service'
+import apiClient from '@/lib/api-client'
+import { expensesService, ExpenseReportPayload } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
+import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
+import HaypSelect from '@/components/shared/HaypSelect'
 
 interface ExpenseReportFormProps {
   mode: 'new' | 'edit'
@@ -33,10 +36,12 @@ interface ExpenseLine {
   id: string
   date: string
   category: string
+  vendor: string
   description: string
   accountId: string
   amount: number
   receiptName: string
+  receiptUrl: string | null
   billable: boolean
 }
 
@@ -44,10 +49,12 @@ const defaultLine = (): ExpenseLine => ({
   id: Math.random().toString(36).slice(2, 9),
   date: today,
   category: 'Travel',
+  vendor: '',
   description: '',
   accountId: '',
   amount: 0,
   receiptName: '',
+  receiptUrl: null,
   billable: false,
 })
 
@@ -60,14 +67,24 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const [employees, setEmployees] = useState<Employee[]>([])
   const [employeeId, setEmployeeId] = useState('')
   const [reportName, setReportName] = useState('')
+  const [businessPurpose, setBusinessPurpose] = useState('')
   const [fromDate, setFromDate] = useState(today)
   const [toDate, setToDate] = useState(today)
+  const [departmentId, setDepartmentId] = useState('')
   const [status, setStatus] = useState('DRAFT')
   const [lines, setLines] = useState<ExpenseLine[]>([defaultLine()])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [vendors, setVendors] = useState<Array<{ id: string; displayName: string }>>([])
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
   const [advancePayment, setAdvancePayment] = useState(0)
   const [notes, setNotes] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
+  const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
+  const [activeTab, setActiveTab] = useState<'notes' | 'policy' | 'attachments'>('notes')
+  const [uploadingLineId, setUploadingLineId] = useState<string | null>(null)
+  const uploadInputRef = useRef<HTMLInputElement | null>(null)
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null)
+  const [attachmentUploading, setAttachmentUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -91,6 +108,26 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       })
       .catch(() => {})
 
+    expensesService.listVendors(companyId)
+      .then((res) => {
+        if (!active) return
+        const data = res.data ?? []
+        const items = Array.isArray(data) ? data : data.data ?? []
+        setVendors(items.map((vendor: any) => ({ id: vendor.id, displayName: vendor.displayName ?? vendor.name ?? vendor.id })))
+      })
+      .catch(() => {})
+
+    apiClient.get(`/companies/${companyId}/organization/departments`)
+      .then((res) => {
+        if (!active) return
+        const payload = res.data ?? res
+        const list = Array.isArray(payload) ? payload : payload.data ?? []
+        const normalized = list.map((dept: any) => ({ id: dept.id, name: dept.name }))
+        setDepartments(normalized)
+        if (!departmentId && normalized.length > 0) setDepartmentId(normalized[0].id)
+      })
+      .catch(() => {})
+
     accountingService.listAccounts(companyId, { includeInactive: false })
       .then((res) => {
         if (!active) return
@@ -102,7 +139,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       .catch(() => {})
 
     return () => { active = false }
-  }, [companyId, employeeId])
+  }, [companyId, employeeId, departmentId])
 
   useEffect(() => {
     if (!companyId || !isEdit || !expenseId) return
@@ -113,23 +150,36 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         if (!active) return
         const data = res.data ?? res
         setReportName(data.description ?? '')
+        setBusinessPurpose(data.businessPurpose ?? '')
         setFromDate(data.fromDate ?? today)
         setToDate(data.toDate ?? today)
         setStatus(data.status ?? 'DRAFT')
         setEmployeeId(data.employeeId ?? '')
+        setDepartmentId(data.departmentId ?? '')
         setAdvancePayment(Number(data.advancePayment ?? 0))
         setNotes(data.notes ?? '')
         setInternalNotes(data.internalNotes ?? '')
+        if (Array.isArray(data.attachments) && data.attachments.length > 0) {
+          setAttachments(data.attachments.map((attachment: any) => ({
+            id: attachment.id ?? attachment.fileUrl ?? `${Date.now()}`,
+            fileName: attachment.fileName ?? attachment.name ?? 'Attachment',
+            contentType: attachment.mimeType ?? null,
+            size: attachment.fileSize ?? null,
+            url: attachment.fileUrl ?? attachment.url ?? undefined,
+          })))
+        }
         if (Array.isArray(data.lines) && data.lines.length > 0) {
-          interface ApiExpenseLine { id?: string; date?: string | null; category?: string | null; description?: string | null; accountId?: string | null; amount?: number | null; receiptUrl?: string | null; billable?: boolean | null }
+          interface ApiExpenseLine { id?: string; date?: string | null; category?: string | null; vendor?: string | null; description?: string | null; accountId?: string | null; amount?: number | null; receiptUrl?: string | null; billable?: boolean | null }
           setLines(data.lines.map((line: ApiExpenseLine) => ({
             id: Math.random().toString(36).slice(2, 9),
             date: line.date ?? today,
             category: line.category ?? 'Other',
+            vendor: line.vendor ?? '',
             description: line.description ?? '',
             accountId: line.accountId ?? '',
             amount: Number(line.amount ?? 0),
             receiptName: line.receiptUrl ?? '',
+            receiptUrl: line.receiptUrl ?? null,
             billable: Boolean(line.billable),
           })))
         }
@@ -160,36 +210,49 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
     return true
   }
 
-  const createPayload = () => ({
+  const createPayload = (): Omit<ExpenseReportPayload, 'status'> => ({
     employeeId,
+    departmentId: departmentId || null,
     description: reportName,
+    businessPurpose,
     fromDate,
     toDate,
     lines: lines.map((line) => ({
       date: line.date,
       category: line.category,
+      vendor: line.vendor,
       description: line.description,
       accountId: line.accountId || null,
       amount: line.amount,
-      receiptUrl: line.receiptName || null,
+      receiptUrl: line.receiptUrl,
+      receiptName: line.receiptName || null,
       billable: line.billable,
     })),
     advancePayment: Number(advancePayment || 0),
     notes,
     internalNotes,
+    attachments: attachments.map((attachment) => ({
+      fileUrl: attachment.url,
+      fileName: attachment.fileName,
+      mimeType: attachment.contentType,
+      fileSize: attachment.size,
+    })),
   })
 
   const handleSaveDraft = async () => {
     if (!companyId) return
-    if (!validate()) return
     setSubmitting(true)
     try {
-      const payload = createPayload()
-      await expensesService.createExpenseReport(companyId, payload)
-      toast.success('Expense report saved as draft')
+      const payload: ExpenseReportPayload = { ...createPayload(), status: 'DRAFT' as const }
+      if (mode === 'edit' && expenseId) {
+        await expensesService.updateExpenseReport(companyId, expenseId, payload)
+        toast.success('Expense report updated as draft')
+      } else {
+        await expensesService.createExpenseReport(companyId, payload)
+        toast.success('Expense report saved as draft')
+      }
       router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save expense report')
       toast.error('Unable to save expense report')
     } finally {
@@ -202,15 +265,15 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
     if (!validate()) return
     setSubmitting(true)
     try {
-      const payload = createPayload()
-      const res = await expensesService.createExpenseReport(companyId, payload)
-      const id = res.data?.id ?? (res as any)?.id
-      if (!id) throw new Error('Created report id missing')
-      await expensesService.submitExpenseReport(companyId, id)
+      const payload: ExpenseReportPayload = { ...createPayload(), status: 'SUBMITTED' as const }
+      if (mode === 'edit' && expenseId) {
+        await expensesService.updateExpenseReport(companyId, expenseId, payload)
+      } else {
+        await expensesService.createExpenseReport(companyId, payload)
+      }
       toast.success('Expense report submitted for approval')
       router.push('/expenses/employee-expenses/expenses')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to submit expense report')
       toast.error('Unable to submit expense report')
     } finally {
@@ -218,20 +281,61 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
     }
   }
 
-  const handleSubmitFromEdit = async () => {
-    if (!companyId || !expenseId) return
+  const handleSubmitFromEdit = handleSubmitForApproval
+
+  const handleUploadLineReceipt = async (lineId: string, file: File) => {
+    if (!companyId) return
     setSubmitting(true)
     try {
-      await expensesService.submitExpenseReport(companyId, expenseId)
-      toast.success('Expense report submitted for approval')
-      router.push('/expenses/employee-expenses/expenses')
-    } catch (err: any) {
-      console.error(err)
-      setError(err?.response?.data?.message ?? 'Unable to submit expense report')
-      toast.error('Unable to submit expense report')
+      const response = await expensesService.uploadAttachment(companyId, file, 'expenseLine', lineId)
+      const attachment = response.data ?? response
+      setLines((current) => current.map((line) => line.id === lineId ? {
+        ...line,
+        receiptName: attachment.fileName || file.name,
+        receiptUrl: attachment.fileUrl ?? null,
+      } : line))
+    } catch (err) {
+      toast.error('Receipt upload failed')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleLineFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !uploadingLineId) return
+    handleUploadLineReceipt(uploadingLineId, file)
+    event.target.value = ''
+    setUploadingLineId(null)
+  }
+
+  const handleUploadAttachments = async (files: FileList | null) => {
+    if (!companyId || !files?.length) return
+    setAttachmentUploading(true)
+    try {
+      const uploaded: AttachmentMeta[] = []
+      for (const file of Array.from(files)) {
+        const response = await expensesService.uploadAttachment(companyId, file, 'expenseReport', 'draft')
+        const attachment = response.data ?? response
+        uploaded.push({
+          id: attachment.id || `${Date.now()}-${file.name}`,
+          fileName: attachment.fileName || file.name,
+          contentType: attachment.mimeType ?? file.type,
+          size: attachment.fileSize ?? file.size,
+          url: attachment.fileUrl,
+        })
+      }
+      setAttachments((current) => [...current, ...uploaded])
+    } catch (err) {
+      toast.error('Attachment upload failed')
+    } finally {
+      setAttachmentUploading(false)
+    }
+  }
+
+  const handleAttachmentFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleUploadAttachments(event.target.files)
+    event.target.value = ''
   }
 
   const selectedEmployee = useMemo(() => employees.find((item) => item.id === employeeId), [employees, employeeId])
@@ -239,18 +343,14 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   return (
     <div className="min-h-full flex min-h-[100vh] flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/employee-expenses/expenses')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to expense reports
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Track expense receipts and approvals in one report.</p>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}</h1>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
               <div className="font-semibold">Status</div>
               <div>{status}</div>
             </div>
@@ -260,9 +360,9 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
           <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label htmlFor="report-name" className="block text-sm font-semibold text-slate-900">Report Name</label>
@@ -278,19 +378,34 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </div>
               <div className="sm:col-span-2 lg:col-span-1">
                 <label htmlFor="report-employee" className="block text-sm font-semibold text-slate-900">Employee</label>
-                <select id="report-employee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Select employee" title="Select employee">
-                  <option value="">Select employee</option>
-                  {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.displayName}</option>)}
-                </select>
+                <HaypSelect id="report-employee" value={employeeId} onChange={setEmployeeId} disabled={readOnly} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} placeholder="Select employee" />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-1">
+                <label htmlFor="report-department" className="block text-sm font-semibold text-slate-900">Department</label>
+                <HaypSelect id="report-department" value={departmentId} onChange={setDepartmentId} disabled={readOnly} options={departments.map((d) => ({ value: d.id, label: d.name }))} placeholder="Select department" />
               </div>
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div>
+              <label htmlFor="business-purpose" className="block text-sm font-semibold text-slate-900">Business Purpose</label>
+              <textarea
+                id="business-purpose"
+                value={businessPurpose}
+                onChange={(e) => setBusinessPurpose(e.target.value)}
+                disabled={readOnly}
+                rows={3}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                placeholder="Why is this report being submitted?"
+              />
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Expense Lines</h2>
-                <p className="mt-1 text-sm text-slate-500">Add each expense item with account and receipt details.</p>
               </div>
               {!readOnly && (
                 <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Line</button>
@@ -301,7 +416,9 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                 <thead className="border-b border-slate-200 text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Description</th>
+                    <th className="px-4 py-3">Vendor</th>
                     <th className="px-4 py-3">Account</th>
                     <th className="px-4 py-3 text-right">Amount</th>
                     <th className="px-4 py-3">Receipt</th>
@@ -313,46 +430,123 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                   {lines.map((line) => (
                     <tr key={line.id} className="border-b border-slate-200 hover:bg-slate-50">
                       <td className="px-4 py-3"><input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense line date" title="Expense line date" /></td>
+                      <td className="px-4 py-3">
+                        <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
+                      </td>
                       <td className="px-4 py-3"><input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Description" aria-label="Expense line description" title="Expense line description" /></td>
-                      <td className="px-4 py-3"><select value={line.accountId} onChange={(e) => updateLine(line.id, 'accountId', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense account" title="Expense account"><option value="">Select account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.code ? `${account.code} • ${account.name}` : account.name}</option>)}</select></td>
+                      <td className="px-4 py-3">
+                        <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Select vendor" />
+                      </td>
+                      <td className="px-4 py-3"><HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Select account" /></td>
                       <td className="px-4 py-3 text-right"><input type="number" min="0" step="0.01" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense amount" title="Expense amount" /></td>
-                      <td className="px-4 py-3"><input value={line.receiptName} onChange={(e) => updateLine(line.id, 'receiptName', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Receipt link" aria-label="Expense receipt link" title="Expense receipt link" /></td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-2">
+                          <input value={line.receiptName} onChange={(e) => updateLine(line.id, 'receiptName', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Receipt description" aria-label="Expense receipt description" title="Expense receipt description" />
+                          <button type="button" onClick={() => { if (!readOnly) { setUploadingLineId(line.id); uploadInputRef.current?.click() } }} disabled={readOnly} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <Upload size={12} /> {line.receiptUrl ? 'Replace' : 'Upload'}
+                          </button>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-center"><input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 text-emerald-600" aria-label="Billable expense" title="Billable expense" /></td>
                       {!readOnly && <td className="px-4 py-3 text-right"><button type="button" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100" aria-label="Remove expense line" title="Remove expense line"><X size={14} /></button></td>}
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <input
+                ref={uploadInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={handleLineFileSelection}
+              />
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-3xl bg-slate-50 p-4">
+              <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="text-sm text-slate-600">Total Expenses</div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{formatCurrency(totalExpenses, currency)}</div>
               </div>
-              <div className="rounded-3xl bg-slate-50 p-4">
+              <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="text-sm text-slate-600">Advance Payment</div>
                 <input type="number" min="0" step="0.01" value={advancePayment} onChange={(e) => setAdvancePayment(Number(e.target.value))} disabled={readOnly} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Advance payment amount" title="Advance payment amount" />
               </div>
-              <div className="rounded-3xl bg-slate-50 p-4">
+              <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="text-sm text-slate-600">Net Amount Owed</div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{formatCurrency(netAmount, currency)}</div>
               </div>
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Notes</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readOnly} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Vendor-facing notes" />
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            {mode !== 'new' && (
+              <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
+                {['notes', 'policy', 'attachments'].map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab as 'notes' | 'policy' | 'attachments')}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === tab ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                    {tab === 'notes' ? 'Notes' : tab === 'policy' ? 'Policy' : 'Attachments'}
+                  </button>
+                ))}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-                <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readOnly} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Internal notes" />
-              </div>
+            )}
+            <div className="mt-6">
+              {(mode === 'new' || activeTab === 'notes') && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900">Business Notes</label>
+                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readOnly} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="What should approvers know?" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
+                    <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readOnly} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Private notes for accounting" />
+                  </div>
+                </div>
+              )}
+              {(mode === 'new' || activeTab === 'policy') && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-700">
+                  <div className="text-sm font-semibold text-slate-900">Expense Policy</div>
+                  <p className="mt-3">All expense lines must comply with company policy. Receipts are required for amounts over $25, and travel expenses should be pre-approved.</p>
+                  <ul className="mt-3 space-y-2 list-disc pl-5 text-slate-600">
+                    <li>Include vendor and business purpose for every line.</li>
+                    <li>Upload receipts for each line item.</li>
+                    <li>Non-reimbursable items are subject to review.</li>
+                  </ul>
+                </div>
+              )}
+              {(mode === 'new' || activeTab === 'attachments') && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => attachmentInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                    >
+                      <Upload size={16} /> Upload attachments
+                    </button>
+                    {attachmentUploading && <span className="text-sm text-slate-500">Uploading files…</span>}
+                  </div>
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    className="hidden"
+                    multiple
+                    accept="image/*,application/pdf"
+                    onChange={handleAttachmentFileSelection}
+                  />
+                  <HaypFileUpload
+                    attachments={attachments}
+                    onChange={(next) => setAttachments(next)}
+                    label="Report attachments"
+                    description="Uploaded files are saved to this report and referenced on final submission."
+                    multiple
+                  />
+                </div>
+              )}
             </div>
           </section>
             </div>

@@ -20,7 +20,12 @@ export function ProfileCard() {
         <div className="text-slate-900 space-y-1">
           <p>{data.name}</p>
           <p className="text-slate-600 text-sm">{data.email}</p>
-          <p className="text-slate-600 text-sm">{data.company.name} · {data.company.currency}</p>
+          <p className="text-slate-600 text-sm">
+            <span className="truncate max-w-[200px] inline-block" title={data.company.name}>
+              {data.company.name}
+            </span>{' '}
+            · {data.company.currency}
+          </p>
         </div>
       ) : (
         <p className="text-slate-600">Loading…</p>

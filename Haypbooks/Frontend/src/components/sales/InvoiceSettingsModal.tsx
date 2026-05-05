@@ -176,7 +176,7 @@ export default function InvoiceSettingsModal({ initial, onApply, onClose }: Prop
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] bg-black/40"
+          className="fixed inset-0 z-[100] bg-black/80"
           onClick={onClose}
         />
 

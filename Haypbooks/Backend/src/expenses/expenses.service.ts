@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { ApService } from '../ap/ap.service'
+import { AttachmentsService } from '../attachments/attachments.service'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly apService: ApService, private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly apService: ApService,
+    private readonly prisma: PrismaService,
+    private readonly attachmentsService: AttachmentsService,
+  ) {}
 
   private async getWorkspaceId(companyId: string) {
     const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { workspaceId: true } })
@@ -65,15 +70,15 @@ export class ExpensesService {
       submittedAt: record.submittedAt?.toISOString(),
       approvedAt: record.approvedAt?.toISOString(),
       reimbursedAt: record.reimbursedAt?.toISOString(),
+      fromDate: record.fromDate?.toISOString(),
+      toDate: record.toDate?.toISOString(),
+      advancePayment: Number(record.advancePayment ?? 0),
     }))
   }
 
   async getReimbursement(userId: string, companyId: string, reimbursementId: string) {
     await this.assertAccess(userId, companyId)
-    const record = await this.prisma.expenseClaim.findFirst({
-      where: { id: reimbursementId, companyId },
-      include: { employee: { select: { id: true, firstName: true, lastName: true } }, lines: true },
-    })
+    const record = await this.prisma.expenseClaim.findFirst({ where: { id: reimbursementId, companyId }, include: { employee: { select: { id: true, firstName: true, lastName: true } }, lines: true } })
     if (!record) throw new NotFoundException('Reimbursement not found')
     return {
       ...record,
@@ -82,6 +87,9 @@ export class ExpensesService {
       submittedAt: record.submittedAt?.toISOString(),
       approvedAt: record.approvedAt?.toISOString(),
       reimbursedAt: record.reimbursedAt?.toISOString(),
+      fromDate: record.fromDate?.toISOString(),
+      toDate: record.toDate?.toISOString(),
+      advancePayment: Number(record.advancePayment ?? 0),
     }
   }
 
@@ -91,14 +99,21 @@ export class ExpensesService {
     const lines = Array.isArray(data.lines) ? data.lines : []
     if (!lines.length) throw new BadRequestException('At least one reimbursement line is required')
     const totalAmount = lines.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0)
-    return this.prisma.expenseClaim.create({
+    const record = await this.prisma.expenseClaim.create({
       data: {
         workspaceId,
         companyId,
         employeeId: data.employeeId,
+        departmentId: data.departmentId ?? null,
         reimbursementMethod: data.paymentMethod,
         status: data.status ?? 'DRAFT',
         description: data.description ?? null,
+        businessPurpose: data.businessPurpose ?? null,
+        notes: data.notes ?? null,
+        internalNotes: data.internalNotes ?? null,
+        fromDate: data.fromDate ? new Date(data.fromDate) : null,
+        toDate: data.toDate ? new Date(data.toDate) : null,
+        advancePayment: data.advancePayment != null ? Number(data.advancePayment) : null,
         totalAmount,
         submittedAt: data.status === 'SUBMITTED' ? new Date() : null,
         approvedAt: data.status === 'APPROVED' ? new Date() : null,
@@ -106,16 +121,64 @@ export class ExpensesService {
         lines: {
           create: lines.map((line: any) => ({
             date: line.date ? new Date(line.date) : new Date(),
+            category: line.category ?? null,
             description: line.description ?? '',
+            merchant: line.vendor ?? line.merchant ?? null,
             amount: Number(line.amount ?? 0),
             accountId: line.accountId ?? null,
-            merchant: line.category ?? null,
+            receiptUrl: line.receiptUrl ?? null,
+            receiptName: line.receiptName ?? null,
             subCategoryId: line.subCategoryId ?? null,
           })),
         },
       },
       include: { lines: true },
     })
+
+    const attachments = Array.isArray(data.attachments) ? data.attachments : []
+    if (attachments.length) {
+      await Promise.all(
+        attachments.map((attachment: any) =>
+          this.attachmentsService.create({
+            workspaceId,
+            entityType: 'expenseClaim',
+            entityId: record.id,
+            fileUrl: attachment.fileUrl,
+            fileName: attachment.fileName || attachment.fileName || null,
+            mimeType: attachment.mimeType ?? null,
+            fileSize: attachment.fileSize ?? null,
+            uploadedById: userId,
+          }),
+        ),
+      )
+    }
+
+    return record
+  }
+
+  async createExpenseReport(userId: string, companyId: string, data: any) {
+    return this.createReimbursement(userId, companyId, { ...data, status: data.status ?? 'DRAFT' })
+  }
+
+  async submitExpenseReport(userId: string, companyId: string, expenseId: string) {
+    await this.assertAccess(userId, companyId)
+    const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId } })
+    if (!record) throw new NotFoundException('Expense report not found')
+    if (record.status !== 'DRAFT' && record.status !== 'REJECTED') {
+      throw new BadRequestException('Only draft or rejected reports can be submitted')
+    }
+    return this.prisma.expenseClaim.update({
+      where: { id: expenseId },
+      data: { status: 'SUBMITTED', submittedAt: new Date() },
+    })
+  }
+
+  async listExpenseReports(userId: string, companyId: string, query: any) {
+    return this.listReimbursements(userId, companyId, query)
+  }
+
+  async getExpenseReport(userId: string, companyId: string, expenseId: string) {
+    return this.getReimbursement(userId, companyId, expenseId)
   }
 
   async updateReimbursement(userId: string, companyId: string, reimbursementId: string, data: any) {
@@ -135,8 +198,15 @@ export class ExpensesService {
         where: { id: reimbursementId },
         data: {
           employeeId: data.employeeId ?? record.employeeId,
+          departmentId: data.departmentId ?? record.departmentId,
           reimbursementMethod: data.paymentMethod ?? record.reimbursementMethod,
           description: data.description ?? record.description,
+          businessPurpose: data.businessPurpose ?? record.businessPurpose,
+          notes: data.notes ?? record.notes,
+          internalNotes: data.internalNotes ?? record.internalNotes,
+          fromDate: data.fromDate ? new Date(data.fromDate) : record.fromDate,
+          toDate: data.toDate ? new Date(data.toDate) : record.toDate,
+          advancePayment: data.advancePayment != null ? Number(data.advancePayment) : record.advancePayment,
           totalAmount,
           status: data.status ?? record.status,
           submittedAt: data.status === 'SUBMITTED' ? new Date() : record.submittedAt,
@@ -146,10 +216,13 @@ export class ExpensesService {
             lines: {
               create: lines.map((line: any) => ({
                 date: line.date ? new Date(line.date) : new Date(),
+                category: line.category ?? null,
                 description: line.description ?? '',
+                merchant: line.merchant ?? null,
                 amount: Number(line.amount ?? 0),
                 accountId: line.accountId ?? null,
-                merchant: line.category ?? null,
+                receiptUrl: line.receiptUrl ?? null,
+                receiptName: line.receiptName ?? null,
                 subCategoryId: line.subCategoryId ?? null,
               })),
             },
@@ -167,12 +240,47 @@ export class ExpensesService {
     if (!['DRAFT', 'SUBMITTED', 'REJECTED'].includes(record.status)) {
       throw new BadRequestException('Only draft, submitted, or rejected reports can be updated')
     }
-    const updateData: any = {}
-    if (data.status) {
-      updateData.status = data.status
-      if (data.status === 'REJECTED') updateData.approvedAt = null
-      if (data.status === 'APPROVED') updateData.approvedAt = new Date()
-    }
-    return this.prisma.expenseClaim.update({ where: { id: expenseId }, data: updateData })
+    const lines = Array.isArray(data.lines) ? data.lines : null
+    const totalAmount = lines ? lines.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0) : Number(record.totalAmount)
+    return this.prisma.$transaction(async (tx) => {
+      if (lines) {
+        await tx.expenseClaimLine.deleteMany({ where: { expenseClaimId: expenseId } })
+      }
+      const updateData: any = {
+        employeeId: data.employeeId ?? record.employeeId,
+        departmentId: data.departmentId ?? record.departmentId,
+        reimbursementMethod: data.paymentMethod ?? record.reimbursementMethod,
+        description: data.description ?? record.description,
+        businessPurpose: data.businessPurpose ?? record.businessPurpose,
+        notes: data.notes ?? record.notes,
+        internalNotes: data.internalNotes ?? record.internalNotes,
+        fromDate: data.fromDate ? new Date(data.fromDate) : record.fromDate,
+        toDate: data.toDate ? new Date(data.toDate) : record.toDate,
+        advancePayment: data.advancePayment != null ? Number(data.advancePayment) : record.advancePayment,
+        totalAmount,
+        status: data.status ?? record.status,
+        submittedAt: data.status === 'SUBMITTED' ? new Date() : record.submittedAt,
+        approvedAt: data.status === 'APPROVED' ? new Date() : record.approvedAt,
+        reimbursedAt: data.status === 'PAID' ? new Date() : record.reimbursedAt,
+      }
+
+      if (lines) {
+        updateData.lines = {
+          create: lines.map((line: any) => ({
+            date: line.date ? new Date(line.date) : new Date(),
+            category: line.category ?? null,
+            description: line.description ?? '',
+            merchant: line.vendor ?? line.merchant ?? null,
+            amount: Number(line.amount ?? 0),
+            accountId: line.accountId ?? null,
+            receiptUrl: line.receiptUrl ?? null,
+            receiptName: line.receiptName ?? null,
+            subCategoryId: line.subCategoryId ?? null,
+          })),
+        }
+      }
+
+      return tx.expenseClaim.update({ where: { id: expenseId }, data: updateData, include: { lines: true } })
+    })
   }
 }

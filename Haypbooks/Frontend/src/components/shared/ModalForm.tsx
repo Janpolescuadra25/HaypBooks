@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useEffect, useRef } from 'react'
 import { X, Loader2 } from 'lucide-react'
@@ -123,7 +123,7 @@ export default function ModalForm({
       <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
         <div
           data-testid="modal-overlay"
-          className="fixed inset-0 z-[2000] bg-slate-900/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[2000] bg-black/80"
           onClick={closeOnOverlayClick && !isActionDisabled ? onClose : undefined}
           aria-hidden="true"
         />

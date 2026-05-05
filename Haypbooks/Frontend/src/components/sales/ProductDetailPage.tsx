@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -353,7 +353,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Item?</h3>
             <p className="text-sm text-slate-600 mb-5">

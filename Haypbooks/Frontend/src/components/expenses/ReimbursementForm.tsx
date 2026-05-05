@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Loader2, Plus, X } from 'lucide-react'
+import { Save, Loader2, Plus, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
+import HaypSelect from '@/components/shared/HaypSelect'
 
 interface ReimbursementFormProps {
   mode: 'new' | 'edit'
@@ -49,6 +50,8 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   const [employees, setEmployees] = useState<Employee[]>([])
   const [employeeId, setEmployeeId] = useState('')
   const [description, setDescription] = useState('')
+  const [businessPurpose, setBusinessPurpose] = useState('')
+  const [notes, setNotes] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER')
   const [status, setStatus] = useState('DRAFT')
   const [lines, setLines] = useState<ReimbursementLine[]>([defaultLine()])
@@ -94,6 +97,8 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         if (!active) return
         const data = res.data ?? res
         setDescription(data.description ?? '')
+        setBusinessPurpose(data.businessPurpose ?? '')
+        setNotes(data.notes ?? '')
         setStatus(data.status ?? 'DRAFT')
         setEmployeeId(data.employeeId ?? '')
         setPaymentMethod(data.paymentMethod ?? 'BANK_TRANSFER')
@@ -136,6 +141,8 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   const payload = () => ({
     employeeId,
     description,
+    businessPurpose,
+    notes,
     paymentMethod,
     status,
     lines: lines.map((line) => ({
@@ -162,7 +169,6 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
       toast.success('Reimbursement saved as draft')
       router.push('/expenses/employee-expenses/reimbursements')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save reimbursement')
       toast.error('Unable to save reimbursement')
     } finally {
@@ -186,7 +192,6 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
       toast.success('Reimbursement submitted for approval')
       router.push('/expenses/employee-expenses/reimbursements')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to submit reimbursement')
       toast.error('Unable to submit reimbursement')
     } finally {
@@ -197,18 +202,14 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/employee-expenses/reimbursements')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to reimbursements
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Reimbursement' : 'Edit Reimbursement'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Create and submit employee reimbursements.</p>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Reimbursement' : 'Edit Reimbursement'}</h1>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
               <div className="font-semibold">Status</div>
               <div>{status}</div>
             </div>
@@ -218,46 +219,51 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
-            <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-            <button type="button" onClick={() => setActiveTab('activity')} disabled={mode === 'new' || !reimbursementId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-          </div>
+          {mode !== 'new' && (
+            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
+              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+              <button type="button" onClick={() => setActiveTab('activity')} disabled={!reimbursementId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+            </div>
+          )}
         </div>
 
-        <div className={activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+        <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
             <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
                   <div className="space-y-4">
                     <div>
                       <label htmlFor="reimbursement-employee" className="block text-sm font-semibold text-slate-700">Employee</label>
-                      <select id="reimbursement-employee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={isReadOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20">
-                        {employees.map((employee) => (
-                          <option key={employee.id} value={employee.id}>{employee.displayName}</option>
-                        ))}
-                      </select>
+                      <HaypSelect id="reimbursement-employee" value={employeeId} onChange={setEmployeeId} disabled={isReadOnly} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} />
                     </div>
 
                     <div>
                       <label htmlFor="reimbursement-description" className="block text-sm font-semibold text-slate-700">Reimbursement description</label>
-                      <textarea id="reimbursement-description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={isReadOnly} rows={3} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20" />
+                      <textarea id="reimbursement-description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={isReadOnly} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20" />
+                    </div>
+
+                    <div>
+                      <label htmlFor="reimbursement-business-purpose" className="block text-sm font-semibold text-slate-700">Business purpose</label>
+                      <input id="reimbursement-business-purpose" value={businessPurpose} onChange={(e) => setBusinessPurpose(e.target.value)} disabled={isReadOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20" />
+                    </div>
+
+                    <div>
+                      <label htmlFor="reimbursement-notes" className="block text-sm font-semibold text-slate-700">Notes</label>
+                      <textarea id="reimbursement-notes" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isReadOnly} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20" />
                     </div>
 
                     <div>
                       <label htmlFor="reimbursement-payment-method" className="block text-sm font-semibold text-slate-700">Payment method</label>
-                      <select id="reimbursement-payment-method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={isReadOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20">
-                        <option value="BANK_TRANSFER">Bank transfer</option>
-                        <option value="CHECK">Check</option>
-                      </select>
+                      <HaypSelect id="reimbursement-payment-method" value={paymentMethod} onChange={setPaymentMethod} disabled={isReadOnly} options={[{ value: 'BANK_TRANSFER', label: 'Bank transfer' }, { value: 'CHECK', label: 'Check' }]} />
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-slate-200 bg-emerald-50/40 p-5 text-sm text-slate-700">
+                  <div className="rounded-2xl border border-slate-200 bg-emerald-50/40 p-5 text-sm text-slate-700">
                     <div className="font-semibold text-slate-800">Totals</div>
                     <div className="mt-4 grid gap-3">
                       <div className="flex items-center justify-between"><span>Line total</span><span className="font-semibold text-emerald-800">{formatCurrency(totalAmount, currency)}</span></div>
                       <div className="flex items-center justify-between"><span>Advance paid</span><span className="font-semibold text-slate-900">{formatCurrency(0, currency)}</span></div>
-                      <div className="rounded-3xl bg-white p-4 border border-slate-200"><div className="flex items-center justify-between text-slate-500"><span>Reimbursable amount</span><span className="font-semibold text-emerald-900">{formatCurrency(totalAmount, currency)}</span></div></div>
+                      <div className="rounded-2xl bg-white p-4 border border-slate-200"><div className="flex items-center justify-between text-slate-500"><span>Reimbursable amount</span><span className="font-semibold text-emerald-900">{formatCurrency(totalAmount, currency)}</span></div></div>
                     </div>
                   </div>
                 </div>
@@ -273,16 +279,14 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
 
                   <div className="space-y-4">
                     {lines.map((line) => (
-                      <div key={line.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] items-end">
+                      <div key={line.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] items-end">
                         <div>
                           <label htmlFor={`line-date-${line.id}`} className="block text-xs font-semibold text-slate-500">Date</label>
                           <input id={`line-date-${line.id}`} type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={isReadOnly} className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" />
                         </div>
                         <div>
                           <label htmlFor={`line-category-${line.id}`} className="block text-xs font-semibold text-slate-500">Category</label>
-                          <select id={`line-category-${line.id}`} value={line.category} onChange={(e) => updateLine(line.id, 'category', e.target.value)} disabled={isReadOnly} className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                            {CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
-                          </select>
+                          <HaypSelect id={`line-category-${line.id}`} value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={isReadOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
                         </div>
                         <div>
                           <label htmlFor={`line-description-${line.id}`} className="block text-xs font-semibold text-slate-500">Description</label>
@@ -322,9 +326,9 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         </div>
 
         <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
             <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
                 <div className="mt-4">
                   <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this reimbursement yet." />

@@ -45,7 +45,7 @@ export default function CompanySwitcher() {
         title="Switch company"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-        <span className="hidden md:inline">
+        <span className="hidden md:inline truncate max-w-[200px]" title={company?.name}>
           {loading ? 'My company' : company?.name || company?.id || 'My company'}
         </span>
       </button>
@@ -63,7 +63,14 @@ export default function CompanySwitcher() {
             <div className="divide-y divide-slate-100">
               {companies.length === 0 && <div className="px-3 py-2 text-slate-500">No recent companies</div>}
               {companies.map((c) => (
-                <button key={c.id} onClick={() => visitCompany(c)} className="w-full text-left px-3 py-2 hover:bg-slate-50">{c.name}</button>
+                <button
+                  key={c.id}
+                  onClick={() => visitCompany(c)}
+                  className="w-full max-w-[160px] truncate text-left px-3 py-2 hover:bg-slate-50"
+                  title={c.name}
+                >
+                  {c.name}
+                </button>
               ))}
             </div>
           </div>

@@ -6,6 +6,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
+import HaypSelect from '@/components/shared/HaypSelect'
 
 const today = new Date().toISOString().slice(0, 10)
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED']
@@ -155,16 +156,13 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="perDiemEmployee" className="text-[10px] font-bold uppercase text-slate-400">Employee</label>
-                    <select
+                    <HaypSelect
                       id="perDiemEmployee"
                       value={employeeId}
-                      onChange={(e) => setEmployeeId(e.target.value)}
-                      aria-label="Employee"
-                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
-                    >
-                      <option value="">Select employee</option>
-                      {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.displayName}</option>)}
-                    </select>
+                      onChange={setEmployeeId}
+                      options={employees.map((emp) => ({ value: emp.id, label: emp.displayName }))}
+                      placeholder="Select employee"
+                    />
                   </div>
                   <div>
                     <label htmlFor="perDiemDestination" className="text-[10px] font-bold uppercase text-slate-400">Destination</label>
@@ -190,15 +188,12 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                   </div>
                   <div>
                     <label htmlFor="perDiemStatus" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
-                    <select
+                    <HaypSelect
                       id="perDiemStatus"
                       value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      aria-label="Status"
-                      className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
-                    >
-                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                      onChange={setStatus}
+                      options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                    />
                   </div>
                 </div>
               </div>

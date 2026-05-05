@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
@@ -70,7 +70,7 @@ export default function CenteredModal({
             onClick={closeOnOverlayClick ? onClose : undefined}
           >
             <motion.div
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80"
               aria-hidden="true"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

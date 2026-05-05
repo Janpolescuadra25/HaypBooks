@@ -161,7 +161,7 @@ export default function PurchaseRequestsPage() {
     showToast('CSV exported')
   }, [filtered, showToast])
 
-  const columns = useMemo<HaypColumn<PurchaseRequest>>(
+  const columns = useMemo<HaypColumn<PurchaseRequest>[]>(
     () => [
       {
         id: 'prNumber',

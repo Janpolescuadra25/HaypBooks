@@ -188,7 +188,7 @@ export default function InviteAccountantModal({ tenantId, onClose, onSuccess, ro
   }, [mode, tenantId])
 
   const modal = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80" onClick={onClose}>
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-bold mb-4">{roleName === 'Client' ? 'Add Client' : `Invite ${roleLabel}`}</h2>
 

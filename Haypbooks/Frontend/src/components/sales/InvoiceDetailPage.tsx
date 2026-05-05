@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -377,7 +377,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
         <motion.div initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 10 }}
           onClick={e => e.stopPropagation()}
           className={`bg-white rounded-2xl shadow-2xl w-full ${activeTab === 'email' ? 'max-w-4xl' : 'max-w-2xl'} max-h-[92vh] flex flex-col overflow-hidden`}>
@@ -979,7 +979,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       <AnimatePresence>
         {confirmVoid && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
               className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
               <div className="flex items-center gap-3 mb-3">
@@ -1032,7 +1032,7 @@ export default function InvoiceDetailPage({ invoice: initialInvoice, companyId, 
       <AnimatePresence>
         {showPaymentModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
               className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
               <div className="flex items-center gap-3 mb-4">

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import React from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -185,7 +185,7 @@ export default function HubSelectionModal({ user, onClose, asPage = false }: { u
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
       <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="hub-select-title" className="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>

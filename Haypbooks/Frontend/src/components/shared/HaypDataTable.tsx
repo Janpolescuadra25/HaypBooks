@@ -54,6 +54,7 @@ import {
 import { useTablePersistence } from '@/hooks/useTablePersistence'
 import { DraggableHeader } from './DraggableHeader'
 import HaypDateRangePicker from './HaypDateRangePicker'
+import HaypSelect from './HaypSelect'
 import Popover from '@/components/Popover'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -174,7 +175,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
           <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all bg-transparent border border-transparent hover:border-slate-300 cursor-pointer focus:outline-none">
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 shadow-2xl border-slate-300 p-1 bg-white z-[9999] rounded-xl">
+          <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-48 shadow-2xl border-slate-300 p-1 bg-white z-[9999] rounded-xl">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground px-2 py-1.5 tracking-widest">Actions</DropdownMenuLabel>
               <DropdownMenuSeparator className="opacity-50" />
@@ -575,7 +576,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
             </div>
             <ChevronDown className="h-4 w-4 ml-auto text-slate-400 transition-transform" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-[260px] bg-white shadow-2xl border border-slate-200 p-1 z-[100] rounded-[24px]">
+          <DropdownMenuContent align="start" side="bottom" sideOffset={4} className="w-[260px] bg-white shadow-2xl border border-slate-200 p-1 z-[100] rounded-[24px]">
              <div className="px-3 py-2 mb-1 border-b border-slate-50">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Select Range</p>
               </div>
@@ -628,7 +629,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
         </div>
         <ChevronDown size={14} className="text-slate-400" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[180px] !bg-white !opacity-100 shadow-2xl border border-slate-200 p-2 z-[9999] rounded-[24px] !backdrop-blur-none">
+      <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-[180px] !bg-white !opacity-100 shadow-2xl border border-slate-200 p-2 z-[9999] rounded-[24px] !backdrop-blur-none">
         <div className="px-3 py-2 mb-1 border-b border-slate-50">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Filter by Status</p>
         </div>
@@ -707,15 +708,11 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                 <p className="text-[10px] text-slate-400 font-medium ml-6">Match <span className="text-emerald-700 font-black">ALL</span> of the filters below</p>
               </div>
               <div className="flex items-center gap-3">
-                <select
+                <HaypSelect
                   value={selectedColForFilter}
-                  onChange={(e) => setSelectedColForFilter(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
-                >
-                  {columns.map(col => (
-                    <option key={col.id} value={col.id}>{col.header}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedColForFilter}
+                  options={columns.map(col => ({ value: col.id, label: col.header }))}
+                />
                 <button
                   type="button"
                   onClick={addAdvancedFilter}
@@ -739,22 +736,21 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                       <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest px-2 py-1 bg-emerald-50 rounded-md min-w-[100px] text-center">
                         {colLabel}
                       </span>
-                      <select
+                      <HaypSelect
                         value={filter.operator}
-                        onChange={(e) => {
+                        onChange={(v) => {
                           const newFilters = [...activeAdvancedFilters]
-                          newFilters[idx].operator = e.target.value as AdvancedFilter['operator']
+                          newFilters[idx].operator = v as AdvancedFilter['operator']
                           setActiveAdvancedFilters(newFilters)
                         }}
-                        className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
-                        aria-label="Filter operator"
-                      >
-                        <option value="contains">contains</option>
-                        <option value="equals">is exactly</option>
-                        <option value="startsWith">starts with</option>
-                        <option value="greaterThan">is greater than</option>
-                        <option value="lessThan">is less than</option>
-                      </select>
+                        options={[
+                          { value: 'contains', label: 'contains' },
+                          { value: 'equals', label: 'is exactly' },
+                          { value: 'startsWith', label: 'starts with' },
+                          { value: 'greaterThan', label: 'is greater than' },
+                          { value: 'lessThan', label: 'is less than' },
+                        ]}
+                      />
 
                       <div className="flex gap-2 items-center">
                         <input
@@ -953,7 +949,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
               >
                 <Settings2 size={16} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 !bg-white !opacity-100 shadow-2xl border border-slate-200 p-0 overflow-hidden rounded-[24px] z-[9999] animate-in fade-in zoom-in-95 duration-200 !backdrop-blur-none">
+              <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-64 !bg-white !opacity-100 shadow-2xl border border-slate-200 p-0 overflow-hidden rounded-[24px] z-[9999] animate-in fade-in zoom-in-95 duration-200 !backdrop-blur-none">
                 <div className="flex items-center justify-between px-4 py-4 bg-slate-50 border-b border-slate-200">
                   <div>
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Column Settings</h3>
@@ -1002,9 +998,9 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="z-10 relative mb-4"
+              className="sticky top-0 z-10 mb-2"
             >
-              <div className="bg-slate-900 rounded-2xl p-4 flex items-center justify-between shadow-2xl border border-white/10 emerald-glow">
+              <div className="bg-slate-900 rounded-2xl px-4 py-2 flex items-center justify-between shadow-2xl border border-white/10 emerald-glow">
                 <div className="flex items-center gap-4">
                   <span className="text-white text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-xl uppercase tracking-wider">
                     {selectedCount} Selected
@@ -1020,7 +1016,7 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
                           key={action.label}
                           type="button"
                           className={cn(
-                            'text-xs font-bold rounded-xl px-3 py-2 transition-all flex items-center gap-2 hover:scale-105 active:scale-95',
+                            'text-xs font-bold rounded-xl px-2 py-1 transition-all flex items-center gap-2 hover:scale-105 active:scale-95',
                             action.variant === 'danger'
                               ? 'text-rose-400 hover:text-white hover:bg-rose-500/20'
                               : 'text-slate-300 hover:text-white hover:bg-white/10',
@@ -1309,17 +1305,11 @@ export function HaypDataTable<T extends Record<string, any>>(props: HaypDataTabl
             <div className="flex items-center gap-6 order-2 sm:order-1">
                <div className="flex items-center gap-3">
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Rows</p>
-                <select
-                  value={table.getState().pagination.pageSize}
-                  onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/50 transition-all shadow-sm cursor-pointer"
-                >
-                  {[10, 20, 25, 50, 100].map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      {pageSize}
-                    </option>
-                  ))}
-                </select>
+                <HaypSelect
+                  value={String(table.getState().pagination.pageSize)}
+                  onChange={(v) => table.setPageSize(Number(v))}
+                  options={[10, 20, 25, 50, 100].map((ps) => ({ value: String(ps), label: String(ps) }))}
+                />
               </div>
               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest hidden sm:block">
                 Showing <span className="text-slate-900">{table.getRowModel().rows.length}</span> of <span className="text-slate-900">{table.getFilteredRowModel().rows.length}</span> results

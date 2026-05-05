@@ -1,6 +1,8 @@
 import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import ProductsServicesPage from '../ProductsServicesPage'
+import ProductsServicesPage from '../../sales/ProductsServicesPage'
+
+const ProductsServicesPageAny = ProductsServicesPage as any
 
 describe('ProductsServicesPage', () => {
   beforeEach(() => {
@@ -9,7 +11,7 @@ describe('ProductsServicesPage', () => {
 
   it('renders defaults from spec and exposes getData via ref', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(React.createElement(ProductsServicesPage as any, { ref }))
 
     // defaults
     expect(screen.getByLabelText(/Sell Services/i)).toBeInTheDocument()
@@ -21,7 +23,7 @@ describe('ProductsServicesPage', () => {
 
   it('toggles payment pills and persists to localStorage', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(React.createElement(ProductsServicesPage as any, { ref }))
 
     const bankBtn = screen.getByRole('button', { name: /Bank Transfer/i })
     expect(bankBtn).toBeInTheDocument()
@@ -61,7 +63,7 @@ describe('ProductsServicesPage', () => {
 
   it('disables Track Inventory when Sell Products is off and preserves when turned on', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(React.createElement(ProductsServicesPage as any, { ref }))
 
     // initially sellProducts is false and trackInventory should be disabled
     const sellProductsCheckbox = screen.getByLabelText(/Sell Products/i) as HTMLInputElement
@@ -98,7 +100,7 @@ describe('ProductsServicesPage', () => {
 
   it('switch inputs are accessible and update aria-checked', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(React.createElement(ProductsServicesPage as any, { ref }))
 
     const sellProductsSwitch = screen.getByRole('switch', { name: /Sell Products/i }) as HTMLInputElement
     const sellServicesSwitch = screen.getByRole('switch', { name: /Sell Services/i }) as HTMLInputElement
@@ -122,7 +124,7 @@ describe('ProductsServicesPage', () => {
 
   it('payment pill buttons are keyboard accessible and toggle on Enter/Space', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(<ProductsServicesPageAny ref={ref} />)
 
     const bankBtn = screen.getByRole('button', { name: /Bank Transfer/i })
     bankBtn.focus()
@@ -147,7 +149,7 @@ describe('ProductsServicesPage', () => {
 
   it('payroll segmented control toggles and shows inputs', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(<ProductsServicesPageAny ref={ref} />)
 
     const yesBtn = screen.getByRole('button', { name: 'YES' })
     const noBtn = screen.getByRole('button', { name: 'NO' })
@@ -168,7 +170,7 @@ describe('ProductsServicesPage', () => {
 
   it('payroll section hides/shows controls and persists total employees', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(<ProductsServicesPageAny ref={ref} />)
 
     // Payroll disabled by default
     expect(screen.getByText(/Total Employees: 0/i)).toBeInTheDocument()
@@ -198,7 +200,7 @@ describe('ProductsServicesPage', () => {
 
   it('select defaults are set correctly', () => {
     const ref: any = React.createRef()
-    render(<ProductsServicesPage ref={ref} />)
+    render(<ProductsServicesPageAny ref={ref} />)
     expect(ref.current.getData().defaultPaymentTerms).toBe('Due on Receipt')
     expect(ref.current.getData().invoiceTemplate).toBe('Modern')
   })

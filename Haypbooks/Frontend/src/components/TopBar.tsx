@@ -128,7 +128,13 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
                 </div>
                 <div>
                   <h1 className={`${titleClass} text-slate-800`}>HAYPBOOKS</h1>
-                  <p className={`${subtitleClass} text-slate-500 flex items-center gap-2`}>{user?.companyName ? <span className="text-slate-700 font-semibold text-[10px]">{user.companyName}</span> : null}</p>
+                  <p className={`${subtitleClass} text-slate-500 flex items-center gap-2`}>
+                    {user?.companyName ? (
+                      <span className="truncate max-w-[200px] text-slate-700 font-semibold text-[10px]" title={user.companyName}>
+                        {user.companyName}
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
               </div>
 
@@ -223,7 +229,9 @@ export default function TopBar({ searchValue = '', onSearchChange, companyCount 
               {/* Center workspace name (render only when available) */}
               {user?.companyName ? (
                 <div className="w-full text-center mt-1 mb-2">
-                  <div className="text-sm font-semibold text-slate-700">{user.companyName}</div>
+                  <div className="truncate max-w-[200px] mx-auto text-sm font-semibold text-slate-700" title={user.companyName}>
+                    {user.companyName}
+                  </div>
                 </div>
               ) : null}
 

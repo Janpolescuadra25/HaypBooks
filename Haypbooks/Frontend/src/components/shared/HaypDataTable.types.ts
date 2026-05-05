@@ -80,7 +80,7 @@ export interface HaypDataTableProps<T = any> {
   onGlobalFilterChange?: (value: string) => void
   filters?: HaypFilterOption[]
   activeFilter?: string
-  onFilterChange?: (value: string) => void
+  onFilterChange?: ((value: string) => void) | React.Dispatch<React.SetStateAction<any>>
   filterLabel?: string
   dateRangeLabel?: string
   dateRangeMenuItems?: Array<{ label: string; onClick: () => void; active?: boolean }>

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import {
@@ -693,7 +693,7 @@ export default function CustomerPortalPage() {
 
       {/* ── Send Invites Modal ────────────────────────────────────────────────── */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col max-h-[80vh]">
             <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
               <h2 className="text-base font-bold text-slate-900">Send Portal Invitations</h2>

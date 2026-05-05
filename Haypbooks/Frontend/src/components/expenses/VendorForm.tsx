@@ -5,6 +5,7 @@ import { useToast } from '@/components/ToastProvider'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
+import HaypSelect from '@/components/shared/HaypSelect'
 
 export type VendorFormHandle = {
   save: () => Promise<void>
@@ -148,7 +149,6 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
         if (onSaved) onSaved()
       }
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save vendor')
       toast.error('Unable to save vendor')
     } finally {
@@ -161,168 +161,192 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
   return (
     <div className="space-y-6 text-slate-900">
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       )}
 
-      <section className="pb-4 border-b border-emerald-700 mb-4">
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Company Information</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Company Name *</label>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Company Information</h2>
+            <p className="text-sm text-slate-500">Vendor core details and default currency settings.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label htmlFor="vendorCompanyName" className="block text-sm font-semibold text-slate-900">Company Name *</label>
             <input
+              id="vendorCompanyName"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Vendor name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Type</label>
-            <select
+            <label htmlFor="vendorType" className="block text-sm font-semibold text-slate-900">Vendor Type</label>
+            <HaypSelect
+              id="vendorType"
               value={vendorType}
-              onChange={(e) => setVendorType(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
-            >
-              {VENDOR_TYPES.map((type) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+              onChange={setVendorType}
+              options={VENDOR_TYPES.map((t) => ({ value: t, label: t }))}
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Tax ID / EIN</label>
+            <label htmlFor="vendorTaxId" className="block text-sm font-semibold text-slate-900">Tax ID / EIN</label>
             <input
+              id="vendorTaxId"
               value={taxId}
               onChange={(e) => setTaxId(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Tax ID"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Website</label>
+            <label htmlFor="vendorWebsite" className="block text-sm font-semibold text-slate-900">Website</label>
             <input
+              id="vendorWebsite"
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="https://"
             />
           </div>
 
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Currency</label>
-            <select
+          <div className="md:col-span-2">
+            <label htmlFor="vendorCurrency" className="block text-sm font-semibold text-slate-900">Currency</label>
+            <HaypSelect
+              id="vendorCurrency"
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
-            >
-              {CURRENCIES.map((cur) => (
-                <option key={cur} value={cur}>{cur}</option>
-              ))}
-            </select>
+              onChange={setCurrency}
+              options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+            />
           </div>
         </div>
       </section>
 
-      <section className="pb-4 border-b border-emerald-700 mb-4">
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Contact Information</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Primary Contact</label>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Contact Information</h2>
+            <p className="text-sm text-slate-500">Primary vendor contact details used for communication.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label htmlFor="vendorContactName" className="block text-sm font-semibold text-slate-900">Primary Contact</label>
             <input
+              id="vendorContactName"
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Contact name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+            <label htmlFor="vendorPhone" className="block text-sm font-semibold text-slate-900">Phone</label>
             <input
+              id="vendorPhone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="(123) 456-7890"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <label htmlFor="vendorEmail" className="block text-sm font-semibold text-slate-900">Email</label>
             <input
+              id="vendorEmail"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="email@example.com"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Mobile</label>
+          <div className="md:col-span-2">
+            <label htmlFor="vendorMobile" className="block text-sm font-semibold text-slate-900">Mobile</label>
             <input
+              id="vendorMobile"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="(123) 456-7890"
             />
           </div>
         </div>
       </section>
 
-      <section className="pb-4 border-b border-emerald-700 mb-4">
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Address</h3>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Address</h2>
+            <p className="text-sm text-slate-500">Billing address for vendor invoices and payments.</p>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Street Address</label>
+            <label htmlFor="vendorAddressLine1" className="block text-sm font-semibold text-slate-900">Street Address</label>
             <input
+              id="vendorAddressLine1"
               value={billingAddress.line1}
               onChange={(e) => setBillingAddress((prev) => ({ ...prev, line1: e.target.value }))}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Street address"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+              <label htmlFor="vendorAddressCity" className="block text-sm font-semibold text-slate-900">City</label>
               <input
+                id="vendorAddressCity"
                 value={billingAddress.city}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, city: e.target.value }))}
-                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="City"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
+              <label htmlFor="vendorAddressState" className="block text-sm font-semibold text-slate-900">State</label>
               <input
+                id="vendorAddressState"
                 value={billingAddress.state}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, state: e.target.value }))}
-                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="State"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ZIP Code</label>
+              <label htmlFor="vendorAddressZip" className="block text-sm font-semibold text-slate-900">ZIP Code</label>
               <input
+                id="vendorAddressZip"
                 value={billingAddress.zip}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, zip: e.target.value }))}
-                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="ZIP"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Country</label>
+              <label htmlFor="vendorAddressCountry" className="block text-sm font-semibold text-slate-900">Country</label>
               <input
+                id="vendorAddressCountry"
                 value={billingAddress.country}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, country: e.target.value }))}
-                className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="Country"
               />
             </div>
@@ -330,69 +354,82 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
         </div>
       </section>
 
-      <section className="pb-4 border-b border-emerald-700 mb-4">
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Financial Details</h3>
-        <div className="grid grid-cols-2 gap-3">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Payment Terms</label>
-            <select
+            <h2 className="text-lg font-semibold text-slate-900">Financial Details</h2>
+            <p className="text-sm text-slate-500">Default payment terms and vendor credit settings.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="vendorPaymentTerms" className="block text-sm font-semibold text-slate-900">Payment Terms</label>
+            <HaypSelect
+              id="vendorPaymentTerms"
               value={paymentTerms}
-              onChange={(e) => setPaymentTerms(e.target.value)}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
-            >
-              {PAYMENT_TERMS.map((term) => (
-                <option key={term} value={term}>{term}</option>
-              ))}
-            </select>
+              onChange={setPaymentTerms}
+              options={PAYMENT_TERMS.map((t) => ({ value: t, label: t }))}
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Credit Limit</label>
+            <label htmlFor="vendorCreditLimit" className="block text-sm font-semibold text-slate-900">Credit Limit</label>
             <input
+              id="vendorCreditLimit"
               type="number"
               min={0}
               value={creditLimit}
               onChange={(e) => setCreditLimit(Number(e.target.value))}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="0.00"
             />
           </div>
 
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Opening Balance</label>
+          <div className="md:col-span-2">
+            <label htmlFor="vendorOpeningBalance" className="block text-sm font-semibold text-slate-900">Opening Balance</label>
             <input
+              id="vendorOpeningBalance"
               type="number"
               min={0}
               value={openingBalance}
               onChange={(e) => setOpeningBalance(Number(e.target.value))}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="0.00"
             />
           </div>
         </div>
       </section>
 
-      <section>
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Notes</h3>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
+            <p className="text-sm text-slate-500">Use internal or public notes to share vendor context.</p>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Internal Notes</label>
+            <label htmlFor="vendorInternalNotes" className="block text-sm font-semibold text-slate-900">Internal Notes</label>
             <textarea
+              id="vendorInternalNotes"
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
               rows={3}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Notes for internal users"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Public Notes</label>
+            <label htmlFor="vendorPublicNotes" className="block text-sm font-semibold text-slate-900">Public Notes</label>
             <textarea
+              id="vendorPublicNotes"
               value={publicNotes}
               onChange={(e) => setPublicNotes(e.target.value)}
               rows={3}
-              className="w-full border border-emerald-700 rounded-none px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Notes visible to vendor"
             />
           </div>

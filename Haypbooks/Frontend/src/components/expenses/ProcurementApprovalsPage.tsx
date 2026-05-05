@@ -160,7 +160,7 @@ export default function ProcurementApprovalsPage() {
     showToast('CSV exported')
   }, [filtered, showToast])
 
-  const columns = useMemo<HaypColumn<ProcurementApproval>>(
+  const columns = useMemo<HaypColumn<ProcurementApproval>[]>(
     () => [
       {
         id: 'type',

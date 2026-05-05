@@ -71,7 +71,6 @@ export default function VendorDetailPage({ vendorId: vendorIdProp }: { vendorId?
         const data = res.data ?? res
         setVendor(data as VendorDetail)
       } catch (err) {
-        console.error(err)
         if (!active) return
         setError('Unable to load vendor details')
       } finally {
@@ -163,7 +162,6 @@ export default function VendorDetailPage({ vendorId: vendorIdProp }: { vendorId?
           toast.success('Vendor deleted')
           router.push('/expenses/procurement/vendors')
         } catch (err) {
-          console.error(err)
           toast.error('Failed to delete vendor')
         } finally {
           setDeleting(false)

@@ -104,7 +104,6 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
         const data = res.data ?? res
         setBill(data as BillDetail)
       } catch (err) {
-        console.error(err)
         if (!active) return
         setError('Unable to load bill details')
         setBill(null)
@@ -132,7 +131,6 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
         const list = Array.isArray(data) ? data : data.data ?? []
         setPayments(list as BillPayment[])
       } catch (err) {
-        console.error(err)
       }
     }
 
@@ -234,7 +232,6 @@ export default function BillDetailPage({ billId: billIdProp }: { billId?: string
           toast.success('Bill deleted')
           router.push('/expenses/bills-payments/bills')
         } catch (err) {
-          console.error(err)
           toast.error('Failed to delete bill')
         } finally {
           setDeleting(false)

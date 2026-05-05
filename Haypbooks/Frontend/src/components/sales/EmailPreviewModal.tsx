@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
@@ -136,7 +136,7 @@ export default function EmailPreviewModal({ invoice, companyId, companyName = 'Y
 
   return (
     <>
-    <div className="fixed inset-0 z-[60] flex items-stretch bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-stretch bg-black/80">
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}

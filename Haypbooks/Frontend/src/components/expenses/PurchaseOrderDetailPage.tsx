@@ -86,7 +86,6 @@ export default function PurchaseOrderDetailPage({ purchaseOrderId: purchaseOrder
         const data = res.data ?? res
         setPo(data as PurchaseOrderDetail)
       } catch (err) {
-        console.error(err)
         if (!active) return
         setError('Unable to load purchase order details')
       } finally {
@@ -192,7 +191,6 @@ export default function PurchaseOrderDetailPage({ purchaseOrderId: purchaseOrder
             router.push('/expenses/bills-payments/bills')
           }
         } catch (err) {
-          console.error(err)
           toast.error('Failed to convert purchase order')
         } finally {
           setConverting(false)
@@ -213,7 +211,6 @@ export default function PurchaseOrderDetailPage({ purchaseOrderId: purchaseOrder
           toast.success('Purchase order deleted')
           router.push('/expenses/procurement/orders')
         } catch (err) {
-          console.error(err)
           toast.error('Failed to delete purchase order')
         } finally {
           setDeleting(false)

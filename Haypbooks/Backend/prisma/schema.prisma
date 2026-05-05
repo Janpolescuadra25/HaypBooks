@@ -8042,6 +8042,12 @@ model ExpenseClaim {
   reimbursementMethod String? // SEPARATE_CHECK, ADD_TO_PAYCHECK
   status              String    @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, REIMBURSED
   description         String?
+  businessPurpose     String?
+  notes               String?
+  internalNotes       String?
+  fromDate            DateTime?
+  toDate              DateTime?
+  advancePayment      Decimal?  @db.Decimal(19, 4)
   totalAmount         Decimal   @db.Decimal(19, 4)
   submittedAt         DateTime?
   approvedAt          DateTime?
@@ -8049,22 +8055,60 @@ model ExpenseClaim {
 
   workspace Workspace          @relation(fields: [workspaceId], references: [id])
   company   Company            @relation(fields: [companyId], references: [id])
-  employee  Employee           @relation(fields: [employeeId], references: [id])
-  paycheck  Paycheck?          @relation(fields: [paycheckId], references: [id])
-  lines     ExpenseClaimLine[]
+  employee    Employee           @relation(fields: [employeeId], references: [id])
+  departmentId String?
+  department   Department?       @relation(fields: [departmentId], references: [id])
+  paycheck     Paycheck?          @relation(fields: [paycheckId], references: [id])
+  lines        ExpenseClaimLine[]
+
+  @@index([workspaceId, employeeId])
+  @@index([workspaceId, departmentId])
+  @@index([companyId, status])
+  @@index([companyId, departmentId])
+}
+
+model PerDiemClaim {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  companyId     String
+  employeeId    String
+  perDiemNumber String?
+  destination   String
+  purpose       String?
+  startDate     DateTime
+  endDate       DateTime
+  days          Int
+  dailyRate     Decimal   @db.Decimal(19, 4)
+  totalAmount   Decimal   @db.Decimal(19, 4)
+  currency      String    @default("PHP")
+  status        String    @default("DRAFT")
+  notes         String?
+  submittedAt   DateTime?
+  approvedAt    DateTime?
+  reimbursedAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  company   Company   @relation(fields: [companyId], references: [id])
+  employee  Employee  @relation(fields: [employeeId], references: [id])
 
   @@index([workspaceId, employeeId])
   @@index([companyId, status])
+  @@index([companyId, employeeId])
 }
 
 model ExpenseClaimLine {
   id             String   @id @default(uuid())
   expenseClaimId String
   date           DateTime
+  category       String?
   description    String
+  merchant       String?
   amount         Decimal  @db.Decimal(19, 4)
   accountId      String? // Expense account
-  merchant       String?
+  receiptUrl     String?
+  receiptName    String?
   subCategoryId  String? // Optional sub-category for detailed expense categorization
 
   expenseClaim ExpenseClaim              @relation(fields: [expenseClaimId], references: [id], onDelete: Cascade)
@@ -8996,7 +9040,12 @@ model Bill {
   companyId             String
   workspaceId           String
   vendorId              String
+  purchaseOrderId       String?
   billNumber            String?
+  billType              String?
+  memo                  String?
+  terms                 String?
+  internalNotes         String?
   status                BillStatus       @default(DRAFT)
   approvedAt            DateTime?
   paymentStatus         PaymentStatus    @default(DRAFT)
@@ -9020,6 +9069,7 @@ model Bill {
 
   workspace              Workspace                @relation(fields: [workspaceId], references: [id])
   vendor                 Vendor                   @relation(fields: [vendorId], references: [contactId])
+  purchaseOrder          PurchaseOrder?           @relation(fields: [purchaseOrderId], references: [id])
   lines                  BillLine[]
   payments               BillPayment[]
   journalEntryId         String?
@@ -9171,20 +9221,27 @@ model PurchaseOrderLine {
 }
 
 model VendorCredit {
-  id           String   @id @default(uuid())
-  companyId    String
-  workspaceId  String
-  vendorId     String
-  creditNumber String?
-  total        Decimal  @db.Decimal(19, 4)
-  balance      Decimal  @db.Decimal(19, 4)
-  issuedAt     DateTime @default(now())
-  status       String   @default("DRAFT")
-  templateId   String?
+  id                 String   @id @default(uuid())
+  companyId          String
+  workspaceId        String
+  vendorId           String
+  creditNumber       String?
+  creditType         String?
+  referenceBillNumber String?
+  referenceBillId    String?
+  memo               String?
+  notes              String?
+  attachments        Json?
+  total              Decimal  @db.Decimal(19, 4)
+  balance            Decimal  @db.Decimal(19, 4)
+  issuedAt           DateTime @default(now())
+  status             String   @default("DRAFT")
+  templateId         String?
 
   workspace     Workspace          @relation(fields: [workspaceId], references: [id])
   company       Company            @relation(fields: [companyId], references: [id])
   vendor        Vendor             @relation(fields: [vendorId], references: [contactId])
+  referenceBill Bill?              @relation(fields: [referenceBillId], references: [id])
   template      DocumentTemplate?  @relation(fields: [templateId], references: [id])
   lines         VendorCreditLine[]
   postingStatus PostingStatus      @default(DRAFT)
@@ -9192,6 +9249,7 @@ model VendorCredit {
   @@unique([workspaceId, creditNumber])
   @@index([workspaceId, status])
   @@index([workspaceId, vendorId])
+  @@index([workspaceId, referenceBillId])
   @@index([companyId])
   @@index([companyId, templateId])
 }
@@ -9285,6 +9343,8 @@ model BillPayment {
   paymentDate           DateTime  @default(now())
   method                String
   referenceNumber       String?
+  memo                  String?
+  attachments           Json?
   bankAccountId         String?
   vendorPaymentMethodId String?
   currency              String?
@@ -10893,23 +10953,30 @@ model Receipt {
 }
 
 model MileageLog {
-  id           String   @id @default(uuid())
-  companyId    String
-  employeeId   String?
-  userId       String
-  logDate      DateTime
-  fromLocation String?
-  toLocation   String?
-  miles        Decimal
-  ratePerMile  Decimal
-  amount       Decimal
-  purpose      String?
-  isBillable   Boolean  @default(false)
-  customerId   String?
-  projectId    String?
-  status       String   @default("draft")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(uuid())
+  companyId      String
+  employeeId     String?
+  userId         String
+  logNumber      String?
+  logDate        DateTime
+  tripDate       DateTime?
+  fromLocation   String?
+  toLocation     String?
+  miles          Decimal
+  ratePerMile    Decimal
+  distanceUnit   String?
+  vehicle        String?
+  personalVehicle Boolean  @default(false)
+  accountId      String?
+  amount         Decimal
+  purpose        String?
+  notes          String?
+  isBillable     Boolean  @default(false)
+  customerId     String?
+  projectId      String?
+  status         String   @default("draft")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -11684,10 +11751,18 @@ model PurchaseRequest {
   id              String    @id @default(uuid())
   workspaceId     String
   companyId       String
+  requestNumber   String?
   requesterId     String // Employee / User submitting the request
+  vendorId        String?
   status          String    @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | REJECTED | ORDERED
   requestDate     DateTime  @default(now())
   requiredDate    DateTime?
+  priority        String?
+  departmentId    String?
+  locationId      String?
+  reason          String?
+  notes           String?
+  internalNotes   String?
   totalAmount     Decimal   @db.Decimal(19, 4)
   purchaseOrderId String?
 
@@ -11703,9 +11778,12 @@ model PurchaseRequestLine {
   id                 String   @id @default(uuid())
   purchaseRequestId  String
   itemId             String?
+  accountId          String?
   description        String
   quantity           Decimal  @db.Decimal(16, 6)
   estimatedUnitPrice Decimal? @db.Decimal(19, 4)
+  taxRate            Decimal? @db.Decimal(10, 6)
+  amount             Decimal? @db.Decimal(19, 4)
 
   purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
   item            Item?           @relation(fields: [itemId], references: [id])

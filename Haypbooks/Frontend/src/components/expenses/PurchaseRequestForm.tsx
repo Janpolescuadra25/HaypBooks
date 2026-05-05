@@ -2,16 +2,21 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Save, Send, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Save, Send, Trash2, Loader2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
+import apiClient from '@/lib/api-client'
 import { formatCurrency } from '@/lib/format'
 import LineItemTable from './LineItemTable'
 import ActivityLog from '@/components/ui/ActivityLog'
+import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
 import { useActivityLog } from '@/hooks/useActivityLog'
+import CustomerPickerField from '@/components/sales/CustomerPickerField'
+import HaypSelect from '@/components/shared/HaypSelect'
+import { NewVendorModal } from '@/components/shared/NewVendorModal'
 
 const today = new Date().toISOString().slice(0, 10)
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent']
@@ -107,6 +112,9 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
+  const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([])
+  const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [requestNumber, setRequestNumber] = useState('')
   const [requestDate, setRequestDate] = useState(today)
   const [requiredDate, setRequiredDate] = useState(today)
@@ -114,14 +122,16 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
   const [status, setStatus] = useState('DRAFT')
   const [requesterId, setRequesterId] = useState('')
   const [vendorId, setVendorId] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
+  const [locationId, setLocationId] = useState('')
   const [reason, setReason] = useState('')
   const [notes, setNotes] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-
-  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'notes' | 'attachments' | 'activity'>('details')
+  const [showVendorModal, setShowVendorModal] = useState(false)
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
@@ -158,8 +168,29 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         if (!requesterId && list.length > 0) setRequesterId(list[0].id)
       })
       .catch(() => {})
+
+    apiClient.get(`/companies/${companyId}/organization/departments`)
+      .then((res) => {
+        if (!active) return
+        const payload = res.data ?? res
+        const list = Array.isArray(payload) ? payload : payload.data ?? []
+        setDepartments(list.map((dept: any) => ({ id: dept.id, name: dept.name })))
+        if (!departmentId && list.length > 0) setDepartmentId(list[0].id)
+      })
+      .catch(() => {})
+
+    apiClient.get(`/companies/${companyId}/organization/locations`)
+      .then((res) => {
+        if (!active) return
+        const payload = res.data ?? res
+        const list = Array.isArray(payload) ? payload : payload.data ?? []
+        setLocations(list.map((loc: any) => ({ id: loc.id, name: loc.name })))
+        if (!locationId && list.length > 0) setLocationId(list[0].id)
+      })
+      .catch(() => {})
+
     return () => { active = false }
-  }, [companyId, toast, vendorId, requesterId])
+  }, [companyId, toast, vendorId, requesterId, departmentId, locationId])
 
   useEffect(() => {
     if (mode !== 'edit' || !prId || !companyId) return
@@ -178,6 +209,16 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         setReason(data.reason ?? '')
         setNotes(data.notes ?? '')
         setInternalNotes(data.internalNotes ?? '')
+        setDepartmentId(data.departmentId ?? '')
+        setLocationId(data.locationId ?? '')
+        setVendorId(data.vendorId ?? '')
+        setAttachments(Array.isArray(data.attachments) ? data.attachments.map((attachment: any, index: number) => ({
+          id: attachment.id ?? `att-${index}`,
+          fileName: attachment.fileName ?? attachment.name ?? 'Attachment',
+          contentType: attachment.contentType ?? null,
+          size: attachment.size ?? null,
+          url: attachment.url ?? attachment.fileUrl ?? undefined,
+        })) : [])
         if (Array.isArray(data.lines) && data.lines.length > 0) {
           setLineItems(data.lines.map((line: ApiPRLine) => ({
             id: genId(),
@@ -197,6 +238,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
   const subtotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0), [lineItems])
   const taxTotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0) * (Number(line.taxRate || 0) / 100), 0), [lineItems])
   const total = useMemo(() => Math.max(0, subtotal + taxTotal), [subtotal, taxTotal])
+  const vendorOptions = useMemo(() => vendors.map((v) => ({ id: v.id, name: v.displayName })), [vendors])
 
   const updateLine = useCallback((id: string, field: keyof LineItem, value: string | number) => {
     setLineItems((items) => items.map((item) => {
@@ -242,9 +284,12 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         status: action === 'submit' ? 'SUBMITTED' : status,
         requesterId,
         vendorId,
+        departmentId: departmentId || null,
+        locationId: locationId || null,
         reason,
         notes,
         internalNotes,
+        attachments,
         lines: lineItems.map((line) => ({
           description: line.description,
           accountId: line.accountId || null,
@@ -265,7 +310,6 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
 
       router.push('/expenses/procurement/purchase-requests')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save purchase request')
       toast.error('Unable to save purchase request')
     } finally {
@@ -278,18 +322,14 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/procurement/purchase-requests')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to purchase requests
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h1>
-                <p className="mt-1 text-sm text-slate-500">Create or edit a purchase request with line items and approval details.</p>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{title}</h1>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
               <div className="font-semibold">PR Number</div>
               <div>{requestNumber || 'Auto-generated'}</div>
             </div>
@@ -299,73 +339,100 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          {mode !== 'new' && (
-            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
-              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-              <button type="button" onClick={() => setActiveTab('activity')} disabled={!prId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
-            </div>
-          )}
+          {mode !== 'new' ? (
+            <div className="inline-flex overflow-hidden rounded-xl bg-white p-1 border border-slate-100">
+              {[
+                { id: 'details', label: 'Details' },
+                { id: 'notes', label: 'Notes' },
+                { id: 'attachments', label: 'Attachments' },
+                { id: 'activity', label: 'Activity', disabled: false },
+              ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => !tab.disabled && setActiveTab(tab.id as typeof activeTab)}
+                disabled={tab.disabled}
+                className={`px-4 py-2 text-sm font-semibold ${activeTab === tab.id ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'} ${tab.id === 'details' ? 'rounded-l-lg' : tab.id === 'activity' ? 'rounded-r-lg' : ''}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          ) : null}
         </div>
-        <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
+        <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
             <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_280px]">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="requestDate" className="block text-sm font-semibold text-slate-900">Request Date</label>
-                  <input id="requestDate" type="date" value={requestDate} onChange={(e) => setRequestDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label htmlFor="requiredDate" className="block text-sm font-semibold text-slate-900">Required By Date</label>
-                  <input id="requiredDate" type="date" value={requiredDate} onChange={(e) => setRequiredDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label htmlFor="priority" className="block text-sm font-semibold text-slate-900">Priority</label>
-                  <select id="priority" value={priority} onChange={(e) => setPriority(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {PRIORITIES.map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="status" className="block text-sm font-semibold text-slate-900">Status</label>
-                  <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="requesterId" className="block text-sm font-semibold text-slate-900">Requester</label>
-                  <select id="requesterId" value={requesterId} onChange={(e) => setRequesterId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    <option value="">Select requester</option>
-                    {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.displayName}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="vendorId" className="block text-sm font-semibold text-slate-900">Vendor</label>
-                  <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                    <option value="">Select vendor</option>
-                    {vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
-                    <p className="mt-1 text-sm text-slate-500">Add one or more purchase request line items.</p>
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="requestDate" className="block text-sm font-semibold text-slate-900">Request Date</label>
+                      <input id="requestDate" type="date" value={requestDate} onChange={(e) => setRequestDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label htmlFor="requiredDate" className="block text-sm font-semibold text-slate-900">Delivery Date</label>
+                      <input id="requiredDate" type="date" value={requiredDate} onChange={(e) => setRequiredDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label htmlFor="priority" className="block text-sm font-semibold text-slate-900">Priority</label>
+                      <HaypSelect id="priority" value={priority} onChange={setPriority} options={PRIORITIES.map((o) => ({ value: o, label: o }))} />
+                    </div>
+                    <div>
+                      <label htmlFor="status" className="block text-sm font-semibold text-slate-900">Status</label>
+                      <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} />
+                    </div>
                   </div>
-                  <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
-                    <Plus size={16} /> Add row
-                  </button>
+                  <div className="grid gap-4">
+                    <div>
+                      <label htmlFor="requesterId" className="block text-sm font-semibold text-slate-900">Requester</label>
+                      <HaypSelect id="requesterId" value={requesterId} onChange={setRequesterId} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} placeholder="Select requester" />
+                    </div>
+                    <div>
+                      <CustomerPickerField
+                        label="Vendor"
+                        value={vendorId}
+                        customers={vendorOptions}
+                        placeholder="Search vendors…"
+                        createLabel="+ New Vendor"
+                        onChange={setVendorId}
+                        onCreateNew={() => setShowVendorModal(true)}
+                      />
+                      {companyId && (
+                        <NewVendorModal
+                          open={showVendorModal}
+                          companyId={companyId}
+                          onClose={() => setShowVendorModal(false)}
+                          onCreated={(v) => {
+                            setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
+                            setVendorId(v.id)
+                          }}
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label htmlFor="departmentId" className="block text-sm font-semibold text-slate-900">Department</label>
+                      <HaypSelect id="departmentId" value={departmentId} onChange={setDepartmentId} options={departments.map((d) => ({ value: d.id, label: d.name }))} placeholder="Select department" />
+                    </div>
+                    <div>
+                      <label htmlFor="locationId" className="block text-sm font-semibold text-slate-900">Location</label>
+                      <HaypSelect id="locationId" value={locationId} onChange={setLocationId} options={locations.map((l) => ({ value: l.id, label: l.name }))} placeholder="Select location" />
+                    </div>
+                  </div>
                 </div>
+              </section>
 
-                <div className="mt-6">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
+                    </div>
+                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
+                      <Plus size={16} /> Add row
+                    </button>
+                  </div>
+
                   <LineItemTable
                     columns={lineItemColumns.map((column) => column.key === 'accountId'
                       ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} — ${account.name}` : account.name ?? '' })) }
@@ -376,42 +443,59 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                     currency={currency ?? 'USD'}
                     calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
                   />
-                </div>
-              </div>
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-                <div className="space-y-3">
-                  <div className="text-sm font-semibold text-slate-900">Request summary</div>
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
-                  <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
-                  <div className="border-t border-slate-200 pt-4 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total</span><span>{formatCurrency(total, currency)}</span></div>
-                </div>
-              </div>
-            </div>
-          </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="reason" className="block text-sm font-semibold text-slate-900">Justification / Reason</label>
-                <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label htmlFor="notes" className="block text-sm font-semibold text-slate-900">Notes</label>
-                <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label htmlFor="internalNotes" className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-                <textarea id="internalNotes" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-            </div>
-          </section>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+                    <div className="space-y-3">
+                      <div className="text-sm font-semibold text-slate-900">Request summary</div>
+                      <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
+                      <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
+                      <div className="border-t border-slate-200 pt-4 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total</span><span>{formatCurrency(total, currency)}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         </div>
-        <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+
+        <div className={mode === 'new' || activeTab === 'notes' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-32">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="space-y-6">
+                <div>
+                  <label htmlFor="reason" className="block text-sm font-semibold text-slate-900">Justification / Reason</label>
+                  <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                </div>
+                <div>
+                  <label htmlFor="notes" className="block text-sm font-semibold text-slate-900">Notes</label>
+                  <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                </div>
+                <div>
+                  <label htmlFor="internalNotes" className="block text-sm font-semibold text-slate-900">Internal Notes</label>
+                  <textarea id="internalNotes" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div className={mode === 'new' || activeTab === 'attachments' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-32">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <HaypFileUpload
+                attachments={attachments}
+                onChange={setAttachments}
+                label="Purchase Request Attachments"
+                description="Upload supporting documents for the purchase request."
+              />
+            </section>
+          </div>
+        </div>
+
+        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
             <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
                 <div className="mt-4">
                   <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this purchase request yet." />

@@ -123,13 +123,13 @@ export default function ExpenseDetailLayout({
       </div>
 
       {loading ? (
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">Loading bill details…</div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">Loading bill details…</div>
       ) : error ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-8 text-center text-rose-700">{error}</div>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-rose-700">{error}</div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {sections.map((section) => (
-            <div key={section.title} className={`${section.fullWidth ? 'sm:col-span-2' : ''} rounded-3xl border border-slate-200 bg-white p-6`}>
+            <div key={section.title} className={`${section.fullWidth ? 'sm:col-span-2' : ''} rounded-2xl border border-slate-200 bg-white p-6`}>
               <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 mb-4">{section.title}</h2>
               {section.rows && (
                 <div className="grid gap-3">

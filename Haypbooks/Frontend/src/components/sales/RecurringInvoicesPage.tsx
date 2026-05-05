@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -458,7 +458,7 @@ export default function RecurringInvoicesPage() {
 
       {showForm && (
         <ModalPortal>
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
             <div className="relative z-[10000] bg-white rounded-2xl shadow-2xl w-full max-w-md">
               <div className="flex items-center justify-between px-6 py-4 border-b">
                 <h2 className="text-lg font-semibold text-gray-900">New Recurring Template</h2>
@@ -529,7 +529,7 @@ export default function RecurringInvoicesPage() {
       {detailItem && (
         <ModalPortal>
           <div className="fixed inset-0 z-[9999] flex justify-end">
-            <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
+            <div className="fixed inset-0 z-[9998] bg-black/80" onClick={() => setDetailItem(null)} />
             <div className="relative z-[10000] bg-white w-full max-w-md shadow-2xl overflow-y-auto flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold text-gray-900">{getRowName(detailItem)}</h2>

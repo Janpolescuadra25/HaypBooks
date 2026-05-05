@@ -2,15 +2,18 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Save, Send, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Save, Send, Trash2, Loader2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
+import AccountSplitModal, { AccountSplitRow } from '@/components/shared/AccountSplitModal'
 import LineItemTable from './LineItemTable'
 import ActivityLog from '@/components/ui/ActivityLog'
+import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
+import HaypSelect from '@/components/shared/HaypSelect'
 import { useActivityLog } from '@/hooks/useActivityLog'
 
 const today = new Date().toISOString().slice(0, 10)
@@ -47,6 +50,7 @@ interface LineItem {
   unitPrice: number
   taxRate: number
   amount: number
+  splits?: AccountSplitRow[]
 }
 
 interface VendorCreditFormProps {
@@ -97,17 +101,46 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
   const [accounts, setAccounts] = useState<Account[]>([])
   const [creditNumber, setCreditNumber] = useState('')
   const [creditDate, setCreditDate] = useState(today)
-  const [referenceBill, setReferenceBill] = useState('')
+  const [referenceBillId, setReferenceBillId] = useState('')
   const [creditType, setCreditType] = useState('Return')
   const [vendorId, setVendorId] = useState('')
   const [status, setStatus] = useState('DRAFT')
   const [reason, setReason] = useState('')
   const [notes, setNotes] = useState('')
+  const [billOptions, setBillOptions] = useState<Array<{ id: string; label: string }>>([])
+  const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [splitModalOpen, setSplitModalOpen] = useState(false)
+  const [splitRowId, setSplitRowId] = useState<string | null>(null)
+  const [splitDraft, setSplitDraft] = useState<AccountSplitRow[]>([])
 
-  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'memo' | 'attachments' | 'activity'>('details')
+  const selectedSplitLine = useMemo(() => lineItems.find((line) => line.id === splitRowId) ?? null, [lineItems, splitRowId])
+  const lineItemAccountOptions = useMemo(() => accounts.map((account) => ({ id: account.id, label: account.code ? `${account.code} ${account.name}` : account.name ?? account.id })), [accounts])
+
+  const openSplitModal = useCallback((rowId: string) => {
+    const line = lineItems.find((item) => item.id === rowId)
+    setSplitRowId(rowId)
+    setSplitDraft(line?.splits?.length ? [...line.splits] : [{ id: genId(), accountId: '', amount: Number(line?.amount ?? 0) }])
+    setSplitModalOpen(true)
+  }, [lineItems])
+
+  const closeSplitModal = useCallback(() => {
+    setSplitModalOpen(false)
+    setSplitRowId(null)
+    setSplitDraft([])
+  }, [])
+
+  const handleSplitSave = useCallback(() => {
+    if (!splitRowId) {
+      closeSplitModal()
+      return
+    }
+    setLineItems((items) => items.map((item) => item.id === splitRowId ? { ...item, splits: splitDraft } : item))
+    closeSplitModal()
+  }, [closeSplitModal, splitDraft, splitRowId])
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
@@ -139,6 +172,27 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
   }, [companyId, toast, vendorId])
 
   useEffect(() => {
+    if (!companyId || !vendorId) {
+      setBillOptions([])
+      setReferenceBillId('')
+      return
+    }
+    let active = true
+    expensesService.listBills(companyId, { vendorId, limit: 100 })
+      .then((res) => {
+        if (!active) return
+        const data = res.data ?? []
+        const bills = Array.isArray(data) ? data : data.data ?? []
+        const options = bills
+          .filter((bill: any) => bill.status !== 'PAID' && bill.status !== 'VOIDED')
+          .map((bill: any) => ({ id: bill.id, label: `${bill.billNumber ?? 'Draft'} • ${bill.date ?? ''}` }))
+        setBillOptions(options)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [companyId, vendorId])
+
+  useEffect(() => {
     if (mode !== 'edit' || !creditId || !companyId) return
     let active = true
     expensesService.getVendorCredit(companyId, creditId)
@@ -147,7 +201,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
         const data = res.data ?? res
         setCreditNumber(data.creditNumber ?? data.number ?? '')
         setCreditDate(data.creditDate?.slice(0, 10) ?? today)
-        setReferenceBill(data.referenceBillNumber ?? '')
+        setReferenceBillId(data.referenceBillId ?? '')
         setCreditType(data.creditType ?? 'Return')
         setVendorId(data.vendorId ?? '')
         setStatus(data.status ?? 'DRAFT')
@@ -204,12 +258,13 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
     try {
       const payload = {
         creditDate,
-        referenceBillNumber: referenceBill || null,
+        referenceBillId: referenceBillId || null,
         creditType,
         vendorId,
         status: action === 'submit' ? 'SUBMITTED' : status,
         reason,
         notes,
+        attachments: attachments.length ? attachments : undefined,
         lines: lineItems.map((line) => ({
           description: line.description,
           accountId: line.accountId || null,
@@ -229,7 +284,6 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
       }
       router.push('/expenses/bills-payments/vendor-credits')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save vendor credit')
       toast.error('Unable to save vendor credit')
     } finally {
@@ -240,18 +294,14 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/bills-payments/vendor-credits')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to vendor credits
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Vendor Credit' : 'Edit Vendor Credit'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Manage vendor credits and credit line details.</p>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Vendor Credit' : 'Edit Vendor Credit'}</h1>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
               <div className="font-semibold">Credit #</div>
               <div>{creditNumber || 'Auto-generated'}</div>
             </div>
@@ -261,17 +311,19 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          {mode !== 'new' && (
+            {mode !== 'new' ? (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
               <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
+              <button type="button" onClick={() => setActiveTab('memo')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'memo' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Memo</button>
+              <button type="button" onClick={() => setActiveTab('attachments')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'attachments' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Attachments</button>
               <button type="button" onClick={() => setActiveTab('activity')} disabled={!creditId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
             </div>
-          )}
+          ) : null}
         </div>
-        <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-44">
+        <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
             <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_280px]">
                   <div>
                 <label htmlFor="creditDate" className="block text-sm font-semibold text-slate-900">Credit Date</label>
@@ -281,41 +333,33 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
                 <label htmlFor="creditNumber" className="block text-sm font-semibold text-slate-900">Credit Number</label>
                 <input id="creditNumber" value={creditNumber ? creditNumber : 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
 
-                  <div>
-                    <label htmlFor="referenceBill" className="block text-sm font-semibold text-slate-900">Reference Bill #</label>
-                    <input id="referenceBill" value={referenceBill} onChange={(e) => setReferenceBill(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                          <div>
+                    <label htmlFor="referenceBill" className="block text-sm font-semibold text-slate-900">Reference Bill</label>
+                    <HaypSelect id="referenceBill" value={referenceBillId} onChange={setReferenceBillId} options={[{ value: '', label: 'Standalone credit' }, ...billOptions.map((b) => ({ value: b.id, label: b.label }))]} />
                   </div>
                   <div>
                     <label htmlFor="creditType" className="block text-sm font-semibold text-slate-900">Credit Type</label>
-                    <select id="creditType" value={creditType} onChange={(e) => setCreditType(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                      {CREDIT_TYPES.map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
+                    <HaypSelect id="creditType" value={creditType} onChange={setCreditType} options={CREDIT_TYPES.map((o) => ({ value: o, label: o }))} />
                   </div>
 
                   <div>
                     <label htmlFor="status" className="block text-sm font-semibold text-slate-900">Status</label>
-                    <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                      {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option.replace(/_/g, ' ')}</option>)}
-                    </select>
+                    <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o.replace(/_/g, ' ') }))} />
                   </div>
                   <div>
                     <label htmlFor="vendorId" className="block text-sm font-semibold text-slate-900">Vendor</label>
-                    <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none">
-                      <option value="">Select vendor</option>
-                      {vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
-                    </select>
+                    <HaypSelect id="vendorId" value={vendorId} onChange={setVendorId} options={vendors.map((v) => ({ value: v.id, label: v.displayName }))} placeholder="Select vendor" />
                   </div>
                 </div>
               </div>
               </section>
 
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="space-y-6">
                   <div>
                     <div className="flex items-center justify-between gap-4 mb-4">
                       <div>
                         <h2 className="text-lg font-semibold text-slate-900">Credit Line Items</h2>
-                        <p className="mt-1 text-sm text-slate-500">Add details for each credit line.</p>
                       </div>
                       <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
                         <Plus size={16} /> Add row
@@ -332,10 +376,12 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
                         onChange={setLineItems}
                         currency={currency ?? 'USD'}
                         calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+                        showSplitButton
+                        onSplit={openSplitModal}
                       />
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
                     <div className="space-y-3">
                       <div className="text-sm font-semibold text-slate-900">Credit summary</div>
                       <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
@@ -346,15 +392,26 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <AccountSplitModal
+                open={splitModalOpen}
+                onClose={closeSplitModal}
+                title={selectedSplitLine?.description ? `Split: ${selectedSplitLine.description}` : 'Split credit line'}
+                totalAmount={Number(selectedSplitLine?.amount ?? 0)}
+                splits={splitDraft}
+                accounts={lineItemAccountOptions}
+                onChange={setSplitDraft}
+                onSave={handleSplitSave}
+              />
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="space-y-6">
                   <div>
                     <label htmlFor="creditReason" className="block text-sm font-semibold text-slate-900">Reason</label>
-                    <textarea id="creditReason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                    <textarea id="creditReason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                   </div>
                   <div>
                     <label htmlFor="creditNotes" className="block text-sm font-semibold text-slate-900">Notes</label>
-                    <textarea id="creditNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                    <textarea id="creditNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                   </div>
                 </div>
               </section>
@@ -362,10 +419,38 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
           </div>
         </div>
 
+        <div className={mode === 'new' || activeTab === 'memo' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="space-y-6">
+                <div>
+                  <label htmlFor="creditReason" className="block text-sm font-semibold text-slate-900">Reason</label>
+                  <textarea id="creditReason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                </div>
+                <div>
+                  <label htmlFor="creditNotes" className="block text-sm font-semibold text-slate-900">Notes</label>
+                  <textarea id="creditNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div className={mode === 'new' || activeTab === 'attachments' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
+              <div className="mt-4">
+                <HaypFileUpload attachments={attachments} onChange={setAttachments} />
+              </div>
+            </section>
+          </div>
+        </div>
+
         <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
             <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
                 <div className="mt-4">
                   <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this vendor credit yet." />

@@ -186,7 +186,7 @@ export interface ReceiptPayload {
   description?: string
   employeeId?: string
   accountId?: string | null
-  attachmentUrl?: string
+  attachmentUrl?: string | null
   status?: string
   paymentMethod?: string
   referenceNumber?: string | null
@@ -194,28 +194,44 @@ export interface ReceiptPayload {
   billable?: boolean
   clientProject?: string | null
   notes?: string
+  expenseReportId?: string | null
 }
 
 // ─── Mileage Log ─────────────────────────────────────────────────────────────
 export interface MileageLogPayload {
-  date?: string
+  logNumber?: string | null
   logDate?: string
   tripDate?: string
-  startLocation?: string
-  endLocation?: string
+  fromLocation?: string
+  toLocation?: string
   miles?: number
-  distance?: number
   distanceUnit?: string
-  rate?: number
+  ratePerMile?: number
   amount?: number
   purpose?: string
   employeeId?: string
   accountId?: string | null
   vehicle?: string
+  personalVehicle?: boolean
   notes?: string
   status?: string
-  billable?: boolean
-  clientProject?: string | null
+  isBillable?: boolean
+  projectId?: string | null
+}
+
+export interface PerDiemPayload {
+  employeeId: string
+  perDiemNumber?: string
+  destination: string
+  purpose?: string
+  startDate: string
+  endDate: string
+  days: number
+  dailyRate: number
+  totalAmount: number
+  currency?: string
+  status?: string
+  notes?: string
 }
 
 // ─── Expense Report (Reimbursement) ──────────────────────────────────────────
@@ -235,12 +251,44 @@ export interface ReimbursementPayload {
   paymentMethod?: string
   status?: string
   description?: string
+  businessPurpose?: string | null
+  notes?: string | null
+  internalNotes?: string | null
+  fromDate?: string
+  toDate?: string
+  advancePayment?: number
   lines: ReimbursementLinePayload[]
 }
 
-// ─── Expense Report status update ────────────────────────────────────────────
-export interface ExpenseReportUpdatePayload {
-  status: 'APPROVED' | 'REJECTED' | 'SUBMITTED' | 'DELETED' | 'VOID'
+export interface ExpenseReportLinePayload {
+  date?: string
+  category?: string
+  vendor?: string
+  description?: string
+  accountId?: string | null
+  amount: number
+  receiptUrl?: string | null
+  receiptName?: string | null
+  billable?: boolean
+}
+
+export interface ExpenseReportPayload {
+  employeeId: string
+  departmentId?: string | null
+  description?: string
+  businessPurpose?: string
+  fromDate?: string
+  toDate?: string
+  lines?: ExpenseReportLinePayload[]
+  advancePayment?: number
+  notes?: string
+  internalNotes?: string
+  attachments?: Array<{ fileUrl?: string | null; fileName?: string; mimeType?: string | null; fileSize?: number | null }>
+  status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'DELETED' | 'VOID'
+}
+
+export type ExpenseReportUpdatePayload = Partial<ExpenseReportPayload> & {
+  status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'DELETED' | 'VOID'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -378,6 +426,20 @@ export const expensesService = {
   deleteReceipt: (companyId: string, receiptId: string): Promise<AxiosResponse> =>
     apiClient.delete(`/companies/${companyId}/ap/receipts/${receiptId}`),
 
+  uploadAttachment: (companyId: string, file: File, entityType: string, entityId: string, description?: string): Promise<AxiosResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('entityType', entityType)
+    formData.append('entityId', entityId)
+    if (description) formData.append('description', description)
+    return apiClient.post(`/companies/${companyId}/attachments/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  listAttachments: (companyId: string, entityType: string, entityId: string): Promise<AxiosResponse> =>
+    apiClient.get(`/attachments`, { params: { tenantId: companyId, entityType, entityId } }),
+
   // ─── Mileage Logs ─────────────────────────────────────────────────────────
   listMileageLogs: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/ap/mileage`, { params: query }),
@@ -405,7 +467,7 @@ export const expensesService = {
   getExpenseReport: (companyId: string, expenseId: string): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/expenses/${expenseId}`),
 
-  createExpenseReport: (companyId: string, body: ReimbursementPayload): Promise<AxiosResponse> =>
+  createExpenseReport: (companyId: string, body: ExpenseReportPayload): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/expenses`, body),
 
   submitExpenseReport: (companyId: string, expenseId: string): Promise<AxiosResponse> =>
@@ -418,7 +480,7 @@ export const expensesService = {
     apiClient.post(`/companies/${companyId}/expenses/${expenseId}/reimburse`, body),
 
   updateExpenseReport: (companyId: string, expenseId: string, body: ExpenseReportUpdatePayload): Promise<AxiosResponse> =>
-    apiClient.post(`/companies/${companyId}/expenses/${expenseId}`, body),
+    apiClient.patch(`/companies/${companyId}/expenses/${expenseId}`, body),
 
   // ─── Reimbursements ───────────────────────────────────────────────────────
   listReimbursements: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>
@@ -479,10 +541,10 @@ export const expensesService = {
   getPerDiem: (companyId: string, perDiemId: string): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/ap/per-diem/${perDiemId}`),
 
-  createPerDiem: (companyId: string, body: Record<string, unknown>): Promise<AxiosResponse> =>
+  createPerDiem: (companyId: string, body: PerDiemPayload): Promise<AxiosResponse> =>
     apiClient.post(`/companies/${companyId}/ap/per-diem`, body),
 
-  updatePerDiem: (companyId: string, perDiemId: string, body: Record<string, unknown>): Promise<AxiosResponse> =>
+  updatePerDiem: (companyId: string, perDiemId: string, body: Partial<PerDiemPayload>): Promise<AxiosResponse> =>
     apiClient.put(`/companies/${companyId}/ap/per-diem/${perDiemId}`, body),
 
   // ─── Payroll Employees (shared lookup) ───────────────────────────────────

@@ -7,7 +7,7 @@ import { CSSProperties, useEffect, useMemo, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Header, flexRender } from '@tanstack/react-table'
-import { GripVertical, ArrowUpDown } from 'lucide-react'
+import { GripVertical, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface DraggableHeaderProps<TData, TValue> {
@@ -107,7 +107,13 @@ export function DraggableHeader<TData, TValue>({ header, isLastDataColumn, isDef
           {content}
         </span>
         {isSortable && (
-          <ArrowUpDown className={cn('h-3 w-3 transition-all', sorted ? 'text-emerald-600 scale-110' : 'opacity-0 group-hover:opacity-40')} />
+          sorted === 'asc' ? (
+            <ArrowUp className="h-3 w-3 text-emerald-600" />
+          ) : sorted === 'desc' ? (
+            <ArrowDown className="h-3 w-3 text-emerald-600" />
+          ) : (
+            <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+          )
         )}
       </div>
 

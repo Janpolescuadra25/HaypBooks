@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Req, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { ExpensesService } from './expenses.service'
@@ -58,7 +58,27 @@ export class ExpensesController {
     return this.expensesService.updateReimbursement(req.user.userId, companyId, id, body)
   }
 
-  @Post('expenses/:expenseId')
+  @Get('expenses')
+  listExpenseReports(@Req() req: any, @Param('companyId') companyId: string, @Query() query: any) {
+    return this.expensesService.listExpenseReports(req.user.userId, companyId, query)
+  }
+
+  @Post('expenses')
+  createExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Body() body: any) {
+    return this.expensesService.createExpenseReport(req.user.userId, companyId, body)
+  }
+
+  @Get('expenses/:id')
+  getExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.expensesService.getExpenseReport(req.user.userId, companyId, id)
+  }
+
+  @Post('expenses/:id/submit')
+  submitExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.expensesService.submitExpenseReport(req.user.userId, companyId, id)
+  }
+
+  @Patch('expenses/:expenseId')
   updateExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('expenseId') expenseId: string, @Body() body: any) {
     return this.expensesService.updateExpenseReport(req.user.userId, companyId, expenseId, body)
   }

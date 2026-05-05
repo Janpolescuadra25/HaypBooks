@@ -2,16 +2,21 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Trash2, Save, Send, Loader2, Check, X } from 'lucide-react'
+import { Trash2, Save, Send, Loader2, Check, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import LineItemTable from './LineItemTable'
+import AccountSplitModal, { AccountSplitRow } from '@/components/shared/AccountSplitModal'
+import { getPostingRulesForTransaction } from '@/lib/gl-posting-rules'
 import { formatCurrency } from '@/lib/format'
+import apiClient from '@/lib/api-client'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import ActivityLog from '@/components/ui/ActivityLog'
+import HaypSelect from '@/components/shared/HaypSelect'
+import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
 import { ModalPortal } from '@/components/shared/ModalPortal'
 import { useActivityLog } from '@/hooks/useActivityLog'
 
@@ -43,6 +48,7 @@ interface LineItem {
   unitPrice: number
   taxRate: number
   amount: number
+  splits?: AccountSplitRow[]
 }
 
 interface Account {
@@ -94,10 +100,14 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const [paymentTerms, setPaymentTerms] = useState('Net 30')
   const [description, setDescription] = useState('')
   const [memo, setMemo] = useState('')
+  const [billType, setBillType] = useState('Regular')
+  const [purchaseOrderId, setPurchaseOrderId] = useState('')
   const [terms, setTerms] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
+  const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [purchaseOrders, setPurchaseOrders] = useState<Array<{ id: string; poNumber?: string; status?: string }>>([])
   const expenseAccounts = useMemo(
     () => accounts.filter((a) => {
       const type = a.type?.toLowerCase() ?? ''
@@ -111,6 +121,9 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const [status, setStatus] = useState<'DRAFT' | 'PENDING' | 'APPROVED' | string>('DRAFT')
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const [splitModalOpen, setSplitModalOpen] = useState(false)
+  const [splitRowId, setSplitRowId] = useState<string | null>(null)
+  const [splitDraft, setSplitDraft] = useState<AccountSplitRow[]>([])
 
   const vendorOptions = useMemo(() => vendors.map((v) => ({ id: v.id, name: v.displayName, email: v.email })), [vendors])
 
@@ -152,7 +165,6 @@ export default function BillForm({ mode, billId }: BillFormProps) {
       setNewVendorPhone('')
       toast.success('Vendor created')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to create vendor')
       toast.error('Unable to create vendor')
     } finally {
@@ -198,6 +210,16 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         setAccounts(list.map((a: any) => ({ id: a.id, code: a.code, name: a.name, type: a.type })))
       })
       .catch(() => {})
+
+    expensesService.listPurchaseOrders(companyId)
+      .then((res) => {
+        if (!active) return
+        const data = res.data ?? []
+        const list = Array.isArray(data) ? data : data.data ?? []
+        setPurchaseOrders(list.map((po: any) => ({ id: po.id, poNumber: po.poNumber ?? po.poId ?? '', status: po.status ?? '' })))
+      })
+      .catch(() => {})
+
     return () => { active = false }
   }, [companyId])
 
@@ -212,12 +234,21 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         if (cancelled) return
         setBillNumber((data.billNumber ?? '') as string)
         setVendorId((data.vendorId ?? '') as string)
+        setPurchaseOrderId((data.purchaseOrderId ?? '') as string)
+        setBillType((data.billType ?? 'Regular') as string)
         setDate((data.date ?? today) as string)
         setDueDate((data.dueDate ?? defaultDue()) as string)
         setDescription((data.description ?? '') as string)
         setMemo((data.memo ?? data.description ?? '') as string)
         setTerms((data.terms ?? '') as string)
         setInternalNotes((data.internalNotes ?? '') as string)
+        setAttachments(Array.isArray(data.attachments) ? data.attachments.map((attachment: any, index: number) => ({
+          id: attachment.id ?? `att-${index}`,
+          fileName: attachment.fileName ?? attachment.name ?? 'Attachment',
+          contentType: attachment.contentType ?? null,
+          size: attachment.size ?? null,
+          url: attachment.url ?? attachment.fileUrl ?? undefined,
+        })) : [])
         setStatus(data.status ?? 'DRAFT')
         if (Array.isArray(data.items) && data.items.length > 0) {
           interface RawBillLine { description?: unknown; accountId?: unknown; quantity?: unknown; unitPrice?: unknown; rate?: unknown; taxRate?: unknown; amount?: unknown }
@@ -232,7 +263,6 @@ export default function BillForm({ mode, billId }: BillFormProps) {
           })))
         }
       } catch (err) {
-        console.error(err)
         toast.error('Failed to load bill')
       }
     }
@@ -245,6 +275,32 @@ export default function BillForm({ mode, billId }: BillFormProps) {
   const taxTotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0) * (Number(line.taxRate || 0) / 100), 0), [lineItems])
   const discountAmount = useMemo(() => discountType === 'pct' ? subtotal * (discountValue / 100) : discountValue, [discountType, discountValue, subtotal])
   const total = Math.max(0, subtotal + taxTotal - discountAmount)
+
+  const selectedSplitLine = useMemo(() => lineItems.find((line) => line.id === splitRowId) ?? null, [lineItems, splitRowId])
+  const postingRules = useMemo(() => getPostingRulesForTransaction('bill'), [])
+  const lineItemAccountOptions = useMemo(() => expenseAccounts.map((a) => ({ id: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? a.id })), [expenseAccounts])
+
+  const openSplitModal = useCallback((rowId: string) => {
+    const line = lineItems.find((item) => item.id === rowId)
+    setSplitRowId(rowId)
+    setSplitDraft(line?.splits?.length ? [...line.splits] : [{ id: Math.random().toString(36).slice(2, 9), accountId: '', amount: Number(line?.amount ?? 0) }])
+    setSplitModalOpen(true)
+  }, [lineItems])
+
+  const closeSplitModal = useCallback(() => {
+    setSplitModalOpen(false)
+    setSplitRowId(null)
+    setSplitDraft([])
+  }, [])
+
+  const handleSplitSave = useCallback(() => {
+    if (!splitRowId) {
+      closeSplitModal()
+      return
+    }
+    setLineItems((items) => items.map((item) => item.id === splitRowId ? { ...item, splits: splitDraft } : item))
+    closeSplitModal()
+  }, [closeSplitModal, splitDraft, splitRowId])
 
   const handleLineItemsChange = useCallback((rows: LineItem[]) => {
     setLineItems(rows)
@@ -265,11 +321,18 @@ export default function BillForm({ mode, billId }: BillFormProps) {
 
   const buildPayload = () => {
     return {
+      billNumber: billNumber || undefined,
       vendorId,
+      purchaseOrderId: purchaseOrderId || null,
+      billType,
+      date,
       dueAt: dueDate,
       description: memo,
       currency,
       paymentTermId: paymentTerms,
+      terms,
+      internalNotes,
+      attachments,
       lines: lineItems.map(line => {
         const lineAmount = Number(line.quantity || 0) * Number(line.unitPrice || 0)
         const taxAmount = Number(line.taxRate || 0) / 100 * lineAmount
@@ -278,6 +341,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
           accountId: line.account || null,
           quantity: line.quantity,
           rate: line.unitPrice,
+          taxRate: line.taxRate,
           amount: Number((lineAmount + taxAmount).toFixed(2)),
         }
       }),
@@ -313,7 +377,6 @@ export default function BillForm({ mode, billId }: BillFormProps) {
 
       router.push('/expenses/bills-payments/bills')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save bill')
       toast.error('Unable to save bill')
     } finally {
@@ -338,24 +401,16 @@ export default function BillForm({ mode, billId }: BillFormProps) {
       className="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden"
     >
       <div className="shrink-0 border-b border-slate-200 bg-white z-30">
-        <div className="mx-auto max-w-7xl px-6 py-4">
+        <div className="mx-auto max-w-7xl px-6 py-2.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button 
-                type="button" 
-                onClick={() => router.push('/expenses/bills-payments/bills')} 
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all active:scale-95"
-              >
-                <ArrowLeft size={20} />
-              </button>
+            <div className="flex items-center">
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
-                <p className="text-xs text-slate-500 font-medium">Drafting bill for expense management</p>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{title}</h1>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+              <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
                 {status}
               </div>
             </div>
@@ -372,14 +427,14 @@ export default function BillForm({ mode, billId }: BillFormProps) {
             </div>
           )}
         </div>
-        <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-6 py-6 space-y-8">
+        <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
+          <div className="mx-auto max-w-7xl px-6 py-3 space-y-6">
             <section className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-1 h-6 bg-emerald-500 rounded-full" />
                 <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Bill Information</h2>
               </div>
-              <div className="grid gap-6 sm:grid-cols-3 p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <div className="grid gap-4 sm:grid-cols-3 p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
                 <div className="space-y-1.5">
                   <label htmlFor="billNumber" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill #</label>
                   <input 
@@ -417,33 +472,59 @@ export default function BillForm({ mode, billId }: BillFormProps) {
                 <div className="w-1 h-6 bg-emerald-500 rounded-full" />
                 <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Vendor</h2>
               </div>
-              <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-6">
-                <div className="grid gap-6 sm:grid-cols-[2fr_1fr]">
-                  <CustomerPickerField
-                    label="Select Vendor"
-                    value={vendorId}
-                    customers={vendorOptions}
-                    placeholder="Search vendors by name or email…"
-                    createLabel="+ New Vendor"
-                    onChange={(id) => {
-                      setVendorId(id)
-                      setShowVendorModal(false)
-                    }}
-                    onCreateNew={() => {
-                      setShowVendorModal(true)
-                      setNewVendorName('')
-                      setNewVendorEmail('')
-                      setNewVendorPhone('')
-                    }}
-                  />
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Terms</label>
-                    <input 
-                      value={paymentTerms} 
-                      onChange={e => setPaymentTerms(e.target.value)} 
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
-                      placeholder="Net 30" 
+              <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-6">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="sm:col-span-2">
+                    <CustomerPickerField
+                      label="Select Vendor"
+                      value={vendorId}
+                      customers={vendorOptions}
+                      placeholder="Search vendors by name or email…"
+                      createLabel="+ New Vendor"
+                      onChange={(id) => {
+                        setVendorId(id)
+                        setShowVendorModal(false)
+                      }}
+                      onCreateNew={() => {
+                        setShowVendorModal(true)
+                        setNewVendorName('')
+                        setNewVendorEmail('')
+                        setNewVendorPhone('')
+                      }}
                     />
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="billType" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill Type</label>
+                      <HaypSelect
+                        id="billType"
+                        value={billType}
+                        onChange={setBillType}
+                        options={['Regular', 'Credit', 'Prepaid', 'Other'].map((t) => ({ value: t, label: t }))}
+                        className="mt-2 h-12 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="purchaseOrderId" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">PO Reference</label>
+                      <HaypSelect
+                        id="purchaseOrderId"
+                        value={purchaseOrderId}
+                        onChange={setPurchaseOrderId}
+                        options={purchaseOrders.map((po) => ({ value: po.id, label: `${po.poNumber || po.id}${po.status ? ` · ${po.status}` : ''}` }))}
+                        placeholder="Select purchase order"
+                        className="mt-2 h-12 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="paymentTerms" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Terms</label>
+                      <input 
+                        id="paymentTerms"
+                        value={paymentTerms} 
+                        onChange={e => setPaymentTerms(e.target.value)} 
+                        className="mt-2 w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
+                        placeholder="Net 30" 
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -468,8 +549,8 @@ export default function BillForm({ mode, billId }: BillFormProps) {
               {showVendorModal && (
                 <ModalPortal>
                   <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60" onClick={() => setShowVendorModal(false)} />
-                    <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+                    <div className="absolute inset-0 bg-black/80" onClick={() => setShowVendorModal(false)} />
+                    <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
                       <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                         <div>
                           <h2 className="text-lg font-semibold text-slate-900">New Vendor</h2>
@@ -547,10 +628,19 @@ export default function BillForm({ mode, billId }: BillFormProps) {
                 onChange={handleLineItemsChange}
                 currency={currency ?? 'USD'}
                 calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+                showSplitButton
+                onSplit={openSplitModal}
               />
             </section>
 
-            <section className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            {postingRules.length > 0 ? (
+              <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-slate-700">
+                <div className="font-semibold text-emerald-900">GL posting guidance</div>
+                <p className="mt-2">{postingRules[0].description}</p>
+              </section>
+            ) : null}
+
+            <section className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end divide-x divide-slate-100">
                 <div className="px-6 text-sm font-medium text-slate-500">Subtotal: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(subtotal, currency)}</span></div>
                 <div className="px-6 text-sm font-medium text-slate-500">Tax: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(taxTotal, currency)}</span></div>
@@ -558,13 +648,13 @@ export default function BillForm({ mode, billId }: BillFormProps) {
               </div>
             </section>
 
-            <section className="grid gap-6 sm:grid-cols-2">
+            <section className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-6 bg-slate-300 rounded-full" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Terms & Notes</h2>
                 </div>
-                <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-6">
                   <div className="space-y-1.5">
                     <label htmlFor="terms" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms & Conditions</label>
                     <textarea 
@@ -593,7 +683,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
                   <div className="w-1 h-6 bg-rose-400 rounded-full" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Internal Use</h2>
                 </div>
-                <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
                   <div className="space-y-1.5">
                     <label htmlFor="internalNotes" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Private Internal Notes</label>
                     <textarea 
@@ -604,19 +694,37 @@ export default function BillForm({ mode, billId }: BillFormProps) {
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 transition-all outline-none" 
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <HaypFileUpload
+                      attachments={attachments}
+                      onChange={setAttachments}
+                      label="Bill Attachments"
+                      description="Attach supporting files for this bill record."
+                    />
+                  </div>
                 </div>
               </div>
             </section>
           </div>
         </div>
+        <AccountSplitModal
+          open={splitModalOpen}
+          onClose={closeSplitModal}
+          title={selectedSplitLine?.description ? `Split: ${selectedSplitLine.description}` : 'Split line item'}
+          totalAmount={Number(selectedSplitLine?.amount ?? 0)}
+          splits={splitDraft}
+          accounts={lineItemAccountOptions}
+          onChange={setSplitDraft}
+          onSave={handleSplitSave}
+        />
         <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-6 py-6 space-y-8">
+          <div className="mx-auto max-w-7xl px-6 py-3 space-y-6">
             <section className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-1 h-6 bg-blue-500 rounded-full" />
                 <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity Log</h2>
               </div>
-              <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
                 <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill yet." />
               </div>
             </section>

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
@@ -768,7 +768,7 @@ export default function ClientMailPage() {
 
       {/* ── New Category Modal ── */}
       {showCatModal && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-slate-800">Manage Categories</h2>
@@ -841,7 +841,7 @@ export default function ClientMailPage() {
       {showNewModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200]">
           {/* Backdrop */}
-          <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-[2px]" aria-hidden="true" onClick={handleReqClose} />
+          <div className="fixed inset-0 z-[100] bg-black/80" aria-hidden="true" onClick={handleReqClose} />
 
           {/* Dialog card */}
           <div
@@ -973,7 +973,7 @@ export default function ClientMailPage() {
           {isReqDiscardMounted && typeof document !== 'undefined' && createPortal(
             <>
               <div
-                className={`fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+                className={`fixed inset-0 z-[210] bg-black/80 transition-opacity duration-200 ${
                   isReqDiscardVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
                 onClick={cancelReqDiscard}

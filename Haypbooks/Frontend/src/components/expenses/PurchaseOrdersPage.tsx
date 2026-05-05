@@ -172,7 +172,7 @@ export default function PurchaseOrdersPage() {
     toast.success('CSV exported')
   }, [filtered, toast])
 
-  const columns = useMemo<HaypColumn<PurchaseOrder>>(
+  const columns = useMemo<HaypColumn<PurchaseOrder>[]>(
     () => [
       {
         id: 'poNumber',

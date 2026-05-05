@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Loader2, Plus, X, Check, FileText } from 'lucide-react'
+import { Save, Loader2, Plus, X, Check, FileText } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -12,7 +12,9 @@ import { accountingService } from '@/services/accounting.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
 import LineItemTable from './LineItemTable'
-// Modal confirmation removed; using window.confirm flow per UX spec
+import CustomerPickerField from '@/components/sales/CustomerPickerField'
+import { NewVendorModal } from '@/components/shared/NewVendorModal'
+import HaypSelect from '@/components/shared/HaypSelect'
 
 interface PurchaseOrderFormProps {
   mode: 'new' | 'edit'
@@ -41,8 +43,8 @@ interface Account {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'OPEN', label: 'Draft' },
-  { value: 'OPEN', label: 'Sent' },
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SENT', label: 'Sent' },
   { value: 'PARTIAL_RECEIVED', label: 'Partially Received' },
   { value: 'RECEIVED', label: 'Received' },
   { value: 'CLOSED', label: 'Closed' },
@@ -90,7 +92,6 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [vendorId, setVendorId] = useState('')
-  const [vendorSearch, setVendorSearch] = useState('')
   const [poNumber, setPoNumber] = useState('')
   const [orderDate, setOrderDate] = useState(today)
   const [expectedDate, setExpectedDate] = useState(today)
@@ -105,6 +106,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [converting, setConverting] = useState(false)
+  const [showVendorModal, setShowVendorModal] = useState(false)
 
   const [accounts, setAccounts] = useState<Account[]>([])
 
@@ -121,11 +123,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   const lockIdFields = isEdit && status !== 'OPEN'
   const readonlyFields = false
 
-  const filteredVendors = useMemo(() => {
-    if (!vendorSearch) return vendors
-    const q = vendorSearch.toLowerCase()
-    return vendors.filter((vendor) => vendor.displayName.toLowerCase().includes(q))
-  }, [vendorSearch, vendors])
+  const vendorOptions = useMemo(() => vendors.map((v) => ({ id: v.id, name: v.displayName })), [vendors])
 
   useEffect(() => {
     if (!companyId) return
@@ -256,7 +254,6 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
       }
       router.push('/expenses/procurement/orders')
     } catch (err: any) {
-      console.error(err)
       setError(err?.response?.data?.message ?? 'Unable to save purchase order')
       toast.error('Unable to save purchase order')
     } finally {
@@ -279,7 +276,6 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         toast.error('Failed to convert PO to bill')
       }
     } catch (err: any) {
-      console.error(err)
       toast.error(err?.response?.data?.message ?? 'Failed to convert PO to bill')
     } finally {
       setConverting(false)
@@ -289,18 +285,14 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700">
-                <ArrowLeft size={16} /> Back to orders
-              </button>
-              <div className="mt-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Purchase Order' : 'Edit Purchase Order'}</h1>
-                <p className="mt-1 text-sm text-slate-500">Create and manage purchase orders with shipping and line item details.</p>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Purchase Order' : 'Edit Purchase Order'}</h1>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
               <div className="font-semibold">Status</div>
               <div>{STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status}</div>
             </div>
@@ -318,9 +310,9 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           )}
         </div>
         <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-40">
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
             <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div>
                 <label htmlFor="poNumber" className="block text-[10px] font-bold text-slate-400 uppercase">PO Number</label>
@@ -335,26 +327,42 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                 <input id="expectedDate" type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
               </div>
               <div className="sm:col-span-2 xl:col-span-1">
-                <label htmlFor="vendorId" className="block text-[10px] font-bold text-slate-400 uppercase">Vendor</label>
-                <div className="mt-2 flex gap-2">
-                  <input id="vendorSearch" value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} disabled={lockIdFields} aria-label="Search vendors" placeholder="Search vendors" className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
-                  <button type="button" onClick={() => setVendorSearch('')} disabled={lockIdFields} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Clear</button>
-                </div>
-                <select id="vendorId" value={vendorId} onChange={(e) => setVendorId(e.target.value)} disabled={lockIdFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all">
-                  <option value="">Select vendor</option>
-                  {filteredVendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.displayName}</option>)}
-                </select>
+                <CustomerPickerField
+                  label="Vendor"
+                  value={vendorId}
+                  customers={vendorOptions}
+                  placeholder="Search vendors…"
+                  createLabel="+ New Vendor"
+                  disabled={lockIdFields}
+                  onChange={setVendorId}
+                  onCreateNew={() => setShowVendorModal(true)}
+                />
+                {companyId && (
+                  <NewVendorModal
+                    open={showVendorModal}
+                    companyId={companyId}
+                    onClose={() => setShowVendorModal(false)}
+                    onCreated={(v) => {
+                      setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
+                      setVendorId(v.id)
+                    }}
+                  />
+                )}
               </div>
               <div>
                 <label htmlFor="status" className="block text-[10px] font-bold text-slate-400 uppercase">Status</label>
-                <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all">
-                  {STATUS_OPTIONS.map((option) => <option key={option.value + option.label} value={option.value}>{option.label}</option>)}
-                </select>
+                <HaypSelect
+                  id="status"
+                  value={status}
+                  onChange={setStatus}
+                  options={STATUS_OPTIONS}
+                  className="mt-2"
+                />
               </div>
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-4">
                 <div className="mb-4">
@@ -380,7 +388,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
             </div>
             </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
                 <div className="space-y-3">
                   <div className="text-sm text-slate-600">Subtotal</div>
@@ -400,7 +408,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
               </div>
             </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase">Ship To</label>
@@ -424,9 +432,14 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
               </div>
               <div>
                 <label htmlFor="shippingMethod" className="block text-[10px] font-bold text-slate-400 uppercase">Shipping Method</label>
-                <select id="shippingMethod" value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all">
-                  {SHIPPING_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
-                </select>
+                <HaypSelect
+                  id="shippingMethod"
+                  value={shippingMethod}
+                  onChange={setShippingMethod}
+                  options={SHIPPING_METHODS.map((m) => ({ value: m, label: m }))}
+                  disabled={readonlyFields}
+                  className="mt-2"
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase">Tracking Number</label>
@@ -435,7 +448,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase">Notes</label>
@@ -451,9 +464,9 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           </div>
         </div>
         <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
             <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
                 <div className="mt-4">
                   <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this purchase order yet." />
