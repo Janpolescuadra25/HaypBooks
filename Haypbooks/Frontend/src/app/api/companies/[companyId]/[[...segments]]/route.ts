@@ -646,6 +646,7 @@ export async function PATCH(req: Request, ctx: { params: { companyId: string; se
 }
 
 export async function DELETE(req: Request, ctx: { params: { companyId: string; segments?: string[] } }) {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API !== 'true') return proxyToBackend(req)
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
