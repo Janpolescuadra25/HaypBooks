@@ -9261,7 +9261,7 @@ model VendorCredit {
 
 model CustomerCredit {
   id           String   @id @default(uuid())
-  companyId    String?
+  companyId    String
   workspaceId  String
   customerId   String
   creditNumber String?
@@ -9273,7 +9273,7 @@ model CustomerCredit {
 
   workspace     Workspace                   @relation(fields: [workspaceId], references: [id])
   customer      Customer                    @relation(fields: [customerId], references: [contactId])
-  company       Company?                    @relation(fields: [companyId], references: [id])
+  company       Company                     @relation(fields: [companyId], references: [id])
   template      DocumentTemplate?           @relation(fields: [templateId], references: [id])
   lines         CustomerCreditLine[]
   postingStatus PostingStatus               @default(DRAFT)
@@ -9288,7 +9288,7 @@ model CustomerCredit {
 
 model CustomerCreditLine {
   id               String  @id @default(uuid())
-  companyId        String?
+  companyId        String
   customerCreditId String
   accountId        String?
   amount           Decimal @db.Decimal(19, 4)
@@ -9296,7 +9296,7 @@ model CustomerCreditLine {
   workspaceId      String
 
   customerCredit CustomerCredit @relation(fields: [customerCreditId], references: [id])
-  company        Company?       @relation(fields: [companyId], references: [id])
+  company        Company        @relation(fields: [companyId], references: [id])
   account        Account?       @relation(fields: [accountId], references: [id])
   workspace      Workspace      @relation(fields: [workspaceId], references: [id])
 
@@ -9323,7 +9323,7 @@ model CustomerCreditApplication {
 
 model VendorCreditLine {
   id             String  @id @default(uuid())
-  companyId      String?
+  companyId      String
   vendorCreditId String
   accountId      String?
   amount         Decimal @db.Decimal(19, 4)
@@ -9331,7 +9331,7 @@ model VendorCreditLine {
   workspaceId    String
 
   vendorCredit VendorCredit @relation(fields: [vendorCreditId], references: [id])
-  company      Company?     @relation(fields: [companyId], references: [id])
+  company      Company      @relation(fields: [companyId], references: [id])
   account      Account?     @relation(fields: [accountId], references: [id])
   workspace    Workspace    @relation(fields: [workspaceId], references: [id])
 
@@ -9341,7 +9341,7 @@ model VendorCreditLine {
 
 model BillPayment {
   id                    String    @id @default(uuid())
-  companyId             String?
+  companyId             String
   workspaceId           String
   billId                String
   amount                Decimal   @db.Decimal(19, 4)
@@ -9361,7 +9361,7 @@ model BillPayment {
   bill                   Bill                     @relation(fields: [billId], references: [id])
   bankAccount            BankAccount?             @relation(fields: [bankAccountId], references: [id])
   vendorPaymentMethod    VendorPaymentMethod?     @relation(fields: [vendorPaymentMethodId], references: [id])
-  company                Company?                 @relation(fields: [companyId], references: [id])
+  company                Company                  @relation(fields: [companyId], references: [id])
   BillPaymentApplication BillPaymentApplication[]
   refunds                VendorRefund[]
   journalEntryId         String?
@@ -9403,7 +9403,7 @@ model BillPaymentApplication {
 
 model VendorPaymentMethod {
   id          String   @id @default(uuid())
-  companyId   String?
+  companyId   String
   workspaceId String
   vendorId    String
   type        String // ACH, CARD, CHECK
@@ -9414,7 +9414,7 @@ model VendorPaymentMethod {
   workspace   Workspace     @relation(fields: [workspaceId], references: [id])
   vendor      Vendor        @relation(fields: [vendorId], references: [contactId])
   BillPayment BillPayment[]
-  company     Company?      @relation(fields: [companyId], references: [id])
+  company     Company       @relation(fields: [companyId], references: [id])
 
   @@index([workspaceId, vendorId])
   @@index([companyId, vendorId])
