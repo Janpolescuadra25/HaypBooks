@@ -225,7 +225,8 @@ async function main() {
           exprs.push('now()')
         } else if (c.data_type === 'boolean') {
           colNames.push(`"${name}"`)
-          params.push(false)
+          // isActive should default to true for the demo company
+          params.push(name === 'isActive' ? true : false)
           exprs.push(`$${params.length}`)
         } else if (['numeric','double precision','real','integer'].includes(c.data_type)) {
           colNames.push(`"${name}"`)
@@ -434,11 +435,14 @@ async function main() {
       try {
         // Prefer a simple lookup first to avoid Prisma create/upsert requiring nested relations
         demoCompany = await prisma.company.findFirst({ where: { workspaceId: tenant.id, name: 'Demo Company' } }).catch(() => undefined)
+        if (demoCompany && !demoCompany.isActive) {
+          demoCompany = await prisma.company.update({ where: { id: demoCompany.id }, data: { isActive: true } as any }).catch(() => demoCompany)
+        }
         if (!demoCompany) {
           try {
             // Try a pragmatic scalar-only create; if the generated client requires nested relations
             // (varies during schema migrations), fall back to the adaptive raw insert helper.
-            demoCompany = await prisma.company.create({ data: { workspaceId: tenant.id, name: 'Demo Company' } as any })
+            demoCompany = await prisma.company.create({ data: { workspaceId: tenant.id, name: 'Demo Company', isActive: true } as any })
           } catch (e1) {
             console.warn('Prisma company.create failed; attempting adaptive raw INSERT for demo company', errorMessage(e1))
             demoCompany = await createMinimalCompanyRow(tenant.id)
