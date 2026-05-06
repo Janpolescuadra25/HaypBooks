@@ -97,42 +97,58 @@ async function main() {
     },
   })
 
-  const rate = await prisma.taxRate.create({
-    data: {
-      companyId: company.id,
-      jurisdictionId: jurisdiction.id,
-      name: 'NY State Sales Tax',
-      rate: 0.08875,
-      effectiveFrom: new Date('2020-01-01'),
-    },
+  let rate = await prisma.taxRate.findFirst({
+    where: { companyId: company.id, jurisdictionId: jurisdiction.id, name: 'NY State Sales Tax' },
   })
+  if (!rate) {
+    rate = await prisma.taxRate.create({
+      data: {
+        companyId: company.id,
+        jurisdictionId: jurisdiction.id,
+        name: 'NY State Sales Tax',
+        rate: 0.08875,
+        effectiveFrom: new Date('2020-01-01'),
+      },
+    })
+  }
 
-  const taxCode = await prisma.taxCode.create({
-    data: {
+  const taxCode = await prisma.taxCode.upsert({
+    where: { companyId_code: { companyId: company.id, code: 'NY_SALES' } },
+    update: { name: 'NY Sales Tax' },
+    create: {
       companyId: company.id,
       code: 'NY_SALES',
       name: 'NY Sales Tax',
     },
   })
-  await prisma.taxCodeRate.create({
-    data: {
-      companyId: company.id,
-      taxCodeId: taxCode.id,
-      taxRateId: rate.id,
-      sequence: 1,
-      ratePct: 0.08875,
-    },
+  const existingTaxCodeRate = await prisma.taxCodeRate.findFirst({
+    where: { taxCodeId: taxCode.id, taxRateId: rate.id },
   })
-  await prisma.taxCodeAccount.create({
-    data: {
+  if (!existingTaxCodeRate) {
+    await prisma.taxCodeRate.create({
+      data: {
+        companyId: company.id,
+        taxCodeId: taxCode.id,
+        taxRateId: rate.id,
+        sequence: 1,
+        ratePct: 0.08875,
+      },
+    })
+  }
+  await prisma.taxCodeAccount.upsert({
+    where: { companyId_taxCodeId_accountId: { companyId: company.id, taxCodeId: taxCode.id, accountId: taxAccount.id } },
+    update: {},
+    create: {
       companyId: company.id,
       taxCodeId: taxCode.id,
       accountId: taxAccount.id,
     },
   })
 
-  const bill = await prisma.bill.create({
-    data: {
+  const bill = await prisma.bill.upsert({
+    where: { companyId_vendorId_billNumber: { companyId: company.id, vendorId: vendor.contactId, billNumber: 'BILL-1000' } },
+    update: {},
+    create: {
       workspaceId: workspace.id,
       companyId: company.id,
       vendorId: vendor.contactId,
@@ -143,27 +159,35 @@ async function main() {
     },
   })
 
-  const billLine = await prisma.billLine.create({
-    data: {
-      billId: bill.id,
-      workspaceId: workspace.id,
-      companyId: company.id,
-      description: 'Service Charge',
-      quantity: 1,
-      rate: 100.0,
-      amount: 100.0,
-    },
-  })
+  let billLine = await prisma.billLine.findFirst({ where: { billId: bill.id, description: 'Service Charge' } })
+  if (!billLine) {
+    billLine = await prisma.billLine.create({
+      data: {
+        billId: bill.id,
+        workspaceId: workspace.id,
+        companyId: company.id,
+        description: 'Service Charge',
+        quantity: 1,
+        rate: 100.0,
+        amount: 100.0,
+      },
+    })
+  }
 
-  await prisma.lineTax.create({
-    data: {
-      companyId: company.id,
-      billLineId: billLine.id,
-      taxCodeId: taxCode.id,
-      taxRateId: rate.id,
-      amount: 8.875,
-    },
+  const existingLineTax = await prisma.lineTax.findFirst({
+    where: { billLineId: billLine.id, taxCodeId: taxCode.id },
   })
+  if (!existingLineTax) {
+    await prisma.lineTax.create({
+      data: {
+        companyId: company.id,
+        billLineId: billLine.id,
+        taxCodeId: taxCode.id,
+        taxRateId: rate.id,
+        amount: 8.875,
+      },
+    })
+  }
 
   console.log('AP & Tax seed complete')
 }
