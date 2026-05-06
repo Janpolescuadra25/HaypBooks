@@ -335,17 +335,41 @@ export class OnboardingService {
           createdTenant = existingWorkspace
           this.logger.log('[ONBOARDING-COMPLETE] ✅ Found existing workspace for accountant: ' + existingWorkspace.id)
           // Create or update Practice rows depending on mode
+          let resolvedPractice: any = null
           try {
             const existingPractice = await this.prisma.practice.findFirst({ where: { workspaceId: existingWorkspace.id } })
             if (mode === 'append' || !existingPractice) {
-              await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: existingWorkspace.id } })
+              resolvedPractice = await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: existingWorkspace.id } })
               this.logger.log('[ONBOARDING-COMPLETE] ✅ Created new Practice record: ' + normalizedFirm)
             } else {
-              await this.prisma.practice.update({ where: { id: existingPractice.id }, data: { name: normalizedFirm } })
+              resolvedPractice = await this.prisma.practice.update({ where: { id: existingPractice.id }, data: { name: normalizedFirm } })
               this.logger.log('[ONBOARDING-COMPLETE] ✅ Updated existing Practice record: ' + normalizedFirm)
             }
           } catch (e) {
             this.logger.warn('[ONBOARDING-COMPLETE] Practice record change failed (non-fatal): ' + (e as any)?.message)
+          }
+          // Ensure WorkspaceUser + PracticeUser exist (required FK chain)
+          if (resolvedPractice) {
+            try {
+              let ownerRole = await (this.prisma as any).role.findFirst({ where: { workspaceId: existingWorkspace.id, name: { equals: 'Owner', mode: 'insensitive' } } })
+              if (!ownerRole) {
+                ownerRole = await (this.prisma as any).role.create({ data: { workspaceId: existingWorkspace.id, name: 'Owner' } })
+              }
+              const existingWu = await (this.prisma as any).workspaceUser.findFirst({ where: { workspaceId: existingWorkspace.id, userId } })
+              if (!existingWu) {
+                await (this.prisma as any).workspaceUser.create({
+                  data: { workspace: { connect: { id: existingWorkspace.id } }, user: { connect: { id: userId } }, Role: { connect: { id: ownerRole.id } }, isOwner: true, lastAccessedAt: new Date(), joinedAt: new Date(), status: 'ACTIVE' },
+                })
+              }
+              await (this.prisma as any).practiceUser.upsert({
+                where: { practiceId_workspaceId_userId: { practiceId: resolvedPractice.id, workspaceId: existingWorkspace.id, userId } },
+                create: { practiceId: resolvedPractice.id, workspaceId: existingWorkspace.id, userId },
+                update: {},
+              })
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ PracticeUser linked for practice: ' + resolvedPractice.id)
+            } catch (puErr) {
+              this.logger.warn('[ONBOARDING-COMPLETE] PracticeUser upsert failed (non-fatal): ' + (puErr as any)?.message)
+            }
           }
         } else {
           // No workspace yet — create a PRACTICE workspace
@@ -359,11 +383,35 @@ export class OnboardingService {
           createdTenant = newPracticeWorkspace
           this.logger.log('[ONBOARDING-COMPLETE] ✅ Created PRACTICE workspace: ' + newPracticeWorkspace.id)
           // Create a Practice record under the new workspace
+          let newPractice: any = null
           try {
-            await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: newPracticeWorkspace.id } })
+            newPractice = await this.prisma.practice.create({ data: { name: normalizedFirm, workspaceId: newPracticeWorkspace.id } })
             this.logger.log('[ONBOARDING-COMPLETE] ✅ Created Practice record: ' + normalizedFirm)
           } catch (practiceErr) {
             this.logger.warn('[ONBOARDING-COMPLETE] Practice record creation failed (non-fatal): ' + (practiceErr as any)?.message)
+          }
+          // Ensure WorkspaceUser + PracticeUser exist (required FK chain)
+          if (newPractice) {
+            try {
+              let ownerRole = await (this.prisma as any).role.findFirst({ where: { workspaceId: newPracticeWorkspace.id, name: { equals: 'Owner', mode: 'insensitive' } } })
+              if (!ownerRole) {
+                ownerRole = await (this.prisma as any).role.create({ data: { workspaceId: newPracticeWorkspace.id, name: 'Owner' } })
+              }
+              const existingWu = await (this.prisma as any).workspaceUser.findFirst({ where: { workspaceId: newPracticeWorkspace.id, userId } })
+              if (!existingWu) {
+                await (this.prisma as any).workspaceUser.create({
+                  data: { workspace: { connect: { id: newPracticeWorkspace.id } }, user: { connect: { id: userId } }, Role: { connect: { id: ownerRole.id } }, isOwner: true, lastAccessedAt: new Date(), joinedAt: new Date(), status: 'ACTIVE' },
+                })
+              }
+              await (this.prisma as any).practiceUser.upsert({
+                where: { practiceId_workspaceId_userId: { practiceId: newPractice.id, workspaceId: newPracticeWorkspace.id, userId } },
+                create: { practiceId: newPractice.id, workspaceId: newPracticeWorkspace.id, userId },
+                update: {},
+              })
+              this.logger.log('[ONBOARDING-COMPLETE] ✅ PracticeUser linked for practice: ' + newPractice.id)
+            } catch (puErr) {
+              this.logger.warn('[ONBOARDING-COMPLETE] PracticeUser upsert failed (non-fatal): ' + (puErr as any)?.message)
+            }
           }
         }
       } catch (e) {

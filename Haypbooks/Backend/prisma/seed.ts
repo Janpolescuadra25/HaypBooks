@@ -506,6 +506,18 @@ async function main() {
       create: { id: practiceId, workspaceId: tenant.id, name: 'Demo Accounting Firm', servicesOffered: 'Bookkeeping, Tax, Advisory' },
     })
 
+    // Ensure WorkspaceUser exists — PracticeUser has a FK to WorkspaceUser(workspaceId, userId)
+    let puOwnerRole = await (prisma as any).role.findFirst({ where: { workspaceId: tenant.id, name: { equals: 'Owner', mode: 'insensitive' } } })
+    if (!puOwnerRole) {
+      puOwnerRole = await (prisma as any).role.create({ data: { workspaceId: tenant.id, name: 'Owner' } })
+    }
+    const existingPuWu = await (prisma as any).workspaceUser.findFirst({ where: { workspaceId: tenant.id, userId: user.id } })
+    if (!existingPuWu) {
+      await (prisma as any).workspaceUser.create({
+        data: { workspace: { connect: { id: tenant.id } }, user: { connect: { id: user.id } }, Role: { connect: { id: puOwnerRole.id } }, isOwner: true, lastAccessedAt: new Date(), joinedAt: new Date(), status: 'ACTIVE' },
+      })
+    }
+
     await prisma.practiceUser.upsert({
       where: { practiceId_workspaceId_userId: { practiceId: practice.id, workspaceId: tenant.id, userId: user.id } },
       update: {},
