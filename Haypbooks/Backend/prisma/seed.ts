@@ -462,6 +462,40 @@ async function main() {
       }
     }
 
+  // Ensure CompanyUser row exists so the frontend can resolve the company by user
+  if (demoCompany && user && tenant) {
+    try {
+      // Ensure WorkspaceUser exists — it is the FK parent of CompanyUser.
+      // WorkspaceUser requires roleId, so create/find the Owner role first.
+      let ownerRole = await (prisma as any).role.findFirst({ where: { workspaceId: tenant.id, name: { equals: 'Owner', mode: 'insensitive' } } })
+      if (!ownerRole) {
+        ownerRole = await (prisma as any).role.create({ data: { workspaceId: tenant.id, name: 'Owner' } })
+      }
+      const existingWu = await (prisma as any).workspaceUser.findFirst({ where: { workspaceId: tenant.id, userId: user.id } })
+      if (!existingWu) {
+        await (prisma as any).workspaceUser.create({
+          data: {
+            workspace: { connect: { id: tenant.id } },
+            user: { connect: { id: user.id } },
+            Role: { connect: { id: ownerRole.id } },
+            isOwner: true,
+            lastAccessedAt: new Date(),
+            joinedAt: new Date(),
+            status: 'ACTIVE',
+          },
+        })
+      }
+      await (prisma as any).companyUser.upsert({
+        where: { companyId_workspaceId_userId: { companyId: demoCompany.id, workspaceId: tenant.id, userId: user.id } },
+        create: { companyId: demoCompany.id, workspaceId: tenant.id, userId: user.id },
+        update: {},
+      })
+      console.log('[seed] CompanyUser linked: demo user → Demo Company')
+    } catch (e) {
+      console.warn('[seed] CompanyUser upsert failed (non-fatal):', errorMessage(e))
+    }
+  }
+
   // 🧾 Practice Hub seed data: demo practice / practice user / accounting firm / client access
   try {
     const practiceId = `practice-${tenant.id}`

@@ -4,16 +4,31 @@ const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 
 // Legacy alias: tenant -> workspace (mapped in Prisma schema with @@map("Tenant"))
-if (!('tenant' in prisma)) {
+if (typeof prisma.tenant === 'undefined') {
   Object.defineProperty(prisma, 'tenant', {
     configurable: true,
     enumerable: true,
-    get() { return this.workspace }
+    value: prisma.workspace,
+    writable: true,
   })
 }
 
 // Common related aliases
-if (!('tenantUser' in prisma) && prisma.workspaceUser) prisma.tenantUser = prisma.workspaceUser
-if (!('tenantInvite' in prisma) && prisma.workspaceInvite) prisma.tenantInvite = prisma.workspaceInvite
+if (typeof prisma.tenantUser === 'undefined' && prisma.workspaceUser) {
+  Object.defineProperty(prisma, 'tenantUser', {
+    configurable: true,
+    enumerable: true,
+    value: prisma.workspaceUser,
+    writable: true,
+  })
+}
+if (typeof prisma.tenantInvite === 'undefined' && prisma.workspaceInvite) {
+  Object.defineProperty(prisma, 'tenantInvite', {
+    configurable: true,
+    enumerable: true,
+    value: prisma.workspaceInvite,
+    writable: true,
+  })
+}
 
 module.exports = prisma

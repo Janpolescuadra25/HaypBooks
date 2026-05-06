@@ -280,6 +280,19 @@ export class OnboardingService {
               else (createdTenant as any).__createdCompany = updated
             }
 
+            if (createdCompanyId && workspaceId) {
+              try {
+                await (tx as any).companyUser.upsert({
+                  where: { companyId_workspaceId_userId: { companyId: createdCompanyId, workspaceId, userId } },
+                  create: { companyId: createdCompanyId, workspaceId, userId },
+                  update: {},
+                })
+                this.logger.log('[ONBOARDING-COMPLETE] ✅ CompanyUser linked for company: ' + createdCompanyId)
+              } catch (cuErr) {
+                this.logger.warn('[ONBOARDING-COMPLETE] CompanyUser upsert failed (non-fatal): ' + (cuErr as any)?.message)
+              }
+            }
+
             const step5Data = steps?.coa || {}
             if (createdCompanyId) {
               await this.accountingService.seedDefaultAccounts(createdCompanyId, tx, { industry: businessStep?.industry ?? undefined })

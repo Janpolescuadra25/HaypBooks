@@ -1174,6 +1174,7 @@ model Workspace {
   donations                   Donation[]
   dunningProfiles             DunningProfile[]
   expenseClaims               ExpenseClaim[]
+  perDiemClaims               PerDiemClaim[]
   financialStatementSnapshots FinancialStatementSnapshot[]
   form1099s                   Form1099[]
   funds                       Fund[]
@@ -1703,6 +1704,7 @@ model Company {
   donations                             Donation[]
   entityVersions                        EntityVersion[]
   expenseClaims                         ExpenseClaim[]
+  perDiemClaims                          PerDiemClaim[]
   externalSystemConfigs                 ExternalSystemConfig[]
   financialControls                     FinancialControl[]
   financialMetrics                      FinancialMetric[]
@@ -5930,6 +5932,7 @@ model Employee {
   // Auto-added opposite relations (generated)
   payrollAccruals                PayrollAccrual[]
   expenseClaims                  ExpenseClaim[]
+  perDiemClaims                  PerDiemClaim[]
   pettyCashFunds                 PettyCashFund[]
 
   @@unique([companyId, employeeNumber])
@@ -9072,6 +9075,7 @@ model Bill {
   purchaseOrder          PurchaseOrder?           @relation(fields: [purchaseOrderId], references: [id])
   lines                  BillLine[]
   payments               BillPayment[]
+  vendorCredits          VendorCredit[]
   journalEntryId         String?
   journalEntry           JournalEntry?            @relation("JournalEntry_Bills", fields: [journalEntryId], references: [id])
   postingStatus          PostingStatus            @default(DRAFT)
@@ -9165,6 +9169,7 @@ model PurchaseOrder {
   lines                 PurchaseOrderLine[]
   inventoryTransactions InventoryTransaction[]
   purchaseRequests      PurchaseRequest[]
+  bills                 Bill[]
 
   // Auto-added opposite relations (generated)
   letterOfCredits LetterOfCredit[]
@@ -10712,6 +10717,7 @@ model Department {
   company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   parent   Department?  @relation("DeptHierarchy", fields: [parentId], references: [id])
   children Department[] @relation("DeptHierarchy")
+  expenseClaims ExpenseClaim[]
 
   @@unique([companyId, name])
   @@index([companyId])

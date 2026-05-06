@@ -6,21 +6,54 @@ dotenv.config({ path: process.cwd() + '/.env' })
 async function main() {
   console.log('Seeding AP & Tax sample data...')
 
-  const tenant = await prisma.tenant.upsert({
-    where: { subdomain: 'demo-haypbooks' },
+  const ownerUserId = '00000000-0000-0000-0000-000000000002'
+  const workspaceId = '00000000-0000-0000-0000-000000000001'
+  const companyId = '00000000-0000-0000-0000-000000000003'
+
+  const ownerUser = await prisma.user.upsert({
+    where: { email: 'demo-owner@haypbooks.local' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000001',
-      name: 'Demo Tenant',
-      subdomain: 'demo-haypbooks',
+      id: ownerUserId,
+      email: 'demo-owner@haypbooks.local',
+      password: 'ChangeMe123!',
+      isEmailVerified: true,
+    },
+  })
+
+  const workspace = await prisma.workspace.upsert({
+    where: { id: workspaceId },
+    update: {},
+    create: {
+      id: workspaceId,
+      ownerUserId: ownerUser.id,
       baseCurrency: 'USD',
     },
   })
 
-  // Create a vendor contact
-  let vendorContact = await prisma.contact.findFirst({ where: { tenantId: tenant.id, displayName: 'Demo Vendor LLC' } })
+  const company = await prisma.company.upsert({
+    where: { workspaceId_name: { workspaceId: workspace.id, name: 'Demo Company' } },
+    update: {},
+    create: {
+      id: companyId,
+      workspaceId: workspace.id,
+      name: 'Demo Company',
+      legalName: 'Demo Company LLC',
+      currency: 'USD',
+    },
+  })
+
+  let vendorContact = await prisma.contact.findFirst({
+    where: { workspaceId: workspace.id, displayName: 'Demo Vendor LLC' },
+  })
   if (!vendorContact) {
-    vendorContact = await prisma.contact.create({ data: { tenantId: tenant.id, type: 'VENDOR', displayName: 'Demo Vendor LLC' } })
+    vendorContact = await prisma.contact.create({
+      data: {
+        workspaceId: workspace.id,
+        type: 'VENDOR',
+        displayName: 'Demo Vendor LLC',
+      },
+    })
   }
 
   const vendor = await prisma.vendor.upsert({
@@ -28,35 +61,109 @@ async function main() {
     update: {},
     create: {
       contactId: vendorContact.id,
-      tenantId: tenant.id,
+      workspaceId: workspace.id,
     },
   })
 
-  // Create a GL account to map tax to
   const taxAccount = await prisma.account.upsert({
-    where: { code_tenantId: { tenantId: tenant.id, code: '2100' } },
+    where: { companyId_code: { companyId: company.id, code: '2100' } },
     update: {},
     create: {
-      tenantId: tenant.id,
+      companyId: company.id,
       code: '2100',
       name: 'Sales Tax Payable',
       typeId: 2,
     },
   })
 
-  // Create a tax jurisdiction and rate
-  const jurisdiction = await prisma.taxJurisdiction.create({ data: { name: 'New York', country: 'US', region: 'NY', code: 'NY' } })
-  const rate = await prisma.taxRate.create({ data: { jurisdictionId: jurisdiction.id, name: 'NY State Sales Tax', rate: 0.08875, effectiveFrom: new Date('2020-01-01') } })
+  const country = await prisma.country.upsert({
+    where: { code: 'US' },
+    update: {},
+    create: {
+      code: 'US',
+      name: 'United States',
+      defaultCurrency: 'USD',
+    },
+  })
 
-  // Create a tenant-level TaxCode and map to account
-  const taxCode = await prisma.taxCode.create({ data: { tenantId: tenant.id, code: 'NY_SALES', name: 'NY Sales Tax' } })
-  await prisma.taxCodeRate.create({ data: { taxCodeId: taxCode.id, taxRateId: rate.id, sequence: 1, ratePct: 0.08875 } })
-  await prisma.taxCodeAccount.create({ data: { tenantId: tenant.id, taxCodeId: taxCode.id, accountId: taxAccount.id } })
+  const jurisdiction = await prisma.taxJurisdiction.upsert({
+    where: { countryId_region_code: { countryId: country.id, region: 'NY', code: 'NY' } },
+    update: {},
+    create: {
+      countryId: country.id,
+      name: 'New York',
+      region: 'NY',
+      code: 'NY',
+    },
+  })
 
-  // Create a bill with a single line
-  const bill = await prisma.bill.create({ data: { tenantId: tenant.id, vendorId: vendor.contactId, billNumber: 'BILL-1000', total: 110.00, balance: 110.00, issuedAt: new Date() } })
-  const billLine = await prisma.billLine.create({ data: { billId: bill.id, description: 'Service Charge', quantity: 1, rate: 100.00, amount: 100.00 } })
-  await prisma.lineTax.create({ data: { tenantId: tenant.id, billLineId: billLine.id, taxCodeId: taxCode.id, taxRateId: rate.id, amount: 8.875 } })
+  const rate = await prisma.taxRate.create({
+    data: {
+      companyId: company.id,
+      jurisdictionId: jurisdiction.id,
+      name: 'NY State Sales Tax',
+      rate: 0.08875,
+      effectiveFrom: new Date('2020-01-01'),
+    },
+  })
+
+  const taxCode = await prisma.taxCode.create({
+    data: {
+      companyId: company.id,
+      code: 'NY_SALES',
+      name: 'NY Sales Tax',
+    },
+  })
+  await prisma.taxCodeRate.create({
+    data: {
+      companyId: company.id,
+      taxCodeId: taxCode.id,
+      taxRateId: rate.id,
+      sequence: 1,
+      ratePct: 0.08875,
+    },
+  })
+  await prisma.taxCodeAccount.create({
+    data: {
+      companyId: company.id,
+      taxCodeId: taxCode.id,
+      accountId: taxAccount.id,
+    },
+  })
+
+  const bill = await prisma.bill.create({
+    data: {
+      workspaceId: workspace.id,
+      companyId: company.id,
+      vendorId: vendor.contactId,
+      billNumber: 'BILL-1000',
+      total: 110.0,
+      balance: 110.0,
+      issuedAt: new Date(),
+    },
+  })
+
+  const billLine = await prisma.billLine.create({
+    data: {
+      billId: bill.id,
+      workspaceId: workspace.id,
+      companyId: company.id,
+      description: 'Service Charge',
+      quantity: 1,
+      rate: 100.0,
+      amount: 100.0,
+    },
+  })
+
+  await prisma.lineTax.create({
+    data: {
+      companyId: company.id,
+      billLineId: billLine.id,
+      taxCodeId: taxCode.id,
+      taxRateId: rate.id,
+      amount: 8.875,
+    },
+  })
 
   console.log('AP & Tax seed complete')
 }
