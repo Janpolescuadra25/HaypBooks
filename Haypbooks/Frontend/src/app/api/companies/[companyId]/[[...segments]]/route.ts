@@ -1,5 +1,34 @@
 import { NextResponse } from 'next/server'
 
+interface BankAccount {
+  id: string
+  name: string
+  type: string
+  accountNumber: string
+  balance: number
+  currency: string
+  transactions: any[]
+}
+
+interface JournalEntry {
+  id: string
+  sourceType: string
+  sourceId: string
+  description: string
+  status: string
+  createdAt: string
+  lines: any[]
+}
+
+interface AuditLog {
+  id: string
+  tableName: string
+  action: string
+  message: string
+  sourceId?: string
+  ts: string
+}
+
 interface CompanyState {
   accounts: any[]
   employees: any[]
@@ -17,6 +46,9 @@ interface CompanyState {
   recurringBills: any[]
   paymentRuns: any[]
   perDiem: any[]
+  bankAccounts: BankAccount[]
+  journalEntries: JournalEntry[]
+  auditLogs: AuditLog[]
 }
 
 const companyStore = new Map<string, CompanyState>()
@@ -63,6 +95,11 @@ function createCompanyState(): CompanyState {
     recurringBills: [],
     paymentRuns: [],
     perDiem: [],
+    bankAccounts: [
+      { id: genId('bank'), name: 'Main Bank', type: 'checking', accountNumber: '123456789', balance: 10000, currency: 'USD', transactions: [] },
+    ],
+    journalEntries: [],
+    auditLogs: [],
   }
 }
 
@@ -142,16 +179,23 @@ function resolveResource(state: CompanyState, namespace: string, resource: strin
       case 'per-diem': return state.perDiem
       case 'expenses': return state.expenseReports
       case 'reimbursements': return state.reimbursements
+      case 'journal-entries': return state.journalEntries
     }
   }
   if (namespace === 'payroll' && resource === 'employees') {
     return state.employees
   }
-  if (namespace === 'accounts' && resource === '') {
+  if (namespace === 'accounts' && (resource === '' || resource === 'accounts')) {
     return state.accounts
   }
-  if (namespace === 'accounts' && resource === 'accounts') {
-    return state.accounts
+  if (namespace === 'banking' && resource === 'accounts') {
+    return state.bankAccounts
+  }
+  if (namespace === 'accounting' && resource === 'journal-entries') {
+    return state.journalEntries
+  }
+  if (namespace === 'integrations' && resource === 'audit-logs') {
+    return state.auditLogs
   }
   return null
 }
@@ -164,7 +208,7 @@ function createBaseItem(resource: string, payload: any) {
     case 'bills':
       return { id: genId('bill'), status: payload.status || 'OPEN', balance: payload.total ?? 0, billDate: payload.date || now, dueDate: payload.dueAt || payload.dueDate || now, payments: [], ...payload }
     case 'bill-payments':
-      return { id: genId('pay'), status: 'COMPLETED', paymentDate: payload.date || now, amount: payload.amount || 0, ...payload }
+      return { id: genId('pay'), status: 'COMPLETED', paymentDate: payload.date || now, amount: payload.amount || 0, billId: payload.billId || null, vendorId: payload.vendorId || null, ...payload }
     case 'purchase-orders':
       return { id: genId('po'), status: payload.status || 'OPEN', date: payload.date || now, lines: payload.lines || payload.lineItems || [], ...payload }
     case 'purchase-requests':
@@ -223,9 +267,53 @@ function createBaseItem(resource: string, payload: any) {
         active: payload.active ?? true,
         ...payload,
       }
+    case 'journal-entries':
+      return {
+        id: genId('je'),
+        status: payload.status || 'DRAFT',
+        description: payload.description || '',
+        lines: payload.lines || [],
+        createdAt: now,
+        ...payload,
+      }
     default:
       return { id: genId('item'), ...payload }
   }
+}
+
+function createJournalEntry(resource: string, item: any, state: CompanyState, lines: any[] = []) {
+  const now = new Date().toISOString()
+  const journalEntry = {
+    id: genId('je'),
+    sourceType: resource,
+    sourceId: item.id,
+    description: item.description || `${resource} ${item.id}`,
+    status: 'DRAFT',
+    createdAt: now,
+    lines,
+  }
+  state.journalEntries.push(journalEntry)
+  return journalEntry
+}
+
+function buildBalancedLines(state: CompanyState, amount: number, sourceAccount?: string) {
+  const cashAccount = state.bankAccounts[0]?.id || state.accounts[0]?.id
+  const payableAccount = state.accounts.find((account) => account.subtype === 'payable')?.id || state.accounts[2]?.id
+  return [
+    { id: genId('line'), accountId: sourceAccount || cashAccount, type: 'debit', amount },
+    { id: genId('line'), accountId: payableAccount, type: 'credit', amount },
+  ]
+}
+
+function recordAuditLog(state: CompanyState, tableName: string, action: string, sourceId?: string) {
+  state.auditLogs.push({
+    id: genId('log'),
+    tableName,
+    action,
+    message: `${tableName} ${action}${sourceId ? `: ${sourceId}` : ''}`,
+    sourceId,
+    ts: new Date().toISOString(),
+  })
 }
 
 function handleSpecialActions(resource: string, item: any, action: string | undefined, payload: any, state: CompanyState) {
@@ -262,6 +350,8 @@ function handleSpecialActions(resource: string, item: any, action: string | unde
     }
     case 'vendor-credits/apply':
       item.status = 'APPLIED'; return item
+    case 'payment-runs/process':
+      item.status = 'PROCESSED'; return item
     case 'bills/activity':
       return {
         activity: [
@@ -304,6 +394,13 @@ function routeCollection(method: string, namespace: string, resource: string, id
       if (method === 'POST') {
         const created = createBaseItem(resource, body || {})
         items.push(created)
+        if (resource === 'bill-payments') {
+          createJournalEntry('bill-payments', created, state, buildBalancedLines(state, created.amount || 0))
+          recordAuditLog(state, 'BillPayment', 'created', created.id)
+        }
+        if (resource === 'journal-entries') {
+          recordAuditLog(state, 'JournalEntry', 'created', created.id)
+        }
         return buildResponse(created)
       }
       return handleMethodNotAllowed()
@@ -342,31 +439,30 @@ function routeExpenses(method: string, segments: string[], state: CompanyState, 
   const [resource, id, action, extra] = segments
   if (!resource) return handleNotFound()
 
-  // Support both /expenses and nested /expenses/reimbursements
   if (resource === 'expenses' && id === 'reimbursements') {
     return routeCollection(method, 'expenses', 'reimbursements', action, extra, state, req)
   }
-
   if (resource === 'expenses' && id === 'reports') {
     return routeCollection(method, 'expenses', 'expenses', action, extra, state, req)
   }
-
   if (resource === 'expenses' && id === 'receipts') {
     return routeCollection(method, 'expenses', 'receipts', action, extra, state, req)
   }
-
   if (resource === 'reimbursements') {
     return routeCollection(method, 'expenses', 'reimbursements', id, action, state, req)
   }
-
   if (resource === 'reports') {
     return routeCollection(method, 'expenses', 'expenses', id, action, state, req)
   }
-
   if (resource === 'receipts') {
     return routeCollection(method, 'expenses', 'receipts', id, action, state, req)
   }
-
+  if (resource === 'expenses' && id === 'mileage') {
+    return routeCollection(method, 'expenses', 'mileage', action, extra, state, req)
+  }
+  if (resource === 'expenses' && id === 'per-diem') {
+    return routeCollection(method, 'expenses', 'per-diem', action, extra, state, req)
+  }
   if (resource === 'expenses') {
     return routeCollection(method, 'expenses', 'expenses', id, action, state, req)
   }
@@ -388,21 +484,109 @@ function routeAccounts(method: string, segments: string[], state: CompanyState, 
   return handleNotFound()
 }
 
-function routeAp(method: string, segments: string[], state: CompanyState, req: Request) {
-  const [resource, id, action] = segments
-  if (!resource) return handleNotFound()
+async function routeBanking(method: string, segments: string[], state: CompanyState, req: Request) {
+  const [resource, accountId, action, extra] = segments
+  if (resource !== 'accounts') return handleNotFound()
 
-  if (resource === 'reports' && id === 'aging') {
-    if (method !== 'GET') return handleMethodNotAllowed()
-    const items = state.bills.concat(state.vendorCredits, state.purchaseOrders, state.receipts)
-    const agingData = items.map((item) => ({ id: item.id, status: item.status || 'OPEN', amount: item.total || item.amount || 0 }))
-    return buildResponse({ aging: agingData })
+  if (!accountId) {
+    return routeCollection(method, 'banking', 'accounts', undefined, action, state, req)
   }
 
-  return routeCollection(method, 'ap', resource, id, action, state, req)
+  const bankAccount = findById(state.bankAccounts, accountId)
+  if (!bankAccount) return handleNotFound()
+
+  if (action === 'activity') {
+    return buildResponse((bankAccount.transactions || []).map((transaction: any) => ({
+      id: genId('evt'),
+      type: 'bank-transaction',
+      message: `Transaction ${transaction.id} for account ${bankAccount.name}`,
+      ts: new Date().toISOString(),
+    })))
+  }
+
+  if (action === 'transactions') {
+    if (!extra) {
+      if (method === 'GET') {
+        return buildResponse(bankAccount.transactions || [])
+      }
+      if (method === 'POST') {
+        const body = await parseJsonBody(req)
+        const transaction = { id: genId('txn'), status: 'PENDING', date: new Date().toISOString(), amount: body?.amount || 0, description: body?.description || '', ...body }
+        bankAccount.transactions = bankAccount.transactions || []
+        bankAccount.transactions.push(transaction)
+        createJournalEntry('banking-transaction', transaction, state, buildBalancedLines(state, transaction.amount || 0, bankAccount.id))
+        recordAuditLog(state, 'BankTransaction', 'created', transaction.id)
+        return buildResponse(transaction)
+      }
+      return handleMethodNotAllowed()
+    }
+    const transaction = findById(bankAccount.transactions || [], extra)
+    if (!transaction) return handleNotFound()
+    if (method === 'GET') {
+      return buildResponse(transaction)
+    }
+    if (method === 'PATCH' || method === 'PUT') {
+      const body = await parseJsonBody(req)
+      Object.assign(transaction, body || {})
+      return buildResponse(transaction)
+    }
+    if (method === 'DELETE') {
+      removeById(bankAccount.transactions || [], extra)
+      return NextResponse.json({ success: true })
+    }
+  }
+
+  return routeCollection(method, 'banking', 'accounts', accountId, action, state, req)
+}
+
+function routeAccounting(method: string, segments: string[], state: CompanyState, req: Request) {
+  const [resource, id] = segments
+  if (resource !== 'journal-entries') return handleNotFound()
+
+  if (id === 'audit-log') {
+    const query = parseQueryParams(req.url)
+    const tableName = query.get('tableName')
+    const logs = tableName ? state.auditLogs.filter((log) => log.tableName === tableName) : state.auditLogs
+    return buildResponse(logs)
+  }
+
+  return routeCollection(method, 'accounting', 'journal-entries', id, undefined, state, req)
+}
+
+function routeIntegrations(method: string, segments: string[], state: CompanyState, req: Request) {
+  const [resource] = segments
+  if (resource !== 'audit-logs') return handleNotFound()
+  if (method !== 'GET') return handleMethodNotAllowed()
+
+  const query = parseQueryParams(req.url)
+  const tableName = query.get('tableName')
+  const logs = tableName ? state.auditLogs.filter((log) => log.tableName === tableName) : state.auditLogs
+  return buildResponse(logs)
+}
+
+async function proxyToBackend(req: Request): Promise<Response> {
+  const backendBase = process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:4000'
+  const { pathname, search } = new URL(req.url)
+  const backendUrl = `${backendBase}${pathname}${search}`
+  try {
+    const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
+    const proxyRes = await fetch(backendUrl, {
+      method: req.method,
+      headers: new Headers(req.headers),
+      ...(hasBody ? { body: req.body, duplex: 'half' } : {}),
+    } as RequestInit)
+    const body = await proxyRes.text()
+    return new Response(body, {
+      status: proxyRes.status,
+      headers: { 'Content-Type': proxyRes.headers.get('Content-Type') || 'application/json' },
+    })
+  } catch {
+    return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 })
+  }
 }
 
 export async function GET(req: Request, ctx: { params: { companyId: string; segments?: string[] } }) {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API !== 'true') return proxyToBackend(req)
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
@@ -410,10 +594,14 @@ export async function GET(req: Request, ctx: { params: { companyId: string; segm
   if (segments[0] === 'expenses') return routeExpenses('GET', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('GET', segments.slice(1), state, req)
   if (segments[0] === 'accounts') return routeAccounts('GET', segments.slice(1), state, req)
+  if (segments[0] === 'banking') return routeBanking('GET', segments.slice(1), state, req)
+  if (segments[0] === 'accounting') return routeAccounting('GET', segments.slice(1), state, req)
+  if (segments[0] === 'integrations') return routeIntegrations('GET', segments.slice(1), state, req)
   return handleNotFound()
 }
 
 export async function POST(req: Request, ctx: { params: { companyId: string; segments?: string[] } }) {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API !== 'true') return proxyToBackend(req)
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
@@ -421,10 +609,14 @@ export async function POST(req: Request, ctx: { params: { companyId: string; seg
   if (segments[0] === 'expenses') return routeExpenses('POST', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('POST', segments.slice(1), state, req)
   if (segments[0] === 'accounts') return routeAccounts('POST', segments.slice(1), state, req)
+  if (segments[0] === 'banking') return routeBanking('POST', segments.slice(1), state, req)
+  if (segments[0] === 'accounting') return routeAccounting('POST', segments.slice(1), state, req)
+  if (segments[0] === 'integrations') return routeIntegrations('POST', segments.slice(1), state, req)
   return handleNotFound()
 }
 
 export async function PUT(req: Request, ctx: { params: { companyId: string; segments?: string[] } }) {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API !== 'true') return proxyToBackend(req)
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
@@ -432,10 +624,14 @@ export async function PUT(req: Request, ctx: { params: { companyId: string; segm
   if (segments[0] === 'expenses') return routeExpenses('PUT', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('PUT', segments.slice(1), state, req)
   if (segments[0] === 'accounts') return routeAccounts('PUT', segments.slice(1), state, req)
+  if (segments[0] === 'banking') return routeBanking('PUT', segments.slice(1), state, req)
+  if (segments[0] === 'accounting') return routeAccounting('PUT', segments.slice(1), state, req)
+  if (segments[0] === 'integrations') return routeIntegrations('PUT', segments.slice(1), state, req)
   return handleNotFound()
 }
 
 export async function PATCH(req: Request, ctx: { params: { companyId: string; segments?: string[] } }) {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API !== 'true') return proxyToBackend(req)
   const segments = ctx.params.segments ?? []
   const state = getCompanyState(ctx.params.companyId)
 
@@ -443,6 +639,9 @@ export async function PATCH(req: Request, ctx: { params: { companyId: string; se
   if (segments[0] === 'expenses') return routeExpenses('PATCH', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('PATCH', segments.slice(1), state, req)
   if (segments[0] === 'accounts') return routeAccounts('PATCH', segments.slice(1), state, req)
+  if (segments[0] === 'banking') return routeBanking('PATCH', segments.slice(1), state, req)
+  if (segments[0] === 'accounting') return routeAccounting('PATCH', segments.slice(1), state, req)
+  if (segments[0] === 'integrations') return routeIntegrations('PATCH', segments.slice(1), state, req)
   return handleNotFound()
 }
 
@@ -454,5 +653,8 @@ export async function DELETE(req: Request, ctx: { params: { companyId: string; s
   if (segments[0] === 'expenses') return routeExpenses('DELETE', segments, state, req)
   if (segments[0] === 'payroll') return routePayroll('DELETE', segments.slice(1), state, req)
   if (segments[0] === 'accounts') return routeAccounts('DELETE', segments.slice(1), state, req)
+  if (segments[0] === 'banking') return routeBanking('DELETE', segments.slice(1), state, req)
+  if (segments[0] === 'accounting') return routeAccounting('DELETE', segments.slice(1), state, req)
+  if (segments[0] === 'integrations') return routeIntegrations('DELETE', segments.slice(1), state, req)
   return handleNotFound()
 }

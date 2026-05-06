@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
 
-const BACKEND = (process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:4000').replace(/\/$/, '')
+const BACKEND = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '') : ''
+
+const MOCK_USER = {
+  id: 'mock-user-1',
+  email: 'owner@haypbooks.com',
+  firstName: 'Demo',
+  lastName: 'User',
+  role: 'owner',
+  companyId: '6c7cf4bd-ea1b-4b26-896e-5ebe59eebf55',
+}
 
 /**
  * Proxy GET /api/users/me to the backend.
@@ -8,6 +17,10 @@ const BACKEND = (process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:4000').rep
  * correctly from the browser to the backend and back.
  */
 export async function GET(req: Request) {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API === 'true' || !BACKEND) {
+    return NextResponse.json(MOCK_USER)
+  }
+
   try {
     const backendRes = await fetch(`${BACKEND}/api/users/me`, {
       method: 'GET',
@@ -31,7 +44,6 @@ export async function GET(req: Request) {
 
     return nextRes
   } catch (error) {
-    console.error('[proxy /api/users/me] error:', error)
-    return NextResponse.json({ error: 'Failed to reach backend' }, { status: 502 })
+    return NextResponse.json(MOCK_USER)
   }
 }
