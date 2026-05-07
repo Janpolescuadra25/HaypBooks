@@ -143,7 +143,11 @@ export default function ExpensesPage() {
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
-      label: 'Open expense',
+      label: 'View details',
+      onClick: (id) => router.push(`/expenses/employee-expenses/expenses/${id}`),
+    },
+    {
+      label: 'Edit expense',
       onClick: (id) => router.push(`/expenses/${id}/edit`),
     },
   ], [router])
