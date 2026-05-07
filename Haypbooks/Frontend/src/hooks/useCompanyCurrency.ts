@@ -1,7 +1,5 @@
 'use client'
 
-'use client'
-
 import { useEffect } from 'react'
 import { useCompany } from './use-company'
 import { setDefaultCurrency } from '@/lib/format'
@@ -12,7 +10,7 @@ import { setDefaultCurrency } from '@/lib/format'
  */
 export function useCompanyCurrency(defaultCurrency = 'USD') {
   const { company, loading } = useCompany()
-  const currency = company?.currency ?? defaultCurrency
+  const currency = company?.currency || defaultCurrency
 
   useEffect(() => {
     setDefaultCurrency(currency)

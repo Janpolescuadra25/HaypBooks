@@ -96,6 +96,7 @@ export class ExpensesService {
   async createReimbursement(userId: string, companyId: string, data: any) {
     await this.assertAccess(userId, companyId)
     const workspaceId = await this.getWorkspaceId(companyId)
+    if (!data.employeeId) throw new BadRequestException('employeeId is required')
     const lines = Array.isArray(data.lines) ? data.lines : []
     if (!lines.length) throw new BadRequestException('At least one reimbursement line is required')
     const totalAmount = lines.reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0)
