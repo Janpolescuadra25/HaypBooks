@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Download, Eye, Printer, TrendingUp, Clock, AlertCircle, Ban } from 'lucide-react'
 import { apService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
@@ -24,6 +25,7 @@ interface ApAgingRow {
 }
 
 export default function ApAgingPage() {
+  const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const toast = useToast()
@@ -160,18 +162,29 @@ export default function ApAgingPage() {
     { icon: Ban, label: 'Over 90 Days', value: rows.filter((row) => row.over90 > 0).length, color: 'rose' },
   ], [rows])
 
+  const handleViewDetails = useCallback(
+    (row: ApAgingRow) => {
+      if (!row?.id || row.id.startsWith('vendor-')) {
+        toast.info('Vendor details unavailable for this entry')
+        return
+      }
+      router.push(`/expenses/procurement/vendors/${row.id}`)
+    },
+    [router, toast],
+  )
+
   const actions = useMemo<HaypActionItem[]>(() => [
     {
-      label: 'View Details',
+      label: 'View Vendor',
       icon: <Eye size={14} />,
-      onClick: () => toast.info('Coming soon'),
+      onClick: (_id, row) => handleViewDetails(row),
     },
     {
       label: 'Print Report',
       icon: <Printer size={14} />,
       onClick: () => window.print(),
     },
-  ], [toast])
+  ], [handleViewDetails])
 
   const handleExportCSV = useCallback(() => {
     csvDownload(`ap-aging-${new Date().toISOString().slice(0, 10)}.csv`,

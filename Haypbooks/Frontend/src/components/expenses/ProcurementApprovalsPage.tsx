@@ -7,6 +7,7 @@ import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
+import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
@@ -32,6 +33,7 @@ export default function ProcurementApprovalsPage() {
   const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
+  const toast = useToast()
   const [rows, setRows] = useState<ProcurementApproval[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -39,12 +41,10 @@ export default function ProcurementApprovalsPage() {
   const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [toast, setToast] = useState('')
 
   const showToast = useCallback((message: string) => {
-    setToast(message)
-    setTimeout(() => setToast(''), 3000)
-  }, [])
+    toast.info(message)
+  }, [toast])
 
   const fetchRows = useCallback(async () => {
     if (!companyId) return
@@ -232,12 +232,24 @@ export default function ProcurementApprovalsPage() {
     formatValue: (value) => formatCurrency(Number(value ?? 0), currency),
   }), [currency])
 
+  const handleViewDetails = useCallback(
+    (row: ProcurementApproval) => {
+      if (row.type === 'PO') {
+        router.push(`/expenses/bills-payments/bills/${row.id}`)
+      } else {
+        toast.info('Opening expense report list')
+        router.push('/reporting/reports-center/expense-reports')
+      }
+    },
+    [router, toast],
+  )
+
   const actions = useMemo<HaypActionItem[]>(
     () => [
       {
         label: 'View Details',
         icon: <Eye size={14} />,
-        onClick: () => showToast('Coming soon'),
+        onClick: (_id, row) => handleViewDetails(row),
       },
       { divider: true, label: '', onClick: () => {} },
       {
@@ -254,7 +266,7 @@ export default function ProcurementApprovalsPage() {
         onClick: (_id, row) => handleReject(row),
       },
     ],
-    [handleApprove, handleReject, showToast],
+    [handleApprove, handleReject, handleViewDetails],
   )
 
   const bulkActions = useMemo<HaypBulkAction[]>(
@@ -308,14 +320,6 @@ export default function ProcurementApprovalsPage() {
           activeFilter={statusFilter.toLowerCase()}
           onFilterChange={(value) => setStatusFilter(String(value).toUpperCase() as (typeof STATUSES)[number])}
           filterLabel={filterLabel}
-          headerActions={
-            <button
-              onClick={() => showToast('Coming soon')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
-            >
-              <Plus size={15} /> New Approval
-            </button>
-          }
           actions={actions}
           bulkActions={bulkActions}
           totals={totals}
@@ -327,12 +331,6 @@ export default function ProcurementApprovalsPage() {
           emptySubtitle="Approval items will appear here when submitted"
         />
       </div>
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg pointer-events-none">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }
