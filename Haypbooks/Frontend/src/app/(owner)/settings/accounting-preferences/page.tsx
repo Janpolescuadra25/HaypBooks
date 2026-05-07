@@ -258,7 +258,7 @@ export default function AccountingPreferencesPage() {
         <div className="flex items-center gap-1 mt-2">
           <ChevronRight size={11} />
           <span>Currency is set in </span>
-          <Link href="/settings/company-profile/base-currency" className="font-semibold underline">Company Profile → Base Currency</Link>
+          <Link href="/settings/entity-management/base-currency" className="font-semibold underline">Entity Management → Base Currency</Link>
         </div>
       </div>
 
@@ -280,8 +280,8 @@ export default function AccountingPreferencesPage() {
             </div>
             <span className="text-xs text-gray-400">
               Change in{' '}
-              <Link href="/settings/company-profile/base-currency" className="text-emerald-600 hover:underline">
-                Company Profile → Base Currency
+              <Link href="/settings/entity-management/base-currency" className="text-emerald-600 hover:underline">
+                Entity Management → Base Currency
               </Link>
             </span>
           </div>
