@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Save, Loader2, Plus, X, Upload, FileText } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -60,6 +60,9 @@ const defaultLine = (): ExpenseLine => ({
 
 export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const companyQuery = searchParams.get('company')
+  const expensesReturnPath = companyQuery ? `/expenses/employee-expenses/expenses?company=${companyQuery}` : '/expenses/employee-expenses/expenses'
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
   const toast = useToast()
@@ -251,7 +254,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         await expensesService.createExpenseReport(companyId, payload)
         toast.success('Expense report saved as draft')
       }
-      router.push('/expenses/employee-expenses/expenses')
+      router.push(expensesReturnPath)
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Unable to save expense report')
       toast.error('Unable to save expense report')
@@ -272,7 +275,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         await expensesService.createExpenseReport(companyId, payload)
       }
       toast.success('Expense report submitted for approval')
-      router.push('/expenses/employee-expenses/expenses')
+      router.push(expensesReturnPath)
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Unable to submit expense report')
       toast.error('Unable to submit expense report')
@@ -415,31 +418,31 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b border-slate-200 text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Description</th>
-                    <th className="px-4 py-3">Vendor</th>
-                    <th className="px-4 py-3">Account</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3">Receipt</th>
-                    <th className="px-4 py-3">Billable</th>
-                    {!readOnly && <th className="px-4 py-3" />}
+                    <th className="px-3 py-2">Date</th>
+                    <th className="px-3 py-2">Category</th>
+                    <th className="px-3 py-2">Description</th>
+                    <th className="px-3 py-2">Vendor</th>
+                    <th className="px-3 py-2">Account</th>
+                    <th className="px-3 py-2 text-right">Amount</th>
+                    <th className="px-3 py-2">Receipt</th>
+                    <th className="px-3 py-2">Billable</th>
+                    {!readOnly && <th className="px-3 py-2" />}
                   </tr>
                 </thead>
                 <tbody>
                   {lines.map((line) => (
                     <tr key={line.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="px-4 py-3"><input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense line date" title="Expense line date" /></td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2"><input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense line date" title="Expense line date" /></td>
+                      <td className="px-3 py-2">
                         <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
                       </td>
-                      <td className="px-4 py-3"><input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Description" aria-label="Expense line description" title="Expense line description" /></td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2"><input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Description" aria-label="Expense line description" title="Expense line description" /></td>
+                      <td className="px-3 py-2">
                         <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Select vendor" />
                       </td>
-                      <td className="px-4 py-3"><HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Select account" /></td>
-                      <td className="px-4 py-3 text-right"><input type="number" min="0" step="0.01" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense amount" title="Expense amount" /></td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2"><HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Select account" /></td>
+                      <td className="px-3 py-2 text-right"><input type="number" min="0" step="0.01" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense amount" title="Expense amount" /></td>
+                      <td className="px-3 py-2">
                         <div className="space-y-2">
                           <input value={line.receiptName} onChange={(e) => updateLine(line.id, 'receiptName', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Receipt description" aria-label="Expense receipt description" title="Expense receipt description" />
                           <button type="button" onClick={() => { if (!readOnly) { setUploadingLineId(line.id); uploadInputRef.current?.click() } }} disabled={readOnly} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -447,8 +450,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                           </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center"><input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 text-emerald-600" aria-label="Billable expense" title="Billable expense" /></td>
-                      {!readOnly && <td className="px-4 py-3 text-right"><button type="button" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100" aria-label="Remove expense line" title="Remove expense line"><X size={14} /></button></td>}
+                      <td className="px-3 py-2 text-center"><input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 text-emerald-600" aria-label="Billable expense" title="Billable expense" /></td>
+                      {!readOnly && <td className="px-3 py-2 text-right"><button type="button" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100" aria-label="Remove expense line" title="Remove expense line"><X size={14} /></button></td>}
                     </tr>
                   ))}
                 </tbody>
@@ -558,7 +561,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
             <div className="text-sm text-slate-600">Report owner: {selectedEmployee?.displayName ?? '—'}</div>
             <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push('/expenses/employee-expenses/expenses')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
+              <button type="button" onClick={() => router.push(expensesReturnPath)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
               {mode === 'new' ? (
                 <>
                   <button type="button" onClick={handleSaveDraft} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed">Save Draft</button>

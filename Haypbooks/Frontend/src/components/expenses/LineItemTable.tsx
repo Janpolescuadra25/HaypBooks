@@ -229,9 +229,9 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
             </colgroup>
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-4 py-3 border-r border-slate-200" />
+                <th className="px-3 py-2 border-r border-slate-200" />
                 {columns.map((column) => (
-                  <th key={column.key} className={`relative overflow-hidden px-4 py-3 border-r border-slate-200 ${getAlignmentClass(column)} ${getColumnClassName(column.key)}`}>
+                  <th key={column.key} className={`relative overflow-hidden px-3 py-2 border-r border-slate-200 ${getAlignmentClass(column)} ${getColumnClassName(column.key)}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span>{column.label}</span>
                       <div
@@ -241,7 +241,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                     </div>
                   </th>
                 ))}
-                <th className="px-4 py-3" />
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -257,7 +257,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                     onDragEnd={onDragEnd}
                     className={`${isDragging ? 'opacity-50' : ''} border-t border-slate-200 ${overId === row.id ? 'bg-slate-50' : ''}`}
                   >
-                    <td className="w-12 px-2 py-3 border-r border-slate-200 text-center text-slate-500">
+                    <td className="w-12 px-2 py-2 border-r border-slate-200 text-center text-slate-500">
                       {showDragHandle ? (
                         <span className="inline-flex h-10 w-8 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-100 hover:text-slate-600 cursor-grab active:cursor-grabbing transition-all group active:scale-95">
                           <GripVertical size={20} strokeWidth={2.5} className="group-active:text-emerald-600 transition-colors" />
@@ -268,14 +268,14 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                       const value = getValue(row, column)
                       const alignmentClass = getAlignmentClass(column)
                       return (
-                        <td key={column.key} className={`px-4 py-3 border-r border-slate-200 align-top ${alignmentClass} ${getColumnClassName(column.key)}`}>
+                        <td key={column.key} className={`px-3 py-2 border-r border-slate-200 align-top ${alignmentClass} ${getColumnClassName(column.key)}`}>
                           {column.type === 'text' && (
                             <input
                               type="text"
                               value={String(value ?? '')}
                               placeholder={column.placeholder}
                               onChange={(event) => updateRow(row.id, column.key, event.target.value)}
-                              className="w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
+                              className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
                             />
                           )}
                           {column.type === 'number' && (
@@ -284,7 +284,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                               value={value == null || value === 0 ? '' : value}
                               placeholder={column.placeholder}
                               onChange={(event) => updateRow(row.id, column.key, event.target.value === '' ? 0 : Number(event.target.value))}
-                              className="w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
+                              className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all"
                             />
                           )}
                           {column.type === 'select' && (
@@ -304,17 +304,17 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                             />
                           )}
                           {column.type === 'calculated' && (
-                            <div className="flex items-center w-full h-12 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 tabular-nums">
+                            <div className="flex items-center w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 tabular-nums">
                               {typeof value === 'number' ? formatCurrency(value, currency) : String(value ?? '—')}
                             </div>
                           )}
                         </td>
                       )
                     })}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {showSplitButton && (
-                          <button type="button" title="Split this line across accounts" aria-label="Split this line across accounts" onClick={() => onSplit?.(row.id)} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-200">
+                          <button type="button" title="Split this line across accounts" aria-label="Split this line across accounts" onClick={() => onSplit?.(row.id)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-200">
                             <Columns size={18} />
                           </button>
                         )}
@@ -322,12 +322,12 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                           <span className="inline-flex whitespace-nowrap rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">{row.splits.length} split</span>
                         ) : null}
                         {showCopyButton && (
-                          <button type="button" title="Duplicate row" aria-label="Duplicate row" onClick={() => duplicateRow(row.id)} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-200">
+                          <button type="button" title="Duplicate row" aria-label="Duplicate row" onClick={() => duplicateRow(row.id)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-200">
                             <Copy size={18} />
                           </button>
                         )}
                         {showDeleteButton && (
-                          <button type="button" title="Delete row" aria-label="Delete row" onClick={() => deleteRow(row.id)} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all border border-slate-200">
+                          <button type="button" title="Delete row" aria-label="Delete row" onClick={() => deleteRow(row.id)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all border border-slate-200">
                             <Trash2 size={18} />
                           </button>
                         )}

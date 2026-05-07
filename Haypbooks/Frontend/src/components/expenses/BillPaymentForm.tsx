@@ -407,31 +407,31 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                   <table className="min-w-full text-left text-sm">
                     <thead className="border-b border-slate-200 text-slate-500">
                       <tr>
-                        <th className="px-4 py-3 w-12" />
-                        <th className="px-4 py-3">Bill #</th>
-                        <th className="px-4 py-3">Bill Date</th>
-                        <th className="px-4 py-3">Due Date</th>
-                        <th className="px-4 py-3 text-right">Original Amount</th>
-                        <th className="px-4 py-3 text-right">Amount Due</th>
-                        <th className="px-4 py-3 text-right">Payment</th>
-                        <th className="px-4 py-3">Memo</th>
+                        <th className="px-3 py-2 w-12" />
+                        <th className="px-3 py-2">Bill #</th>
+                        <th className="px-3 py-2">Bill Date</th>
+                        <th className="px-3 py-2">Due Date</th>
+                        <th className="px-3 py-2 text-right">Original Amount</th>
+                        <th className="px-3 py-2 text-right">Amount Due</th>
+                        <th className="px-3 py-2 text-right">Payment</th>
+                        <th className="px-3 py-2">Memo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {visibleBills.length === 0 ? (
-                        <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
+                        <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
                       ) : visibleBills.map((bill) => (
                         <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
-                          <td className="px-4 py-3"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
-                          <td className="px-4 py-3 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
-                          <td className="px-4 py-3 text-slate-500">{bill.date}</td>
-                          <td className="px-4 py-3 text-slate-500">{bill.dueDate}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(bill.originalAmount, currency)}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-3 py-2"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
+                          <td className="px-3 py-2 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
+                          <td className="px-3 py-2 text-slate-500">{bill.date}</td>
+                          <td className="px-3 py-2 text-slate-500">{bill.dueDate}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-slate-900">{formatCurrency(bill.originalAmount, currency)}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
+                          <td className="px-3 py-2 text-right">
                             <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                           </td>
-                          <td className="px-4 py-3"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
+                          <td className="px-3 py-2"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
                         </tr>
                       ))}
                     </tbody>
