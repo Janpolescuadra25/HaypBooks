@@ -661,6 +661,20 @@ export class ApService {
         return this.repo.deleteVendorCredit(companyId, creditId)
     }
 
+    async applyVendorCredit(userId: string, companyId: string, creditId: string) {
+        await this.assertAccess(userId, companyId)
+        const existing = await this.repo.findVendorCreditById(companyId, creditId)
+        if (!existing) throw new NotFoundException('Vendor credit not found')
+        if (existing.status === 'APPLIED') {
+            throw new BadRequestException('Vendor credit has already been applied')
+        }
+        const workspaceId = await this.getWorkspaceId(companyId)
+        await this.prisma.auditLog.create({
+            data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'VendorCredit', recordId: creditId, changes: { status: 'APPLIED' } },
+        }).catch(() => { /* non-critical */ })
+        return this.prisma.vendorCredit.update({ where: { id: creditId }, data: { status: 'APPLIED' } })
+    }
+
     // ─── Receipts ────────────────────────────────────────────────────────────
 
     async listReceipts(userId: string, companyId: string, opts: any) {
@@ -937,6 +951,75 @@ export class ApService {
             data: { workspaceId, companyId, userId, action: 'DELETE', tableName: 'MileageLog', recordId: logId, changes: {} },
         }).catch(() => { /* non-critical */ })
         return this.repo.deleteMileageLog(companyId, logId)
+    }
+
+    // ─── RFQs (Request for Quotation) ─────────────────────────────────────────
+    // TODO: Add Rfq Prisma model and full CRUD when schema is extended.
+
+    async listRfqs(userId: string, companyId: string, _opts: any) {
+        await this.assertAccess(userId, companyId)
+        return []
+    }
+
+    async getRfq(userId: string, companyId: string, rfqId: string) {
+        await this.assertAccess(userId, companyId)
+        throw new NotFoundException(`RFQ ${rfqId} not found`)
+    }
+
+    async createRfq(userId: string, companyId: string, _data: any) {
+        await this.assertAccess(userId, companyId)
+        throw new BadRequestException('RFQ creation is not yet supported')
+    }
+
+    async updateRfq(userId: string, companyId: string, rfqId: string, _data: any) {
+        await this.assertAccess(userId, companyId)
+        throw new NotFoundException(`RFQ ${rfqId} not found`)
+    }
+
+    // ─── Recurring Bills ──────────────────────────────────────────────────────
+    // TODO: Add RecurringBill Prisma model when schema is extended.
+
+    async listRecurringBills(userId: string, companyId: string, _opts: any) {
+        await this.assertAccess(userId, companyId)
+        return []
+    }
+
+    async getRecurringBill(userId: string, companyId: string, billId: string) {
+        await this.assertAccess(userId, companyId)
+        throw new NotFoundException(`Recurring bill ${billId} not found`)
+    }
+
+    async createRecurringBill(userId: string, companyId: string, _data: any) {
+        await this.assertAccess(userId, companyId)
+        throw new BadRequestException('Recurring bill creation is not yet supported')
+    }
+
+    async updateRecurringBill(userId: string, companyId: string, billId: string, _data: any) {
+        await this.assertAccess(userId, companyId)
+        throw new NotFoundException(`Recurring bill ${billId} not found`)
+    }
+
+    // ─── Payment Runs ─────────────────────────────────────────────────────────
+    // TODO: Add PaymentRun Prisma model when schema is extended.
+
+    async listPaymentRuns(userId: string, companyId: string, _opts: any) {
+        await this.assertAccess(userId, companyId)
+        return []
+    }
+
+    async getPaymentRun(userId: string, companyId: string, runId: string) {
+        await this.assertAccess(userId, companyId)
+        throw new NotFoundException(`Payment run ${runId} not found`)
+    }
+
+    async createPaymentRun(userId: string, companyId: string, _data: any) {
+        await this.assertAccess(userId, companyId)
+        throw new BadRequestException('Payment run creation is not yet supported')
+    }
+
+    async processPaymentRun(userId: string, companyId: string, runId: string) {
+        await this.assertAccess(userId, companyId)
+        throw new NotFoundException(`Payment run ${runId} not found`)
     }
 
     // ─── AP Aging ─────────────────────────────────────────────────────────────

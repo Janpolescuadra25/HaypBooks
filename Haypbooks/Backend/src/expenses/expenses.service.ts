@@ -174,6 +174,36 @@ export class ExpensesService {
     })
   }
 
+  async approveExpenseReport(userId: string, companyId: string, expenseId: string) {
+    await this.assertAccess(userId, companyId)
+    const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId } })
+    if (!record) throw new NotFoundException('Expense report not found')
+    if (record.status !== 'SUBMITTED') {
+      throw new BadRequestException('Only submitted reports can be approved')
+    }
+    return this.prisma.expenseClaim.update({
+      where: { id: expenseId },
+      data: { status: 'APPROVED', approvedAt: new Date() },
+    })
+  }
+
+  async reimburseExpenseReport(userId: string, companyId: string, expenseId: string, data: any) {
+    await this.assertAccess(userId, companyId)
+    const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId } })
+    if (!record) throw new NotFoundException('Expense report not found')
+    if (record.status !== 'APPROVED') {
+      throw new BadRequestException('Only approved reports can be reimbursed')
+    }
+    return this.prisma.expenseClaim.update({
+      where: { id: expenseId },
+      data: {
+        status: 'PAID',
+        reimbursedAt: new Date(),
+        reimbursementMethod: data?.method ?? record.reimbursementMethod,
+      },
+    })
+  }
+
   async listExpenseReports(userId: string, companyId: string, query: any) {
     return this.listReimbursements(userId, companyId, query)
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CompanyAccessGuard } from '../auth/guards/company-access.guard'
 import { ExpensesService } from './expenses.service'
@@ -76,6 +76,18 @@ export class ExpensesController {
   @Post('expenses/:id/submit')
   submitExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
     return this.expensesService.submitExpenseReport(req.user.userId, companyId, id)
+  }
+
+  @Post('expenses/:id/approve')
+  @HttpCode(HttpStatus.OK)
+  approveExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.expensesService.approveExpenseReport(req.user.userId, companyId, id)
+  }
+
+  @Post('expenses/:id/reimburse')
+  @HttpCode(HttpStatus.OK)
+  reimburseExpenseReport(@Req() req: any, @Param('companyId') companyId: string, @Param('id') id: string, @Body() body: any) {
+    return this.expensesService.reimburseExpenseReport(req.user.userId, companyId, id, body)
   }
 
   @Patch('expenses/:expenseId')

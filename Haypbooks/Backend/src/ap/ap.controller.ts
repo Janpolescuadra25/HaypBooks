@@ -198,6 +198,12 @@ export class ApController {
         return this.svc.deleteVendorCredit(req.user.userId, cid, creditId)
     }
 
+    @Post('vendor-credits/:creditId/apply')
+    @HttpCode(HttpStatus.OK)
+    applyVendorCredit(@Req() req: any, @Param('companyId') cid: string, @Param('creditId') creditId: string) {
+        return this.svc.applyVendorCredit(req.user.userId, cid, creditId)
+    }
+
     // ─── Receipts ────────────────────────────────────────────────────────────
 
     @Get('receipts')
@@ -279,5 +285,72 @@ export class ApController {
     @Get('reports/aging')
     getApAging(@Req() req: any, @Param('companyId') cid: string) {
         return this.svc.getApAging(req.user.userId, cid)
+    }
+
+    // ─── RFQs (Request for Quotation) ─────────────────────────────────────────
+
+    @Get('rfqs')
+    listRfqs(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listRfqs(req.user.userId, cid, q)
+    }
+
+    @Post('rfqs')
+    createRfq(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createRfq(req.user.userId, cid, body)
+    }
+
+    @Get('rfqs/:rfqId')
+    getRfq(@Req() req: any, @Param('companyId') cid: string, @Param('rfqId') rfqId: string) {
+        return this.svc.getRfq(req.user.userId, cid, rfqId)
+    }
+
+    @Put('rfqs/:rfqId')
+    updateRfq(@Req() req: any, @Param('companyId') cid: string, @Param('rfqId') rfqId: string, @Body() body: any) {
+        return this.svc.updateRfq(req.user.userId, cid, rfqId, body)
+    }
+
+    // ─── Recurring Bills ──────────────────────────────────────────────────────
+
+    @Get('recurring-bills')
+    listRecurringBills(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listRecurringBills(req.user.userId, cid, q)
+    }
+
+    @Post('recurring-bills')
+    createRecurringBill(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createRecurringBill(req.user.userId, cid, body)
+    }
+
+    @Get('recurring-bills/:billId')
+    getRecurringBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') billId: string) {
+        return this.svc.getRecurringBill(req.user.userId, cid, billId)
+    }
+
+    @Put('recurring-bills/:billId')
+    updateRecurringBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') billId: string, @Body() body: any) {
+        return this.svc.updateRecurringBill(req.user.userId, cid, billId, body)
+    }
+
+    // ─── Payment Runs ─────────────────────────────────────────────────────────
+
+    @Get('payment-runs')
+    listPaymentRuns(@Req() req: any, @Param('companyId') cid: string, @Query() q: any) {
+        return this.svc.listPaymentRuns(req.user.userId, cid, q)
+    }
+
+    @Post('payment-runs')
+    createPaymentRun(@Req() req: any, @Param('companyId') cid: string, @Body() body: any) {
+        return this.svc.createPaymentRun(req.user.userId, cid, body)
+    }
+
+    @Get('payment-runs/:runId')
+    getPaymentRun(@Req() req: any, @Param('companyId') cid: string, @Param('runId') runId: string) {
+        return this.svc.getPaymentRun(req.user.userId, cid, runId)
+    }
+
+    @Post('payment-runs/:runId/process')
+    @HttpCode(HttpStatus.OK)
+    processPaymentRun(@Req() req: any, @Param('companyId') cid: string, @Param('runId') runId: string) {
+        return this.svc.processPaymentRun(req.user.userId, cid, runId)
     }
 }
