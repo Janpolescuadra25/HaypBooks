@@ -285,7 +285,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div>
@@ -301,7 +301,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-2 sm:px-6 lg:px-8">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
               <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
@@ -310,46 +310,48 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           )}
         </div>
         <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
+          <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
             <div className="space-y-6">
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <div>
-                <label htmlFor="poNumber" className="block text-[10px] font-bold text-slate-400 uppercase">PO Number</label>
-                <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly={lockIdFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" />
-              </div>
-              <div>
-                <label htmlFor="orderDate" className="block text-[10px] font-bold text-slate-400 uppercase">Order Date</label>
-                <input id="orderDate" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
-              </div>
-              <div>
-                <label htmlFor="expectedDate" className="block text-[10px] font-bold text-slate-400 uppercase">Expected Delivery</label>
-                <input id="expectedDate" type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
-              </div>
-              <div className="sm:col-span-2 xl:col-span-1">
-                <CustomerPickerField
-                  label="Vendor"
-                  value={vendorId}
-                  customers={vendorOptions}
-                  placeholder="Search vendors…"
-                  createLabel="+ New Vendor"
-                  disabled={lockIdFields}
-                  onChange={setVendorId}
-                  onCreateNew={() => setShowVendorModal(true)}
-                />
-                {companyId && (
-                  <NewVendorModal
-                    open={showVendorModal}
-                    companyId={companyId}
-                    onClose={() => setShowVendorModal(false)}
-                    onCreated={(v) => {
-                      setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
-                      setVendorId(v.id)
-                    }}
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="poNumber" className="block text-[10px] font-bold text-slate-400 uppercase">PO Number</label>
+                  <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly={lockIdFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" />
+                </div>
+                <div>
+                  <label htmlFor="orderDate" className="block text-[10px] font-bold text-slate-400 uppercase">Order Date</label>
+                  <input id="orderDate" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
+                </div>
+                <div>
+                  <label htmlFor="expectedDate" className="block text-[10px] font-bold text-slate-400 uppercase">Expected Delivery</label>
+                  <input id="expectedDate" type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
+                </div>
+                <div className="sm:col-span-2">
+                  <CustomerPickerField
+                    label="Vendor"
+                    value={vendorId}
+                    customers={vendorOptions}
+                    placeholder="Search vendors…"
+                    createLabel="+ New Vendor"
+                    disabled={lockIdFields}
+                    onChange={setVendorId}
+                    onCreateNew={() => setShowVendorModal(true)}
                   />
-                )}
+                  {companyId && (
+                    <NewVendorModal
+                      open={showVendorModal}
+                      companyId={companyId}
+                      onClose={() => setShowVendorModal(false)}
+                      onCreated={(v) => {
+                        setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
+                        setVendorId(v.id)
+                      }}
+                    />
+                  )}
+                </div>
               </div>
-              <div>
+              <div className="space-y-4">
                 <label htmlFor="status" className="block text-[10px] font-bold text-slate-400 uppercase">Status</label>
                 <HaypSelect
                   id="status"
@@ -369,7 +371,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                 <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
                 <p className="text-sm text-slate-500">Add items and pricing for this purchase order.</p>
               </div>
-              <div className="mt-6">
+              <div className="mt-4">
                   <LineItemTable
                     columns={lineItemColumns.map((column) => column.key === 'account'
                       ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} ${account.name}` : account.name ?? '' })) }
@@ -390,7 +392,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-                <div className="space-y-3">
+                <div className="space-y-2 text-right">
                   <div className="text-sm text-slate-600">Subtotal</div>
                   <div className="text-2xl font-semibold text-slate-900">{formatCurrency(subtotal, currency)}</div>
                   <div className="text-sm text-slate-600">Tax</div>
@@ -464,7 +466,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
           </div>
         </div>
         <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
             <div className="space-y-6">
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
@@ -478,7 +480,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
       </main>
 
       <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="grid gap-3 lg:grid-cols-[1fr_auto] items-end">
             <div className="flex flex-wrap gap-2 justify-end">
               <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>

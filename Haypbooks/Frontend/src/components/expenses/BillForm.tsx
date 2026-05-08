@@ -640,11 +640,11 @@ export default function BillForm({ mode, billId }: BillFormProps) {
               </section>
             ) : null}
 
-            <section className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end divide-x divide-slate-100">
-                <div className="px-6 text-sm font-medium text-slate-500">Subtotal: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(subtotal, currency)}</span></div>
-                <div className="px-6 text-sm font-medium text-slate-500">Tax: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(taxTotal, currency)}</span></div>
-                <div className="px-6 text-sm font-medium text-slate-500">Total: <span className="ml-2 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(total, currency)}</span></div>
+            <section className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end text-right">
+                <div className="px-4 text-sm font-medium text-slate-500">Subtotal: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(subtotal, currency)}</span></div>
+                <div className="px-4 text-sm font-medium text-slate-500">Tax: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(taxTotal, currency)}</span></div>
+                <div className="px-4 text-sm font-medium text-slate-500">Total: <span className="ml-2 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(total, currency)}</span></div>
               </div>
             </section>
 

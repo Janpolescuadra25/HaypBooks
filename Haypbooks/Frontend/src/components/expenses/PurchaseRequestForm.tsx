@@ -364,7 +364,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
           <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
             <div className="space-y-6">
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label htmlFor="requestDate" className="block text-sm font-semibold text-slate-900">Request Date</label>
@@ -426,7 +426,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                 <div className="space-y-6">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
+                      <h2 className="text-sm font-semibold text-slate-700 mb-3">Line Items</h2>
                     </div>
                     <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
                       <Plus size={16} /> Add row
@@ -445,7 +445,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                   />
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div className="text-sm font-semibold text-slate-900">Request summary</div>
                       <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
                       <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
