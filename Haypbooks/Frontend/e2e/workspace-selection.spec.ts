@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { setupTestAuth } from './helpers'
 
 const EMAIL = 'demo@haypbooks.test'
 const PASSWORD = 'Dev@Seed#2026!Local'
@@ -6,30 +7,7 @@ const BACKEND = 'http://127.0.0.1:4000'
 
 test.describe('Workspace selection', () => {
   test('login with demo user, verify companies visible, click company to reach dashboard', async ({ page, request, context }) => {
-    // ── 1. Login via backend API directly to get the auth cookie ────────────
-    // This bypasses the frontend's post-login OTP/verification redirect that
-    // the demo user triggers, letting us test the workspace page in isolation.
-    const loginRes = await request.post(`${BACKEND}/api/auth/login`, {
-      data: { email: EMAIL, password: PASSWORD },
-    })
-    expect(loginRes.ok(), `Backend login failed: ${loginRes.status()}`).toBeTruthy()
-
-    // Extract the httpOnly 'token' cookie from Set-Cookie header
-    const setCookieHeader = loginRes.headers()['set-cookie'] ?? ''
-    const tokenMatch = setCookieHeader.match(/token=([^;]+)/)
-    expect(tokenMatch, 'No token cookie in login response').toBeTruthy()
-    const tokenValue = tokenMatch![1]
-
-    // Inject the cookie into the browser context so Next.js routes use it
-    await context.addCookies([{
-      name: 'token',
-      value: tokenValue,
-      domain: 'localhost',
-      path: '/',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-    }])
+    await setupTestAuth(context, request)
 
     // ── 2. Navigate directly to workspace page ───────────────────────────────
     await page.goto('/workspace')

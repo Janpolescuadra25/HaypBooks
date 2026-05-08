@@ -1,46 +1,9 @@
 import { test, expect } from '@playwright/test'
+import { setupTestAuth } from './helpers'
 
 const EMAIL = 'demo@haypbooks.test'
 const PASSWORD = 'Dev@Seed#2026!Local'
 const BACKEND = 'http://127.0.0.1:4000'
-
-/**
- * Logs in via backend API and injects the auth cookie into the browser context.
- * Returns the raw token value (useful for follow-up API calls if needed).
- */
-async function loginViaApi(
-  request: Parameters<Parameters<typeof test>[2]>[0]['request'],
-  context: Parameters<Parameters<typeof test>[2]>[0]['context'],
-): Promise<string> {
-  const loginRes = await request.post(`${BACKEND}/api/auth/login`, {
-    data: { email: EMAIL, password: PASSWORD },
-  })
-  expect(loginRes.ok(), `Backend login failed (${loginRes.status()})`).toBeTruthy()
-
-  const setCookieHeader = loginRes.headers()['set-cookie'] ?? ''
-  const tokenMatch = setCookieHeader.match(/token=([^;]+)/)
-  expect(tokenMatch, 'No token cookie returned by login').toBeTruthy()
-  const tokenValue = tokenMatch![1]
-
-  await context.addCookies([{
-    name: 'token',
-    value: tokenValue,
-    domain: 'localhost',
-    path: '/',
-    httpOnly: true,
-    secure: false,
-    sameSite: 'Lax',
-  }, {
-    name: 'onboardingComplete',
-    value: 'true',
-    domain: 'localhost',
-    path: '/',
-    secure: false,
-    sameSite: 'Lax',
-  }])
-
-  return tokenValue
-}
 
 /**
  * Navigates through workspace selection and lands on /dashboard.
@@ -71,7 +34,7 @@ async function selectCompanyAndGoToDashboard(page: Parameters<Parameters<typeof 
 
 test.describe('Bill creation', () => {
   test.beforeEach(async ({ context, request }) => {
-    await loginViaApi(request, context)
+    await setupTestAuth(context, request)
   })
 
   // ── Test 1: Bills list loads real data from the backend ─────────────────────

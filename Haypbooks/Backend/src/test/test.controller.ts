@@ -1,4 +1,4 @@
-import { Controller, Get, Query, ForbiddenException, Post, Body, Req, Inject } from '@nestjs/common'
+import { Controller, Get, Query, ForbiddenException, Post, Body, Req, Inject, UnauthorizedException, NotFoundException } from '@nestjs/common'
 import * as bcrypt from '../utils/bcrypt-fallback'
 import { PrismaService } from '../repositories/prisma/prisma.service'
 import { PendingSignupService } from '../auth/pending-signup.service'
@@ -191,6 +191,26 @@ export class TestController {
     this.ensureEnabled()
     const user = await this.prisma.user.findUnique({ where: { email } })
     return user || null
+  }
+
+  @Post('create-token')
+  async createToken(@Body() body: { email?: string }) {
+    try {
+      this.ensureEnabled()
+    } catch (err) {
+      throw new UnauthorizedException('Test endpoints disabled')
+    }
+
+    if (!body?.email) return { error: 'missing email' }
+
+    const user = await this.prisma.user.findUnique({ where: { email: body.email } })
+    if (!user) throw new NotFoundException('User not found')
+
+    const session = await this.authService.createSessionForUser(user.id)
+    if (!session?.token) {
+      throw new Error('Unable to generate test auth token')
+    }
+    return { token: session.token }
   }
 
   @Get('journal-entries')
