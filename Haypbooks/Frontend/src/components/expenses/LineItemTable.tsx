@@ -208,7 +208,9 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
   }, [calculatedColumns])
 
   const getAlignmentClass = useCallback((column: Column) => {
-    return column.type === 'number' || column.type === 'calculated' ? 'text-right' : 'text-left'
+    return ['unitPrice', 'amount'].includes(column.key) || column.type === 'number' || column.type === 'calculated'
+      ? 'text-right'
+      : 'text-left'
   }, [])
 
   return (
@@ -266,7 +268,9 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                     </td>
                     {columns.map((column) => {
                       const value = getValue(row, column)
-                      const alignmentClass = getAlignmentClass(column)
+                      const alignmentClass = ['unitPrice', 'amount'].includes(column.key)
+                        ? 'text-right'
+                        : getAlignmentClass(column)
                       return (
                         <td key={column.key} className={`px-3 py-2 border-r border-slate-200 align-top ${alignmentClass} ${getColumnClassName(column.key)}`}>
                           {column.type === 'text' && (

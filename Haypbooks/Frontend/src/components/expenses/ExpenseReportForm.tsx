@@ -364,33 +364,37 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div>
           <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
-          <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-5">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="space-y-4">
               <div>
                 <label htmlFor="report-name" className="block text-sm font-semibold text-slate-900">Report Name</label>
-                <input id="report-name" value={reportName} onChange={(e) => setReportName(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Report title" />
+                <input id="report-name" value={reportName} onChange={(e) => setReportName(e.target.value)} disabled={readOnly} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Report title" />
               </div>
-              <div>
-                <label htmlFor="report-from-date" className="block text-sm font-semibold text-slate-900">From Date</label>
-                <input id="report-from-date" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report start date" title="Report start date" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="report-from-date" className="block text-sm font-semibold text-slate-900">From Date</label>
+                  <input id="report-from-date" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} disabled={readOnly} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report start date" title="Report start date" />
+                </div>
+                <div>
+                  <label htmlFor="report-to-date" className="block text-sm font-semibold text-slate-900">To Date</label>
+                  <input id="report-to-date" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} disabled={readOnly} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report end date" title="Report end date" />
+                </div>
               </div>
-              <div>
-                <label htmlFor="report-to-date" className="block text-sm font-semibold text-slate-900">To Date</label>
-                <input id="report-to-date" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} disabled={readOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report end date" title="Report end date" />
-              </div>
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label htmlFor="report-employee" className="block text-sm font-semibold text-slate-900">Employee</label>
-                <HaypSelect id="report-employee" value={employeeId} onChange={setEmployeeId} disabled={readOnly} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} placeholder="Select employee" />
-              </div>
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label htmlFor="report-department" className="block text-sm font-semibold text-slate-900">Department</label>
-                <HaypSelect id="report-department" value={departmentId} onChange={setDepartmentId} disabled={readOnly} options={departments.map((d) => ({ value: d.id, label: d.name }))} placeholder="Select department" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="report-employee" className="block text-sm font-semibold text-slate-900">Employee</label>
+                  <HaypSelect id="report-employee" value={employeeId} onChange={setEmployeeId} disabled={readOnly} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} placeholder="Select employee" />
+                </div>
+                <div>
+                  <label htmlFor="report-department" className="block text-sm font-semibold text-slate-900">Department</label>
+                  <HaypSelect id="report-department" value={departmentId} onChange={setDepartmentId} disabled={readOnly} options={departments.map((d) => ({ value: d.id, label: d.name }))} placeholder="Select department" />
+                </div>
               </div>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div>
               <label htmlFor="business-purpose" className="block text-sm font-semibold text-slate-900">Business Purpose</label>
               <textarea
@@ -405,7 +409,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Expense Lines</h2>
@@ -466,7 +470,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="text-sm text-slate-600">Total Expenses</div>
@@ -483,7 +487,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             {mode !== 'new' && (
               <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
                 {['notes', 'policy', 'attachments'].map((tab) => (
@@ -511,7 +515,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                 </div>
               )}
               {(mode === 'new' || activeTab === 'policy') && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-700">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
                   <div className="text-sm font-semibold text-slate-900">Expense Policy</div>
                   <p className="mt-3">All expense lines must comply with company policy. Receipts are required for amounts over $25, and travel expenses should be pre-approved.</p>
                   <ul className="mt-3 space-y-2 list-disc pl-5 text-slate-600">

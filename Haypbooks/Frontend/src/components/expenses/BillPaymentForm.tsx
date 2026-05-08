@@ -334,15 +334,15 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
           ) : null}
 
           <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 lg:grid-cols-3">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="grid gap-3 lg:grid-cols-3">
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Payment Number</label>
-                  <input value={paymentId ? paymentId : 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+                  <input value={paymentId ? paymentId : 'Auto-generated'} readOnly className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 text-sm text-slate-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                  <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} disabled={mode === 'edit'} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Payment Method</label>
@@ -395,7 +395,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm mt-4">
               <div>
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
@@ -442,7 +442,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
           </div>
 
           <div className={mode === 'new' || activeTab === 'memo' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="block text-sm font-semibold text-slate-900">Reference / Check #</label>
@@ -457,7 +457,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
           </div>
 
           <div className={mode === 'new' || activeTab === 'attachments' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
               <div className="mt-4">
                 <HaypFileUpload attachments={attachments} onChange={setAttachments} />
@@ -466,8 +466,8 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
           </div>
 
           <div className={mode === 'new' || activeTab !== 'activity' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6 mt-6">
-              <div className="space-y-3">
+            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 mt-4">
+              <div className="space-y-2">
                 <div className="text-sm font-semibold text-slate-900">Payment summary</div>
                 <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
                 <div className="flex items-center justify-between text-sm text-slate-600"><span>Total payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
@@ -476,7 +476,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
           </div>
 
           <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
               <div className="mt-4">
                 <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill payment yet." />

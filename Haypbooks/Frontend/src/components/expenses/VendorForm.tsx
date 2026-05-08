@@ -181,7 +181,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               id="vendorCompanyName"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Vendor name"
             />
           </div>
@@ -202,7 +202,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               id="vendorTaxId"
               value={taxId}
               onChange={(e) => setTaxId(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Tax ID"
             />
           </div>
@@ -213,7 +213,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               id="vendorWebsite"
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="https://"
             />
           </div>
@@ -245,7 +245,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               id="vendorContactName"
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Contact name"
             />
           </div>
@@ -256,7 +256,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               id="vendorPhone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="(123) 456-7890"
             />
           </div>
@@ -268,18 +268,29 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="email@example.com"
             />
           </div>
 
-          <div className="md:col-span-2">
+          <div>
+            <label htmlFor="vendorWebsite" className="block text-sm font-semibold text-slate-900">Website</label>
+            <input
+              id="vendorWebsite"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              placeholder="https://"
+            />
+          </div>
+
+          <div>
             <label htmlFor="vendorMobile" className="block text-sm font-semibold text-slate-900">Mobile</label>
             <input
               id="vendorMobile"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="(123) 456-7890"
             />
           </div>
@@ -301,7 +312,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               id="vendorAddressLine1"
               value={billingAddress.line1}
               onChange={(e) => setBillingAddress((prev) => ({ ...prev, line1: e.target.value }))}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="Street address"
             />
           </div>
@@ -313,7 +324,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
                 id="vendorAddressCity"
                 value={billingAddress.city}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, city: e.target.value }))}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="City"
               />
             </div>
@@ -323,7 +334,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
                 id="vendorAddressState"
                 value={billingAddress.state}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, state: e.target.value }))}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="State"
               />
             </div>
@@ -336,7 +347,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
                 id="vendorAddressZip"
                 value={billingAddress.zip}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, zip: e.target.value }))}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="ZIP"
               />
             </div>
@@ -346,7 +357,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
                 id="vendorAddressCountry"
                 value={billingAddress.country}
                 onChange={(e) => setBillingAddress((prev) => ({ ...prev, country: e.target.value }))}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
                 placeholder="Country"
               />
             </div>
@@ -381,7 +392,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               min={0}
               value={creditLimit}
               onChange={(e) => setCreditLimit(Number(e.target.value))}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="0.00"
             />
           </div>
@@ -394,7 +405,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
               min={0}
               value={openingBalance}
               onChange={(e) => setOpeningBalance(Number(e.target.value))}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+              className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
               placeholder="0.00"
             />
           </div>
