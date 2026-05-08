@@ -58,9 +58,24 @@ interface Account {
   type?: string
 }
 
+interface RecurrenceSchedule {
+  frequency?: string
+  startDate?: string
+  endDate?: string | null
+  maxOccurrences?: number | null
+  daysInAdvance?: number | null
+}
+
 interface BillFormProps {
   mode: 'new' | 'edit'
   billId?: string
+  title?: string
+  onClose?: () => void
+  onSaved?: () => void
+  saveBill?: (companyId: string, payload: Record<string, unknown>, action: 'draft' | 'submit', mode: 'new' | 'edit', billId?: string) => Promise<any>
+  loadBill?: (companyId: string, billId: string) => Promise<any>
+  buildPayloadExtras?: (payload: Record<string, unknown>) => Record<string, unknown>
+  schedule?: RecurrenceSchedule
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -80,7 +95,7 @@ const defaultLineItem = (): LineItem => ({
   amount: 0,
 })
 
-export default function BillForm({ mode, billId }: BillFormProps) {
+export default function BillForm({ mode, billId, title, onClose, onSaved, saveBill, loadBill, buildPayloadExtras }: BillFormProps) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -230,7 +245,8 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     let cancelled = false
     async function loadBill() {
       try {
-        const { data } = await expensesService.getBill(companyIdValue, billIdValue)
+        const loadBillFn = loadBill ?? ((companyIdParam: string, id: string) => expensesService.getBill(companyIdParam, id))
+    const { data } = await loadBillFn(companyIdValue, billIdValue)
         if (cancelled) return
         setBillNumber((data.billNumber ?? '') as string)
         setVendorId((data.vendorId ?? '') as string)
@@ -238,8 +254,8 @@ export default function BillForm({ mode, billId }: BillFormProps) {
         setBillType((data.billType ?? 'Regular') as string)
         setDate((data.date ?? today) as string)
         setDueDate((data.dueDate ?? defaultDue()) as string)
-        setDescription((data.description ?? '') as string)
-        setMemo((data.memo ?? data.description ?? '') as string)
+        setDescription((data.description ?? data.templateName ?? '') as string)
+        setMemo((data.memo ?? data.description ?? data.templateName ?? '') as string)
         setTerms((data.terms ?? '') as string)
         setInternalNotes((data.internalNotes ?? '') as string)
         setAttachments(Array.isArray(data.attachments) ? data.attachments.map((attachment: any, index: number) => ({
@@ -353,29 +369,44 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     if (!validate()) return
     setSubmitting(true)
     try {
-      const payload = buildPayload()
+      let payload = buildPayload()
+      if (buildPayloadExtras) payload = buildPayloadExtras(payload)
 
       if (mode === 'new') {
-        const result = await expensesService.createBill(companyId, payload)
-        const billId = result.data?.id ?? (result as any)?.id
-        if (action === 'submit') {
-          if (!billId) throw new Error('Created bill id missing')
-          await expensesService.approveBill(companyId, billId)
-          toast.success('Bill submitted')
+        if (saveBill) {
+          await saveBill(companyId, payload, action, mode)
         } else {
-          toast.success('Draft saved')
+          const result = await expensesService.createBill(companyId, payload)
+          const billId = result.data?.id ?? (result as any)?.id
+          if (action === 'submit') {
+            if (!billId) throw new Error('Created bill id missing')
+            await expensesService.approveBill(companyId, billId)
+            toast.success('Bill submitted')
+          } else {
+            toast.success('Draft saved')
+          }
         }
       } else if (billId) {
-        await expensesService.updateBill(companyId, billId, payload)
-        if (action === 'submit' && status === 'DRAFT') {
-          await expensesService.approveBill(companyId, billId)
-          toast.success('Bill submitted')
+        if (saveBill) {
+          await saveBill(companyId, payload, action, mode, billId)
         } else {
-          toast.success(action === 'submit' ? 'Bill updated' : 'Draft updated')
+          await expensesService.updateBill(companyId, billId, payload)
+          if (action === 'submit' && status === 'DRAFT') {
+            await expensesService.approveBill(companyId, billId)
+            toast.success('Bill submitted')
+          } else {
+            toast.success(action === 'submit' ? 'Bill updated' : 'Draft updated')
+          }
         }
       }
 
-      router.push('/expenses/bills-payments/bills')
+      if (onSaved) {
+        onSaved()
+      } else if (onClose) {
+        onClose()
+      } else {
+        router.push('/expenses/bills-payments/bills')
+      }
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Unable to save bill')
       toast.error('Unable to save bill')
@@ -384,7 +415,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
     }
   }
 
-  const title = mode === 'new' ? 'New Bill' : 'Edit Bill'
+  const titleText = title ?? (mode === 'new' ? 'New Bill' : 'Edit Bill')
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
@@ -405,7 +436,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{title}</h1>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{titleText}</h1>
               </div>
             </div>
 
@@ -731,7 +762,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
           </div>
         </div>
       </div>
-      <div className="shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)] z-30">
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
@@ -744,7 +775,7 @@ export default function BillForm({ mode, billId }: BillFormProps) {
             <div className="flex items-center gap-3">
               <button 
                 type="button" 
-                onClick={() => router.push('/expenses/bills-payments/bills')} 
+                onClick={() => onClose ? onClose() : router.push('/expenses/bills-payments/bills')} 
                 disabled={submitting}
                 className="h-12 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
               >

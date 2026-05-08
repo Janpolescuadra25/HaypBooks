@@ -350,7 +350,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}</h1>
+                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Expense' : 'Edit Expense'}</h1>
               </div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
@@ -560,7 +560,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
           </div>
         </div>
 
-      <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
+      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
             <div className="text-sm text-slate-600">Report owner: {selectedEmployee?.displayName ?? '—'}</div>

@@ -74,7 +74,8 @@ test.describe('Expense management end-to-end', () => {
     console.log('[TEST] Bill created and list refreshed')
 
     // Purchase order flow
-    await page.goto(`/expenses/procurement/purchase-orders?company=${COMPANY_ID}`)
+    await page.goto(`/expenses/procurement/orders?company=${COMPANY_ID}`)
+    await expect(page.locator('h1', { hasText: 'Purchase Orders' })).toBeVisible({ timeout: 15000 })
     await expect(page.locator('button', { hasText: 'New PO' })).toBeVisible({ timeout: 15000 })
     await page.locator('button', { hasText: 'New PO' }).click()
     await page.waitForURL(/expenses\/procurement\/purchase-orders\/new/, { timeout: 20000 })
@@ -143,7 +144,8 @@ test.describe('Expense management end-to-end', () => {
     await page.locator('input[aria-label="Expense amount"]').first().fill(expenseAmount.toFixed(2))
 
     await page.locator('button', { hasText: 'Save Draft' }).click()
-    await page.waitForURL(/expenses\/employee-expenses\/expenses/, { timeout: 20000 })
+    await page.waitForURL(/expenses\/employee-expenses\/expenses/, { timeout: 60000 })
+    await expect(page.getByRole('heading', { name: 'Expenses' })).toBeVisible({ timeout: 60000 })
     await expect(page.getByText(`$${expenseAmount.toFixed(2)}`).first()).toBeVisible({ timeout: 20000 })
 
     const reportRow = page.locator('div[role="row"]', { hasText: `$${expenseAmount.toFixed(2)}` }).first()

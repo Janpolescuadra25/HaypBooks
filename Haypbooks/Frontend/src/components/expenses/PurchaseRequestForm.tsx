@@ -506,7 +506,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Changes are saved when you press Save or Submit.</p>}

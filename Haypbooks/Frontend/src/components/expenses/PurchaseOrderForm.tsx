@@ -479,7 +479,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
+      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="grid gap-3 lg:grid-cols-[1fr_auto] items-end">
             <div className="flex flex-wrap gap-2 justify-end">

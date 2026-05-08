@@ -487,7 +487,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
+      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap gap-2 justify-end">
             <button type="button" onClick={() => router.push('/expenses/bills-payments/bill-payments')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
