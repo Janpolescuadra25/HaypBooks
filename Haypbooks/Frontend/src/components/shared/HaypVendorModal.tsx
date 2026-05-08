@@ -328,7 +328,7 @@ export default function HaypVendorModal({
             </AnimatePresence>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
               {loading ? (
                 <div className="h-64 flex flex-col items-center justify-center gap-4">
                   <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
@@ -336,7 +336,7 @@ export default function HaypVendorModal({
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Left Column: Basic Info */}
                     <div className="space-y-6">
                       <div className="grid grid-cols-6 gap-3">
@@ -517,13 +517,13 @@ export default function HaypVendorModal({
                       ))}
                     </div>
 
-                    <div className="p-8 min-h-[280px]">
+                    <div className="p-6 min-h-[260px]">
                       <AnimatePresence mode="wait">
                         {activeTab === 'General' && (
                           <motion.div 
                             key="general-tab"
                             initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
-                            className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                            className="grid grid-cols-1 md:grid-cols-2 gap-6"
                           >
                             <div className="space-y-6">
                               <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm space-y-4">

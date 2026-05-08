@@ -355,9 +355,9 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
               </section>
 
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <div className="flex items-center justify-between gap-4 mb-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
                       <div>
                         <h2 className="text-lg font-semibold text-slate-900">Credit Line Items</h2>
                       </div>
@@ -366,7 +366,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
                       </button>
                     </div>
 
-                    <div className="mt-6">
+                    <div className="mt-4">
                       <LineItemTable
                         columns={lineItemColumns.map((column) => column.key === 'accountId'
                           ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} — ${account.name}` : account.name ?? '' })) }
@@ -381,8 +381,8 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
                       />
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-                    <div className="space-y-3">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="space-y-4">
                       <div className="text-sm font-semibold text-slate-900">Credit summary</div>
                       <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
                       <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
