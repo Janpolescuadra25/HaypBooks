@@ -892,7 +892,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
           </div>
         </div>
       </div>
-      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+      <div className="z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <div className="flex items-center justify-end">
             <div className="flex items-center gap-3">
