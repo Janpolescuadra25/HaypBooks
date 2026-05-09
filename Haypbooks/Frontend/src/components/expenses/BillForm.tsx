@@ -701,7 +701,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         </button>
                       </div>
                       <div className="space-y-4 px-6 py-6">
-                        {error && (
+                        {error ? (
                           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
                         )}
                         <div>

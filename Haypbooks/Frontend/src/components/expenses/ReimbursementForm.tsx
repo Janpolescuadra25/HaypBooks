@@ -558,7 +558,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
           </div>
         </div>
 
-      {error && (
+      {error ? (
         <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
             {error}

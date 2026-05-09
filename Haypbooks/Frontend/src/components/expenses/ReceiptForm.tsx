@@ -332,7 +332,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
         </section>
       </div>
 
-      {error && (
+      {error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {error}
         </div>

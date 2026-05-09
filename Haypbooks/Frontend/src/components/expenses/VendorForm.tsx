@@ -160,7 +160,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
 
   return (
     <div className="space-y-4 text-slate-900 pb-8">
-      {error && (
+      {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
           {error}
         </div>
