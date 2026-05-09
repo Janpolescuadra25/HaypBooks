@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import ModuleTabs from '@/components/shared/ModuleTabs'
 import { ToastProvider } from '@/components/ui/Toast'
 
@@ -11,11 +12,14 @@ const TABS = [
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+  const isFormPage = /(\/new|\/edit)\/?$/.test(pathname)
+
   return (
     <ToastProvider>
       <div className="flex flex-col h-full">
-        <ModuleTabs tabs={TABS} basePath="/expenses/employee-expenses" />
-        <div className="flex-1 overflow-y-auto">
+        {!isFormPage && <ModuleTabs tabs={TABS} basePath="/expenses/employee-expenses" />}
+        <div className={isFormPage ? 'flex-1 h-full' : 'flex-1 overflow-y-auto'}>
           {children}
         </div>
       </div>
