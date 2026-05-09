@@ -359,6 +359,41 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 />
               )}
             </div>
+            <div className="grid gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <input
+                  id="personalVehicle"
+                  type="checkbox"
+                  checked={personalVehicle || false}
+                  onChange={(e) => setPersonalVehicle(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <label htmlFor="personalVehicle" className="text-sm font-medium text-slate-700">Personal Vehicle</label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  id="billable"
+                  type="checkbox"
+                  checked={billable || false}
+                  onChange={(e) => setBillable(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <label htmlFor="billable" className="text-sm font-medium text-slate-700">Billable to Client</label>
+              </div>
+              {billable && (
+                <div className="space-y-1.5">
+                  <label htmlFor="clientProject" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Client / Project</label>
+                  <input
+                    id="clientProject"
+                    type="text"
+                    value={clientProject || ''}
+                    onChange={(e) => setClientProject(e.target.value)}
+                    placeholder="Project name or code"
+                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>

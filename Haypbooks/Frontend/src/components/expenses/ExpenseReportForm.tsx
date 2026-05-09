@@ -536,6 +536,25 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </div>
             </section>
 
+            <section className="space-y-3">
+              <div>
+                <label htmlFor="advancePayment" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Advance Payment</label>
+                <div className="relative mt-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
+                  <input
+                    id="advancePayment"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={advancePayment || ''}
+                    onChange={(e) => setAdvancePayment(Number(e.target.value) || 0)}
+                    placeholder="0.00"
+                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  />
+                </div>
+              </div>
+            </section>
+
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
               <section>
                 <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">

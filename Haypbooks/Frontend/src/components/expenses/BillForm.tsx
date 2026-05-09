@@ -797,6 +797,20 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
               </div>
             </section>
 
+            <section className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Discount</h3>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <select aria-label="Discount type" value={discountType} onChange={(e) => setDiscountType(e.target.value as 'pct' | 'flat')} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none">
+                  <option value="pct">%</option>
+                  <option value="flat">Fixed</option>
+                </select>
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
+                  <input type="number" min="0" step="0.01" value={discountValue || ''} onChange={(e) => setDiscountValue(Number(e.target.value) || 0)} placeholder="0.00" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                </div>
+              </div>
+            </section>
+
             {postingRules.length > 0 ? (
               <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-slate-700">
                 <div className="font-semibold text-emerald-900">GL posting guidance</div>

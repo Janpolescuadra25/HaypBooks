@@ -290,7 +290,8 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
           <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
             <div className="flex items-center justify-end gap-3">
               <button type="button" onClick={handleCancel} disabled={submitting} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
-              <button type="submit" disabled={submitting} className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20">Save</button>
+              <button type="button" onClick={() => { setStatus('DRAFT'); handleSave(); }} disabled={submitting} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Save Draft</button>
+              <button type="button" onClick={() => { setStatus('SUBMITTED'); handleSave(); }} disabled={submitting} className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20">Submit for Approval</button>
             </div>
           </div>
         </div>
