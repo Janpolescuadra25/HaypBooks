@@ -427,7 +427,6 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
             </div>
           </div>
         </div>
-      </div>
 
       {error && (
         <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">

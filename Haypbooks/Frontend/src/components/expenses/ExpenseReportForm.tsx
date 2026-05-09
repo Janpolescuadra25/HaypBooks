@@ -701,7 +701,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
               </button>
             </div>
           </div>
-        </div>
       </div>
 
       <input

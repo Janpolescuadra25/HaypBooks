@@ -335,104 +335,6 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
             </section>
 
             <section>
-              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
-                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Expense Items</h2>
-                  </div>
-                  {!isReadOnly && (
-                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition-all active:scale-95">
-                      <Plus size={16} /> Add Expense
-                    </button>
-                  )}
-                </div>
-                <div className="px-4 pb-4 sm:px-5 lg:px-6">
-                  <div className="space-y-3">
-                    {lines.map((line) => (
-                      <div key={line.id} className="group relative p-4 bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:border-emerald-200 hover:bg-white">
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-                          <div className="space-y-1.5">
-                            <HaypDatePicker
-                              id={`line-date-${line.id}`}
-                              label="Date"
-                              value={line.date}
-                              onChange={(value) => updateLine(line.id, 'date', value)}
-                              disabled={isReadOnly}
-                              className="w-full h-9 text-xs"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label htmlFor={`line-category-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
-                            <HaypSelect 
-                              id={`line-category-${line.id}`} 
-                              value={line.category} 
-                              onChange={(v) => updateLine(line.id, 'category', v)} 
-                              disabled={isReadOnly} 
-                              options={CATEGORIES.map((c) => ({ value: c, label: c }))} 
-                              className="h-9 text-xs disabled:opacity-50"
-                            />
-                          </div>
-                          <div className="space-y-1.5 lg:col-span-1">
-                            <label htmlFor={`line-description-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</label>
-                            <input 
-                              id={`line-description-${line.id}`} 
-                              value={line.description} 
-                              onChange={(e) => updateLine(line.id, 'description', e.target.value)} 
-                              disabled={isReadOnly} 
-                              placeholder="What was this for?"
-                              className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-emerald-500 transition-all outline-none disabled:opacity-50" 
-                            />
-                          </div>
-                          <div className="flex gap-2 items-end">
-                            <div className="flex-1 space-y-1.5">
-                              <label htmlFor={`line-amount-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount</label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
-                                <input 
-                                  id={`line-amount-${line.id}`} 
-                                  type="number" 
-                                  min={0} 
-                                  step={0.01} 
-                                  value={line.amount || ''} 
-                                  onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} 
-                                  disabled={isReadOnly} 
-                                  className="w-full h-9 rounded-lg border border-slate-200 bg-white pl-10 pr-3 py-2 text-xs font-bold text-slate-900 text-right focus:border-emerald-500 transition-all outline-none disabled:opacity-50" 
-                                />
-                              </div>
-                            </div>
-                            {!isReadOnly && lines.length > 1 && (
-                              <button 
-                                type="button" 
-                                onClick={() => removeLine(line.id)} 
-                                className="h-9 w-9 flex items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors"
-                              >
-                                <X size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-4 space-y-1.5">
-                          <label htmlFor={`line-account-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account</label>
-                          <select
-                            id={`line-account-${line.id}`}
-                            value={line.accountId || ''}
-                            onChange={(e) => updateLine(line.id, 'accountId', e.target.value)}
-                            disabled={isReadOnly}
-                            className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none disabled:opacity-50"
-                          >
-                            <option value="">Select account</option>
-                            {accounts.map((account) => (
-                              <option key={account.id} value={account.id}>{account.code ? account.code : account.name ?? account.id}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-              ))}
-              </div>
-            </div>
-          </div>
-            </section>
 
             <section>
               <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
@@ -557,6 +459,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
             </div>
           </div>
         </div>
+      </div>
 
       {error && (
         <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">

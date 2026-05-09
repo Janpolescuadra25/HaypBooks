@@ -611,7 +611,6 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
             </div>
           </div>
         </div>
-      </div>
 
       {error && (
         <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
