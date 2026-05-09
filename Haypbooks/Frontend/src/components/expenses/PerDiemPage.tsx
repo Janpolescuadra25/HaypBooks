@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, Download, Filter, Clock, Pencil, Trash2, Calendar, CheckCircle, Wallet } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
@@ -10,8 +10,6 @@ import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
-import HaypModal from '@/components/shared/HaypModal'
-import PerDiemForm, { type PerDiemFormHandle } from './PerDiemForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface PerDiem {
@@ -42,11 +40,6 @@ export default function PerDiemPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [panelOpen, setPanelOpen] = useState(false)
-  const [openMode, setOpenMode] = useState<'new' | 'edit'>('new')
-  const [openId, setOpenId] = useState<string | null>(null)
-  const formRef = useRef<PerDiemFormHandle | null>(null)
-  const saveAndNewRef = useRef(false)
 
   const fetchRows = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -66,24 +59,6 @@ export default function PerDiemPage() {
 
   useEffect(() => { fetchRows() }, [fetchRows])
 
-  const handleClose = useCallback(() => {
-    saveAndNewRef.current = false
-    setPanelOpen(false)
-    setOpenId(null)
-    setOpenMode('new')
-  }, [])
-
-  const handleSaved = useCallback(async () => {
-    await fetchRows()
-    if (saveAndNewRef.current) {
-      saveAndNewRef.current = false
-      setOpenMode('new')
-      setOpenId(null)
-    } else {
-      setPanelOpen(false)
-      setOpenId(null)
-    }
-  }, [fetchRows])
 
   const handleDeletePerDiem = useCallback((id: string) => {
     if (!confirm('Delete this per diem claim?')) return
@@ -125,11 +100,7 @@ export default function PerDiemPage() {
     {
       label: 'Edit',
       icon: <Pencil size={14} />,
-      onClick: (_id, row) => {
-        setPanelOpen(true)
-        setOpenMode('edit')
-        setOpenId(row.id)
-      },
+      onClick: (_id, row) => router.push(`/expenses/employee-expenses/per-diem/${row.id}/edit`),
     },
     {
       label: 'Delete',
@@ -278,7 +249,7 @@ export default function PerDiemPage() {
       <div className="min-h-full min-w-0 overflow-visible">
         <HaypDataTable
         headerActions={
-          <button onClick={() => setPanelOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
+          <button onClick={() => router.push('/expenses/employee-expenses/per-diem/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Claim</button>
         }
         data={dateFiltered}
         columns={columns}
@@ -304,38 +275,13 @@ export default function PerDiemPage() {
         onExport={handleExportCSV}
         exportLabel="Export CSV"
         onActivityLog={() => router.push('/expenses/employee-expenses/per-diem/activity')}
-        onRowClick={(row) => {
-          setPanelOpen(true)
-          setOpenMode('edit')
-          setOpenId(row.id)
-        }}
+        onRowClick={(row) => router.push(`/expenses/employee-expenses/per-diem/${row.id}/edit`)}
         emptyTitle={loading ? 'Loading per diem claims…' : 'No per diem claims found'}
         emptySubtitle="Use search or filters to locate claims"
         loading={loading}
       />
       </div>
 
-      <HaypModal
-        open={panelOpen}
-        onClose={handleClose}
-        title={openMode === 'new' ? 'New Per Diem Claim' : 'Edit Per Diem Claim'}
-        footer={
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button type="button" onClick={handleClose} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={() => { saveAndNewRef.current = true; formRef.current?.save() }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Save and new</button>
-            <button type="button" onClick={() => { saveAndNewRef.current = false; formRef.current?.save() }} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">Save</button>
-          </div>
-        }
-      >
-        <PerDiemForm
-          key={`${openMode}-${openId ?? 'new'}`}
-          ref={formRef}
-          mode={openMode}
-          perDiemId={openId ?? undefined}
-          onClose={handleClose}
-          onSaved={handleSaved}
-        />
-      </HaypModal>
     </div>
   )
 }

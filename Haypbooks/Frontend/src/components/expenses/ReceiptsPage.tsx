@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, Download, Filter, RefreshCw, Pencil, Trash2, FileText, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
@@ -10,8 +10,6 @@ import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
-import HaypModal from '@/components/shared/HaypModal'
-import ReceiptForm, { type ReceiptFormHandle } from './ReceiptForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface Receipt {
@@ -40,11 +38,6 @@ export default function ReceiptsPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const [receiptPanelOpen, setReceiptPanelOpen] = useState(false)
-  const [openReceiptMode, setOpenReceiptMode] = useState<'new' | 'edit'>('new')
-  const [openReceiptId, setOpenReceiptId] = useState<string | null>(null)
-  const receiptFormRef = useRef<ReceiptFormHandle | null>(null)
-  const saveAndNewRef = useRef(false)
 
   const fetchReceipts = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -64,24 +57,6 @@ export default function ReceiptsPage() {
 
   useEffect(() => { fetchReceipts() }, [fetchReceipts])
 
-  const handleClose = useCallback(() => {
-    saveAndNewRef.current = false
-    setReceiptPanelOpen(false)
-    setOpenReceiptId(null)
-    setOpenReceiptMode('new')
-  }, [])
-
-  const handleSaved = useCallback(async () => {
-    await fetchReceipts()
-    if (saveAndNewRef.current) {
-      saveAndNewRef.current = false
-      setOpenReceiptMode('new')
-      setOpenReceiptId(null)
-    } else {
-      setReceiptPanelOpen(false)
-      setOpenReceiptId(null)
-    }
-  }, [fetchReceipts])
 
   const filtered = useMemo(() => {
     return rows
@@ -219,10 +194,8 @@ export default function ReceiptsPage() {
   const activeFilterCount = [statusFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length
 
   const openEditReceipt = useCallback((id: string) => {
-    setReceiptPanelOpen(true)
-    setOpenReceiptMode('edit')
-    setOpenReceiptId(id)
-  }, [])
+    router.push(`/expenses/employee-expenses/receipts/${id}/edit`)
+  }, [router])
 
   const handleDeleteReceipt = useCallback(async (id: string) => {
     if (!companyId) return
@@ -268,7 +241,7 @@ export default function ReceiptsPage() {
         stats={stats}
         headerActions={
           <button
-            onClick={() => setReceiptPanelOpen(true)}
+            onClick={() => router.push('/expenses/employee-expenses/receipts/new')}
             className="flex items-center gap-2 px-5 py-2.5 bg-brand-emerald text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
           >
             <Plus size={18} />
@@ -287,45 +260,6 @@ export default function ReceiptsPage() {
         loading={loading}
       />
       </div>
-      <HaypModal
-        open={receiptPanelOpen}
-        onClose={handleClose}
-        title={openReceiptMode === 'new' ? 'New Receipt' : 'Edit Receipt'}
-        footer={
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => { saveAndNewRef.current = true; receiptFormRef.current?.save() }}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Save and new
-            </button>
-            <button
-              type="button"
-              onClick={() => { saveAndNewRef.current = false; receiptFormRef.current?.save() }}
-              className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-            >
-              Save
-            </button>
-          </div>
-        }
-      >
-        <ReceiptForm
-          key={`${openReceiptMode}-${openReceiptId ?? 'new'}`}
-          ref={receiptFormRef}
-          mode={openReceiptMode}
-          receiptId={openReceiptId ?? undefined}
-          onClose={handleClose}
-          onSaved={handleSaved}
-        />
-      </HaypModal>
     </div>
   )
 }

@@ -169,7 +169,7 @@ export const OPERATIONS_NAV: OperationsSection[] = [
         id: 'employee-expenses',
         label: 'Expenses',
         tabs: [
-          { id: 'expenses',             label: 'Expense Reports',      path: '/expenses/employee-expenses/expenses' },
+          { id: 'expenses',             label: 'Expenses',             path: '/expenses/employee-expenses/expenses' },
           { id: 'receipts',             label: 'Receipts',             path: '/expenses/employee-expenses/receipts' },
           { id: 'mileage',              label: 'Mileage',              path: '/expenses/employee-expenses/mileage' },
           { id: 'per-diem',             label: 'Per Diem',             path: '/expenses/employee-expenses/per-diem' },

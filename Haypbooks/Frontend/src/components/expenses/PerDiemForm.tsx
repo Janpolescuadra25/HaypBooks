@@ -140,10 +140,22 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
       }
     }, [companyId, validate, employeeId, destination, purpose, startDate, endDate, days, dailyRate, totalAmount, currency, status, notes, mode, perDiemId, onSaved, onClose, toast])
 
+    const handleCancel = useCallback(() => {
+      if (onClose) onClose()
+    }, [onClose])
+
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
     return (
-      <div className="space-y-4 text-slate-900">
+      <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+        <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+            <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Per Diem' : 'Edit Per Diem'}</h1>
+          </div>
+        </div>
+        <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+            <div className="space-y-6">
         <section>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
@@ -243,20 +255,6 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl bg-slate-50/50 border border-slate-100 p-4 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Days</p>
-                  <p className="mt-1 text-xl font-black text-slate-900">{days}</p>
-                </div>
-                <div className="rounded-2xl bg-slate-50/50 border border-slate-100 p-4 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Daily Rate</p>
-                  <p className="mt-1 text-xl font-black text-slate-900">{formatCurrency(dailyRate, currency)}</p>
-                </div>
-                <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Total Amount</p>
-                  <p className="mt-1 text-xl font-black text-emerald-600">{formatCurrency(totalAmount, currency)}</p>
-                </div>
-              </div>
             </div>
           </div>
         </section>
@@ -285,7 +283,18 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
             {error}
           </div>
         )}
-      </div>
+            </div>
+          </div>
+        </main>
+        <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+            <div className="flex items-center justify-end gap-3">
+              <button type="button" onClick={handleCancel} disabled={submitting} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
+              <button type="submit" disabled={submitting} className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20">Save</button>
+            </div>
+          </div>
+        </div>
+      </form>
     )
   }
 )

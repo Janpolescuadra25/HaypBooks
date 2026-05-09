@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Plus, Save, ArrowLeft, FileText, History } from 'lucide-react'
+import { Loader2, Plus, Save, FileText, History } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -197,19 +197,11 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
   const vendorOptions = useMemo(() => vendors.map((v) => ({ id: v.id, name: v.displayName })), [vendors])
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+    <div className="flex h-full flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
-                type="button"
-                onClick={() => router.push('/expenses/procurement/rfq')} 
-                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
-              <div className="w-px h-6 bg-slate-200" />
               <h1 className="text-lg font-bold tracking-tight text-slate-900">
                 {mode === 'new' ? 'New Request for Quotation' : 'Edit RFQ'}
               </h1>
@@ -412,7 +404,7 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+      <div className="z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm font-medium text-slate-500">

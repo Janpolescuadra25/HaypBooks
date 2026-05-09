@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Save, Loader2, Plus, X, Upload, FileText, Send, Trash2 } from 'lucide-react'
+import { Save, Loader2, Plus, X, Upload, FileText, Send, ArrowLeft, Trash2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -10,7 +10,6 @@ import { formatCurrency } from '@/lib/format'
 import { expensesService, ExpenseReportPayload } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
-import HaypDatePicker from '@/components/shared/HaypDatePicker'
 import HaypSelect from '@/components/shared/HaypSelect'
 
 interface ExpenseReportFormProps {
@@ -344,11 +343,19 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const selectedEmployee = useMemo(() => employees.find((item) => item.id === employeeId), [employees, employeeId])
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+    <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <button 
+                type="button"
+                onClick={() => router.push(expensesReturnPath)} 
+                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
               <h1 className="text-lg font-bold tracking-tight text-slate-900">
                 {mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}
               </h1>
@@ -393,21 +400,25 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                   </div>
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="space-y-1.5">
-                      <HaypDatePicker
-                        id="report-from-date"
-                        label="From Date"
-                        value={fromDate}
-                        onChange={setFromDate}
-                        disabled={readOnly}
+                      <label htmlFor="report-from-date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">From Date</label>
+                      <input 
+                        id="report-from-date" 
+                        type="date" 
+                        value={fromDate} 
+                        onChange={(e) => setFromDate(e.target.value)} 
+                        disabled={readOnly} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <HaypDatePicker
-                        id="report-to-date"
-                        label="To Date"
-                        value={toDate}
-                        onChange={setToDate}
-                        disabled={readOnly}
+                      <label htmlFor="report-to-date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">To Date</label>
+                      <input 
+                        id="report-to-date" 
+                        type="date" 
+                        value={toDate} 
+                        onChange={(e) => setToDate(e.target.value)} 
+                        disabled={readOnly} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -484,14 +495,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         {lines.map((line) => (
                           <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-2 py-2 min-w-[140px]">
-                              <HaypDatePicker
-                                id={`line-date-${line.id}`}
-                                label=""
-                                value={line.date}
-                                onChange={(value) => updateLine(line.id, 'date', value)}
-                                disabled={readOnly}
-                                className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none"
-                              />
+                              <input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" />
                             </td>
                             <td className="px-2 py-2 min-w-[140px]">
                               <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} className="h-9 text-xs" />
@@ -529,27 +533,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                     </table>
                   </div>
                 </div>
-              </div>
-            </section>
-
-            <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Expenses</p>
-                <p className="text-2xl font-black text-slate-900 tabular-nums">{formatCurrency(totalExpenses, currency)}</p>
-              </div>
-              <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Advance Payment</p>
-                <input 
-                  type="number" 
-                  value={advancePayment} 
-                  onChange={(e) => setAdvancePayment(Number(e.target.value))} 
-                  disabled={readOnly} 
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
-                />
-              </div>
-              <div className="p-6 bg-emerald-600 rounded-3xl border border-emerald-500 shadow-lg shadow-emerald-600/20 space-y-1">
-                <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider">Net Amount Owed</p>
-                <p className="text-2xl font-black text-white tabular-nums">{formatCurrency(netAmount, currency)}</p>
               </div>
             </section>
 
@@ -669,17 +652,9 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         </div>
       </main>
 
-      <div className="z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-              <div className="flex items-center gap-2">
-                <span>Total Net:</span>
-                <span className="text-lg font-bold text-slate-900">{formatCurrency(netAmount, currency)}</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-end gap-3">
               <button 
                 type="button" 
                 onClick={() => router.push(expensesReturnPath)} 

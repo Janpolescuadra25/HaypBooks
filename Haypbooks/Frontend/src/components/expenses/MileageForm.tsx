@@ -171,8 +171,22 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
     save: handleSave,
   }), [handleSave])
 
+  const handleCancel = useCallback(() => {
+    if (onClose) onClose()
+    else router.push('/expenses/employee-expenses/mileage')
+  }, [onClose, router])
+
   return (
-    <div className="space-y-4 text-slate-900">
+    <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Mileage' : 'Edit Mileage'}</h1>
+          <p className="text-sm text-slate-500 mt-1">Record mileage details for expense reimbursement.</p>
+        </div>
+      </div>
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+          <div className="space-y-4 text-slate-900">
       <section>
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
@@ -345,10 +359,6 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 />
               )}
             </div>
-            <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-6 flex items-center justify-between">
-              <span className="text-sm font-bold text-emerald-800 uppercase tracking-wider">Total Reimbursement</span>
-              <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatCurrency(amount, currency)}</span>
-            </div>
           </div>
         </div>
       </section>
@@ -377,7 +387,18 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
           {error}
         </div>
       )}
-    </div>
+          </div>
+        </div>
+      </main>
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="flex items-center justify-end gap-3">
+            <button type="button" onClick={handleCancel} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
+            <button type="submit" disabled={submitting} className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20">{submitting ? 'Saving...' : mode === 'new' ? 'Save Mileage' : 'Update Mileage'}</button>
+          </div>
+        </div>
+      </div>
+    </form>
   )
 }
 

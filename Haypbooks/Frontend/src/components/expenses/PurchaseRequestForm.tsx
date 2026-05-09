@@ -318,7 +318,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+    <div className="flex h-full flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">

@@ -452,7 +452,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
         e.preventDefault()
         handleSave('submit')
       }}
-      className="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden"
+      className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden"
     >
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
@@ -803,14 +803,6 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                 <p className="mt-2">{postingRules[0].description}</p>
               </section>
             ) : null}
-
-            <section className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end text-right">
-                <div className="px-4 text-sm font-medium text-slate-500">Subtotal: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(subtotal, currency)}</span></div>
-                <div className="px-4 text-sm font-medium text-slate-500">Tax: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(taxTotal, currency)}</span></div>
-                <div className="px-4 text-sm font-medium text-slate-500">Total: <span className="ml-2 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(total, currency)}</span></div>
-              </div>
-            </section>
 
             <section className="grid gap-4 sm:grid-cols-2">
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">

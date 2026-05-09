@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Download, Clock, Pencil, Trash2, Car, CheckCircle, CreditCard } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/format'
@@ -10,8 +10,6 @@ import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
-import HaypModal from '@/components/shared/HaypModal'
-import MileageForm, { type MileageFormHandle } from './MileageForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface MileageLog {
@@ -37,11 +35,6 @@ export default function MileagePage() {
   const [search, setSearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [mileagePanelOpen, setMileagePanelOpen] = useState(false)
-  const [openMileageId, setOpenMileageId] = useState<string | null>(null)
-  const [openMileageMode, setOpenMileageMode] = useState<'new' | 'edit'>('new')
-  const mileageFormRef = useRef<MileageFormHandle | null>(null)
-  const saveAndNewRef = useRef(false)
 
   const fetchMileage = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -61,35 +54,13 @@ export default function MileagePage() {
 
   useEffect(() => { fetchMileage() }, [fetchMileage])
 
-  const closeMileagePanel = useCallback(() => {
-    saveAndNewRef.current = false
-    setMileagePanelOpen(false)
-    setOpenMileageId(null)
-    setOpenMileageMode('new')
-  }, [])
-
-  const handleSaved = useCallback(async () => {
-    await fetchMileage()
-    if (saveAndNewRef.current) {
-      saveAndNewRef.current = false
-      setOpenMileageMode('new')
-      setOpenMileageId(null)
-    } else {
-      closeMileagePanel()
-    }
-  }, [fetchMileage, closeMileagePanel])
-
   const openNewMileage = useCallback(() => {
-    setMileagePanelOpen(true)
-    setOpenMileageMode('new')
-    setOpenMileageId(null)
-  }, [])
+    router.push('/expenses/employee-expenses/mileage/new')
+  }, [router])
 
   const openEditMileage = useCallback((id: string) => {
-    setMileagePanelOpen(true)
-    setOpenMileageMode('edit')
-    setOpenMileageId(id)
-  }, [])
+    router.push(`/expenses/employee-expenses/mileage/${id}/edit`)
+  }, [router])
 
   const handleDeleteMileage = useCallback((id: string) => {
     if (!confirm('Delete this mileage log?')) return
@@ -292,45 +263,6 @@ export default function MileagePage() {
       />
       </div>
 
-      <HaypModal
-        open={mileagePanelOpen}
-        onClose={closeMileagePanel}
-        title={openMileageMode === 'new' ? 'New Mileage Log' : 'Edit Mileage Log'}
-        footer={
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={closeMileagePanel}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => { saveAndNewRef.current = true; mileageFormRef.current?.save() }}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Save and new
-            </button>
-            <button
-              type="button"
-              onClick={() => { saveAndNewRef.current = false; mileageFormRef.current?.save() }}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-            >
-              Save
-            </button>
-          </div>
-        }
-      >
-        <MileageForm
-          key={`${openMileageMode}-${openMileageId ?? 'new'}`}
-          ref={mileageFormRef}
-          mode={openMileageMode}
-          logId={openMileageId ?? undefined}
-          onClose={closeMileagePanel}
-          onSaved={handleSaved}
-        />
-      </HaypModal>
     </div>
   )
 }

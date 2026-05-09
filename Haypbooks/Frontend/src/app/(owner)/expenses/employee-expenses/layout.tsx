@@ -3,7 +3,7 @@ import ModuleTabs from '@/components/shared/ModuleTabs'
 import { ToastProvider } from '@/components/ui/Toast'
 
 const TABS = [
-  { label: 'Expense Reports', value: 'expenses' },
+  { label: 'Expenses', value: 'expenses' },
   { label: 'Receipts', value: 'receipts' },
   { label: 'Mileage', value: 'mileage' },
   { label: 'Per Diem', value: 'per-diem' },

@@ -210,7 +210,7 @@ export default function ExpenseReportDetailPage({ expenseId: expenseIdProp }: { 
 
   return (
     <ExpenseDetailLayout
-      title={report?.expenseNumber ?? 'Expense Report'}
+      title={report?.expenseNumber ?? 'Expense'}
       subtitle={report?.description ?? ''}
       status={status}
       statusColor={statusColor}
@@ -221,7 +221,7 @@ export default function ExpenseReportDetailPage({ expenseId: expenseIdProp }: { 
       sections={[overviewSection, financialSection, datesSection, notesSection, linesSection]}
       actions={actions}
       backUrl="/expenses/employee-expenses/expenses"
-      backLabel="Expense Reports"
+      backLabel="Expenses"
       loading={loading || cidLoading}
       error={error}
     />
