@@ -332,26 +332,6 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
         </section>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
-        <button 
-          type="button" 
-          onClick={onClose} 
-          disabled={submitting}
-          className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
-        >
-          Cancel
-        </button>
-        <button 
-          type="button" 
-          onClick={handleSave} 
-          disabled={submitting}
-          className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-        >
-          {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-          {mode === 'new' ? 'Save Receipt' : 'Update Receipt'}
-        </button>
-      </div>
-
       {error && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {error}

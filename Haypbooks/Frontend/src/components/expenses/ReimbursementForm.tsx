@@ -520,15 +520,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
 
       <div className="z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-              <div className="flex items-center gap-2">
-                <span>Total Amount:</span>
-                <span className="text-lg font-bold text-slate-900">{formatCurrency(totalAmount, currency)}</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-end gap-3">
               <button 
                 type="button" 
                 onClick={() => router.push('/expenses/employee-expenses/reimbursements')} 

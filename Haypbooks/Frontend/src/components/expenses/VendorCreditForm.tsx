@@ -926,23 +926,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
 
-          <div className="flex items-center justify-between">
-
-            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-
-              <div className="flex items-center gap-2">
-
-                <span>Total Credit:</span>
-
-                <span className="text-lg font-bold text-slate-900">{formatCurrency(total, currency)}</span>
-
-              </div>
-
-            </div>
-
-            
-
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-end gap-3">
 
               <button 
 
