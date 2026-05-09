@@ -120,13 +120,13 @@ export default function ClientRoot({ children }: { children: ReactNode }) {
       ) : (
         /* Owner accounting app — full layout: green topbar + collapsible sidebar */
         <>
-          <div className="h-screen flex flex-col overflow-hidden">
+          <div className="h-screen flex flex-col overflow-x-hidden">
             <OwnerTopBar />
-            <div className="flex flex-1 min-h-0 overflow-hidden">
+            <div className="flex flex-1 min-h-0 overflow-x-hidden">
               <OwnerSidebar />
               <main
                 id="main"
-                className="flex-1 min-w-0 overflow-hidden bg-slate-50"
+                className="flex-1 min-w-0 overflow-x-hidden bg-slate-50"
               >
                 {children}
               </main>

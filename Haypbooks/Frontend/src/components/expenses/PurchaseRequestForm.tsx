@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Save, Send, Trash2, Loader2, ArrowLeft, History, Paperclip, FileText } from 'lucide-react'
+import { Plus, Save, Send, Trash2, Loader2, History, Paperclip, FileText } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -11,6 +11,7 @@ import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
 import LineItemTable from './LineItemTable'
 import ActivityLog from '@/components/ui/ActivityLog'
+import HaypDatePicker from '@/components/shared/HaypDatePicker'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
 import { useActivityLog } from '@/hooks/useActivityLog'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
@@ -322,14 +323,6 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
-                type="button"
-                onClick={() => router.push('/expenses/procurement/purchase-requests')} 
-                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
-              <div className="w-px h-6 bg-slate-200" />
               <h1 className="text-lg font-bold tracking-tight text-slate-900">
                 {mode === 'new' ? 'New Purchase Request' : 'Edit Purchase Request'}
               </h1>
@@ -351,8 +344,8 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button 
-                type="button" 
-                onClick={() => setActiveTab('details')} 
+                type="button"
+                onClick={() => setActiveTab('details')}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'details' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
               >
                 <FileText className="w-4 h-4" /> Details
@@ -384,12 +377,20 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                 <div className="px-4 pb-4 sm:px-5 lg:px-6">
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4">
                     <div className="space-y-1.5">
-                      <label htmlFor="requestDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Request Date</label>
-                      <input id="requestDate" type="date" value={requestDate} onChange={(e) => setRequestDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                      <HaypDatePicker
+                        id="requestDate"
+                        label="Request Date"
+                        value={requestDate}
+                        onChange={setRequestDate}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label htmlFor="requiredDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivery Date</label>
-                      <input id="requiredDate" type="date" value={requiredDate} onChange={(e) => setRequiredDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                      <HaypDatePicker
+                        id="requiredDate"
+                        label="Delivery Date"
+                        value={requiredDate}
+                        onChange={setRequiredDate}
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <label htmlFor="priority" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Priority</label>

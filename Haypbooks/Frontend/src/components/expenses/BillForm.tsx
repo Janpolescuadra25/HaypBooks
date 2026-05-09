@@ -13,6 +13,7 @@ import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import ActivityLog from '@/components/ui/ActivityLog'
+import HaypDatePicker from '@/components/shared/HaypDatePicker'
 import HaypSelect from '@/components/shared/HaypSelect'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
 import { ModalPortal } from '@/components/shared/ModalPortal'
@@ -310,11 +311,10 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   const total = Math.max(0, subtotal + taxTotal - discountAmount)
 
   const postingRules = useMemo(() => getPostingRulesForTransaction('bill'), [])
-  const lineItemAccountOptions = useMemo(() => [
-    { value: '__new_account__', label: '+ New Account' },
-    ...expenseAccounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? a.id })),
-  ], [expenseAccounts])
-
+  const lineItemAccountOptions = useMemo(() => expenseAccounts.map((a) => ({
+    value: a.id,
+    label: a.code ? `${a.code} ${a.name}` : a.name ?? a.id,
+  })), [expenseAccounts])
 
 
   const handleLineItemsChange = useCallback((rows: LineItem[]) => {
@@ -322,7 +322,10 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   }, [])
 
   const handleAccountSelect = useCallback((rowId: string, accountId: string) => {
-    if (accountId !== '__new_account__') return
+    setLineItems((rows) => rows.map((row) => row.id === rowId ? { ...row, account: accountId } : row))
+  }, [])
+
+  const handleAccountCreate = useCallback((rowId: string) => {
     setNewAccountRowId(rowId)
     setLineItems((rows) => rows.map((row) => row.id === rowId ? { ...row, account: '' } : row))
     setShowAccountModal(true)
@@ -515,23 +518,19 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="startDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date</label>
-                    <input
+                    <HaypDatePicker
                       id="startDate"
-                      type="date"
+                      label="Start Date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                      onChange={setStartDate}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="endDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date (Optional)</label>
-                    <input
+                    <HaypDatePicker
                       id="endDate"
-                      type="date"
+                      label="End Date (Optional)"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                      onChange={setEndDate}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -588,23 +587,19 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="billDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill Date</label>
-                  <input 
-                    id="billDate" 
-                    type="date" 
-                    value={date} 
-                    onChange={e => setDate(e.target.value)} 
-                    className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
+                  <HaypDatePicker
+                    id="billDate"
+                    label="Bill Date"
+                    value={date}
+                    onChange={setDate}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="dueDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Due Date</label>
-                  <input 
-                    id="dueDate" 
-                    type="date" 
-                    value={dueDate} 
-                    onChange={e => setDueDate(e.target.value)} 
-                    className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
+                  <HaypDatePicker
+                    id="dueDate"
+                    label="Due Date"
+                    value={dueDate}
+                    onChange={setDueDate}
                   />
                 </div>
                 </div>
@@ -785,7 +780,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                   <LineItemTable
                     columns={[
                       { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item or description', required: true },
-                      { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: lineItemAccountOptions },
+                      { key: 'account', label: 'Account', type: 'account', width: 180, minWidth: 140, required: true, options: lineItemAccountOptions },
                       { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
                       { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
                       { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
@@ -794,6 +789,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                     rows={lineItems}
                     onChange={handleLineItemsChange}
                     onAccountSelect={handleAccountSelect}
+                    onAccountCreate={handleAccountCreate}
                     currency={currency ?? 'USD'}
                     calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
                   />

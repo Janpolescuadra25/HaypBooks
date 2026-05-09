@@ -5,6 +5,7 @@ import { Columns, Copy, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableMap } from '@/hooks/useFixedWidthTableResize'
 import HaypSelect from '@/components/shared/HaypSelect'
+import HaypAccountPicker from './HaypAccountPicker'
 
 export interface Column {
   key: string
@@ -29,6 +30,7 @@ export interface LineItemTableProps<Row extends LineItemBase = LineItemBase> {
   currency?: string
   calculatedColumns?: Record<string, (row: Row) => number>
   onAccountSelect?: (rowId: string, accountId: string) => void
+  onAccountCreate?: (rowId: string) => void
   onItemSelect?: (rowId: string, itemId: string) => void
   showDragHandle?: boolean
   showCopyButton?: boolean
@@ -48,6 +50,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
   currency = 'USD',
   calculatedColumns,
   onAccountSelect,
+  onAccountCreate,
   onItemSelect,
   showDragHandle = true,
   showCopyButton = true,
@@ -296,15 +299,24 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                               value={String(value ?? '')}
                               onChange={(selected) => {
                                 updateRow(row.id, column.key, selected)
-                                if (column.key === 'account') {
-                                  onAccountSelect?.(row.id, selected)
-                                }
                                 if (column.key === 'item') {
                                   onItemSelect?.(row.id, selected)
                                 }
                               }}
                               options={column.options ?? []}
                               placeholder="Select"
+                            />
+                          )}
+                          {column.type === 'account' && (
+                            <HaypAccountPicker
+                              value={String(value ?? '')}
+                              onChange={(selected) => {
+                                updateRow(row.id, column.key, selected)
+                                onAccountSelect?.(row.id, selected)
+                              }}
+                              options={column.options ?? []}
+                              placeholder="Search accounts…"
+                              onCreateNew={() => onAccountCreate?.(row.id)}
                             />
                           )}
                           {column.type === 'calculated' && (

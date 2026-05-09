@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Plus, X, ArrowLeft, FileText, History, Send } from 'lucide-react'
+import { Save, Loader2, Plus, X, FileText, History, Send } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
+import HaypDatePicker from '@/components/shared/HaypDatePicker'
 import HaypSelect from '@/components/shared/HaypSelect'
 
 interface ReimbursementFormProps {
@@ -205,14 +206,6 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
-                type="button"
-                onClick={() => router.push('/expenses/employee-expenses/reimbursements')} 
-                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
-              <div className="w-px h-6 bg-slate-200" />
               <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Reimbursement' : 'Edit Reimbursement'}</h1>
             </div>
             <div className="flex items-center gap-2">
@@ -324,14 +317,13 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                       <div key={line.id} className="group relative p-4 bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:border-emerald-200 hover:bg-white">
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
                           <div className="space-y-1.5">
-                            <label htmlFor={`line-date-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</label>
-                            <input 
-                              id={`line-date-${line.id}`} 
-                              type="date" 
-                              value={line.date} 
-                              onChange={(e) => updateLine(line.id, 'date', e.target.value)} 
-                              disabled={isReadOnly} 
-                              className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-emerald-500 transition-all outline-none disabled:opacity-50" 
+                            <HaypDatePicker
+                              id={`line-date-${line.id}`}
+                              label="Date"
+                              value={line.date}
+                              onChange={(value) => updateLine(line.id, 'date', value)}
+                              disabled={isReadOnly}
+                              className="w-full h-9 text-xs"
                             />
                           </div>
                           <div className="space-y-1.5">

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Save, Loader2, Plus, X, Upload, FileText, Send, ArrowLeft, Trash2 } from 'lucide-react'
+import { Save, Loader2, Plus, X, Upload, FileText, Send, Trash2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/format'
 import { expensesService, ExpenseReportPayload } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
+import HaypDatePicker from '@/components/shared/HaypDatePicker'
 import HaypSelect from '@/components/shared/HaypSelect'
 
 interface ExpenseReportFormProps {
@@ -348,14 +349,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
-                type="button"
-                onClick={() => router.push(expensesReturnPath)} 
-                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
-              <div className="w-px h-6 bg-slate-200" />
               <h1 className="text-lg font-bold tracking-tight text-slate-900">
                 {mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}
               </h1>
@@ -400,25 +393,21 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                   </div>
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="space-y-1.5">
-                      <label htmlFor="report-from-date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">From Date</label>
-                      <input 
-                        id="report-from-date" 
-                        type="date" 
-                        value={fromDate} 
-                        onChange={(e) => setFromDate(e.target.value)} 
-                        disabled={readOnly} 
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      <HaypDatePicker
+                        id="report-from-date"
+                        label="From Date"
+                        value={fromDate}
+                        onChange={setFromDate}
+                        disabled={readOnly}
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label htmlFor="report-to-date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">To Date</label>
-                      <input 
-                        id="report-to-date" 
-                        type="date" 
-                        value={toDate} 
-                        onChange={(e) => setToDate(e.target.value)} 
-                        disabled={readOnly} 
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      <HaypDatePicker
+                        id="report-to-date"
+                        label="To Date"
+                        value={toDate}
+                        onChange={setToDate}
+                        disabled={readOnly}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -495,7 +484,14 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         {lines.map((line) => (
                           <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-2 py-2 min-w-[140px]">
-                              <input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" />
+                              <HaypDatePicker
+                                id={`line-date-${line.id}`}
+                                label=""
+                                value={line.date}
+                                onChange={(value) => updateLine(line.id, 'date', value)}
+                                disabled={readOnly}
+                                className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none"
+                              />
                             </td>
                             <td className="px-2 py-2 min-w-[140px]">
                               <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} className="h-9 text-xs" />
