@@ -342,13 +342,6 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
           </div>
         </section>
         
-        {error && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
-            {error}
-          </div>
-        )}
-            </div>
-          </div>
         </main>
         <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
           <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
@@ -359,6 +352,11 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
             </div>
           </div>
         </div>
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+          {error}
+        </div>
+      )}
       </form>
     )
   }

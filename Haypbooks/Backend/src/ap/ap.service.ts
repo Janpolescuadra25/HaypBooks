@@ -197,6 +197,7 @@ export class ApService {
                 memo: data.memo ?? null,
                 terms: data.terms ?? null,
                 internalNotes: data.internalNotes ?? null,
+                discountType: data.discountType ?? null,
                 currency: data.currency,
                 ...(paymentTermId ? { paymentTermId } : {}),
                 dueAt: dueAt ? new Date(dueAt) : undefined,
@@ -255,6 +256,7 @@ export class ApService {
             memo: data.memo ?? null,
             terms: data.terms ?? null,
             internalNotes: data.internalNotes ?? null,
+            discountType: data.discountType ?? undefined,
         }, userId)
         if (!result) throw new BadRequestException('Bill not found or not editable (only DRAFT bills can be updated)')
         return result
@@ -721,6 +723,12 @@ export class ApService {
             isMatched: data.isMatched ?? false,
             expenseId: data.expenseId ?? null,
             notes: data.notes ?? null,
+            employeeId: data.employeeId ?? null,
+            departmentId: data.departmentId ?? null,
+            isBillable: data.isBillable ?? false,
+            customerId: data.customerId ?? null,
+            projectId: data.projectId ?? null,
+            accountId: data.accountId ?? null,
         }
         const result = await this.repo.createReceipt(payload)
         await this.prisma.auditLog.create({
@@ -745,6 +753,12 @@ export class ApService {
             isMatched: data.isMatched ?? existing.isMatched,
             expenseId: data.expenseId ?? existing.expenseId,
             notes: data.notes ?? existing.notes,
+            employeeId: data.employeeId ?? existing.employeeId,
+            departmentId: data.departmentId ?? existing.departmentId,
+            isBillable: data.isBillable ?? existing.isBillable,
+            customerId: data.customerId ?? existing.customerId,
+            projectId: data.projectId ?? existing.projectId,
+            accountId: data.accountId ?? existing.accountId,
         }
         const result = await this.repo.updateReceipt(companyId, receiptId, payload)
         const workspaceId = await this.getWorkspaceId(companyId)
@@ -921,6 +935,8 @@ export class ApService {
             currency: data.currency ?? 'PHP',
             status: data.status ?? 'DRAFT',
             notes: data.notes ?? null,
+            departmentId: data.departmentId ?? null,
+            accountId: data.accountId ?? null,
             submittedAt: data.status === 'SUBMITTED' ? new Date() : null,
             approvedAt: data.status === 'APPROVED' ? new Date() : null,
             reimbursedAt: data.status === 'PAID' ? new Date() : null,
@@ -945,6 +961,8 @@ export class ApService {
             currency: data.currency ?? existing.currency,
             status: data.status ?? existing.status,
             notes: data.notes ?? existing.notes,
+            departmentId: data.departmentId ?? existing.departmentId,
+            accountId: data.accountId ?? existing.accountId,
             submittedAt: data.status === 'SUBMITTED' ? new Date() : existing.submittedAt,
             approvedAt: data.status === 'APPROVED' ? new Date() : existing.approvedAt,
             reimbursedAt: data.status === 'PAID' ? new Date() : existing.reimbursedAt,

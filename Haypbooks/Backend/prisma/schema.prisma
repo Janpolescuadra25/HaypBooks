@@ -3990,6 +3990,7 @@ model Project {
   InventoryTransactionLine InventoryTransactionLine[]
   InvoiceLine              InvoiceLine[]
   BillLine                 BillLine[]
+  receipts                  Receipt[]
   company                  Company                    @relation(fields: [companyId], references: [id])
   workspace                Workspace                  @relation(fields: [workspaceId], references: [id])
   lines                    ProjectLine[]
@@ -5397,6 +5398,8 @@ model Account {
   expenseSubCategoryConfigs       ExpenseSubCategoryConfig[] @relation("ExpenseSubCategoryConfig_account")
   cashOverShortEntries            CashOverShortEntry[]
   cashOverShortRules              CashOverShortRule[]
+  perDiemClaims                   PerDiemClaim[]
+  receipts                        Receipt[]
   pettyCashFunds                  PettyCashFund[]
   pettyCashVouchers               PettyCashVoucher[]
   writeOffs                       WriteOff[]
@@ -5613,6 +5616,7 @@ model Customer {
   PaymentReceived  PaymentReceived[]
   RecurringInvoice RecurringInvoice[]
   CustomerCredit   CustomerCredit[]
+  receipts         Receipt[]
 
   workspace                  Workspace             @relation(fields: [workspaceId], references: [id])
   // Auto-added opposite relations (generated)
@@ -5936,6 +5940,7 @@ model Employee {
   payrollAccruals                PayrollAccrual[]
   expenseClaims                  ExpenseClaim[]
   perDiemClaims                  PerDiemClaim[]
+  receipts                      Receipt[]
   pettyCashFunds                 PettyCashFund[]
 
   @@unique([companyId, employeeNumber])
@@ -8118,15 +8123,19 @@ model PerDiemClaim {
   currency      String    @default("PHP")
   status        String    @default("DRAFT")
   notes         String?
+  departmentId  String?
+  accountId     String?
   submittedAt   DateTime?
   approvedAt    DateTime?
   reimbursedAt  DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  company   Company   @relation(fields: [companyId], references: [id])
-  employee  Employee  @relation(fields: [employeeId], references: [id])
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  company     Company     @relation(fields: [companyId], references: [id])
+  employee    Employee    @relation(fields: [employeeId], references: [id])
+  department  Department? @relation(fields: [departmentId], references: [id])
+  account     Account?    @relation(fields: [accountId], references: [id])
 
   @@index([workspaceId, employeeId])
   @@index([companyId, status])
@@ -9095,6 +9104,7 @@ model Bill {
   otherCharges          Decimal?         @db.Decimal(19, 4)
   withholdingTaxAmount  Decimal?         @db.Decimal(19, 4)
   creditableWithholding Decimal?         @db.Decimal(19, 4)
+  discountType          String?          // "pct" for percentage, "fixed" for flat amount
   issuedAt              DateTime         @default(now())
   dueAt                 DateTime?
   paymentTermId         String?
@@ -10750,6 +10760,8 @@ model Department {
   parent   Department?  @relation("DeptHierarchy", fields: [parentId], references: [id])
   children Department[] @relation("DeptHierarchy")
   expenseClaims ExpenseClaim[]
+  perDiemClaims PerDiemClaim[]
+  receipts      Receipt[]
 
   @@unique([companyId, name])
   @@index([companyId])
@@ -10980,10 +10992,21 @@ model Receipt {
   isMatched    Boolean   @default(false)
   expenseId    String?
   notes        String?
+  employeeId   String?
+  departmentId String?
+  isBillable   Boolean   @default(false)
+  customerId   String?
+  projectId    String?
+  accountId    String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee    Employee?  @relation(fields: [employeeId], references: [id])
+  department  Department?@relation(fields: [departmentId], references: [id])
+  account     Account?   @relation(fields: [accountId], references: [id])
+  customer    Customer?  @relation(fields: [customerId], references: [contactId])
+  project     Project?   @relation(fields: [projectId], references: [id])
 
   @@index([companyId])
   @@index([uploadedById])
