@@ -1095,7 +1095,7 @@ export default function CustomerPaymentsPage() {
                         loading={customersLoading}
                         disabled={isReallocationMode}
                         placeholder="Select customer..."
-                        createLabel="+ Create New Customer"
+                        createLabel="Create New Customer"
                         onOpen={loadCustomers}
                         onChange={(id) => {
                           setForm((f) => ({ ...f, customerId: id, amount: '' }))

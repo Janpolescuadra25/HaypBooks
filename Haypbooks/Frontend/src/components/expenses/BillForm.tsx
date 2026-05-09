@@ -2,15 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Save, Send, Loader2, Check, X } from 'lucide-react'
+import { Save, Send, Loader2, Check, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import LineItemTable from './LineItemTable'
-import AccountSplitModal, { AccountSplitRow } from '@/components/shared/AccountSplitModal'
 import { getPostingRulesForTransaction } from '@/lib/gl-posting-rules'
 import { formatCurrency } from '@/lib/format'
-import apiClient from '@/lib/api-client'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
@@ -18,6 +16,7 @@ import ActivityLog from '@/components/ui/ActivityLog'
 import HaypSelect from '@/components/shared/HaypSelect'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
 import { ModalPortal } from '@/components/shared/ModalPortal'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 import { useActivityLog } from '@/hooks/useActivityLog'
 
 const genId = () => Math.random().toString(36).slice(2, 9)
@@ -48,7 +47,6 @@ interface LineItem {
   unitPrice: number
   taxRate: number
   amount: number
-  splits?: AccountSplitRow[]
 }
 
 interface Account {
@@ -75,7 +73,7 @@ interface BillFormProps {
   saveBill?: (companyId: string, payload: Record<string, unknown>, action: 'draft' | 'submit', mode: 'new' | 'edit', billId?: string) => Promise<any>
   loadBill?: (companyId: string, billId: string) => Promise<any>
   buildPayloadExtras?: (payload: Record<string, unknown>) => Record<string, unknown>
-  schedule?: RecurrenceSchedule
+  isRecurringTemplate?: boolean
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -95,7 +93,7 @@ const defaultLineItem = (): LineItem => ({
   amount: 0,
 })
 
-export default function BillForm({ mode, billId, title, onClose, onSaved, saveBill, loadBill, buildPayloadExtras }: BillFormProps) {
+export default function BillForm({ mode, billId, title, onClose, onSaved, saveBill, loadBill, buildPayloadExtras, isRecurringTemplate }: BillFormProps) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -123,6 +121,8 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [purchaseOrders, setPurchaseOrders] = useState<Array<{ id: string; poNumber?: string; status?: string }>>([])
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
   const expenseAccounts = useMemo(
     () => accounts.filter((a) => {
       const type = a.type?.toLowerCase() ?? ''
@@ -136,9 +136,15 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   const [status, setStatus] = useState<'DRAFT' | 'PENDING' | 'APPROVED' | string>('DRAFT')
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
-  const [splitModalOpen, setSplitModalOpen] = useState(false)
-  const [splitRowId, setSplitRowId] = useState<string | null>(null)
-  const [splitDraft, setSplitDraft] = useState<AccountSplitRow[]>([])
+  
+  // Recurring fields
+  const [isRecurring, setIsRecurring] = useState(isRecurringTemplate || false)
+  const [templateName, setTemplateName] = useState('')
+  const [frequency, setFrequency] = useState('MONTHLY')
+  const [startDate, setStartDate] = useState(today)
+  const [endDate, setEndDate] = useState('')
+  const [maxOccurrences, setMaxOccurrences] = useState<number | null>(null)
+  const [daysInAdvance, setDaysInAdvance] = useState(0)
 
   const vendorOptions = useMemo(() => vendors.map((v) => ({ id: v.id, name: v.displayName, email: v.email })), [vendors])
 
@@ -266,6 +272,17 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
           url: attachment.url ?? attachment.fileUrl ?? undefined,
         })) : [])
         setStatus(data.status ?? 'DRAFT')
+        
+        if (data.frequency || data.templateName) {
+          setIsRecurring(true)
+          setTemplateName(String(data.templateName ?? ''))
+          setFrequency(String(data.frequency ?? 'MONTHLY'))
+          setStartDate(String(data.startDate?.slice?.(0, 10) ?? today))
+          setEndDate(String(data.endDate?.slice?.(0, 10) ?? ''))
+          setMaxOccurrences(data.maxOccurrences == null ? null : Number(data.maxOccurrences))
+          setDaysInAdvance(data.daysInAdvance == null ? 0 : Number(data.daysInAdvance))
+        }
+
         if (Array.isArray(data.items) && data.items.length > 0) {
           interface RawBillLine { description?: unknown; accountId?: unknown; quantity?: unknown; unitPrice?: unknown; rate?: unknown; taxRate?: unknown; amount?: unknown }
           setLineItems((data.items as RawBillLine[]).map((item) => ({
@@ -292,34 +309,23 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   const discountAmount = useMemo(() => discountType === 'pct' ? subtotal * (discountValue / 100) : discountValue, [discountType, discountValue, subtotal])
   const total = Math.max(0, subtotal + taxTotal - discountAmount)
 
-  const selectedSplitLine = useMemo(() => lineItems.find((line) => line.id === splitRowId) ?? null, [lineItems, splitRowId])
   const postingRules = useMemo(() => getPostingRulesForTransaction('bill'), [])
-  const lineItemAccountOptions = useMemo(() => expenseAccounts.map((a) => ({ id: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? a.id })), [expenseAccounts])
+  const lineItemAccountOptions = useMemo(() => [
+    { value: '__new_account__', label: '+ New Account' },
+    ...expenseAccounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? a.id })),
+  ], [expenseAccounts])
 
-  const openSplitModal = useCallback((rowId: string) => {
-    const line = lineItems.find((item) => item.id === rowId)
-    setSplitRowId(rowId)
-    setSplitDraft(line?.splits?.length ? [...line.splits] : [{ id: Math.random().toString(36).slice(2, 9), accountId: '', amount: Number(line?.amount ?? 0) }])
-    setSplitModalOpen(true)
-  }, [lineItems])
 
-  const closeSplitModal = useCallback(() => {
-    setSplitModalOpen(false)
-    setSplitRowId(null)
-    setSplitDraft([])
-  }, [])
-
-  const handleSplitSave = useCallback(() => {
-    if (!splitRowId) {
-      closeSplitModal()
-      return
-    }
-    setLineItems((items) => items.map((item) => item.id === splitRowId ? { ...item, splits: splitDraft } : item))
-    closeSplitModal()
-  }, [closeSplitModal, splitDraft, splitRowId])
 
   const handleLineItemsChange = useCallback((rows: LineItem[]) => {
     setLineItems(rows)
+  }, [])
+
+  const handleAccountSelect = useCallback((rowId: string, accountId: string) => {
+    if (accountId !== '__new_account__') return
+    setNewAccountRowId(rowId)
+    setLineItems((rows) => rows.map((row) => row.id === rowId ? { ...row, account: '' } : row))
+    setShowAccountModal(true)
   }, [])
 
   const validate = () => {
@@ -361,6 +367,14 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
           amount: Number((lineAmount + taxAmount).toFixed(2)),
         }
       }),
+      ...(isRecurring ? {
+        templateName: templateName.trim() || memo || 'Recurring Bill',
+        frequency,
+        startDate,
+        endDate: endDate || null,
+        maxOccurrences: maxOccurrences ?? null,
+        daysInAdvance: daysInAdvance ?? null,
+      } : {})
     }
   }
 
@@ -375,6 +389,9 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       if (mode === 'new') {
         if (saveBill) {
           await saveBill(companyId, payload, action, mode)
+        } else if (isRecurring) {
+          await expensesService.createRecurringBill(companyId, payload)
+          toast.success('Recurring bill template created')
         } else {
           const result = await expensesService.createBill(companyId, payload)
           const billId = result.data?.id ?? (result as any)?.id
@@ -389,6 +406,9 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       } else if (billId) {
         if (saveBill) {
           await saveBill(companyId, payload, action, mode, billId)
+        } else if (isRecurring) {
+          await expensesService.updateRecurringBill(companyId, billId, payload)
+          toast.success('Recurring bill template updated')
         } else {
           await expensesService.updateBill(companyId, billId, payload)
           if (action === 'submit' && status === 'DRAFT') {
@@ -405,7 +425,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       } else if (onClose) {
         onClose()
       } else {
-        router.push('/expenses/bills-payments/bills')
+        router.push(isRecurring ? '/expenses/bills-payments/recurring-bills' : '/expenses/bills-payments/bills')
       }
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Unable to save bill')
@@ -431,9 +451,9 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       }}
       className="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden"
     >
-      <div className="shrink-0 border-b border-slate-200 bg-white z-30">
-        <div className="mx-auto max-w-7xl px-6 py-2.5">
-          <div className="flex items-center justify-between">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-2.5">
             <div className="flex items-center">
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-slate-900">{titleText}</h1>
@@ -450,7 +470,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-4">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
               <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
@@ -459,13 +479,105 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
           )}
         </div>
         <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
-          <div className="mx-auto max-w-7xl px-6 py-3 space-y-6">
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1 h-6 bg-emerald-500 rounded-full" />
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Bill Information</h2>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3 p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-3 space-y-4">
+            {isRecurring && (
+              <section className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="w-full bg-white rounded-3xl border border-amber-100 shadow-sm shadow-amber-500/5">
+                  <div className="flex items-center gap-2 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                    <div className="w-1 h-6 bg-amber-500 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Recurrence Schedule</h2>
+                  </div>
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="space-y-1.5">
+                    <label htmlFor="templateName" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Template Name</label>
+                    <input
+                      id="templateName"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      placeholder="e.g. Monthly SaaS Subscription"
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="frequency" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Frequency</label>
+                    <HaypSelect
+                      id="frequency"
+                      value={frequency}
+                      onChange={setFrequency}
+                      options={[
+                        { value: 'WEEKLY', label: 'Weekly' },
+                        { value: 'BI_WEEKLY', label: 'Bi-Weekly' },
+                        { value: 'MONTHLY', label: 'Monthly' },
+                        { value: 'QUARTERLY', label: 'Quarterly' },
+                        { value: 'YEARLY', label: 'Yearly' },
+                      ]}
+                      className="mt-1 h-12 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="startDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date</label>
+                    <input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="endDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date (Optional)</label>
+                    <input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="maxOccurrences" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Max Occurrences</label>
+                    <input
+                      id="maxOccurrences"
+                      type="number"
+                      min="0"
+                      value={maxOccurrences === null ? '' : String(maxOccurrences)}
+                      onChange={(e) => setMaxOccurrences(e.target.value ? Number(e.target.value) : null)}
+                      placeholder="Unlimited"
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="daysInAdvance" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Create days in advance</label>
+                    <input
+                      id="daysInAdvance"
+                      type="number"
+                      min="0"
+                      value={daysInAdvance}
+                      onChange={(e) => setDaysInAdvance(Number(e.target.value))}
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="nextDueDatePreview" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Next Due Date (preview)</label>
+                    <input
+                      id="nextDueDatePreview"
+                      type="text"
+                      readOnly
+                      value={startDate || '—'}
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-amber-50/50 px-4 py-2 text-sm font-bold text-amber-700 outline-none cursor-default"
+                    />
+                  </div>
+                  </div>
+                </div>
+              </section>
+            )}
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-2 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Bill Information</h2>
+                </div>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 px-4 pb-4 sm:px-5 lg:px-6">
                 <div className="space-y-1.5">
                   <label htmlFor="billNumber" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill #</label>
                   <input 
@@ -495,15 +607,17 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                     className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
                   />
                 </div>
+                </div>
               </div>
             </section>
 
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1 h-6 bg-emerald-500 rounded-full" />
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Vendor</h2>
-              </div>
-              <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-6">
+            <section>
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Vendor Selection</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="sm:col-span-2">
                     <CustomerPickerField
@@ -511,7 +625,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                       value={vendorId}
                       customers={vendorOptions}
                       placeholder="Search vendors by name or email…"
-                      createLabel="+ New Vendor"
+                      createLabel="New Vendor"
                       onChange={(id) => {
                         setVendorId(id)
                         setShowVendorModal(false)
@@ -639,29 +753,52 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                   </div>
                 </ModalPortal>
               )}
+              </div>
             </section>
 
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1 h-6 bg-emerald-500 rounded-full" />
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Line Items</h2>
-              </div>
-              <LineItemTable
-                columns={[
-                  { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item or description', required: true },
-                  { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: expenseAccounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} ${a.name}` : a.name ?? '' })) },
-                  { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
-                  { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
-                  { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
-                  { key: 'amount', label: 'Amount', type: 'calculated', width: 120, minWidth: 110 },
-                ]}
-                rows={lineItems}
-                onChange={handleLineItemsChange}
-                currency={currency ?? 'USD'}
-                calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
-                showSplitButton
-                onSplit={openSplitModal}
+            {companyId && (
+              <NewAccountModal
+                open={showAccountModal}
+                companyId={companyId}
+                onClose={() => {
+                  setShowAccountModal(false)
+                  setNewAccountRowId(null)
+                }}
+                onCreated={(account) => {
+                  setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name, type: account.type }, ...prev])
+                  if (newAccountRowId) {
+                    setLineItems((rows) => rows.map((row) => row.id === newAccountRowId ? { ...row, account: account.id } : row))
+                  }
+                  setShowAccountModal(false)
+                  setNewAccountRowId(null)
+                }}
               />
+            )}
+
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Line Items</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <LineItemTable
+                    columns={[
+                      { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item or description', required: true },
+                      { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: lineItemAccountOptions },
+                      { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
+                      { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
+                      { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
+                      { key: 'amount', label: 'Amount', type: 'calculated', width: 120, minWidth: 110 },
+                    ]}
+                    rows={lineItems}
+                    onChange={handleLineItemsChange}
+                    onAccountSelect={handleAccountSelect}
+                    currency={currency ?? 'USD'}
+                    calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+                  />
+                </div>
+              </div>
             </section>
 
             {postingRules.length > 0 ? (
@@ -680,14 +817,14 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
             </section>
 
             <section className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
                   <div className="w-1 h-6 bg-slate-300 rounded-full" />
-                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Terms & Notes</h2>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Terms &amp; Notes</h2>
                 </div>
-                <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-6">
+                <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="terms" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms & Conditions</label>
+                    <label htmlFor="terms" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms &amp; Conditions</label>
                     <textarea 
                       id="terms" 
                       value={terms} 
@@ -709,12 +846,12 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
                   <div className="w-1 h-6 bg-rose-400 rounded-full" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Internal Use</h2>
                 </div>
-                <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
                   <div className="space-y-1.5">
                     <label htmlFor="internalNotes" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Private Internal Notes</label>
                     <textarea 
@@ -738,40 +875,26 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
             </section>
           </div>
         </div>
-        <AccountSplitModal
-          open={splitModalOpen}
-          onClose={closeSplitModal}
-          title={selectedSplitLine?.description ? `Split: ${selectedSplitLine.description}` : 'Split line item'}
-          totalAmount={Number(selectedSplitLine?.amount ?? 0)}
-          splits={splitDraft}
-          accounts={lineItemAccountOptions}
-          onChange={setSplitDraft}
-          onSave={handleSplitSave}
-        />
+
         <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-6 py-3 space-y-6">
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1 h-6 bg-blue-500 rounded-full" />
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity Log</h2>
-              </div>
-              <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill yet." />
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-3 space-y-4">
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity Log</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill yet." />
+                </div>
               </div>
             </section>
           </div>
         </div>
       </div>
       <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
-        <div className="mx-auto max-w-7xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-              <div className="flex items-center gap-2">
-                <span>Total:</span>
-                <span className="text-lg font-bold text-slate-900">{formatCurrency(total, currency)}</span>
-              </div>
-            </div>
-            
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="flex items-center justify-end">
             <div className="flex items-center gap-3">
               <button 
                 type="button" 
@@ -781,31 +904,53 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
               >
                 Cancel
               </button>
-              <button 
-                type="button" 
-                onClick={() => handleSave('draft')} 
-                disabled={submitting}
-                className="h-12 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-              >
-                {submitting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Save size={18} className="text-slate-400" />}
-                Save Draft
-              </button>
-              <button 
-                type="submit" 
-                disabled={submitting}
-                className="h-12 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-              >
-                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                Submit
-              </button>
-              {mode === 'edit' && status === 'DRAFT' && (
+              
+              {!isRecurring ? (
+                <>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsRecurring(true)} 
+                    disabled={submitting}
+                    className="h-12 px-6 rounded-xl border border-emerald-100 bg-emerald-50 text-sm font-bold text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    Make recurring
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => handleSave('draft')} 
+                    disabled={submitting}
+                    className="h-12 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {submitting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Save size={18} className="text-slate-400" />}
+                    Save Draft
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={submitting}
+                    className="h-12 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    Submit
+                  </button>
+                  {mode === 'edit' && status === 'DRAFT' && (
+                    <button 
+                      type="button" 
+                      onClick={() => handleSave('submit')} 
+                      disabled={submitting}
+                      className="h-12 px-8 rounded-xl border-2 border-emerald-600 bg-white text-sm font-bold text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <Check size={18} /> Approve
+                    </button>
+                  )}
+                </>
+              ) : (
                 <button 
-                  type="button" 
-                  onClick={() => handleSave('submit')} 
+                  type="submit" 
                   disabled={submitting}
-                  className="h-12 px-8 rounded-xl border-2 border-emerald-600 bg-white text-sm font-bold text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                  className="h-12 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
-                  <Check size={18} /> Approve
+                  {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  Save Template
                 </button>
               )}
             </div>

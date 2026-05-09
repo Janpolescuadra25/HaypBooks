@@ -1,30 +1,22 @@
 'use client'
 
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Upload, FileText } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { FileText, Upload, X, Loader2, Save, Send, ArrowLeft, History, Paperclip } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
-import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import HaypSelect from '@/components/shared/HaypSelect'
+import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import { NewAccountModal } from '@/components/shared/NewAccountModal'
 
 const today = new Date().toISOString().slice(0, 10)
-const CATEGORIES = ['Travel', 'Meals', 'Office Supplies', 'Software', 'Hardware', 'Shipping', 'Other']
-const PAYMENT_METHODS = ['Cash', 'Credit Card', 'Debit Card', 'Bank Transfer']
-const STATUS_OPTIONS = ['DRAFT', 'UNMATCHED', 'MATCHED', 'ATTACHED']
+const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'PROCESSED', 'REJECTED']
+const PAYMENT_METHODS = ['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'BANK_TRANSFER', 'OTHER']
+const CATEGORIES = ['MEALS', 'TRAVEL', 'OFFICE_SUPPLIES', 'SOFTWARE', 'UTILITIES', 'OTHER']
 
-interface Account {
-  id: string
-  code?: string
-  name?: string
-}
-
-export type ReceiptFormHandle = {
-  save: () => Promise<void>
-}
+interface Account { id: string; code: string; name: string }
 
 interface ReceiptFormProps {
   mode: 'new' | 'edit'
@@ -33,149 +25,109 @@ interface ReceiptFormProps {
   onSaved?: () => void
 }
 
-const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function ReceiptForm({ mode, receiptId, onClose, onSaved }, ref) {
+export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: ReceiptFormProps) {
   const toast = useToast()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
 
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [receiptNumber, setReceiptNumber] = useState('')
   const [receiptDate, setReceiptDate] = useState(today)
-  const [status, setStatus] = useState('DRAFT')
-  const [merchant, setMerchant] = useState('')
-  const [category, setCategory] = useState('Travel')
-  const [paymentMethod, setPaymentMethod] = useState('Cash')
-  const [amount, setAmount] = useState(0)
-  const [referenceNumber, setReferenceNumber] = useState('')
   const [expenseDate, setExpenseDate] = useState(today)
-  const [accountId, setAccountId] = useState('')
+  const [merchant, setMerchant] = useState('')
+  const [amount, setAmount] = useState(0)
+  const [category, setCategory] = useState(CATEGORIES[0])
+  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
+  const [referenceNumber, setReferenceNumber] = useState('')
+  const [status, setStatus] = useState('DRAFT')
+  const [notes, setNotes] = useState('')
   const [billable, setBillable] = useState(false)
   const [clientProject, setClientProject] = useState('')
-  const [notes, setNotes] = useState('')
-  const [receiptFile, setReceiptFile] = useState<File | null>(null)
-  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string>('')
-  const [uploadedAttachmentUrl, setUploadedAttachmentUrl] = useState<string | null>(null)
-  const [uploadedAttachmentId, setUploadedAttachmentId] = useState<string | null>(null)
+  const [accountId, setAccountId] = useState('')
+
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [showAccountModal, setShowAccountModal] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
+  const [uploadedAttachmentId, setUploadedAttachmentId] = useState<string | null>(null)
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [showAccountModal, setShowAccountModal] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!companyId) return
-    let active = true
-
-    accountingService.listAccounts(companyId, { includeInactive: false })
+    accountingService.listAccounts(companyId, { limit: 1000 })
       .then((res) => {
-        if (!active) return
-        const payload = res.data ?? res
-        const list = Array.isArray(payload) ? payload : payload.data ?? []
-        setAccounts(list.map((account: any) => ({ id: account.id, code: account.code, name: account.name })))
+        const items = res.data ?? res
+        setAccounts(items.map((a: any) => ({ id: a.id, code: a.code, name: a.name })))
       })
       .catch(() => {})
-
-    return () => { active = false }
   }, [companyId])
 
   useEffect(() => {
     if (mode !== 'edit' || !receiptId || !companyId) return
-    let active = true
-
     expensesService.getReceipt(companyId, receiptId)
       .then((res) => {
-        if (!active) return
         const data = res.data ?? res
-        setReceiptNumber(data.receiptNumber ?? data.number ?? '')
         setReceiptDate(data.receiptDate?.slice(0, 10) ?? today)
-        setStatus(data.status ?? 'DRAFT')
+        setExpenseDate(data.expenseDate?.slice(0, 10) ?? today)
         setMerchant(data.merchant ?? '')
-        setCategory(data.category ?? 'Travel')
-        setPaymentMethod(data.paymentMethod ?? 'Cash')
         setAmount(Number(data.amount ?? 0))
+        setCategory(data.category ?? CATEGORIES[0])
+        setPaymentMethod(data.paymentMethod ?? PAYMENT_METHODS[0])
         setReferenceNumber(data.referenceNumber ?? '')
-        setExpenseDate(data.expenseDate?.slice(0, 10) ?? data.receiptDate?.slice(0, 10) ?? today)
-        setAccountId(data.accountId ?? '')
-        setBillable(Boolean(data.billable))
-        setClientProject(data.clientProject ?? '')
+        setStatus(data.status ?? 'DRAFT')
         setNotes(data.notes ?? '')
-        if (data.attachmentUrl) {
-          setUploadedAttachmentUrl(data.attachmentUrl)
-          setReceiptPreviewUrl(data.attachmentUrl)
-        }
+        setBillable(data.billable ?? false)
+        setClientProject(data.clientProject ?? '')
+        setAccountId(data.accountId ?? '')
+        setUploadedAttachmentId(data.attachmentId ?? null)
+        if (data.attachmentUrl) setReceiptPreviewUrl(data.attachmentUrl)
       })
       .catch(() => toast.error('Failed to load receipt'))
+  }, [companyId, receiptId, mode, toast])
 
-    return () => { active = false }
-  }, [companyId, mode, receiptId, toast])
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !companyId) return
 
-  useEffect(() => {
-    if (!receiptFile) return
-    const objectUrl = URL.createObjectURL(receiptFile)
-    setReceiptPreviewUrl(objectUrl)
-    return () => URL.revokeObjectURL(objectUrl)
-  }, [receiptFile])
-
-  const validate = useCallback(() => {
-    if (!companyId) { setError('Company not loaded'); return false }
-    if (!receiptFile && !uploadedAttachmentUrl) { setError('Receipt file is required'); return false }
-    if (!merchant.trim()) { setError('Vendor is required'); return false }
-    if (amount <= 0) { setError('Amount must be greater than zero'); return false }
-    if (billable && !clientProject.trim()) { setError('Client/Project is required when billable'); return false }
-    setError('')
-    return true
-  }, [companyId, merchant, amount, billable, clientProject, receiptFile, uploadedAttachmentUrl])
-
-  const handleReceiptUpload = async (file: File) => {
-    if (!companyId) return
     setUploadingFile(true)
     try {
-      const response = await expensesService.uploadAttachment(companyId, file, 'receipt', receiptId ?? `receipt-${Date.now()}`)
-      const attachment = response.data ?? response
-      setUploadedAttachmentUrl(attachment.fileUrl)
-      setUploadedAttachmentId(attachment.id ?? null)
-      setReceiptFile(file)
-      setReceiptPreviewUrl(attachment.fileUrl || URL.createObjectURL(file))
-      toast.success('Receipt uploaded')
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Receipt upload failed')
-      toast.error('Receipt upload failed')
+      const res = await expensesService.uploadReceipt(companyId, file)
+      setUploadedAttachmentId(res.attachmentId)
+      setReceiptPreviewUrl(URL.createObjectURL(file))
+      toast.success('File uploaded successfully')
+    } catch (err) {
+      toast.error('Failed to upload file')
     } finally {
       setUploadingFile(false)
     }
   }
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    handleReceiptUpload(file)
-    event.target.value = ''
-  }
-
-  const payload = useMemo(() => ({
-    receiptDate,
-    status,
-    merchant,
-    category,
-    paymentMethod,
-    amount,
-    currency,
-    referenceNumber: referenceNumber || null,
-    expenseDate,
-    accountId: accountId || null,
-    billable,
-    clientProject: billable ? clientProject : null,
-    notes,
-    attachmentUrl: uploadedAttachmentUrl || null,
-  }), [receiptDate, status, merchant, category, paymentMethod, amount, currency, referenceNumber, expenseDate, accountId, billable, clientProject, notes, uploadedAttachmentUrl])
-  const accountOptions = useMemo(() => accounts.map((a) => ({ id: a.id, name: a.code ? `${a.code} — ${a.name}` : a.name ?? a.id })), [accounts])
-
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     if (!companyId) return
-    if (!validate()) return
+    if (!merchant.trim()) { setError('Merchant is required'); return }
+    if (amount <= 0) { setError('Amount must be greater than zero'); return }
+    setError('')
     setSubmitting(true)
+
     try {
+      const payload = {
+        receiptDate,
+        expenseDate,
+        merchant,
+        amount,
+        currency,
+        category,
+        paymentMethod,
+        referenceNumber,
+        status,
+        notes,
+        billable,
+        clientProject,
+        accountId,
+        attachmentId: uploadedAttachmentId,
+      }
+
       if (mode === 'new') {
         await expensesService.createReceipt(companyId, payload)
         toast.success('Receipt created')
@@ -183,141 +135,193 @@ const ReceiptForm = forwardRef<ReceiptFormHandle, ReceiptFormProps>(function Rec
         await expensesService.updateReceipt(companyId, receiptId, payload)
         toast.success('Receipt updated')
       }
-      if (onSaved) {
-        onSaved()
-      } else if (onClose) {
-        onClose()
-      }
+      if (onSaved) onSaved()
+      else if (onClose) onClose()
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Unable to save receipt')
-      toast.error('Unable to save receipt')
+      const msg = err.response?.data?.message ?? 'Failed to save receipt'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }
-  }, [companyId, mode, payload, receiptId, validate, toast, onSaved, onClose])
+  }
 
-  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
+  const accountOptions = accounts.map((a) => ({ id: a.id, name: `${a.code} - ${a.name}` }))
 
   return (
-    <div className="px-6 py-4 space-y-6 text-slate-900">
-      {error && <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
-
+    <div className="space-y-4 text-slate-900">
       {/* Upload */}
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm">
+      <div className="relative group rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center transition-all hover:border-emerald-300 hover:bg-emerald-50/30">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
           <FileText size={28} />
         </div>
-        <div className="mt-4 text-base font-semibold text-slate-900">Upload receipt</div>
-        <p className="mt-1 text-sm text-slate-500">Drag and drop a receipt image or PDF, or click to select</p>
-        <label htmlFor="receipt-file" className="mt-4 inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
-          <Upload size={14} /> {uploadingFile ? 'Uploading…' : 'Choose file'}
+        <div className="mt-4 text-base font-bold text-slate-900 uppercase tracking-tight">Upload Receipt</div>
+        <p className="mt-1 text-xs font-medium text-slate-500">Drag and drop a receipt image or PDF, or click to browse</p>
+        
+        <label htmlFor="receipt-file" className="mt-4 inline-flex cursor-pointer items-center justify-center gap-3 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all">
+          <Upload size={16} /> {uploadingFile ? 'Uploading…' : 'Choose File'}
         </label>
         <input id="receipt-file" type="file" accept="image/*,application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} disabled={uploadingFile} />
+        
         {receiptPreviewUrl ? (
-          <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 text-left">
-            <div className="text-sm font-semibold text-slate-900">Receipt uploaded</div>
-            <p className="mt-1 text-sm text-slate-500">{uploadedAttachmentId ? 'File uploaded successfully.' : 'File selected.'}</p>
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[10px] font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4 text-emerald-500" />
+                Receipt Preview
+              </div>
+              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase rounded border border-emerald-100">Ready</span>
+            </div>
             {receiptPreviewUrl.endsWith('.pdf') ? (
-              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-100 p-3 text-xs text-slate-600">PDF preview not available.</div>
+              <div className="flex items-center justify-center h-32 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-400">PDF Document Attached</div>
             ) : (
-              <img src={receiptPreviewUrl} alt="Receipt preview" className="mt-3 w-full rounded-lg border border-slate-200 object-contain" />
+              <div className="relative rounded-xl overflow-hidden border border-slate-100 shadow-inner">
+                <img src={receiptPreviewUrl} alt="Receipt preview" className="w-full max-h-[300px] object-contain" />
+              </div>
             )}
           </div>
         ) : null}
       </div>
 
-      {/* Receipt Details */}
-      <div>
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Receipt Details</p>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <div>
-            <label htmlFor="receiptDate" className="text-[10px] font-bold uppercase text-slate-400">Receipt Date</label>
-            <input id="receiptDate" type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" />
-          </div>
-          <div>
-            <label htmlFor="status" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
-            <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} />
-          </div>
-          <div>
-            <label htmlFor="merchant" className="text-[10px] font-bold uppercase text-slate-400">Merchant</label>
-            <input id="merchant" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Enter merchant" className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" />
-          </div>
-          <div>
-            <label htmlFor="receiptAmount" className="text-[10px] font-bold uppercase text-slate-400">Total Amount</label>
-            <div className="mt-1 flex rounded-lg border border-slate-200 bg-white">
-              <span className="inline-flex items-center px-3 text-sm text-slate-500 border-r border-slate-200">{currency}</span>
-              <input id="receiptAmount" type="number" min="0" step="0.01" value={amount !== 0 ? amount : ''} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-full border-0 px-3 py-2 text-right text-sm text-slate-900 outline-none rounded-r-lg" />
+      <div className="grid gap-4">
+        <section>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+              <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Transaction Details</h2>
+            </div>
+            <div className="px-4 pb-4 sm:px-5 lg:px-6">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="receiptDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Receipt Date</label>
+                  <input id="receiptDate" type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="status" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</label>
+                  <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="merchant" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Merchant / Vendor</label>
+                  <input id="merchant" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Who did you pay?" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="receiptAmount" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Amount</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
+                    <input id="receiptAmount" type="number" min="0" step="0.01" value={amount !== 0 ? amount : ''} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="expenseDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Expense Date</label>
+                  <input id="expenseDate" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="paymentMethod" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Payment Method</label>
+                  <HaypSelect id="paymentMethod" value={paymentMethod} onChange={setPaymentMethod} options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                </div>
+              </div>
+              <div className="mt-4 space-y-1.5">
+                <label htmlFor="referenceNumber" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reference Number</label>
+                <input id="referenceNumber" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Transaction ref #" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+              </div>
             </div>
           </div>
-          <div>
-            <label htmlFor="expenseDate" className="text-[10px] font-bold uppercase text-slate-400">Expense Date</label>
-            <input id="expenseDate" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" />
-          </div>
-          <div>
-            <label htmlFor="paymentMethod" className="text-[10px] font-bold uppercase text-slate-400">Payment Method</label>
-            <HaypSelect id="paymentMethod" value={paymentMethod} onChange={setPaymentMethod} options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} />
-          </div>
-          <div className="col-span-2">
-            <label htmlFor="referenceNumber" className="text-[10px] font-bold uppercase text-slate-400">Reference Number</label>
-            <input id="referenceNumber" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Optional reference" className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" />
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="border-t border-slate-100" />
-
-      {/* Classification */}
-      <div>
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Classification</p>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <div>
-            <label htmlFor="receiptCategory" className="text-[10px] font-bold uppercase text-slate-400">Category</label>
-            <HaypSelect id="receiptCategory" value={category} onChange={setCategory} options={CATEGORIES.map((o) => ({ value: o, label: o }))} />
-          </div>
-          <div>
-            <CustomerPickerField
-              label="Account"
-              value={accountId}
-              customers={accountOptions}
-              placeholder="Search accounts…"
-              createLabel="+ New Account"
-              onChange={setAccountId}
-              onCreateNew={() => setShowAccountModal(true)}
-            />
-            {companyId && (
-              <NewAccountModal
-                open={showAccountModal}
-                companyId={companyId}
-                onClose={() => setShowAccountModal(false)}
-                onCreated={(a) => {
-                  setAccounts((prev) => [{ id: a.id, code: a.code, name: a.name }, ...prev])
-                  setAccountId(a.id)
-                }}
-              />
-            )}
-          </div>
-          <div className="col-span-2 flex items-center gap-3">
-            <input id="billable" type="checkbox" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-            <label htmlFor="billable" className="text-sm text-slate-700">Billable to Client</label>
-          </div>
-          {billable && (
-            <div className="col-span-2">
-              <label htmlFor="clientProject" className="text-[10px] font-bold uppercase text-slate-400">Client / Project</label>
-              <input id="clientProject" value={clientProject} onChange={(e) => setClientProject(e.target.value)} placeholder="Client or project name" className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" />
+        <section>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+              <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Classification</h2>
             </div>
-          )}
+            <div className="px-4 pb-4 sm:px-5 lg:px-6">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="receiptCategory" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</label>
+                  <HaypSelect id="receiptCategory" value={category} onChange={setCategory} options={CATEGORIES.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                </div>
+                <div className="space-y-1.5">
+                  <CustomerPickerField
+                    label="Account"
+                    value={accountId}
+                    customers={accountOptions}
+                    placeholder="Search accounts…"
+                    createLabel="New Account"
+                    onChange={setAccountId}
+                    onCreateNew={() => setShowAccountModal(true)}
+                  />
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => setShowAccountModal(false)}
+                      onCreated={(a) => {
+                        setAccounts((prev) => [{ id: a.id, code: a.code, name: a.name }, ...prev])
+                        setAccountId(a.id)
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <input id="billable" type="checkbox" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="h-5 w-5 rounded-lg border-slate-300 text-emerald-600 focus:ring-emerald-500 transition-all" />
+                  <label htmlFor="billable" className="text-sm font-bold text-slate-700 uppercase tracking-wider">Billable to Client</label>
+                </div>
+                {billable && <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-white px-2 py-1 rounded border border-emerald-100 shadow-sm">Project Selected</div>}
+              </div>
+              {billable && (
+                <div className="space-y-1.5">
+                  <label htmlFor="clientProject" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Client / Project</label>
+                  <input id="clientProject" value={clientProject} onChange={(e) => setClientProject(e.target.value)} placeholder="Project name or code" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+              <div className="w-1 h-6 bg-slate-300 rounded-full" />
+              <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Notes</h2>
+            </div>
+            <div className="px-4 pb-4 sm:px-5 lg:px-6">
+              <textarea id="receiptNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Add justifications or internal comments..." className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none" />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+        <button 
+          type="button" 
+          onClick={onClose} 
+          disabled={submitting}
+          className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          onClick={handleSave} 
+          disabled={submitting}
+          className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+        >
+          {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+          {mode === 'new' ? 'Save Receipt' : 'Update Receipt'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+          {error}
         </div>
-      </div>
-
-      <div className="border-t border-slate-100" />
-
-      {/* Notes */}
-      <div>
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Notes</p>
-        <textarea id="receiptNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Add extra detail for this receipt" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" />
-      </div>
+      )}
     </div>
   )
-})
-
-export default ReceiptForm
+}

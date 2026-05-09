@@ -144,6 +144,11 @@ export class ApController {
         return this.svc.convertPoToBill(req.user.userId, cid, poId)
     }
 
+    @Delete('purchase-orders/:poId')
+    deletePurchaseOrder(@Req() req: any, @Param('companyId') cid: string, @Param('poId') poId: string) {
+        return this.svc.deletePurchaseOrder(req.user.userId, cid, poId)
+    }
+
     // ─── Purchase Requests ─────────────────────────────────────────────────────
 
     @Get('purchase-requests')
@@ -329,6 +334,11 @@ export class ApController {
     @Put('recurring-bills/:billId')
     updateRecurringBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') billId: string, @Body() body: any) {
         return this.svc.updateRecurringBill(req.user.userId, cid, billId, body)
+    }
+
+    @Delete('recurring-bills/:billId')
+    deleteRecurringBill(@Req() req: any, @Param('companyId') cid: string, @Param('billId') billId: string) {
+        return this.svc.deleteRecurringBill(req.user.userId, cid, billId)
     }
 
     // ─── Payment Runs ─────────────────────────────────────────────────────────

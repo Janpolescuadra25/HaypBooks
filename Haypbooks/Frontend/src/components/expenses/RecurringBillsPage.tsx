@@ -10,8 +10,6 @@ import { expensesService } from '@/services/expenses.service'
 import { useToast } from '@/components/ToastProvider'
 import { HaypDataTable } from '@/components/shared/HaypDataTable'
 import type { HaypActionItem, HaypBulkAction, HaypColumn, HaypTotalsConfig } from '@/components/shared/HaypDataTable.types'
-import HaypModal from '@/components/shared/HaypModal'
-import RecurringBillForm, { type RecurringBillFormHandle } from './RecurringBillForm'
 import { fmtDate, csvDownload, StatusPill } from './_helpers'
 
 interface RecurringBill {
@@ -39,11 +37,6 @@ export default function RecurringBillsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [panelOpen, setPanelOpen] = useState(false)
-  const [openMode, setOpenMode] = useState<'new' | 'edit'>('new')
-  const [openId, setOpenId] = useState<string | null>(null)
-  const formRef = useRef<RecurringBillFormHandle | null>(null)
-  const saveAndNewRef = useRef(false)
 
   const fetchRows = useCallback(async () => {
     if (!companyId) { setLoading(false); return }
@@ -63,23 +56,8 @@ export default function RecurringBillsPage() {
 
   useEffect(() => { fetchRows() }, [fetchRows])
 
-  const handleClose = useCallback(() => {
-    saveAndNewRef.current = false
-    setPanelOpen(false)
-    setOpenId(null)
-    setOpenMode('new')
-  }, [])
-
   const handleSaved = useCallback(async () => {
     await fetchRows()
-    if (saveAndNewRef.current) {
-      saveAndNewRef.current = false
-      setOpenMode('new')
-      setOpenId(null)
-    } else {
-      setPanelOpen(false)
-      setOpenId(null)
-    }
   }, [fetchRows])
 
   const dateFiltered = useMemo(() => {
@@ -164,10 +142,8 @@ export default function RecurringBillsPage() {
   }, [filtered, toast])
 
   const openEdit = useCallback((id: string) => {
-    setOpenMode('edit')
-    setOpenId(id)
-    setPanelOpen(true)
-  }, [])
+    router.push(`/expenses/bills-payments/recurring-bills/edit/${id}`)
+  }, [router])
 
   const actions = useMemo<HaypActionItem[]>(() => [
     {
@@ -257,54 +233,27 @@ export default function RecurringBillsPage() {
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
         <HaypDataTable
-        data={dateFiltered}
-        columns={columns}
-        tableId="recurring-bills"
-        title="Recurring Bills"
-        description="Manage recurring bill templates and payment schedules."
-        headerActions={
-          <button onClick={() => { setPanelOpen(true); setOpenMode('new'); setOpenId(null) }} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Template</button>
-        }
-        globalFilter={search}
-        onGlobalFilterChange={setSearch}
-        filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
-        activeFilter={statusFilter}
-        onFilterChange={setStatusFilter}
-        filterLabel="Status"
-        dateRange={{ start: dateFrom ? new Date(dateFrom) : new Date('1970-01-01'), end: dateTo ? new Date(dateTo) : new Date('9999-12-31') }}
-        onDateRangeChange={({ start, end }) => {
-          setDateFrom(start.toISOString().slice(0, 10))
-          setDateTo(end.toISOString().slice(0, 10))
-        }}
-        actions={actions}
-        bulkActions={bulkActions}
-        totals={totals}
-        stats={stats}
-        onRefresh={fetchRows}
-        onExport={handleExportCSV}
-        exportLabel="Export CSV"
-        onRowClick={(row) => openEdit(row.id)}
-        onActivityLog={() => router.push('/expenses/bills-payments/recurring-bills/activity')}
-        emptyTitle={loading ? 'Loading recurring bills…' : 'No recurring bills found'}
-        emptySubtitle="Use search and filters to locate templates"
-        loading={loading}
-      />
+          data={filtered}
+          columns={columns}
+          tableId="recurring-bills"
+          title="Recurring Bills"
+          description="Manage recurring bill templates and payment schedules."
+          headerActions={
+            <button onClick={() => router.push('/expenses/bills-payments/recurring-bills/new')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> New Template</button>
+          }
+          globalFilter={search}
+          onGlobalFilterChange={setSearch}
+          filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterLabel="Status"
+          totals={totals}
+          actions={actions}
+          bulkActions={bulkActions}
+          stats={stats}
+          loading={loading}
+        />
       </div>
-
-      <HaypModal
-        open={panelOpen}
-        onClose={handleClose}
-        title={openMode === 'new' ? 'New Recurring Bill Template' : 'Edit Recurring Bill Template'}
-        footer={
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button type="button" onClick={handleClose} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={() => { saveAndNewRef.current = true; formRef.current?.save() }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Save and new</button>
-            <button type="button" onClick={() => { saveAndNewRef.current = false; formRef.current?.save() }} className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">Save</button>
-          </div>
-        }
-      >
-        <RecurringBillForm key={`${openMode}-${openId ?? 'new'}`} ref={formRef} mode={openMode} billId={openId ?? undefined} onClose={handleClose} onSaved={handleSaved} />
-      </HaypModal>
     </div>
   )
 }

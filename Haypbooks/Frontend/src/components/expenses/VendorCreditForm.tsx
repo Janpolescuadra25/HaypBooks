@@ -2,14 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Save, Send, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Save, Send, Trash2, Loader2, ArrowLeft, X } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
-import AccountSplitModal, { AccountSplitRow } from '@/components/shared/AccountSplitModal'
 import LineItemTable from './LineItemTable'
 import ActivityLog from '@/components/ui/ActivityLog'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
@@ -50,7 +49,6 @@ interface LineItem {
   unitPrice: number
   taxRate: number
   amount: number
-  splits?: AccountSplitRow[]
 }
 
 interface VendorCreditFormProps {
@@ -112,35 +110,10 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [splitModalOpen, setSplitModalOpen] = useState(false)
-  const [splitRowId, setSplitRowId] = useState<string | null>(null)
-  const [splitDraft, setSplitDraft] = useState<AccountSplitRow[]>([])
 
   const [activeTab, setActiveTab] = useState<'details' | 'memo' | 'attachments' | 'activity'>('details')
-  const selectedSplitLine = useMemo(() => lineItems.find((line) => line.id === splitRowId) ?? null, [lineItems, splitRowId])
   const lineItemAccountOptions = useMemo(() => accounts.map((account) => ({ id: account.id, label: account.code ? `${account.code} ${account.name}` : account.name ?? account.id })), [accounts])
 
-  const openSplitModal = useCallback((rowId: string) => {
-    const line = lineItems.find((item) => item.id === rowId)
-    setSplitRowId(rowId)
-    setSplitDraft(line?.splits?.length ? [...line.splits] : [{ id: genId(), accountId: '', amount: Number(line?.amount ?? 0) }])
-    setSplitModalOpen(true)
-  }, [lineItems])
-
-  const closeSplitModal = useCallback(() => {
-    setSplitModalOpen(false)
-    setSplitRowId(null)
-    setSplitDraft([])
-  }, [])
-
-  const handleSplitSave = useCallback(() => {
-    if (!splitRowId) {
-      closeSplitModal()
-      return
-    }
-    setLineItems((items) => items.map((item) => item.id === splitRowId ? { ...item, splits: splitDraft } : item))
-    closeSplitModal()
-  }, [closeSplitModal, splitDraft, splitRowId])
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
@@ -292,189 +265,258 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Vendor Credit' : 'Edit Vendor Credit'}</h1>
-              </div>
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button"
+                onClick={() => router.back()} 
+                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">
+                {mode === 'new' ? 'New Vendor Credit' : 'Edit Vendor Credit'}
+              </h1>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
-              <div className="font-semibold">Credit #</div>
-              <div>{creditNumber || 'Auto-generated'}</div>
+            <div className="flex items-center gap-2">
+              <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                {status}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-            {mode !== 'new' ? (
-            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          {mode !== 'new' && (
+            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
               <button type="button" onClick={() => setActiveTab('memo')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'memo' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Memo</button>
               <button type="button" onClick={() => setActiveTab('attachments')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'attachments' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Attachments</button>
               <button type="button" onClick={() => setActiveTab('activity')} disabled={!creditId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
             </div>
-          ) : null}
-        </div>
-        <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_280px]">
-                  <div>
-                <label htmlFor="creditDate" className="block text-sm font-semibold text-slate-900">Credit Date</label>
-                <input id="creditDate" type="date" value={creditDate} onChange={(e) => setCreditDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-              </div>
-              <div>
-                <label htmlFor="creditNumber" className="block text-sm font-semibold text-slate-900">Credit Number</label>
-                <input id="creditNumber" value={creditNumber ? creditNumber : 'Auto-generated'} readOnly className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500" />
+          )}
 
-                          <div>
-                    <label htmlFor="referenceBill" className="block text-sm font-semibold text-slate-900">Reference Bill</label>
-                    <HaypSelect id="referenceBill" value={referenceBillId} onChange={setReferenceBillId} options={[{ value: '', label: 'Standalone credit' }, ...billOptions.map((b) => ({ value: b.id, label: b.label }))]} />
+          <div className={activeTab === 'details' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Credit Information</h2>
+                </div>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="space-y-1.5">
+                    <label htmlFor="creditNumber" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Credit #</label>
+                    <input 
+                      id="creditNumber" 
+                      value={creditNumber || 'Auto-generated'} 
+                      readOnly 
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
+                    />
                   </div>
-                  <div>
-                    <label htmlFor="creditType" className="block text-sm font-semibold text-slate-900">Credit Type</label>
-                    <HaypSelect id="creditType" value={creditType} onChange={setCreditType} options={CREDIT_TYPES.map((o) => ({ value: o, label: o }))} />
+                  <div className="space-y-1.5">
+                    <label htmlFor="creditDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Credit Date</label>
+                    <input 
+                      id="creditDate" 
+                      type="date" 
+                      value={creditDate} 
+                      onChange={e => setCreditDate(e.target.value)} 
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                    />
                   </div>
-
-                  <div>
-                    <label htmlFor="status" className="block text-sm font-semibold text-slate-900">Status</label>
-                    <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o.replace(/_/g, ' ') }))} />
-                  </div>
-                  <div>
-                    <label htmlFor="vendorId" className="block text-sm font-semibold text-slate-900">Vendor</label>
-                    <HaypSelect id="vendorId" value={vendorId} onChange={setVendorId} options={vendors.map((v) => ({ value: v.id, label: v.displayName }))} placeholder="Select vendor" />
+                  <div className="space-y-1.5">
+                    <label htmlFor="creditType" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Credit Type</label>
+                    <HaypSelect 
+                      id="creditType" 
+                      value={creditType} 
+                      onChange={setCreditType} 
+                      options={CREDIT_TYPES.map(o => ({ value: o, label: o }))} 
+                      className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                    />
                   </div>
                 </div>
               </div>
-              </section>
+            </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Credit Line Items</h2>
-                      </div>
-                      <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
-                        <Plus size={16} /> Add row
-                      </button>
-                    </div>
-
-                    <div className="mt-4">
-                      <LineItemTable
-                        columns={lineItemColumns.map((column) => column.key === 'accountId'
-                          ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} — ${account.name}` : account.name ?? '' })) }
-                          : column
-                        )}
-                        rows={lineItems}
-                        onChange={setLineItems}
-                        currency={currency ?? 'USD'}
-                        calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
-                        showSplitButton
-                        onSplit={openSplitModal}
-                      />
-                    </div>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Vendor & Reference</h2>
+                </div>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="space-y-1.5">
+                    <label htmlFor="vendorId" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor</label>
+                    <HaypSelect 
+                      id="vendorId" 
+                      value={vendorId} 
+                      onChange={setVendorId} 
+                      options={vendors.map(v => ({ value: v.id, label: v.displayName }))} 
+                      placeholder="Select vendor" 
+                      className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                    />
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="space-y-4">
-                      <div className="text-sm font-semibold text-slate-900">Credit summary</div>
-                      <div className="flex items-center justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal, currency)}</span></div>
-                      <div className="flex items-center justify-between text-sm text-slate-600"><span>Tax</span><span>{formatCurrency(taxTotal, currency)}</span></div>
-                      <div className="border-t border-slate-200 pt-4 flex items-center justify-between text-base font-semibold text-slate-900"><span>Total Credit</span><span>{formatCurrency(total, currency)}</span></div>
-                    </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="referenceBill" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reference Bill</label>
+                    <HaypSelect 
+                      id="referenceBill" 
+                      value={referenceBillId} 
+                      onChange={setReferenceBillId} 
+                      options={[{ value: '', label: 'Standalone credit' }, ...billOptions.map(b => ({ value: b.id, label: b.label }))]} 
+                      className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                    />
                   </div>
                 </div>
-              </section>
+              </div>
+            </section>
 
-              <AccountSplitModal
-                open={splitModalOpen}
-                onClose={closeSplitModal}
-                title={selectedSplitLine?.description ? `Split: ${selectedSplitLine.description}` : 'Split credit line'}
-                totalAmount={Number(selectedSplitLine?.amount ?? 0)}
-                splits={splitDraft}
-                accounts={lineItemAccountOptions}
-                onChange={setSplitDraft}
-                onSave={handleSplitSave}
-              />
-
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="space-y-6">
-                  <div>
-                    <label htmlFor="creditReason" className="block text-sm font-semibold text-slate-900">Reason</label>
-                    <textarea id="creditReason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label htmlFor="creditNotes" className="block text-sm font-semibold text-slate-900">Notes</label>
-                    <textarea id="creditNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                  </div>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Line Items</h2>
                 </div>
-              </section>
-            </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <LineItemTable
+                    columns={lineItemColumns.map((column) => column.key === 'accountId'
+                      ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} — ${account.name}` : account.name ?? '' })) }
+                      : column
+                    )}
+                    rows={lineItems}
+                    onChange={setLineItems}
+                    currency={currency ?? 'USD'}
+                    calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="p-4 sm:p-5 lg:p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end text-right">
+                <div className="px-4 text-sm font-medium text-slate-500">Subtotal: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(subtotal, currency)}</span></div>
+                <div className="px-4 text-sm font-medium text-slate-500">Tax: <span className="ml-2 font-bold text-slate-900 tabular-nums">{formatCurrency(taxTotal, currency)}</span></div>
+                <div className="px-4 text-sm font-medium text-slate-500">Total Credit: <span className="ml-2 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(total, currency)}</span></div>
+              </div>
+            </section>
           </div>
-        </div>
 
-        <div className={mode === 'new' || activeTab === 'memo' ? '' : 'hidden'}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="space-y-6">
-                <div>
-                  <label htmlFor="creditReason" className="block text-sm font-semibold text-slate-900">Reason</label>
-                  <textarea id="creditReason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+          <div className={activeTab === 'memo' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Reason & Notes</h2>
                 </div>
-                <div>
-                  <label htmlFor="creditNotes" className="block text-sm font-semibold text-slate-900">Notes</label>
-                  <textarea id="creditNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
+                <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="creditReason" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reason</label>
+                    <textarea 
+                      id="creditReason" 
+                      value={reason} 
+                      onChange={(e) => setReason(e.target.value)} 
+                      rows={4} 
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="creditNotes" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Notes</label>
+                    <textarea 
+                      id="creditNotes" 
+                      value={notes} 
+                      onChange={(e) => setNotes(e.target.value)} 
+                      rows={3} 
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                    />
+                  </div>
                 </div>
               </div>
             </section>
           </div>
-        </div>
 
-        <div className={mode === 'new' || activeTab === 'attachments' ? '' : 'hidden'}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-44">
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
-              <div className="mt-4">
-                <HaypFileUpload attachments={attachments} onChange={setAttachments} />
+          <div className={activeTab === 'attachments' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Attachments</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <HaypFileUpload attachments={attachments} onChange={setAttachments} />
+                </div>
               </div>
             </section>
           </div>
-        </div>
 
-        <div className={mode === 'new' || activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
-                <div className="mt-4">
+          <div className={activeTab === 'activity' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
                   <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this vendor credit yet." />
                 </div>
-              </section>
-            </div>
+              </div>
+            </section>
           </div>
         </div>
+
       </main>
 
-      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm px-4 py-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Review your credit before saving or submitting.</p>}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => router.push('/expenses/bills-payments/vendor-credits')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={() => handleSave('draft')} disabled={submitting} className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">Save</button>
-            <button type="button" onClick={() => handleSave('submit')} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Submit
-            </button>
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>Total Credit:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(total, currency)}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                type="button" 
+                onClick={() => router.push('/expenses/bills-payments/vendor-credits')} 
+                className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={() => handleSave('draft')} 
+                disabled={submitting} 
+                className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Save size={18} className="text-slate-400" />}
+                Save Draft
+              </button>
+              <button 
+                type="button" 
+                onClick={() => handleSave('submit')} 
+                disabled={submitting} 
+                className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                Submit
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
+            {error}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

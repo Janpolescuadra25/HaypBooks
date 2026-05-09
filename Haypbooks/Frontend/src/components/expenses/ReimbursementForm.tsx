@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Plus, X } from 'lucide-react'
+import { Save, Loader2, Plus, X, ArrowLeft, FileText, History, Send } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -200,159 +200,313 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Reimbursement' : 'Edit Reimbursement'}</h1>
-              </div>
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button"
+                onClick={() => router.push('/expenses/employee-expenses/reimbursements')} 
+                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Reimbursement' : 'Edit Reimbursement'}</h1>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
-              <div className="font-semibold">Status</div>
-              <div>{status}</div>
+            <div className="flex items-center gap-2">
+              <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                {status}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           {mode !== 'new' && (
-            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
-              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-              <button type="button" onClick={() => setActiveTab('activity')} disabled={!reimbursementId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('details')} 
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'details' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                <FileText className="w-4 h-4" /> Details
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('activity')} 
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'activity' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                <History className="w-4 h-4" /> Activity
+              </button>
             </div>
           )}
-        </div>
 
-        <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="reimbursement-employee" className="block text-sm font-semibold text-slate-700">Employee</label>
-                      <HaypSelect id="reimbursement-employee" value={employeeId} onChange={setEmployeeId} disabled={isReadOnly} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} />
+          <div className={activeTab === 'details' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Reimbursement Info</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 mb-4">
+                    <div className="space-y-1.5">
+                      <label htmlFor="reimbursement-employee" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employee</label>
+                      <HaypSelect 
+                        id="reimbursement-employee" 
+                        value={employeeId} 
+                        onChange={setEmployeeId} 
+                        disabled={isReadOnly} 
+                        options={employees.map((e) => ({ value: e.id, label: e.displayName }))} 
+                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
                     </div>
-
-                    <div>
-                      <label htmlFor="reimbursement-description" className="block text-sm font-semibold text-slate-700">Reimbursement description</label>
-                      <textarea id="reimbursement-description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={isReadOnly} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20" />
-                    </div>
-
-                    <div>
-                      <label htmlFor="reimbursement-business-purpose" className="block text-sm font-semibold text-slate-700">Business purpose</label>
-                      <input id="reimbursement-business-purpose" value={businessPurpose} onChange={(e) => setBusinessPurpose(e.target.value)} disabled={isReadOnly} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20" />
-                    </div>
-
-                    <div>
-                      <label htmlFor="reimbursement-notes" className="block text-sm font-semibold text-slate-700">Notes</label>
-                      <textarea id="reimbursement-notes" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isReadOnly} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:ring-emerald-500/20" />
-                    </div>
-
-                    <div>
-                      <label htmlFor="reimbursement-payment-method" className="block text-sm font-semibold text-slate-700">Payment method</label>
-                      <HaypSelect id="reimbursement-payment-method" value={paymentMethod} onChange={setPaymentMethod} disabled={isReadOnly} options={[{ value: 'BANK_TRANSFER', label: 'Bank transfer' }, { value: 'CHECK', label: 'Check' }]} />
+                    <div className="space-y-1.5">
+                      <label htmlFor="reimbursement-payment-method" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Method Preference</label>
+                      <HaypSelect 
+                        id="reimbursement-payment-method" 
+                        value={paymentMethod} 
+                        onChange={setPaymentMethod} 
+                        disabled={isReadOnly} 
+                        options={[{ value: 'BANK_TRANSFER', label: 'Bank Transfer' }, { value: 'CHECK', label: 'Check' }]} 
+                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-emerald-50/40 p-5 text-sm text-slate-700">
-                    <div className="font-semibold text-slate-800">Totals</div>
-                    <div className="mt-4 grid gap-3">
-                      <div className="flex items-center justify-between"><span>Line total</span><span className="font-semibold text-emerald-800">{formatCurrency(totalAmount, currency)}</span></div>
-                      <div className="flex items-center justify-between"><span>Advance paid</span><span className="font-semibold text-slate-900">{formatCurrency(0, currency)}</span></div>
-                      <div className="rounded-2xl bg-white p-4 border border-slate-200"><div className="flex items-center justify-between text-slate-500"><span>Reimbursable amount</span><span className="font-semibold text-emerald-900">{formatCurrency(totalAmount, currency)}</span></div></div>
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label htmlFor="reimbursement-description" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</label>
+                      <input 
+                        id="reimbursement-description" 
+                        value={description} 
+                        onChange={(e) => setDescription(e.target.value)} 
+                        disabled={isReadOnly}
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        placeholder="Brief description of the reimbursement request"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="reimbursement-business-purpose" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Business Purpose</label>
+                      <input 
+                        id="reimbursement-business-purpose" 
+                        value={businessPurpose} 
+                        onChange={(e) => setBusinessPurpose(e.target.value)} 
+                        disabled={isReadOnly}
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        placeholder="Reason for these expenses"
+                      />
                     </div>
                   </div>
                 </div>
+              </div>
+            </section>
 
-                <div className="space-y-4 mt-6">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-semibold text-slate-900">Line items</h2>
-                      <p className="text-sm text-slate-500">Add the expenses you want to reimburse.</p>
-                    </div>
-                    <button type="button" disabled={isReadOnly} onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"><Plus size={14} /> Add line</button>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Expense Items</h2>
                   </div>
-
-                  <div className="space-y-4">
+                  {!isReadOnly && (
+                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition-all active:scale-95">
+                      <Plus size={16} /> Add Expense
+                    </button>
+                  )}
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="space-y-3">
                     {lines.map((line) => (
-                      <div key={line.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] items-end">
-                        <div>
-                          <label htmlFor={`line-date-${line.id}`} className="block text-xs font-semibold text-slate-500">Date</label>
-                          <input id={`line-date-${line.id}`} type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={isReadOnly} className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" />
-                        </div>
-                        <div>
-                          <label htmlFor={`line-category-${line.id}`} className="block text-xs font-semibold text-slate-500">Category</label>
-                          <HaypSelect id={`line-category-${line.id}`} value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={isReadOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
-                        </div>
-                        <div>
-                          <label htmlFor={`line-description-${line.id}`} className="block text-xs font-semibold text-slate-500">Description</label>
-                          <input id={`line-description-${line.id}`} value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={isReadOnly} className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" />
-                        </div>
-                        <div className="grid gap-2">
-                          <div>
-                            <label htmlFor={`line-amount-${line.id}`} className="block text-xs font-semibold text-slate-500">Amount</label>
-                            <input id={`line-amount-${line.id}`} type="number" min={0} step={0.01} value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={isReadOnly} className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                      <div key={line.id} className="group relative p-4 bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:border-emerald-200 hover:bg-white">
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+                          <div className="space-y-1.5">
+                            <label htmlFor={`line-date-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</label>
+                            <input 
+                              id={`line-date-${line.id}`} 
+                              type="date" 
+                              value={line.date} 
+                              onChange={(e) => updateLine(line.id, 'date', e.target.value)} 
+                              disabled={isReadOnly} 
+                              className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-emerald-500 transition-all outline-none disabled:opacity-50" 
+                            />
                           </div>
-                          <button type="button" disabled={isReadOnly} onClick={() => removeLine(line.id)} className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Remove</button>
+                          <div className="space-y-1.5">
+                            <label htmlFor={`line-category-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
+                            <HaypSelect 
+                              id={`line-category-${line.id}`} 
+                              value={line.category} 
+                              onChange={(v) => updateLine(line.id, 'category', v)} 
+                              disabled={isReadOnly} 
+                              options={CATEGORIES.map((c) => ({ value: c, label: c }))} 
+                              className="h-9 text-xs disabled:opacity-50"
+                            />
+                          </div>
+                          <div className="space-y-1.5 lg:col-span-1">
+                            <label htmlFor={`line-description-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</label>
+                            <input 
+                              id={`line-description-${line.id}`} 
+                              value={line.description} 
+                              onChange={(e) => updateLine(line.id, 'description', e.target.value)} 
+                              disabled={isReadOnly} 
+                              placeholder="What was this for?"
+                              className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-emerald-500 transition-all outline-none disabled:opacity-50" 
+                            />
+                          </div>
+                          <div className="flex gap-2 items-end">
+                            <div className="flex-1 space-y-1.5">
+                              <label htmlFor={`line-amount-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
+                                <input 
+                                  id={`line-amount-${line.id}`} 
+                                  type="number" 
+                                  min={0} 
+                                  step={0.01} 
+                                  value={line.amount || ''} 
+                                  onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} 
+                                  disabled={isReadOnly} 
+                                  className="w-full h-9 rounded-lg border border-slate-200 bg-white pl-10 pr-3 py-2 text-xs font-bold text-slate-900 text-right focus:border-emerald-500 transition-all outline-none disabled:opacity-50" 
+                                />
+                              </div>
+                            </div>
+                            {!isReadOnly && lines.length > 1 && (
+                              <button 
+                                type="button" 
+                                onClick={() => removeLine(line.id)} 
+                                className="h-9 w-9 flex items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors"
+                              >
+                                <X size={16} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+              </div>
+            </section>
 
-                {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-6">
-                  <div className="space-y-2 text-sm text-slate-600">
-                    <p className="font-semibold">Next steps</p>
-                    <p>Save as a draft or submit for approval when ready.</p>
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+              <section className="lg:col-span-2">
+                <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm h-full">
+                  <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                    <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Notes & Comments</h2>
                   </div>
-                  <div className="flex flex-wrap gap-3">
-                    <button type="button" onClick={saveDraft} disabled={submitting || isReadOnly} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
-                      {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save draft
-                    </button>
-                    <button type="button" onClick={submitForApproval} disabled={submitting || isReadOnly} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
-                      {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Submit for approval
-                    </button>
+                  <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                    <textarea 
+                      id="reimbursement-notes" 
+                      value={notes} 
+                      onChange={(e) => setNotes(e.target.value)} 
+                      disabled={isReadOnly} 
+                      rows={4} 
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      placeholder="Additional information or justification..."
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm h-full">
+                  <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Summary</h2>
+                  </div>
+                  <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Total Expenses</span>
+                      <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(totalAmount, currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Advance Applied</span>
+                      <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(0, currency)}</span>
+                    </div>
+                    <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                      <span className="text-sm font-bold text-slate-900">Amount Due</span>
+                      <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatCurrency(totalAmount, currency)}</span>
+                    </div>
                   </div>
                 </div>
               </section>
             </div>
           </div>
-        </div>
 
-        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
-                <div className="mt-4">
-                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this reimbursement yet." />
+          <div className={activeTab === 'activity' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity Log</h2>
                 </div>
-              </section>
-            </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity recorded for this reimbursement." />
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : <p className="text-sm text-slate-500">Review before saving or submitting.</p>}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => router.push('/expenses/employee-expenses/reimbursements')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
-            <button type="button" onClick={saveDraft} disabled={submitting || isReadOnly} className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">Save</button>
-            <button type="button" onClick={submitForApproval} disabled={submitting || isReadOnly} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Submit
-            </button>
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>Total Amount:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(totalAmount, currency)}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                type="button" 
+                onClick={() => router.push('/expenses/employee-expenses/reimbursements')} 
+                disabled={submitting}
+                className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              
+              {!isReadOnly && (
+                <>
+                  <button 
+                    type="button" 
+                    onClick={saveDraft} 
+                    disabled={submitting}
+                    className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                    Save Draft
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={submitForApproval} 
+                    disabled={submitting} 
+                    className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    Submit for Approval
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
+            {error}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

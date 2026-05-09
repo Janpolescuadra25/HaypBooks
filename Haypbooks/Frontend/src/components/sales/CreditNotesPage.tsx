@@ -980,7 +980,7 @@ export default function CreditNotesPage() {
                 customers={customers}
                 loading={custLoading}
                 placeholder="Select customer..."
-                createLabel="+ Create New Customer"
+                createLabel="Create New Customer"
                 onOpen={loadCustomers}
                 onChange={(id) => {
                   setNc((p) => ({ ...p, customerId: id }))

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -12,7 +12,6 @@ import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { formatCurrency } from '@/lib/format'
 import { useFixedWidthResizableColumns } from '@/hooks/useFixedWidthTableResize'
 import { useToast } from '@/components/ToastProvider'
-import RecurringInvoiceForm from './RecurringInvoiceForm'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -65,7 +64,6 @@ const FREQ_LABELS: Record<string, string> = {
   QUARTERLY: 'Quarterly', ANNUALLY: 'Annually',
 }
 
-interface RecurringFormData { customerId: string; frequency: string; startDate: string; endDate: string; amount: string; maxOccurrences: string; daysInAdvance: string }
 
 type SortDirection = 'asc' | 'desc'
 type SortKey = 'name' | 'customer' | 'frequency' | 'amount' | 'nextRun' | 'status'
@@ -117,22 +115,7 @@ export default function RecurringInvoicesPage() {
   const [cols, setCols] = useState<ColDef[]>(() => loadCols())
   const [showColMenu, setShowColMenu] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
-  const [showForm, setShowForm] = useState(false)
   const [detailItem, setDetailItem] = useState<RecurringRow | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState<RecurringFormData>({
-    customerId: '',
-    frequency: 'MONTHLY',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: '',
-    amount: '',
-    maxOccurrences: '',
-    daysInAdvance: '0',
-  })
-  const [formSaving, setFormSaving] = useState(false)
-  const [customers, setCustomers] = useState<CustomerPickerOption[]>([])
-  const [customersLoading, setCustomersLoading] = useState(false)
-  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('nextRun')
   const [sortDir, setSortDir] = useState<SortDirection>('asc')
 
@@ -165,23 +148,6 @@ export default function RecurringInvoicesPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const loadCustomers = useCallback(async () => {
-    if (!companyId) return
-    setCustomersLoading(true)
-    try {
-      const { data } = await apiClient.get(`/companies/${companyId}/ar/customers`)
-      const raw: any[] = Array.isArray(data) ? data : data?.data ?? data?.items ?? data?.records ?? []
-      setCustomers(raw.map((c: any) => ({
-        id: c.id ?? c.contactId,
-        name: c.name ?? c.displayName ?? c.contact?.displayName ?? '—',
-        email: c.email ?? c.contact?.email ?? '',
-      })))
-    } catch {
-      setCustomers([])
-    } finally {
-      setCustomersLoading(false)
-    }
-  }, [companyId])
 
   const filtered = useMemo(() => {
     return items.filter(row => {
@@ -249,50 +215,9 @@ export default function RecurringInvoicesPage() {
     setSortDir(key === 'amount' ? 'desc' : 'asc')
   }
 
-  const handleSave = async () => {
-    if (!companyId || !formData.customerId || !formData.amount) { toast.error('Customer and amount are required'); return }
-    setFormSaving(true)
-    try {
-      if (editingId) {
-        await apiClient.put(`/companies/${companyId}/ar/recurring-invoices/${editingId}`, {
-          customerId: formData.customerId,
-          frequency: formData.frequency,
-          startDate: formData.startDate,
-          endDate: formData.endDate || undefined,
-          maxOccurrences: formData.maxOccurrences ? Number(formData.maxOccurrences) : undefined,
-          daysInAdvance: formData.daysInAdvance ? Number(formData.daysInAdvance) : undefined,
-          templateData: { totalAmount: Number(formData.amount) },
-        })
-        toast.success('Recurring template updated'); setShowForm(false); fetchItems(); setEditingId(null)
-      } else {
-        await apiClient.post(`/companies/${companyId}/ar/recurring-invoices`, {
-          customerId: formData.customerId,
-          frequency: formData.frequency,
-          startDate: formData.startDate,
-          endDate: formData.endDate || undefined,
-          maxOccurrences: formData.maxOccurrences ? Number(formData.maxOccurrences) : undefined,
-          daysInAdvance: formData.daysInAdvance ? Number(formData.daysInAdvance) : undefined,
-          templateData: { totalAmount: Number(formData.amount) },
-        })
-        toast.success('Recurring template created'); setShowForm(false); fetchItems()
-      }
-    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Save failed') }
-    finally { setFormSaving(false) }
-  }
 
   function openEditRecurring(row: RecurringRow) {
-    setEditingId(row.id)
-    setFormData({
-      customerId: row.customerId ?? '',
-      frequency: row.frequency ?? 'MONTHLY',
-      startDate: row.nextRunDate ?? row.nextRun ?? new Date().toISOString().split('T')[0],
-      endDate: '',
-      amount: String(getRowAmount(row) ?? ''),
-      maxOccurrences: String((row as any).maxOccurrences ?? ''),
-      daysInAdvance: String((row as any).daysInAdvance ?? 0),
-    })
-    setShowForm(true)
-    loadCustomers()
+    router.push(`/sales/billing/recurring/edit/${row.id}`)
   }
 
   const visibleCols = cols.filter(c => c.visible)
@@ -335,7 +260,7 @@ export default function RecurringInvoicesPage() {
                 </div></>
             )}
           </div>
-          <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ customerId: '', frequency: 'MONTHLY', startDate: new Date().toISOString().split('T')[0], endDate: '', amount: '', maxOccurrences: '', daysInAdvance: '0' }); loadCustomers() }} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Template</button>
+          <button onClick={() => router.push('/sales/billing/recurring/new')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"><Plus size={16} /> New Template</button>
         </div>
       </div>
 
@@ -468,25 +393,6 @@ export default function RecurringInvoicesPage() {
         </div>
       )}
 
-      {showForm && (
-        <RecurringInvoiceForm
-          open={showForm}
-          companyId={companyId}
-          editingId={editingId}
-          customers={customers}
-          customersLoading={customersLoading}
-          formData={formData}
-          setFormData={setFormData}
-          formSaving={formSaving}
-          onClose={() => { setShowForm(false); setEditingId(null) }}
-          onSaved={() => { setShowForm(false); setEditingId(null); fetchItems() }}
-          handleSave={handleSave}
-          loadCustomers={loadCustomers}
-          setCustomers={setCustomers}
-          showQuickAddCustomer={showQuickAddCustomer}
-          setShowQuickAddCustomer={setShowQuickAddCustomer}
-        />
-      )}
 
       {detailItem && (
         <ModalPortal>

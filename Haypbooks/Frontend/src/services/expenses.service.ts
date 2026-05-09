@@ -391,6 +391,13 @@ export const expensesService = {
   deletePurchaseRequest: (companyId: string, requestId: string): Promise<AxiosResponse> =>
     apiClient.delete(`/companies/${companyId}/ap/purchase-requests/${requestId}`),
 
+  // ─── Organization (shared) ──────────────────────────────────────────────────
+  listDepartments: (companyId: string): Promise<AxiosResponse> =>
+    apiClient.get(`/companies/${companyId}/organization/departments`),
+
+  listLocations: (companyId: string): Promise<AxiosResponse> =>
+    apiClient.get(`/companies/${companyId}/organization/locations`),
+
   // ─── Vendor Credits ───────────────────────────────────────────────────────
   listVendorCredits: (companyId: string, query?: ListQuery): Promise<AxiosResponse> =>
     apiClient.get(`/companies/${companyId}/ap/vendor-credits`, { params: query }),
@@ -425,6 +432,14 @@ export const expensesService = {
 
   deleteReceipt: (companyId: string, receiptId: string): Promise<AxiosResponse> =>
     apiClient.delete(`/companies/${companyId}/ap/receipts/${receiptId}`),
+
+  uploadReceipt: (companyId: string, file: File): Promise<any> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.post(`/companies/${companyId}/ap/receipts/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(res => res.data)
+  },
 
   uploadAttachment: (companyId: string, file: File, entityType: string, entityId: string, description?: string): Promise<AxiosResponse> => {
     const formData = new FormData()

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Save, Loader2, X } from 'lucide-react'
+import { Save, Loader2, X, ArrowLeft, FileText, Paperclip, History, CheckCircle2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -309,195 +309,333 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
     : 'Bill Payment Details'
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{pageTitle}</h1>
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button"
+                onClick={() => router.push('/expenses/bills-payments/bill-payments')} 
+                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">{pageTitle}</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                {mode === 'edit' ? 'Posted' : 'Draft Payment'}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
-          {mode !== 'new' ? (
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
-              <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
-              <button type="button" onClick={() => setActiveTab('memo')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'memo' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Memo</button>
-              <button type="button" onClick={() => setActiveTab('attachments')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'attachments' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Attachments</button>
-              <button type="button" onClick={() => setActiveTab('activity')} disabled={!paymentId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('details')} 
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'details' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                <FileText className="w-4 h-4" /> Details
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('attachments')} 
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'attachments' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                <Paperclip className="w-4 h-4" /> Attachments
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('activity')} 
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'activity' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                <History className="w-4 h-4" /> Activity
+              </button>
             </div>
-          ) : null}
+          )}
 
-          <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="grid gap-3 lg:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Payment Number</label>
-                  <input value={paymentId ? paymentId : 'Auto-generated'} readOnly className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 text-sm text-slate-500" />
+          <div className={activeTab === 'details' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Payment Information</h2>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} disabled={mode === 'edit'} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Payment Method</label>
-                  <HaypSelect
-                    value={paymentMethod}
-                    onChange={setPaymentMethod}
-                    options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
-                    disabled={mode === 'edit'}
-                    className="mt-2 rounded-2xl bg-slate-50 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Payment From</label>
-                  <HaypSelect
-                    value={bankAccountId}
-                    onChange={setBankAccountId}
-                    options={bankAccounts.map((a) => ({ value: a.id, label: a.displayName }))}
-                    placeholder="Select account"
-                    disabled={mode === 'edit'}
-                    className="mt-2 rounded-2xl bg-slate-50 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <CustomerPickerField
-                    label="Vendor"
-                    value={vendorId}
-                    customers={vendorOptions}
-                    placeholder="Search vendors…"
-                    createLabel="+ New Vendor"
-                    disabled={mode === 'edit'}
-                    onChange={setVendorId}
-                    onCreateNew={() => setShowVendorModal(true)}
-                  />
-                  {companyId && (
-                    <NewVendorModal
-                      open={showVendorModal}
-                      companyId={companyId}
-                      onClose={() => setShowVendorModal(false)}
-                      onCreated={(v) => {
-                        setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
-                        setVendorId(v.id)
-                      }}
-                    />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900">
-                  <input type="checkbox" checked={showOverdue} disabled={mode === 'edit'} onChange={(e) => setShowOverdue(e.target.checked)} className="h-4 w-4 text-emerald-600" />
-                  <span>Show only overdue bills</span>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm mt-4">
-              <div>
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Bills to Pay</h2>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment ID</label>
+                      <input 
+                        value={paymentId ? paymentId : 'Auto-generated'} 
+                        readOnly 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Date</label>
+                      <input 
+                        type="date" 
+                        value={paymentDate} 
+                        onChange={(e) => setPaymentDate(e.target.value)} 
+                        disabled={mode === 'edit'} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
+                      <HaypSelect
+                        value={paymentMethod}
+                        onChange={setPaymentMethod}
+                        options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
+                        disabled={mode === 'edit'}
+                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
+                    </div>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Total: {formatCurrency(totalPayment, currency)}</div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment From</label>
+                      <HaypSelect
+                        value={bankAccountId}
+                        onChange={setBankAccountId}
+                        options={bankAccounts.map((a) => ({ value: a.id, label: a.displayName }))}
+                        placeholder="Select account"
+                        disabled={mode === 'edit'}
+                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <CustomerPickerField
+                        label="Vendor"
+                        value={vendorId}
+                        customers={vendorOptions}
+                        placeholder="Search vendors…"
+                        createLabel="New Vendor"
+                        disabled={mode === 'edit'}
+                        onChange={setVendorId}
+                        onCreateNew={() => setShowVendorModal(true)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 h-10 mt-auto px-4 rounded-xl border border-slate-200 bg-slate-50">
+                      <input 
+                        type="checkbox" 
+                        id="showOverdue"
+                        checked={showOverdue} 
+                        disabled={mode === 'edit'} 
+                        onChange={(e) => setShowOverdue(e.target.checked)} 
+                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                      />
+                      <label htmlFor="showOverdue" className="text-sm font-bold text-slate-600 cursor-pointer">Show only overdue</label>
+                    </div>
+                  </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="border-b border-slate-200 text-slate-500">
-                      <tr>
-                        <th className="px-3 py-2 w-12" />
-                        <th className="px-3 py-2">Bill #</th>
-                        <th className="px-3 py-2">Bill Date</th>
-                        <th className="px-3 py-2">Due Date</th>
-                        <th className="px-3 py-2 text-right">Original Amount</th>
-                        <th className="px-3 py-2 text-right">Amount Due</th>
-                        <th className="px-3 py-2 text-right">Payment</th>
-                        <th className="px-3 py-2">Memo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleBills.length === 0 ? (
-                        <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">No outstanding bills found for this vendor.</td></tr>
-                      ) : visibleBills.map((bill) => (
-                        <tr key={bill.id} className="border-b border-slate-200 hover:bg-slate-50">
-                          <td className="px-3 py-2"><input type="checkbox" checked={bill.selected} disabled={mode === 'edit'} onChange={() => toggleBill(bill.id)} className="h-4 w-4 text-emerald-600" /></td>
-                          <td className="px-3 py-2 font-semibold text-slate-900">{bill.billNumber || '—'}</td>
-                          <td className="px-3 py-2 text-slate-500">{bill.date}</td>
-                          <td className="px-3 py-2 text-slate-500">{bill.dueDate}</td>
-                          <td className="px-3 py-2 text-right font-semibold text-slate-900">{formatCurrency(bill.originalAmount, currency)}</td>
-                          <td className="px-3 py-2 text-right font-semibold text-emerald-800">{formatCurrency(bill.amountDue, currency)}</td>
-                          <td className="px-3 py-2 text-right">
-                            <input type="number" min="0" step="0.01" value={bill.paymentAmount} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" />
-                          </td>
-                          <td className="px-3 py-2"><input value={bill.memo} disabled={mode === 'edit' || !bill.selected} onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Memo" /></td>
+              </div>
+            </section>
+
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Bills to Pay</h2>
+                  </div>
+                  <div className="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-sm font-bold rounded-xl border border-emerald-100">
+                    Total Selection: {formatCurrency(totalPayment, currency)}
+                  </div>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="overflow-x-auto custom-scrollbar">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th className="px-4 py-3 w-12" />
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill #</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill Date</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Due Date</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Original</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Balance</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right w-40">Payment</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Memo</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {visibleBills.length === 0 ? (
+                          <tr><td colSpan={8} className="px-6 py-12 text-center text-sm text-slate-500">No outstanding bills found.</td></tr>
+                        ) : visibleBills.map((bill) => (
+                          <tr key={bill.id} className={`hover:bg-slate-50 transition-colors ${bill.selected ? 'bg-emerald-50/30' : ''}`}>
+                            <td className="px-4 py-2">
+                              <input 
+                                type="checkbox" 
+                                checked={bill.selected} 
+                                disabled={mode === 'edit'} 
+                                onChange={() => toggleBill(bill.id)} 
+                                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                              />
+                            </td>
+                            <td className="px-4 py-2 font-bold text-slate-900">{bill.billNumber || '—'}</td>
+                            <td className="px-4 py-2 text-slate-500">{bill.date}</td>
+                            <td className="px-4 py-2 text-slate-500">{bill.dueDate}</td>
+                            <td className="px-4 py-2 text-right font-medium text-slate-500">{formatCurrency(bill.originalAmount, currency)}</td>
+                            <td className="px-4 py-2 text-right font-bold text-emerald-700">{formatCurrency(bill.amountDue, currency)}</td>
+                            <td className="px-4 py-2 text-right">
+                              <input 
+                                type="number" 
+                                min="0" 
+                                step="0.01" 
+                                value={bill.paymentAmount} 
+                                disabled={mode === 'edit' || !bill.selected} 
+                                onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} 
+                                className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none text-right" 
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input 
+                                value={bill.memo} 
+                                disabled={mode === 'edit' || !bill.selected} 
+                                onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} 
+                                className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" 
+                                placeholder="Memo" 
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+              <section>
+                <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                    <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Additional Details</h2>
+                  </div>
+                  <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reference / Check #</label>
+                      <input 
+                        value={referenceNumber} 
+                        onChange={(e) => setReferenceNumber(e.target.value)} 
+                        disabled={mode === 'edit'} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
+                        placeholder="Ref #" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Internal Memo</label>
+                      <textarea 
+                        value={memo} 
+                        onChange={(e) => setMemo(e.target.value)} 
+                        disabled={mode === 'edit'} 
+                        rows={3} 
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
+                        placeholder="Add a private note..." 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Payment Summary</h2>
+                  </div>
+                  <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Selected Bills</span>
+                      <span className="font-bold text-slate-900">{selectedBills.length}</span>
+                    </div>
+                    <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                      <span className="text-sm font-bold text-slate-900">Total Payment</span>
+                      <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatCurrency(totalPayment, currency)}</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div className={activeTab === 'attachments' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Attachments</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <HaypFileUpload attachments={attachments} onChange={setAttachments} />
                 </div>
               </div>
             </section>
           </div>
 
-          <div className={mode === 'new' || activeTab === 'memo' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900">Reference / Check #</label>
-                  <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} disabled={mode === 'edit'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Reference number" />
+          <div className={activeTab === 'activity' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity Log</h2>
                 </div>
-                <div className="sm:col-span-2 lg:col-span-1">
-                  <label className="block text-sm font-semibold text-slate-900">Memo</label>
-                  <textarea value={memo} onChange={(e) => setMemo(e.target.value)} disabled={mode === 'edit'} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Payment memo" />
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity recorded for this payment." />
                 </div>
               </div>
             </section>
           </div>
-
-          <div className={mode === 'new' || activeTab === 'attachments' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
-              <div className="mt-4">
-                <HaypFileUpload attachments={attachments} onChange={setAttachments} />
-              </div>
-            </section>
-          </div>
-
-          <div className={mode === 'new' || activeTab !== 'activity' ? '' : 'hidden'}>
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 mt-4">
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-slate-900">Payment summary</div>
-                <div className="flex items-center justify-between text-sm text-slate-600"><span>Selected bills</span><span>{selectedBills.length}</span></div>
-                <div className="flex items-center justify-between text-sm text-slate-600"><span>Total payment</span><span>{formatCurrency(totalPayment, currency)}</span></div>
-              </div>
-            </section>
-          </div>
-
-          <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
-              <div className="mt-4">
-                <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this bill payment yet." />
-              </div>
-            </section>
-          </div>
-
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button type="button" onClick={() => router.push('/expenses/bills-payments/bill-payments')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
-            <button type="button" onClick={handleSave} disabled={mode === 'edit' || submitting || !selectedBills.length} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Record Payment
-            </button>
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>Total Payment:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(totalPayment, currency)}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                type="button" 
+                onClick={() => router.push('/expenses/bills-payments/bill-payments')} 
+                className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handleSave} 
+                disabled={mode === 'edit' || submitting || !selectedBills.length} 
+                className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                Record Payment
+              </button>
+            </div>
           </div>
-          {error && <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         </div>
       </div>
+
+      {error && (
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
+            {error}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

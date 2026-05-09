@@ -462,7 +462,7 @@ export default function SalesOrdersPage() {
                 customers={customers}
                 loading={customersLoading}
                 placeholder="Select customer..."
-                createLabel="+ Create New Customer"
+                createLabel="Create New Customer"
                 onOpen={loadCustomers}
                 onChange={(id) => setFormData((f) => ({ ...f, customerId: id }))}
                 onCreateNew={() => setShowQuickAddCustomer(true)}

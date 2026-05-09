@@ -2,12 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Save, Loader2, Plus, X, Upload, FileText } from 'lucide-react'
+import { Save, Loader2, Plus, X, Upload, FileText, Send, ArrowLeft, Trash2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
-import apiClient from '@/lib/api-client'
 import { expensesService, ExpenseReportPayload } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
@@ -120,7 +119,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       })
       .catch(() => {})
 
-    apiClient.get(`/companies/${companyId}/organization/departments`)
+    expensesService.listDepartments(companyId)
       .then((res) => {
         if (!active) return
         const payload = res.data ?? res
@@ -344,243 +343,392 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const selectedEmployee = useMemo(() => employees.find((item) => item.id === employeeId), [employees, employeeId])
 
   return (
-    <div className="min-h-full flex min-h-[100vh] flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Expense' : 'Edit Expense'}</h1>
-              </div>
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button"
+                onClick={() => router.push(expensesReturnPath)} 
+                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">
+                {mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}
+              </h1>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
-              <div className="font-semibold">Status</div>
-              <div>{status}</div>
+            <div className="flex items-center gap-2">
+              <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                {status}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div>
-          <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
-          <div className="space-y-5">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="report-name" className="block text-sm font-semibold text-slate-900">Report Name</label>
-                <input id="report-name" value={reportName} onChange={(e) => setReportName(e.target.value)} disabled={readOnly} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Report title" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="report-from-date" className="block text-sm font-semibold text-slate-900">From Date</label>
-                  <input id="report-from-date" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} disabled={readOnly} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report start date" title="Report start date" />
-                </div>
-                <div>
-                  <label htmlFor="report-to-date" className="block text-sm font-semibold text-slate-900">To Date</label>
-                  <input id="report-to-date" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} disabled={readOnly} className="mt-2 h-10 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Report end date" title="Report end date" />
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="report-employee" className="block text-sm font-semibold text-slate-900">Employee</label>
-                  <HaypSelect id="report-employee" value={employeeId} onChange={setEmployeeId} disabled={readOnly} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} placeholder="Select employee" />
-                </div>
-                <div>
-                  <label htmlFor="report-department" className="block text-sm font-semibold text-slate-900">Department</label>
-                  <HaypSelect id="report-department" value={departmentId} onChange={setDepartmentId} disabled={readOnly} options={departments.map((d) => ({ value: d.id, label: d.name }))} placeholder="Select department" />
-                </div>
-              </div>
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          {mode !== 'new' && (
+            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
+              <button type="button" onClick={() => setActiveTab('notes')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'notes' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Notes</button>
+              <button type="button" onClick={() => setActiveTab('policy')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'policy' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Policy</button>
+              <button type="button" onClick={() => setActiveTab('attachments')} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'attachments' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Attachments</button>
             </div>
-          </section>
+          )}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div>
-              <label htmlFor="business-purpose" className="block text-sm font-semibold text-slate-900">Business Purpose</label>
-              <textarea
-                id="business-purpose"
-                value={businessPurpose}
-                onChange={(e) => setBusinessPurpose(e.target.value)}
-                disabled={readOnly}
-                rows={3}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
-                placeholder="Why is this report being submitted?"
-              />
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Expense Lines</h2>
-              </div>
-              {!readOnly && (
-                <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={16} /> Add Line</button>
-              )}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">Date</th>
-                    <th className="px-3 py-2">Category</th>
-                    <th className="px-3 py-2">Description</th>
-                    <th className="px-3 py-2">Vendor</th>
-                    <th className="px-3 py-2">Account</th>
-                    <th className="px-3 py-2 text-right">Amount</th>
-                    <th className="px-3 py-2">Receipt</th>
-                    <th className="px-3 py-2">Billable</th>
-                    {!readOnly && <th className="px-3 py-2" />}
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line) => (
-                    <tr key={line.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="px-3 py-2"><input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense line date" title="Expense line date" /></td>
-                      <td className="px-3 py-2">
-                        <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
-                      </td>
-                      <td className="px-3 py-2"><input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Description" aria-label="Expense line description" title="Expense line description" /></td>
-                      <td className="px-3 py-2">
-                        <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Select vendor" />
-                      </td>
-                      <td className="px-3 py-2"><HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Select account" /></td>
-                      <td className="px-3 py-2 text-right"><input type="number" min="0" step="0.01" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Expense amount" title="Expense amount" /></td>
-                      <td className="px-3 py-2">
-                        <div className="space-y-2">
-                          <input value={line.receiptName} onChange={(e) => updateLine(line.id, 'receiptName', e.target.value)} disabled={readOnly} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Receipt description" aria-label="Expense receipt description" title="Expense receipt description" />
-                          <button type="button" onClick={() => { if (!readOnly) { setUploadingLineId(line.id); uploadInputRef.current?.click() } }} disabled={readOnly} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <Upload size={12} /> {line.receiptUrl ? 'Replace' : 'Upload'}
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-center"><input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 text-emerald-600" aria-label="Billable expense" title="Billable expense" /></td>
-                      {!readOnly && <td className="px-3 py-2 text-right"><button type="button" onClick={() => removeLine(line.id)} className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100" aria-label="Remove expense line" title="Remove expense line"><X size={14} /></button></td>}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <input
-                ref={uploadInputRef}
-                type="file"
-                className="hidden"
-                accept="image/*,application/pdf"
-                onChange={handleLineFileSelection}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-sm text-slate-600">Total Expenses</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{formatCurrency(totalExpenses, currency)}</div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-sm text-slate-600">Advance Payment</div>
-                <input type="number" min="0" step="0.01" value={advancePayment} onChange={(e) => setAdvancePayment(Number(e.target.value))} disabled={readOnly} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" aria-label="Advance payment amount" title="Advance payment amount" />
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-sm text-slate-600">Net Amount Owed</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{formatCurrency(netAmount, currency)}</div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            {mode !== 'new' && (
-              <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
-                {['notes', 'policy', 'attachments'].map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab as 'notes' | 'policy' | 'attachments')}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === tab ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-                    {tab === 'notes' ? 'Notes' : tab === 'policy' ? 'Policy' : 'Attachments'}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="mt-6">
-              {(mode === 'new' || activeTab === 'notes') && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-900">Business Notes</label>
-                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readOnly} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="What should approvers know?" />
+          <div className={activeTab === 'notes' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Report Details</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="mb-4 space-y-1.5">
+                    <label htmlFor="report-name" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Report Name</label>
+                    <input 
+                      id="report-name" 
+                      value={reportName} 
+                      onChange={(e) => setReportName(e.target.value)} 
+                      disabled={readOnly} 
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      placeholder="e.g. Q4 Sales Trip to Tokyo" 
+                    />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-900">Internal Notes</label>
-                    <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readOnly} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none" placeholder="Private notes for accounting" />
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-1.5">
+                      <label htmlFor="report-from-date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">From Date</label>
+                      <input 
+                        id="report-from-date" 
+                        type="date" 
+                        value={fromDate} 
+                        onChange={(e) => setFromDate(e.target.value)} 
+                        disabled={readOnly} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="report-to-date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">To Date</label>
+                      <input 
+                        id="report-to-date" 
+                        type="date" 
+                        value={toDate} 
+                        onChange={(e) => setToDate(e.target.value)} 
+                        disabled={readOnly} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="report-employee" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employee</label>
+                      <HaypSelect 
+                        id="report-employee" 
+                        value={employeeId} 
+                        onChange={setEmployeeId} 
+                        disabled={readOnly} 
+                        options={employees.map((e) => ({ value: e.id, label: e.displayName }))} 
+                        placeholder="Select employee" 
+                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="report-department" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Department</label>
+                      <HaypSelect 
+                        id="report-department" 
+                        value={departmentId} 
+                        onChange={setDepartmentId} 
+                        disabled={readOnly} 
+                        options={departments.map((d) => ({ value: d.id, label: d.name }))} 
+                        placeholder="Select department" 
+                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-1.5">
+                    <label htmlFor="business-purpose" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Business Purpose</label>
+                    <textarea
+                      id="business-purpose"
+                      value={businessPurpose}
+                      onChange={(e) => setBusinessPurpose(e.target.value)}
+                      disabled={readOnly}
+                      rows={2}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none"
+                      placeholder="Detailed purpose of the expenses..."
+                    />
                   </div>
                 </div>
-              )}
-              {(mode === 'new' || activeTab === 'policy') && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
-                  <div className="text-sm font-semibold text-slate-900">Expense Policy</div>
-                  <p className="mt-3">All expense lines must comply with company policy. Receipts are required for amounts over $25, and travel expenses should be pre-approved.</p>
-                  <ul className="mt-3 space-y-2 list-disc pl-5 text-slate-600">
-                    <li>Include vendor and business purpose for every line.</li>
-                    <li>Upload receipts for each line item.</li>
-                    <li>Non-reimbursable items are subject to review.</li>
-                  </ul>
-                </div>
-              )}
-              {(mode === 'new' || activeTab === 'attachments') && (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => attachmentInputRef.current?.click()}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                    >
-                      <Upload size={16} /> Upload attachments
+              </div>
+            </section>
+
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Expense Lines</h2>
+                  </div>
+                  {!readOnly && (
+                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition-all active:scale-95">
+                      <Plus size={16} /> Add Line
                     </button>
-                    {attachmentUploading && <span className="text-sm text-slate-500">Uploading files…</span>}
+                  )}
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="overflow-x-auto custom-scrollbar">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-slate-50/50 border-b border-slate-100">
+                        <tr>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Category</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Amount</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Receipt</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Billable</th>
+                          {!readOnly && <th className="px-4 py-3" />}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {lines.map((line) => (
+                          <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-2 py-2 min-w-[140px]">
+                              <input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" />
+                            </td>
+                            <td className="px-2 py-2 min-w-[140px]">
+                              <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} className="h-9 text-xs" />
+                            </td>
+                            <td className="px-2 py-2 min-w-[200px]">
+                              <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" placeholder="Description" />
+                            </td>
+                            <td className="px-2 py-2 min-w-[160px]">
+                              <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Vendor" className="h-9 text-xs" />
+                            </td>
+                            <td className="px-2 py-2 min-w-[160px]">
+                              <HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Account" className="h-9 text-xs" />
+                            </td>
+                            <td className="px-2 py-2 min-w-[120px]">
+                              <input type="number" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-right focus:bg-white focus:border-emerald-500 outline-none" />
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <button type="button" onClick={() => { if (!readOnly) { setUploadingLineId(line.id); uploadInputRef.current?.click() } }} className={`p-2 rounded-lg transition-colors ${line.receiptUrl ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 bg-slate-50 hover:bg-slate-100'}`}>
+                                <Upload size={16} />
+                              </button>
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                            </td>
+                            {!readOnly && (
+                              <td className="px-2 py-2 text-right">
+                                <button type="button" onClick={() => removeLine(line.id)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors">
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <input
-                    ref={attachmentInputRef}
-                    type="file"
-                    className="hidden"
-                    multiple
-                    accept="image/*,application/pdf"
-                    onChange={handleAttachmentFileSelection}
-                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Expenses</p>
+                <p className="text-2xl font-black text-slate-900 tabular-nums">{formatCurrency(totalExpenses, currency)}</p>
+              </div>
+              <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Advance Payment</p>
+                <input 
+                  type="number" 
+                  value={advancePayment} 
+                  onChange={(e) => setAdvancePayment(Number(e.target.value))} 
+                  disabled={readOnly} 
+                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
+                />
+              </div>
+              <div className="p-6 bg-emerald-600 rounded-3xl border border-emerald-500 shadow-lg shadow-emerald-600/20 space-y-1">
+                <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider">Net Amount Owed</p>
+                <p className="text-2xl font-black text-white tabular-nums">{formatCurrency(netAmount, currency)}</p>
+              </div>
+            </section>
+
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+              <section>
+                <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                    <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Notes</h2>
+                  </div>
+                  <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Business Notes (Public)</label>
+                      <textarea 
+                        value={notes} 
+                        onChange={(e) => setNotes(e.target.value)} 
+                        disabled={readOnly} 
+                        rows={3} 
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Internal Notes (Private)</label>
+                      <textarea 
+                        value={internalNotes} 
+                        onChange={(e) => setInternalNotes(e.target.value)} 
+                        disabled={readOnly} 
+                        rows={3} 
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 focus:ring-2 focus:ring-rose-400/10 transition-all outline-none" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <div className="w-full bg-amber-50 rounded-3xl border border-amber-100 shadow-sm h-full">
+                  <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                    <div className="w-1 h-6 bg-amber-400 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Policy Guidance</h2>
+                  </div>
+                  <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                    <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-3">Important Policy Reminders</div>
+                    <ul className="space-y-3">
+                      {[
+                        'Receipts required for all items over $25.00',
+                        'Travel must be pre-authorized by department head',
+                        'All entries must include a specific business purpose',
+                        'Late submissions (>60 days) may be rejected'
+                      ].map((item, i) => (
+                        <li key={i} className="flex gap-3 text-sm text-amber-900/70 font-medium">
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div className={activeTab === 'policy' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-amber-400 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Company Expense Policy</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6 text-slate-600 space-y-4">
+                  <p className="font-bold text-slate-900">Standard Reimbursement Rules:</p>
+                  <p>All expense claims must be submitted within 30 days of the transaction date. Original itemized receipts are mandatory for all transactions exceeding $25.00 USD.</p>
+                  <div className="grid gap-4 sm:grid-cols-2 mt-4">
+                    <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                      <p className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Allowable Expenses</p>
+                      <ul className="list-disc pl-5 space-y-1 text-sm">
+                        <li>Business travel and accommodation</li>
+                        <li>Client entertainment (pre-approved)</li>
+                        <li>Professional development</li>
+                        <li>Office supplies and software</li>
+                      </ul>
+                    </div>
+                    <div className="p-6 rounded-2xl bg-rose-50 border border-rose-100">
+                      <p className="text-xs font-bold text-rose-900 uppercase tracking-wider mb-2">Non-Allowable Expenses</p>
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-rose-800/70">
+                        <li>Personal grooming or attire</li>
+                        <li>Traffic fines or parking tickets</li>
+                        <li>Alcohol (unless client dinner)</li>
+                        <li>Commuting costs to home office</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className={activeTab === 'attachments' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Report Attachments</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
                   <HaypFileUpload
                     attachments={attachments}
-                    onChange={(next) => setAttachments(next)}
-                    label="Report attachments"
-                    description="Uploaded files are saved to this report and referenced on final submission."
+                    onChange={setAttachments}
+                    label="Supporting Documents"
+                    description="Upload PDFs, receipts, or other proof of expense."
                     multiple
                   />
                 </div>
-              )}
-            </div>
-          </section>
-            </div>
+              </div>
+            </section>
           </div>
         </div>
+      </main>
 
-      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-end">
-            <div className="text-sm text-slate-600">Report owner: {selectedEmployee?.displayName ?? '—'}</div>
-            <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push(expensesReturnPath)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
-              {mode === 'new' ? (
-                <>
-                  <button type="button" onClick={handleSaveDraft} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed">Save Draft</button>
-                  <button type="button" onClick={handleSubmitForApproval} disabled={submitting} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Submit for Approval</button>
-                </>
-              ) : (
-                <button type="button" onClick={handleSubmitFromEdit} disabled={submitting || status !== 'DRAFT'} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Submit for Approval</button>
-              )}
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>Total Net:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(netAmount, currency)}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                type="button" 
+                onClick={() => router.push(expensesReturnPath)} 
+                className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handleSaveDraft} 
+                disabled={submitting || readOnly} 
+                className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Save size={18} className="text-slate-400" />}
+                Save Draft
+              </button>
+              <button 
+                type="button" 
+                onClick={handleSubmitForApproval} 
+                disabled={submitting || readOnly} 
+                className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                Submit for Approval
+              </button>
             </div>
           </div>
-          {error && <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         </div>
       </div>
+
+      <input
+        ref={uploadInputRef}
+        type="file"
+        className="hidden"
+        accept="image/*,application/pdf"
+        onChange={handleLineFileSelection}
+      />
+
+      {error && (
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
+            {error}
+          </div>
+        </div>
+      )}
     </div>
-  </div>
   )
 }
-

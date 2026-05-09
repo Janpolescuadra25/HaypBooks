@@ -472,6 +472,13 @@ export class ApService {
         return bill
     }
 
+    async deletePurchaseOrder(userId: string, companyId: string, poId: string) {
+        await this.assertAccess(userId, companyId)
+        const po = await this.prisma.purchaseOrder.findUnique({ where: { id: poId } })
+        if (!po || po.companyId !== companyId) throw new NotFoundException('Purchase order not found')
+        return this.prisma.purchaseOrder.delete({ where: { id: poId } })
+    }
+
     // ─── Purchase Requests ────────────────────────────────────────────────────
 
     async listPurchaseRequests(userId: string, companyId: string, opts: any) {
@@ -496,7 +503,7 @@ export class ApService {
         const workspaceId = await this.getWorkspaceId(companyId)
         if (!data.requesterId) throw new BadRequestException('requesterId is required')
         if (!data.lines?.length) throw new BadRequestException('At least one line item is required')
-        const totalAmount = Number((data.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.estimatedUnitPrice ?? 0) * Number(line.quantity ?? 1), 0))
+        const totalAmount = Number((data.lines ?? []).reduce((sum: number, line: any) => sum + Number(line.unitPrice ?? line.estimatedUnitPrice ?? 0) * Number(line.quantity ?? 1), 0))
         const payload: any = {
             workspaceId,
             companyId,
@@ -541,7 +548,7 @@ export class ApService {
         if (!existing) throw new NotFoundException('Purchase request not found')
         const payload: any = { ...data }
         if (data.lines?.length) {
-            const totalAmount = Number(data.lines.reduce((sum: number, line: any) => sum + Number(line.estimatedUnitPrice ?? 0) * Number(line.quantity ?? 1), 0))
+            const totalAmount = Number(data.lines.reduce((sum: number, line: any) => sum + Number(line.unitPrice ?? line.estimatedUnitPrice ?? 0) * Number(line.quantity ?? 1), 0))
             payload.totalAmount = totalAmount
             payload.lines = data.lines
         }
@@ -696,18 +703,19 @@ export class ApService {
 
     async createReceipt(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        if (!data.fileUrl) throw new BadRequestException('fileUrl is required')
+        const fileUrl = data.fileUrl ?? data.attachmentUrl ?? data.attachmentId
+        if (!fileUrl) throw new BadRequestException('fileUrl or attachmentUrl is required')
         const workspaceId = await this.getWorkspaceId(companyId)
         const payload: any = {
             workspaceId,
             companyId,
             uploadedById: userId,
-            merchantName: data.merchantName ?? null,
+            merchantName: data.merchantName ?? data.merchant ?? null,
             receiptDate: data.receiptDate ? new Date(data.receiptDate) : undefined,
             amount: data.amount ? Number(data.amount) : undefined,
             currency: data.currency ?? 'PHP',
             categoryId: data.categoryId ?? null,
-            fileUrl: data.fileUrl,
+            fileUrl: fileUrl,
             fileType: data.fileType ?? null,
             ocrData: data.ocrData ?? null,
             isMatched: data.isMatched ?? false,
@@ -726,12 +734,12 @@ export class ApService {
         const existing = await this.repo.findReceiptById(companyId, receiptId)
         if (!existing) throw new NotFoundException('Receipt not found')
         const payload: any = {
-            merchantName: data.merchantName ?? existing.merchantName,
+            merchantName: data.merchantName ?? data.merchant ?? existing.merchantName,
             receiptDate: data.receiptDate ? new Date(data.receiptDate) : existing.receiptDate,
             amount: data.amount !== undefined ? Number(data.amount) : existing.amount,
             currency: data.currency ?? existing.currency,
             categoryId: data.categoryId ?? existing.categoryId,
-            fileUrl: data.fileUrl ?? existing.fileUrl,
+            fileUrl: data.fileUrl ?? data.attachmentUrl ?? data.attachmentId ?? existing.fileUrl,
             fileType: data.fileType ?? existing.fileType,
             ocrData: data.ocrData ?? existing.ocrData,
             isMatched: data.isMatched ?? existing.isMatched,
@@ -788,9 +796,11 @@ export class ApService {
         await this.assertAccess(userId, companyId)
         const workspaceId = await this.getWorkspaceId(companyId)
         if (!data.logDate) throw new BadRequestException('logDate is required')
-        if (data.miles === undefined) throw new BadRequestException('miles is required')
-        if (data.ratePerMile === undefined) throw new BadRequestException('ratePerMile is required')
-        const amount = data.amount !== undefined ? Number(data.amount) : Number(data.miles) * Number(data.ratePerMile)
+        const milesValue = data.miles !== undefined ? data.miles : data.distance
+        if (milesValue === undefined) throw new BadRequestException('miles or distance is required')
+        const rateValue = data.ratePerMile !== undefined ? data.ratePerMile : data.rate
+        if (rateValue === undefined) throw new BadRequestException('ratePerMile or rate is required')
+        const amount = data.amount !== undefined ? Number(data.amount) : Number(milesValue) * Number(rateValue)
         const payload: any = {
             workspaceId,
             companyId,
@@ -799,13 +809,13 @@ export class ApService {
             logNumber: data.logNumber ?? null,
             logDate: new Date(data.logDate),
             tripDate: data.tripDate ? new Date(data.tripDate) : null,
-            fromLocation: data.fromLocation ?? null,
-            toLocation: data.toLocation ?? null,
-            miles: Number(data.miles),
-            ratePerMile: Number(data.ratePerMile),
+            fromLocation: data.fromLocation ?? data.startLocation ?? null,
+            toLocation: data.toLocation ?? data.endLocation ?? null,
+            miles: Number(milesValue),
+            ratePerMile: rateValue ?? 0,
             amount,
             purpose: data.purpose ?? null,
-            isBillable: data.isBillable ?? false,
+            isBillable: data.isBillable ?? data.billable ?? false,
             distanceUnit: data.distanceUnit ?? null,
             vehicle: data.vehicle ?? null,
             personalVehicle: data.personalVehicle ?? false,
@@ -832,13 +842,13 @@ export class ApService {
             logNumber: data.logNumber ?? existingAny.logNumber,
             logDate: data.logDate ? new Date(data.logDate) : existingAny.logDate,
             tripDate: data.tripDate ? new Date(data.tripDate) : existingAny.tripDate,
-            fromLocation: data.fromLocation ?? existingAny.fromLocation,
-            toLocation: data.toLocation ?? existingAny.toLocation,
-            miles: data.miles !== undefined ? Number(data.miles) : Number(existingAny.miles),
-            ratePerMile: data.ratePerMile !== undefined ? Number(data.ratePerMile) : Number(existingAny.ratePerMile),
+            fromLocation: data.fromLocation ?? data.startLocation ?? existingAny.fromLocation,
+            toLocation: data.toLocation ?? data.endLocation ?? existingAny.toLocation,
+            miles: data.miles !== undefined ? Number(data.miles) : (data.distance !== undefined ? Number(data.distance) : Number(existingAny.miles)),
+            ratePerMile: data.ratePerMile !== undefined ? Number(data.ratePerMile) : (data.rate !== undefined ? Number(data.rate) : Number(existingAny.ratePerMile)),
             amount: data.amount !== undefined ? Number(data.amount) : Number(existingAny.amount),
             purpose: data.purpose ?? existingAny.purpose,
-            isBillable: data.isBillable ?? existingAny.isBillable,
+            isBillable: data.isBillable ?? data.billable ?? existingAny.isBillable,
             distanceUnit: data.distanceUnit ?? existingAny.distanceUnit,
             vehicle: data.vehicle ?? existingAny.vehicle,
             personalVehicle: data.personalVehicle ?? existingAny.personalVehicle,
@@ -981,22 +991,69 @@ export class ApService {
 
     async listRecurringBills(userId: string, companyId: string, _opts: any) {
         await this.assertAccess(userId, companyId)
-        return []
+        return this.prisma.recurringBill.findMany({
+            where: { companyId },
+            include: { vendor: { include: { contact: true } } },
+            orderBy: { createdAt: 'desc' },
+        })
     }
 
-    async getRecurringBill(userId: string, companyId: string, billId: string) {
+    async getRecurringBill(userId: string, companyId: string, id: string) {
         await this.assertAccess(userId, companyId)
-        throw new NotFoundException(`Recurring bill ${billId} not found`)
+        const rb = await this.prisma.recurringBill.findUnique({
+            where: { id },
+            include: { vendor: { include: { contact: true } } },
+        })
+        if (!rb || rb.companyId !== companyId) throw new NotFoundException('Recurring bill not found')
+        return rb
     }
 
-    async createRecurringBill(userId: string, companyId: string, _data: any) {
+    async createRecurringBill(userId: string, companyId: string, data: any) {
         await this.assertAccess(userId, companyId)
-        throw new BadRequestException('Recurring bill creation is not yet supported')
+        const wid = await this.getWorkspaceId(companyId)
+        const { templateName, frequency, startDate, endDate, maxOccurrences, daysInAdvance, templateData, vendorId } = data
+
+        return this.prisma.recurringBill.create({
+            data: {
+                companyId,
+                workspaceId: wid,
+                vendorId: vendorId || templateData?.vendorId || null,
+                templateName: templateName || 'Recurring Bill',
+                frequency: frequency || 'MONTHLY',
+                startDate: new Date(startDate || Date.now()),
+                endDate: endDate ? new Date(endDate) : null,
+                maxOccurrences: maxOccurrences ? parseInt(maxOccurrences) : null,
+                daysInAdvance: daysInAdvance ? parseInt(daysInAdvance) : 7,
+                nextDueDate: new Date(startDate || Date.now()),
+                templateData: templateData || {},
+                status: 'ACTIVE',
+            },
+        })
     }
 
-    async updateRecurringBill(userId: string, companyId: string, billId: string, _data: any) {
+    async updateRecurringBill(userId: string, companyId: string, id: string, data: any) {
         await this.assertAccess(userId, companyId)
-        throw new NotFoundException(`Recurring bill ${billId} not found`)
+        const rb = await this.prisma.recurringBill.findUnique({ where: { id } })
+        if (!rb || rb.companyId !== companyId) throw new NotFoundException('Recurring bill not found')
+
+        const updateData: any = { ...data }
+        if (data.startDate) updateData.startDate = new Date(data.startDate)
+        if (data.endDate) updateData.endDate = new Date(data.endDate)
+        if (data.maxOccurrences) updateData.maxOccurrences = parseInt(data.maxOccurrences)
+        if (data.daysInAdvance) updateData.daysInAdvance = parseInt(data.daysInAdvance)
+        if (data.templateData) updateData.templateData = data.templateData
+
+        return this.prisma.recurringBill.update({
+            where: { id },
+            data: updateData,
+        })
+    }
+
+    async deleteRecurringBill(userId: string, companyId: string, id: string) {
+        await this.assertAccess(userId, companyId)
+        const rb = await this.prisma.recurringBill.findUnique({ where: { id } })
+        if (!rb || rb.companyId !== companyId) throw new NotFoundException('Recurring bill not found')
+        return this.prisma.recurringBill.delete({ where: { id } })
     }
 
     // ─── Payment Runs ─────────────────────────────────────────────────────────

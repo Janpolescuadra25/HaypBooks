@@ -1122,6 +1122,7 @@ model Workspace {
   revenueRecognitionSchedules RevenueRecognitionSchedule[]
   capabilities                WorkspaceCapabilities?
   RecurringInvoice            RecurringInvoice[]
+  RecurringBill               RecurringBill[]
   InvoicePaymentApplication   InvoicePaymentApplication[]
   BillPaymentApplication      BillPaymentApplication[]
   // Billing & usage tracking (migrated from TenantBilling* legacy tables)
@@ -1534,13 +1535,14 @@ model Company {
   InventoryTransaction           InventoryTransaction[]
   InventoryTransactionLine       InventoryTransactionLine[]
   Invoice                        Invoice[]
+  RecurringInvoice               RecurringInvoice[]
   Bill                           Bill[]
+  RecurringBill                  RecurringBill[]
   PurchaseOrder                  PurchaseOrder[]
   VendorCredit                   VendorCredit[]
   VendorCreditLine               VendorCreditLine[]
   BillPayment                    BillPayment[]
   VendorPaymentMethod            VendorPaymentMethod[]
-  RecurringInvoice               RecurringInvoice[]
   CustomerCredit                 CustomerCredit[]
   CustomerCreditLine             CustomerCreditLine[]
   cashOverShortRules             CashOverShortRule[]
@@ -5644,6 +5646,7 @@ model Vendor {
   PurchaseOrder       PurchaseOrder[]
   VendorCredit        VendorCredit[]
   VendorPaymentMethod VendorPaymentMethod[]
+  recurringBills      RecurringBill[]
   // Philippine-specific withholding tax relations
   withholdingTaxes    WithholdingTaxDeduction[]
   finalTaxes          FinalTaxDeduction[]
@@ -7950,8 +7953,12 @@ model RecurringInvoice {
   endDate        DateTime?
   nextRun        DateTime
   lastRun        DateTime?
-  status         RecurringInvoiceStatus @default(ACTIVE)
-  isActive       Boolean                @default(true)
+  status            RecurringInvoiceStatus @default(ACTIVE)
+  isActive          Boolean                @default(true)
+  templateName      String?
+  maxOccurrences    Int?
+  daysInAdvance     Int                    @default(7)
+  currentOccurrence Int                    @default(0)
   templateData   Json
   recurrenceRule Json?
   createdAt      DateTime               @default(now())
@@ -7964,6 +7971,31 @@ model RecurringInvoice {
   @@index([workspaceId, nextRun])
   @@index([companyId, nextRun])
   @@index([deletedAt])
+}
+
+model RecurringBill {
+  id                String   @id @default(uuid())
+  companyId         String
+  workspaceId       String?
+  vendorId          String?
+  templateName      String
+  frequency         String // WEEKLY, BI_WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  startDate         DateTime
+  endDate           DateTime?
+  maxOccurrences    Int?
+  daysInAdvance     Int      @default(7)
+  nextDueDate       DateTime?
+  currentOccurrence Int      @default(0)
+  status            String   @default("DRAFT") // DRAFT, ACTIVE, PAUSED, CANCELLED
+  templateData      Json? // stores the full bill template (vendor, line items, amounts, etc.)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+  vendor    Vendor?    @relation(fields: [vendorId], references: [contactId])
+
+  @@map("recurring_bills")
 }
 
 model RecurringSchedule {

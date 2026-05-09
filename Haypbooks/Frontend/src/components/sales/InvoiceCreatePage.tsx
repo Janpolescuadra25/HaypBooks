@@ -70,7 +70,7 @@ const defaultLineColWidths = {
   amount: 110,
 }
 
-export default function InvoiceCreatePage() {
+export default function InvoiceCreatePage({ isRecurringTemplate, mode = 'new', invoiceId }: { isRecurringTemplate?: boolean, mode?: 'new' | 'edit', invoiceId?: string }) {
   const router = useRouter()
   const { companyId, loading: cidLoading } = useCompanyId()
   const { currency } = useCompanyCurrency()
@@ -133,6 +133,15 @@ export default function InvoiceCreatePage() {
   const [billAddress, setBillAddress] = useState({ line1: '', city: '', state: '', zip: '' })
   const [shipSameAsBill, setShipSameAsBill] = useState(true)
   const [shipAddress, setShipAddress] = useState({ line1: '', city: '', state: '', zip: '' })
+  
+  // Recurring fields
+  const [isRecurring, setIsRecurring] = useState(isRecurringTemplate || false)
+  const [templateName, setTemplateName] = useState('')
+  const [frequency, setFrequency] = useState('MONTHLY')
+  const [startDate, setStartDate] = useState(today)
+  const [endDate, setEndDate] = useState('')
+  const [maxOccurrences, setMaxOccurrences] = useState<number | null>(null)
+  const [daysInAdvance, setDaysInAdvance] = useState(0)
 
   // Quick-add customer
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
@@ -227,6 +236,64 @@ export default function InvoiceCreatePage() {
     void loadCustomers()
   }, [loadCustomers])
 
+  // Load template if editing
+  useEffect(() => {
+    if (!companyId || mode !== 'edit' || !invoiceId || !isRecurringTemplate) return
+    
+    const loadTemplate = async () => {
+      try {
+        const { data: template } = await apiClient.get(`/companies/${companyId}/ar/recurring-invoices/${invoiceId}`)
+        if (template) {
+          setCustomerId(template.customerId)
+          setFrequency(template.frequency)
+          setStartDate(template.startDate?.split('T')[0] || today)
+          setEndDate(template.endDate?.split('T')[0] || '')
+          setMaxOccurrences(template.maxOccurrences ?? null)
+          setDaysInAdvance(template.daysInAdvance ?? 0)
+          setTemplateName(template.templateName || '')
+          
+          if (template.templateData) {
+            const td = template.templateData
+            setMemo(td.memo || '')
+            setInternalNotes(td.internalNotes || '')
+            setPoNumber(td.poNumber || '')
+            setPaymentTerms(td.paymentTerms || 'Net 30')
+            setDiscountType(td.discountType || 'pct')
+            setDiscountValue(td.discountValue || 0)
+            
+            if (td.items && Array.isArray(td.items)) {
+              setItems(td.items.map((it: any) => ({
+                id: genId(),
+                itemId: it.itemId,
+                description: it.description,
+                quantity: it.quantity,
+                unitPrice: it.unitPrice,
+                taxRate: it.taxRate,
+                taxCodeId: it.taxCodeId,
+              })))
+            }
+
+            if (td.billAddress) {
+              setBillContact(td.billAddress.contactName || '')
+              setBillCompany(td.billAddress.company || '')
+              setBillAddress({
+                line1: td.billAddress.line1 || '',
+                city: td.billAddress.city || '',
+                state: td.billAddress.state || '',
+                zip: td.billAddress.zip || '',
+              })
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load recurring template:', e)
+        toast.error('Failed to load recurring template')
+      }
+    }
+    
+    void loadTemplate()
+  }, [companyId, mode, invoiceId, isRecurringTemplate, toast, today])
+
   useEffect(() => {
     setMemo(template.defaultMessage)
     setItems(p => p.map(it => ({ ...it, taxRate: template.defaults.defaultTaxRate })))
@@ -318,7 +385,12 @@ export default function InvoiceCreatePage() {
         taxRate: Number(it.taxRate),
         itemId: it.itemId,
       }))
-      const { data: inv } = await apiClient.post(`/companies/${companyId}/ar/invoices`, {
+      const method = (mode === 'edit' && isRecurringTemplate) ? 'put' : 'post'
+      const url = (mode === 'edit' && isRecurringTemplate) 
+        ? `/companies/${companyId}/ar/recurring-invoices/${invoiceId}`
+        : (isRecurring ? `/companies/${companyId}/ar/recurring-invoices` : `/companies/${companyId}/ar/invoices`)
+
+      const { data: inv } = await apiClient[method](url, {
         customerId,
         date,
         dueDate,
@@ -332,7 +404,33 @@ export default function InvoiceCreatePage() {
         shipAddress: shipSameAsBill ? undefined : shipAddress,
         items: invoiceLines,
         lines: invoiceLines,
+        ...(isRecurring ? {
+          isRecurring: true,
+          templateName: templateName.trim() || memo || 'Recurring Invoice',
+          frequency,
+          startDate,
+          endDate: endDate || null,
+          maxOccurrences: maxOccurrences ?? null,
+          daysInAdvance: daysInAdvance ?? null,
+          templateData: { 
+            totalAmount: total,
+            memo,
+            internalNotes,
+            poNumber,
+            paymentTerms,
+            discountType,
+            discountValue: Number(discountValue),
+            billAddress: { contactName: billContact, company: billCompany, ...billAddress },
+            items: invoiceLines,
+          },
+        } : {})
       })
+
+      if (isRecurring) {
+        toast.success(isRecurringTemplate ? (mode === 'edit' ? 'Template updated' : 'Recurring template saved') : 'Recurring invoice created')
+        router.push('/sales/billing/recurring')
+        return
+      }
 
       if (action === 'send' && inv?.id) {
         await apiClient.post(`/companies/${companyId}/ar/invoices/${inv.id}/send`, {
@@ -376,32 +474,38 @@ export default function InvoiceCreatePage() {
             Back to Invoices
           </button>
           <div className="flex items-center gap-3">
-            <span className="text-sm font-mono font-bold text-gray-400 tracking-wider">INVOICE #NEW</span>
-            <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full border border-gray-200">Draft</span>
+            <span className="text-sm font-mono font-bold text-gray-400 tracking-wider">
+              {isRecurring ? `TEMPLATE #${isRecurringTemplate ? 'NEW' : 'RECURRING'}` : 'INVOICE #NEW'}
+            </span>
+            <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full border border-gray-200">
+              {isRecurring ? 'Template' : 'Draft'}
+            </span>
           </div>
         </div>
 
         {/* View Tabs */}
-        <div className="border-t border-gray-100 bg-white">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center">
-              {([
-                { tab: 'edit' as const, label: 'Edit', icon: <FileText size={12} /> },
-                { tab: 'email' as const, label: 'Email & Preview', icon: <Mail size={12} /> },
-                { tab: 'print' as const, label: 'Print / PDF', icon: <Printer size={12} /> },
-              ]).map(({ tab, label, icon }) => (
-                <button key={tab} onClick={() => setActiveCreateTab(tab)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors ${
-                    activeCreateTab === tab
-                      ? 'border-emerald-600 text-emerald-700'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
-                  }`}>
-                  {icon} {label}
-                </button>
-              ))}
+        {!isRecurring && (
+          <div className="border-t border-gray-100 bg-white">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6">
+              <div className="flex items-center">
+                {([
+                  { tab: 'edit' as const, label: 'Edit', icon: <FileText size={12} /> },
+                  { tab: 'email' as const, label: 'Email & Preview', icon: <Mail size={12} /> },
+                  { tab: 'print' as const, label: 'Print / PDF', icon: <Printer size={12} /> },
+                ]).map(({ tab, label, icon }) => (
+                  <button key={tab} onClick={() => setActiveCreateTab(tab)}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+                      activeCreateTab === tab
+                        ? 'border-emerald-600 text-emerald-700'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
+                    }`}>
+                    {icon} {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ─── Main Content ─── */}
@@ -416,8 +520,88 @@ export default function InvoiceCreatePage() {
           </motion.div>
         )}
 
+        {/* Recurrence Schedule Section */}
+        {isRecurring && (
+          <section className="bg-white rounded-2xl border border-amber-100 shadow-sm shadow-amber-500/5 p-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1 h-6 bg-amber-500 rounded-full" />
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recurrence Schedule</h3>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1.5">
+                <label htmlFor="templateName" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Template Name</label>
+                <input
+                  id="templateName"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="e.g. Monthly Service Retainer"
+                  className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="frequency" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Frequency</label>
+                <select 
+                  id="frequency"
+                  value={frequency} 
+                  onChange={(e) => setFrequency(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                >
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="BIWEEKLY">Bi-Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="QUARTERLY">Quarterly</option>
+                  <option value="ANNUALLY">Annually</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="startDate" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Start Date</label>
+                <input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="endDate" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">End Date (Optional)</label>
+                <input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="maxOccurrences" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Max Occurrences</label>
+                <input
+                  id="maxOccurrences"
+                  type="number"
+                  min="0"
+                  value={maxOccurrences === null ? '' : String(maxOccurrences)}
+                  onChange={(e) => setMaxOccurrences(e.target.value ? Number(e.target.value) : null)}
+                  placeholder="Unlimited"
+                  className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="daysInAdvance" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Create days in advance</label>
+                <input
+                  id="daysInAdvance"
+                  type="number"
+                  min="0"
+                  value={daysInAdvance}
+                  onChange={(e) => setDaysInAdvance(Number(e.target.value))}
+                  className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                />
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Document Card — Edit Tab */}
-        {activeCreateTab === 'edit' && (
+        {(activeCreateTab === 'edit' || isRecurring) && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
           {/* ── Section 1: Customer Selector ── */}
@@ -469,7 +653,7 @@ export default function InvoiceCreatePage() {
                 value={customerId}
                 customers={customers.map(c => ({ id: c.contactId, name: c.name, email: c.email }))}
                 placeholder="Search customers by name or email…"
-                createLabel="+ Create New Customer"
+                createLabel="Create New Customer"
                 onOpen={loadCustomers}
                 onChange={(id) => setCustomerId(id)}
                 onCreateNew={() => setShowQuickAddModal(true)}
@@ -695,7 +879,7 @@ export default function InvoiceCreatePage() {
                               }))
                             }}
                             onAddNew={() => setProductModalLineItemId(it.id)}
-                            createLabel="+ New product"
+                            createLabel="New product"
                           />
                         </td>
                         <td className="px-4 py-2 border-r border-gray-100 whitespace-nowrap" style={{ width: colWidths.description, minWidth: colWidths.description, maxWidth: colWidths.description }}>
@@ -1192,25 +1376,49 @@ export default function InvoiceCreatePage() {
             Cancel
           </button>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleSave('draft')}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
-            >
-              {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Save Draft
-            </button>
-            <button
-              onClick={() => handleSave('send')}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
-            >
-              {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              Send Invoice
-            </button>
-            <button onClick={() => setActiveCreateTab('print')} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">
-              <Printer size={14} /> Print
-            </button>
+            {!isRecurring && (
+              <button 
+                type="button" 
+                onClick={() => setIsRecurring(true)} 
+                className="px-4 py-2 border border-emerald-100 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-100 transition-colors"
+              >
+                Make recurring
+              </button>
+            )}
+            
+            {!isRecurring ? (
+              <>
+                <button
+                  onClick={() => handleSave('draft')}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                >
+                  {saving && saveAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  Save Draft
+                </button>
+                <button
+                  onClick={() => handleSave('send')}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {saving && saveAction === 'send' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  Send Invoice
+                </button>
+                <button onClick={() => setActiveCreateTab('print')} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">
+                  <Printer size={14} /> Print
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => handleSave('draft')}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-6 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Save Template
+              </button>
+            )}
+            
             <button
               type="button"
               onClick={() => setShowSettings(true)}

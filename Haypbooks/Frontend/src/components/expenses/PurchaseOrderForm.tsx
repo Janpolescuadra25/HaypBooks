@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Plus, X, Check, FileText } from 'lucide-react'
+import { Save, Loader2, Plus, X, Check, FileText, ArrowLeft } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -283,95 +283,133 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Purchase Order' : 'Edit Purchase Order'}</h1>
-              </div>
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button" 
+                onClick={() => router.back()} 
+                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">
+                {mode === 'new' ? 'New Purchase Order' : 'Edit Purchase Order'}
+              </h1>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm text-slate-700">
-              <div className="font-semibold">Status</div>
-              <div>{STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status}</div>
+            <div className="flex items-center gap-2">
+              <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                {STATUS_OPTIONS.find(o => o.value === status)?.label ?? status}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-4 py-2 sm:px-6 lg:px-8">
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           {mode !== 'new' && (
-            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100">
+            <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button type="button" onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'details' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Details</button>
               <button type="button" onClick={() => setActiveTab('activity')} disabled={!poId} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
             </div>
           )}
-        </div>
-        <div className={mode !== 'new' && activeTab !== 'details' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 lg:px-8 pb-40">
-            <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="poNumber" className="block text-[10px] font-bold text-slate-400 uppercase">PO Number</label>
-                  <input id="poNumber" value={poNumber || 'Auto-generated'} readOnly={lockIdFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" />
+
+          <div className={activeTab === 'details' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Order Information</h2>
                 </div>
-                <div>
-                  <label htmlFor="orderDate" className="block text-[10px] font-bold text-slate-400 uppercase">Order Date</label>
-                  <input id="orderDate" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
-                </div>
-                <div>
-                  <label htmlFor="expectedDate" className="block text-[10px] font-bold text-slate-400 uppercase">Expected Delivery</label>
-                  <input id="expectedDate" type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
-                </div>
-                <div className="sm:col-span-2">
-                  <CustomerPickerField
-                    label="Vendor"
-                    value={vendorId}
-                    customers={vendorOptions}
-                    placeholder="Search vendors…"
-                    createLabel="+ New Vendor"
-                    disabled={lockIdFields}
-                    onChange={setVendorId}
-                    onCreateNew={() => setShowVendorModal(true)}
-                  />
-                  {companyId && (
-                    <NewVendorModal
-                      open={showVendorModal}
-                      companyId={companyId}
-                      onClose={() => setShowVendorModal(false)}
-                      onCreated={(v) => {
-                        setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
-                        setVendorId(v.id)
-                      }}
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+                    <div className="space-y-1.5">
+                      <label htmlFor="poNumber" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">PO Number</label>
+                      <input 
+                        id="poNumber" 
+                        value={poNumber || 'Auto-generated'} 
+                        readOnly 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="orderDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Date</label>
+                      <input 
+                        id="orderDate" 
+                        type="date" 
+                        value={orderDate} 
+                        onChange={(e) => setOrderDate(e.target.value)} 
+                        disabled={readonlyFields} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="expectedDate" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expected Delivery</label>
+                      <input 
+                        id="expectedDate" 
+                        type="date" 
+                        value={expectedDate} 
+                        onChange={(e) => setExpectedDate(e.target.value)} 
+                        disabled={readonlyFields} 
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="status" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
+                      <HaypSelect
+                        id="status"
+                        value={status}
+                        onChange={setStatus}
+                        options={STATUS_OPTIONS}
+                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <CustomerPickerField
+                      label="Vendor"
+                      value={vendorId}
+                      customers={vendorOptions}
+                      placeholder="Search vendors…"
+                      createLabel="New Vendor"
+                      disabled={lockIdFields}
+                      onChange={setVendorId}
+                      onCreateNew={() => setShowVendorModal(true)}
                     />
+                    {companyId && (
+                      <NewVendorModal
+                        open={showVendorModal}
+                        companyId={companyId}
+                        onClose={() => setShowVendorModal(false)}
+                        onCreated={(v) => {
+                          setVendors((prev) => [{ id: v.id, displayName: v.displayName }, ...prev])
+                          setVendorId(v.id)
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Line Items</h2>
+                  </div>
+                  {!readonlyFields && (
+                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition-all active:scale-95">
+                      <Plus size={16} /> Add Line
+                    </button>
                   )}
                 </div>
-              </div>
-              <div className="space-y-4">
-                <label htmlFor="status" className="block text-[10px] font-bold text-slate-400 uppercase">Status</label>
-                <HaypSelect
-                  id="status"
-                  value={status}
-                  onChange={setStatus}
-                  options={STATUS_OPTIONS}
-                  className="mt-2"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-4">
-                <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-900">Line Items</h2>
-                <p className="text-sm text-slate-500">Add items and pricing for this purchase order.</p>
-              </div>
-              <div className="mt-4">
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
                   <LineItemTable
                     columns={lineItemColumns.map((column) => column.key === 'account'
                       ? { ...column, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} ${account.name}` : account.name ?? '' })) }
@@ -387,112 +425,185 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                   />
                 </div>
               </div>
-            </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-                <div className="space-y-2 text-right">
-                  <div className="text-sm text-slate-600">Subtotal</div>
-                  <div className="text-2xl font-semibold text-slate-900">{formatCurrency(subtotal, currency)}</div>
-                  <div className="text-sm text-slate-600">Tax</div>
-                  <div className="text-lg font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</div>
-                  <div className="text-sm text-slate-600">Shipping</div>
-                  <div className="text-lg font-semibold text-slate-900">{formatCurrency(shippingCost, currency)}</div>
-                  <div className="text-sm text-slate-600">Total</div>
-                  <div className="text-3xl font-semibold text-slate-900">{formatCurrency(total, currency)}</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <label htmlFor="shippingCost" className="block text-[10px] font-bold text-slate-400 uppercase">Shipping Cost</label>
-                  <input id="shippingCost" type="number" min="0" value={shippingCost} onChange={(e) => setShippingCost(Number(e.target.value))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" />
-                  <div className="mt-4 text-sm text-slate-500">This value is included in the PO total and will update the order amount.</div>
-                </div>
-              </div>
-            </section>
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+              <div className="lg:col-span-2 space-y-4">
+                <section>
+                  <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                      <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                      <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Shipping Details</h2>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2 px-4 pb-4 sm:px-5 lg:px-6">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shipping Method</label>
+                        <HaypSelect
+                          id="shippingMethod"
+                          value={shippingMethod}
+                          onChange={setShippingMethod}
+                          options={SHIPPING_METHODS.map((m) => ({ value: m, label: m }))}
+                          disabled={readonlyFields}
+                          className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tracking Number</label>
+                        <input 
+                          value={trackingNumber} 
+                          onChange={(e) => setTrackingNumber(e.target.value)} 
+                          disabled={readonlyFields} 
+                          className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
+                          placeholder="Tracking #" 
+                        />
+                      </div>
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ship To Address</label>
+                        <input 
+                          value={shipTo.line1} 
+                          onChange={(e) => setShipTo((prev) => ({ ...prev, line1: e.target.value }))} 
+                          disabled={readonlyFields} 
+                          className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all mb-2" 
+                          placeholder="Street address" 
+                        />
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                          <input value={shipTo.city} onChange={(e) => setShipTo((prev) => ({ ...prev, city: e.target.value }))} placeholder="City" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                          <input value={shipTo.state} onChange={(e) => setShipTo((prev) => ({ ...prev, state: e.target.value }))} placeholder="State" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                          <input value={shipTo.zip} onChange={(e) => setShipTo((prev) => ({ ...prev, zip: e.target.value }))} placeholder="Zip" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                          <input value={shipTo.country} onChange={(e) => setShipTo((prev) => ({ ...prev, country: e.target.value }))} placeholder="Country" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">Ship To</label>
-                <input value={shipTo.line1} onChange={(e) => setShipTo((prev) => ({ ...prev, line1: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Street address" />
+                <section>
+                  <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                      <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                      <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Notes</h2>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2 px-4 pb-4 sm:px-5 lg:px-6">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor Notes (Public)</label>
+                        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readonlyFields} rows={3} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Internal Notes (Private)</label>
+                        <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readonlyFields} rows={3} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" />
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">City</label>
-                <input value={shipTo.city} onChange={(e) => setShipTo((prev) => ({ ...prev, city: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="City" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">State</label>
-                <input value={shipTo.state} onChange={(e) => setShipTo((prev) => ({ ...prev, state: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="State" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">Zip</label>
-                <input value={shipTo.zip} onChange={(e) => setShipTo((prev) => ({ ...prev, zip: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Zip" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">Country</label>
-                <input value={shipTo.country} onChange={(e) => setShipTo((prev) => ({ ...prev, country: e.target.value }))} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Country" />
-              </div>
-              <div>
-                <label htmlFor="shippingMethod" className="block text-[10px] font-bold text-slate-400 uppercase">Shipping Method</label>
-                <HaypSelect
-                  id="shippingMethod"
-                  value={shippingMethod}
-                  onChange={setShippingMethod}
-                  options={SHIPPING_METHODS.map((m) => ({ value: m, label: m }))}
-                  disabled={readonlyFields}
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">Tracking Number</label>
-                <input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} disabled={readonlyFields} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Tracking number" />
-              </div>
-            </div>
-          </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">Notes</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readonlyFields} rows={4} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Customer-facing notes" />
+              <div className="space-y-4">
+                <section>
+                  <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                      <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                      <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Summary</h2>
+                    </div>
+                    <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Subtotal</span>
+                        <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(subtotal, currency)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Tax</span>
+                        <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(taxTotal, currency)}</span>
+                      </div>
+                      <div className="space-y-1.5 pt-2">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shipping Cost</label>
+                        <input 
+                          type="number" 
+                          value={shippingCost} 
+                          onChange={(e) => setShippingCost(Number(e.target.value))} 
+                          disabled={readonlyFields} 
+                          className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all text-right" 
+                        />
+                      </div>
+                      <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span className="text-sm font-bold text-slate-900">Total</span>
+                        <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatCurrency(total, currency)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {isEdit && (
+                  <button 
+                    type="button" 
+                    onClick={handleConvert} 
+                    disabled={converting}
+                    className="w-full p-6 rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 hover:border-emerald-300 transition-all group flex flex-col items-center gap-2 text-center"
+                  >
+                    <div className="p-3 rounded-full bg-emerald-100 text-emerald-600 group-hover:scale-110 transition-transform">
+                      {converting ? <Loader2 className="w-6 h-6 animate-spin" /> : <FileText className="w-6 h-6" />}
+                    </div>
+                    <span className="text-sm font-bold text-emerald-700">Convert to Bill</span>
+                    <span className="text-xs text-emerald-600/70">Create a vendor bill from this purchase order</span>
+                  </button>
+                )}
               </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase">Internal Notes</label>
-                <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readonlyFields} rows={4} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/10 transition-all" placeholder="Internal use only" />
-              </div>
-              </div>
-            </section>
             </div>
           </div>
-        </div>
-        <div className={activeTab !== 'activity' ? 'hidden' : ''}>
-          <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
-                <div className="mt-4">
-                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity for this purchase order yet." />
+
+          <div className={activeTab === 'activity' ? 'space-y-4' : 'hidden'}>
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Activity Log</h2>
                 </div>
-              </section>
-            </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <ActivityLog entries={activityEntries} loading={activityLoading} emptyMessage="No activity recorded for this order." />
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_12px_rgb(15,23,42/0.08)]">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto] items-end">
-            <div className="flex flex-wrap gap-2 justify-end">
-              <button type="button" onClick={() => router.push('/expenses/procurement/orders')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><X size={16} /> Cancel</button>
-              <button type="button" onClick={handleSave} disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isEdit ? 'Update Status' : 'Save Draft'}
+      <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>Order Total:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(total, currency)}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                type="button" 
+                onClick={() => router.push('/expenses/procurement/orders')} 
+                className="h-10 px-6 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handleSave} 
+                disabled={submitting} 
+                className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {isEdit ? 'Update Order' : 'Create Order'}
               </button>
             </div>
           </div>
-          {error && <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         </div>
       </div>
-      
+
+      {error && (
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
+            {error}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -249,7 +249,7 @@ export class ExpensesService {
                 date: line.date ? new Date(line.date) : new Date(),
                 category: line.category ?? null,
                 description: line.description ?? '',
-                merchant: line.merchant ?? null,
+                merchant: line.vendor ?? line.merchant ?? null,
                 amount: Number(line.amount ?? 0),
                 accountId: line.accountId ?? null,
                 receiptUrl: line.receiptUrl ?? null,

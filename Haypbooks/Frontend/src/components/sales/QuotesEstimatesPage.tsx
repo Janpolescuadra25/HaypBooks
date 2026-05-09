@@ -853,7 +853,7 @@ export default function QuotesEstimatesPage() {
                   customers={customers}
                   loading={custLoading}
                   placeholder="Select customer..."
-                  createLabel="+ Create New Customer"
+                  createLabel="Create New Customer"
                   onOpen={loadCustomers}
                   onChange={(id) => setForm((f) => ({ ...f, customerId: id }))}
                   onCreateNew={() => setShowQuickAddCustomer(true)}

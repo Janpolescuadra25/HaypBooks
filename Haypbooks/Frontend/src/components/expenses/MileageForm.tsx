@@ -172,205 +172,211 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   }), [handleSave])
 
   return (
-    <div className="space-y-6 text-slate-900">
-      <div className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-4xl px-4 py-6">
-          {error ? (
-            <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-              {error}
+    <div className="space-y-4 text-slate-900">
+      <section>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Trip Overview</h2>
+          </div>
+          <div className="px-4 pb-4 sm:px-5 lg:px-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="mileageLogNumber" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Log Number</label>
+              <input
+                id="mileageLogNumber"
+                value={logNumber}
+                onChange={(e) => setLogNumber(e.target.value)}
+                placeholder="Auto-generated"
+                className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+              />
             </div>
-          ) : null}
-
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 mb-4">Trip Overview</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label htmlFor="mileageLogNumber" className="text-[10px] font-bold uppercase text-slate-400">Log Number</label>
-                  <input
-                    id="mileageLogNumber"
-                    value={logNumber}
-                    onChange={(e) => setLogNumber(e.target.value)}
-                    placeholder="Auto-generated"
-                    aria-label="Log Number"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mileageLogDate" className="text-[10px] font-bold uppercase text-slate-400">Log Date</label>
-                  <input
-                    id="mileageLogDate"
-                    type="date"
-                    value={logDate}
-                    onChange={(e) => setLogDate(e.target.value)}
-                    aria-label="Log Date"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mileageStatus" className="text-[10px] font-bold uppercase text-slate-400">Status</label>
-                  <HaypSelect
-                    id="mileageStatus"
-                    value={status}
-                    onChange={setStatus}
-                    options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
-                  />
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <label htmlFor="mileageLogDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Log Date</label>
+              <input
+                id="mileageLogDate"
+                type="date"
+                value={logDate}
+                onChange={(e) => setLogDate(e.target.value)}
+                className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+              />
             </div>
-
-            <div className="border-t border-slate-100 my-6" />
-
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 mb-4">Trip Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="mileageTripDate" className="text-[10px] font-bold uppercase text-slate-400">Date of Trip</label>
-                  <input
-                    id="mileageTripDate"
-                    type="date"
-                    value={tripDate}
-                    onChange={(e) => setTripDate(e.target.value)}
-                    aria-label="Trip Date"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mileagePurpose" className="text-[10px] font-bold uppercase text-slate-400">Purpose / Description</label>
-                  <input
-                    id="mileagePurpose"
-                    value={purpose}
-                    onChange={(e) => setPurpose(e.target.value)}
-                    placeholder="Purpose of trip"
-                    aria-label="Purpose"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mileageStartLocation" className="text-[10px] font-bold uppercase text-slate-400">Start Location</label>
-                  <input
-                    id="mileageStartLocation"
-                    value={startLocation}
-                    onChange={(e) => setStartLocation(e.target.value)}
-                    placeholder="Start address"
-                    aria-label="Start Location"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mileageEndLocation" className="text-[10px] font-bold uppercase text-slate-400">End Location</label>
-                  <input
-                    id="mileageEndLocation"
-                    value={endLocation}
-                    onChange={(e) => setEndLocation(e.target.value)}
-                    placeholder="End address"
-                    aria-label="End Location"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mileageDistance" className="text-[10px] font-bold uppercase text-slate-400">Distance</label>
-                  <div className="mt-2 flex gap-2">
-                    <input
-                      id="mileageDistance"
-                      type="text"
-                      inputMode="decimal"
-                      value={distance !== 0 ? distance : ''}
-                      onChange={(e) => setDistance(Number(e.target.value) || 0)}
-                      placeholder="0.0"
-                      aria-label="Distance"
-                      className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                    />
-                    <HaypSelect
-                      value={distanceUnit}
-                      onChange={setDistanceUnit}
-                      options={DISTANCE_UNITS.map((o) => ({ value: o, label: o }))}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 my-6" />
-
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 mb-4">Vehicle & Rate</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="mileageVehicle" className="text-[10px] font-bold uppercase text-slate-400">Vehicle</label>
-                  <input
-                    id="mileageVehicle"
-                    value={vehicle}
-                    onChange={(e) => setVehicle(e.target.value)}
-                    placeholder="Vehicle description"
-                    aria-label="Vehicle"
-                    className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="mileageRate" className="text-[10px] font-bold uppercase text-slate-400">Rate per {distanceUnit === 'Miles' ? 'Mile' : 'Km'}</label>
-                  <div className="mt-2 flex rounded-lg overflow-hidden">
-                    <span className="inline-flex items-center px-3 text-sm text-slate-500 bg-white border-r border-slate-200">{currency}</span>
-                    <input
-                      id="mileageRate"
-                      type="text"
-                      inputMode="decimal"
-                      value={rate !== 0 ? rate : ''}
-                      onChange={(e) => setRate(Number(e.target.value) || 0)}
-                      placeholder="0.00"
-                      aria-label="Rate"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-right text-sm font-mono font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <CustomerPickerField
-                    label="Account"
-                    value={accountId}
-                    customers={accountOptions}
-                    placeholder="Search accounts…"
-                    createLabel="+ New Account"
-                    onChange={setAccountId}
-                    onCreateNew={() => setShowAccountModal(true)}
-                  />
-                  {companyId && (
-                    <NewAccountModal
-                      open={showAccountModal}
-                      companyId={companyId}
-                      onClose={() => setShowAccountModal(false)}
-                      onCreated={(a) => {
-                        setAccounts((prev) => [{ id: a.id, code: a.code, name: a.name }, ...prev])
-                        setAccountId(a.id)
-                      }}
-                    />
-                  )}
-                </div>
-                <div className="md:col-span-2">
-                  <div className="rounded-lg bg-white border border-slate-200 p-4">
-                    <div className="text-sm text-slate-600">Total Reimbursement</div>
-                    <div className="mt-3 text-2xl font-semibold text-slate-900">{formatCurrency(amount, currency)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 my-6" />
-
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 mb-4">Notes</h3>
-              <textarea
-                id="mileageNotes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-                placeholder="Enter notes..."
-                aria-label="Notes"
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all resize-y"
+            <div className="space-y-1.5">
+              <label htmlFor="mileageStatus" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</label>
+              <HaypSelect
+                id="mileageStatus"
+                value={status}
+                onChange={setStatus}
+                options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+                className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
               />
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Trip Details</h2>
+          </div>
+          <div className="px-4 pb-4 sm:px-5 lg:px-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-1.5">
+                <label htmlFor="mileageTripDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date of Trip</label>
+                <input
+                  id="mileageTripDate"
+                  type="date"
+                  value={tripDate}
+                  onChange={(e) => setTripDate(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="mileagePurpose" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Purpose / Description</label>
+                <input
+                  id="mileagePurpose"
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="Purpose of trip"
+                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="mileageStartLocation" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Start Location</label>
+                <input
+                  id="mileageStartLocation"
+                  value={startLocation}
+                  onChange={(e) => setStartLocation(e.target.value)}
+                  placeholder="Start address"
+                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="mileageEndLocation" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">End Location</label>
+                <input
+                  id="mileageEndLocation"
+                  value={endLocation}
+                  onChange={(e) => setEndLocation(e.target.value)}
+                  placeholder="End address"
+                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+            </div>
+            <div className="mt-4 space-y-1.5 max-w-sm">
+              <label htmlFor="mileageDistance" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Distance</label>
+              <div className="flex gap-2">
+                <input
+                  id="mileageDistance"
+                  type="text"
+                  inputMode="decimal"
+                  value={distance !== 0 ? distance : ''}
+                  onChange={(e) => setDistance(Number(e.target.value) || 0)}
+                  placeholder="0.0"
+                  className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                />
+                <HaypSelect
+                  value={distanceUnit}
+                  onChange={setDistanceUnit}
+                  options={DISTANCE_UNITS.map((o) => ({ value: o, label: o }))}
+                  className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold min-w-[120px]"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Vehicle & Reimbursement</h2>
+          </div>
+          <div className="px-4 pb-4 sm:px-5 lg:px-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-1.5">
+                <label htmlFor="mileageVehicle" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vehicle</label>
+                <input
+                  id="mileageVehicle"
+                  value={vehicle}
+                  onChange={(e) => setVehicle(e.target.value)}
+                  placeholder="Vehicle description"
+                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="mileageRate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rate per {distanceUnit === 'Miles' ? 'Mile' : 'Km'}</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
+                  <input
+                    id="mileageRate"
+                    type="text"
+                    inputMode="decimal"
+                    value={rate !== 0 ? rate : ''}
+                    onChange={(e) => setRate(Number(e.target.value) || 0)}
+                    placeholder="0.00"
+                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-bold text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1.5 max-w-sm mb-4">
+              <CustomerPickerField
+                label="Account"
+                value={accountId}
+                customers={accountOptions}
+                placeholder="Search accounts…"
+                createLabel="New Account"
+                onChange={setAccountId}
+                onCreateNew={() => setShowAccountModal(true)}
+              />
+              {companyId && (
+                <NewAccountModal
+                  open={showAccountModal}
+                  companyId={companyId}
+                  onClose={() => setShowAccountModal(false)}
+                  onCreated={(a) => {
+                    setAccounts((prev) => [{ id: a.id, code: a.code, name: a.name }, ...prev])
+                    setAccountId(a.id)
+                  }}
+                />
+              )}
+            </div>
+            <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-6 flex items-center justify-between">
+              <span className="text-sm font-bold text-emerald-800 uppercase tracking-wider">Total Reimbursement</span>
+              <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatCurrency(amount, currency)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+            <div className="w-1 h-6 bg-slate-300 rounded-full" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Notes</h2>
+          </div>
+          <div className="px-4 pb-4 sm:px-5 lg:px-6">
+            <textarea
+              id="mileageNotes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Enter additional details..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none"
+            />
+          </div>
+        </div>
+      </section>
+      
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+          {error}
+        </div>
+      )}
     </div>
   )
 }
