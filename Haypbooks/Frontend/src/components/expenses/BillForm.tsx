@@ -482,7 +482,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
           )}
         </div>
         <div className={mode === 'new' || activeTab === 'details' ? '' : 'hidden'}>
-          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-3 space-y-4">
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 space-y-6">
             {isRecurring && (
               <section className="animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="w-full bg-white rounded-3xl border border-amber-100 shadow-sm shadow-amber-500/5">
@@ -514,7 +514,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         { value: 'QUARTERLY', label: 'Quarterly' },
                         { value: 'YEARLY', label: 'Yearly' },
                       ]}
-                      className="mt-1 h-12 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      className="mt-1 h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -641,7 +641,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         value={billType}
                         onChange={setBillType}
                         options={['Regular', 'Credit', 'Prepaid', 'Other'].map((t) => ({ value: t, label: t }))}
-                        className="mt-2 h-12 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="mt-2 h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div>
@@ -652,7 +652,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         onChange={setPurchaseOrderId}
                         options={purchaseOrders.map((po) => ({ value: po.id, label: `${po.poNumber || po.id}${po.status ? ` · ${po.status}` : ''}` }))}
                         placeholder="Select purchase order"
-                        className="mt-2 h-12 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="mt-2 h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div>

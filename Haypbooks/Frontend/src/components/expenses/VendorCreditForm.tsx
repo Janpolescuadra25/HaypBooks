@@ -572,7 +572,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
 
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
 
           {mode !== 'new' && (
 
@@ -656,7 +656,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       options={CREDIT_TYPES.map(o => ({ value: o, label: o }))} 
 
-                      className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                     />
 
@@ -700,7 +700,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       placeholder="Select vendor" 
 
-                      className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                     />
 
@@ -720,7 +720,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       options={[{ value: '', label: 'Standalone credit' }, ...billOptions.map(b => ({ value: b.id, label: b.label }))]} 
 
-                      className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                      className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                     />
 

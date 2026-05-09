@@ -327,7 +327,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button 
@@ -387,7 +387,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                         onChange={setPaymentMethod}
                         options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
                         disabled={mode === 'edit'}
-                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                   </div>
@@ -400,7 +400,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                         options={bankAccounts.map((a) => ({ value: a.id, label: a.displayName }))}
                         placeholder="Select account"
                         disabled={mode === 'edit'}
-                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">

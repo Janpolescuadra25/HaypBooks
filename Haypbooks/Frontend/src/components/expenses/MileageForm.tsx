@@ -55,10 +55,19 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   const [accountId, setAccountId] = useState('')
   const [billable, setBillable] = useState(false)
   const [clientProject, setClientProject] = useState('')
+  const [employeeId, setEmployeeId] = useState('')
+  const [employees, setEmployees] = useState<Array<{ id: string; displayName: string }>>([])
+  const [attachments, setAttachments] = useState<File[]>([])
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [showAccountModal, setShowAccountModal] = useState(false)
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachments(Array.from(e.target.files))
+    }
+  }
 
   useEffect(() => {
     if (!companyId) return
@@ -139,8 +148,10 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
     accountId: accountId || null,
     isBillable: billable,
     projectId: billable ? clientProject : null,
+    employeeId: employeeId || null,
+    attachments: attachments.map((file) => ({ name: file.name })),
     notes,
-  }), [logDate, status, tripDate, purpose, startLocation, endLocation, distance, distanceUnit, rate, amount, vehicle, personalVehicle, accountId, billable, clientProject, notes, logNumber])
+  }), [logDate, status, tripDate, purpose, startLocation, endLocation, distance, distanceUnit, rate, amount, vehicle, personalVehicle, accountId, billable, clientProject, employeeId, attachments, notes, logNumber])
 
   const handleSave = useCallback(async () => {
     if (!companyId) return
@@ -185,15 +196,15 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
         </div>
       </div>
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
-          <div className="space-y-4 text-slate-900">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+          <div className="space-y-6 text-slate-900">
       <section>
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
             <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Trip Overview</h2>
           </div>
-          <div className="px-4 pb-4 sm:px-5 lg:px-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="px-4 pb-4 sm:px-5 lg:px-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1.5">
               <label htmlFor="mileageLogNumber" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Log Number</label>
               <input
@@ -221,8 +232,21 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 value={status}
                 onChange={setStatus}
                 options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
-                className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
               />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="mileageEmployee" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Employee</label>
+              <select
+                id="mileageEmployee"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+              >
+                <option value="">Select employee</option>
+                {/* TODO: fetch employees from API */}
+                {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.displayName}</option>)}
+              </select>
             </div>
           </div>
         </div>
@@ -235,7 +259,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Trip Details</h2>
           </div>
           <div className="px-4 pb-4 sm:px-5 lg:px-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid gap-4 sm:grid-cols-2 mb-4">
               <div className="space-y-1.5">
                 <label htmlFor="mileageTripDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date of Trip</label>
                 <input
@@ -295,7 +319,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   value={distanceUnit}
                   onChange={setDistanceUnit}
                   options={DISTANCE_UNITS.map((o) => ({ value: o, label: o }))}
-                  className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold min-w-[120px]"
+                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none min-w-[120px]"
                 />
               </div>
             </div>
@@ -310,7 +334,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Vehicle & Reimbursement</h2>
           </div>
           <div className="px-4 pb-4 sm:px-5 lg:px-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid gap-4 sm:grid-cols-2 mb-4">
               <div className="space-y-1.5">
                 <label htmlFor="mileageVehicle" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vehicle</label>
                 <input
@@ -393,6 +417,30 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   />
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Attachments</h2>
+          </div>
+          <div className="px-4 pb-4 sm:px-5 lg:px-6">
+            <div className="space-y-4">
+              <label htmlFor="mileageAttachments" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Attachments</label>
+              <div className="mt-1">
+                <input
+                  id="mileageAttachments"
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf"
+                  onChange={handleFileUpload}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                />
+              </div>
             </div>
           </div>
         </div>

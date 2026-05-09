@@ -193,7 +193,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
                     value={vendorType}
                     onChange={setVendorType}
                     options={VENDOR_TYPES.map((t) => ({ value: t, label: t }))}
-                    className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
 
@@ -216,7 +216,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
                   value={currency}
                   onChange={setCurrency}
                   options={CURRENCIES.map((c) => ({ value: c, label: c }))}
-                  className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
               </div>
             </div>
@@ -380,7 +380,7 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
                   value={paymentTerms}
                   onChange={setPaymentTerms}
                   options={PAYMENT_TERMS.map((t) => ({ value: t, label: t }))}
-                  className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
               </div>
 

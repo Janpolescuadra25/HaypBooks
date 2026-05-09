@@ -370,7 +370,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button type="button" onClick={() => setActiveTab('notes')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'notes' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Notes</button>
@@ -430,7 +430,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         disabled={readOnly} 
                         options={employees.map((e) => ({ value: e.id, label: e.displayName }))} 
                         placeholder="Select employee" 
-                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -442,7 +442,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         disabled={readOnly} 
                         options={departments.map((d) => ({ value: d.id, label: d.name }))} 
                         placeholder="Select department" 
-                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                   </div>

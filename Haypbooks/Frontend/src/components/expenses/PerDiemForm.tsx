@@ -46,10 +46,21 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
     const [startDate, setStartDate] = useState(today)
     const [endDate, setEndDate] = useState(today)
     const [dailyRate, setDailyRate] = useState(0)
+    const [accountId, setAccountId] = useState('')
+    const [departmentId, setDepartmentId] = useState('')
+    const [accounts, setAccounts] = useState<Array<{ id: string; code?: string; name?: string }>>([])
+    const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
+    const [attachments, setAttachments] = useState<File[]>([])
     const [status, setStatus] = useState('DRAFT')
     const [notes, setNotes] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+        setAttachments(Array.from(e.target.files))
+      }
+    }
 
     const days = useMemo(() => calcDays(startDate, endDate), [startDate, endDate])
     const totalAmount = useMemo(() => days * dailyRate, [days, dailyRate])
@@ -119,6 +130,9 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
           dailyRate,
           totalAmount,
           currency,
+          accountId: accountId || null,
+          departmentId: departmentId || null,
+          attachments: attachments.map((file) => ({ name: file.name })),
           status,
           notes,
         }
@@ -163,7 +177,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Trip Info</h2>
             </div>
             <div className="px-4 pb-4 sm:px-5 lg:px-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label htmlFor="perDiemEmployee" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Employee</label>
                   <HaypSelect
@@ -172,8 +186,21 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     onChange={setEmployeeId}
                     options={employees.map((emp) => ({ value: emp.id, label: emp.displayName }))}
                     placeholder="Select employee"
-                    className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="perDiemDepartment" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</label>
+                  <select
+                    id="perDiemDepartment"
+                    value={departmentId}
+                    onChange={(e) => setDepartmentId(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  >
+                    <option value="">Select department</option>
+                    {/* TODO: fetch departments from API */}
+                    {departments.map((dept) => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="perDiemDestination" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Destination</label>
@@ -202,7 +229,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     value={status}
                     onChange={setStatus}
                     options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
-                    className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
               </div>
@@ -217,7 +244,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Dates & Rate</h2>
             </div>
             <div className="px-4 pb-4 sm:px-5 lg:px-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid gap-4 sm:grid-cols-2 mb-4">
                 <div className="space-y-1.5">
                   <label htmlFor="perDiemStartDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Start Date</label>
                   <input
@@ -253,8 +280,45 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     />
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="perDiemAccount" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">GL Account</label>
+                  <select
+                    id="perDiemAccount"
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  >
+                    <option value="">Select account</option>
+                    {/* TODO: fetch accounts from API */}
+                    {accounts.map((acc) => <option key={acc.id} value={acc.id}>{acc.name ? `${acc.name} (${acc.code ?? ''})` : acc.id}</option>)}
+                  </select>
+                </div>
               </div>
 
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+              <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Attachments</h2>
+            </div>
+            <div className="px-4 pb-4 sm:px-5 lg:px-6">
+              <div className="space-y-4">
+                <label htmlFor="perDiemAttachments" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Attachments</label>
+                <div className="mt-1">
+                  <input
+                    id="perDiemAttachments"
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </section>

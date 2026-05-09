@@ -41,8 +41,12 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
   const [notes, setNotes] = useState('')
   const [billable, setBillable] = useState(false)
   const [clientProject, setClientProject] = useState('')
+  const [employeeId, setEmployeeId] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
   const [accountId, setAccountId] = useState('')
 
+  const [employees, setEmployees] = useState<Array<{ id: string; displayName: string }>>([])
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
@@ -118,6 +122,8 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
         amount,
         currency,
         category,
+        employeeId,
+        departmentId,
         paymentMethod,
         referenceNumber,
         status,
@@ -204,17 +210,17 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Transaction Details</h2>
             </div>
             <div className="px-4 pb-4 sm:px-5 lg:px-6">
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid gap-4 sm:grid-cols-2 mb-4">
                 <div className="space-y-1.5">
                   <label htmlFor="receiptDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Receipt Date</label>
                   <input id="receiptDate" type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="status" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</label>
-                  <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                  <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid gap-4 sm:grid-cols-2 mb-4">
                 <div className="space-y-1.5">
                   <label htmlFor="merchant" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Merchant / Vendor</label>
                   <input id="merchant" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Who did you pay?" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
@@ -227,14 +233,14 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label htmlFor="expenseDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Expense Date</label>
                   <input id="expenseDate" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="paymentMethod" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Payment Method</label>
-                  <HaypSelect id="paymentMethod" value={paymentMethod} onChange={setPaymentMethod} options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                  <HaypSelect id="paymentMethod" value={paymentMethod} onChange={setPaymentMethod} options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
@@ -252,10 +258,26 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Classification</h2>
             </div>
             <div className="px-4 pb-4 sm:px-5 lg:px-6">
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid gap-4 sm:grid-cols-2 mb-4">
                 <div className="space-y-1.5">
                   <label htmlFor="receiptCategory" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</label>
-                  <HaypSelect id="receiptCategory" value={category} onChange={setCategory} options={CATEGORIES.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                  <HaypSelect id="receiptCategory" value={category} onChange={setCategory} options={CATEGORIES.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="receiptEmployee" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Employee</label>
+                  <select id="receiptEmployee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none mt-1">
+                    <option value="">Select employee</option>
+                    {/* TODO: fetch employees from API */}
+                    {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.displayName}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="receiptDepartment" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</label>
+                  <select id="receiptDepartment" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none mt-1">
+                    <option value="">Select department</option>
+                    {/* TODO: fetch departments from API */}
+                    {departments.map((dept) => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <CustomerPickerField

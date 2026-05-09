@@ -8,6 +8,7 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { formatCurrency } from '@/lib/format'
 import { expensesService } from '@/services/expenses.service'
+import { accountingService } from '@/services/accounting.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
 import HaypDatePicker from '@/components/shared/HaypDatePicker'
@@ -23,11 +24,18 @@ interface Employee {
   displayName: string
 }
 
+interface Account {
+  id: string
+  code?: string
+  name?: string
+}
+
 interface ReimbursementLine {
   id: string
   date: string
   category: string
   description: string
+  accountId: string
   amount: number
 }
 
@@ -39,6 +47,7 @@ const defaultLine = (): ReimbursementLine => ({
   date: today,
   category: 'Travel',
   description: '',
+  accountId: '',
   amount: 0,
 })
 
@@ -49,6 +58,8 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   const toast = useToast()
 
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [attachments, setAttachments] = useState<File[]>([])
   const [employeeId, setEmployeeId] = useState('')
   const [description, setDescription] = useState('')
   const [businessPurpose, setBusinessPurpose] = useState('')
@@ -58,6 +69,12 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   const [lines, setLines] = useState<ReimbursementLine[]>([defaultLine()])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachments(Array.from(e.target.files))
+    }
+  }
 
   const isEdit = mode === 'edit'
   const isReadOnly = isEdit && status !== 'DRAFT' && status !== 'REJECTED'
@@ -90,6 +107,22 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   }, [companyId, employeeId])
 
   useEffect(() => {
+    if (!companyId) return
+    let active = true
+
+    accountingService.listAccounts(companyId, { includeInactive: false })
+      .then((res) => {
+        if (!active) return
+        const data = res.data ?? []
+        const list = Array.isArray(data) ? data : data.data ?? []
+        setAccounts(list.map((account: any) => ({ id: account.id, code: account.code, name: account.name })))
+      })
+      .catch(() => {})
+
+    return () => { active = false }
+  }, [companyId])
+
+  useEffect(() => {
     if (!companyId || !isEdit || !reimbursementId) return
     let active = true
 
@@ -104,12 +137,13 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         setEmployeeId(data.employeeId ?? '')
         setPaymentMethod(data.paymentMethod ?? 'BANK_TRANSFER')
         if (Array.isArray(data.lines) && data.lines.length > 0) {
-          interface ApiReimLine { id?: string; date?: string | null; category?: string | null; description?: string | null; amount?: number | null }
+          interface ApiReimLine { id?: string; date?: string | null; category?: string | null; description?: string | null; accountId?: string | null; amount?: number | null }
           setLines(data.lines.map((line: ApiReimLine) => ({
             id: Math.random().toString(36).slice(2, 9),
             date: line.date ?? today,
             category: line.category ?? 'Other',
             description: line.description ?? '',
+            accountId: line.accountId ?? '',
             amount: Number(line.amount ?? 0),
           })))
         }
@@ -146,10 +180,12 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
     notes,
     paymentMethod,
     status,
+    attachments: attachments.map((file) => ({ name: file.name })),
     lines: lines.map((line) => ({
       date: line.date,
       category: line.category,
       description: line.description,
+      accountId: line.accountId || null,
       amount: Number(line.amount),
     })),
   })
@@ -218,7 +254,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button 
@@ -255,7 +291,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                         onChange={setEmployeeId} 
                         disabled={isReadOnly} 
                         options={employees.map((e) => ({ value: e.id, label: e.displayName }))} 
-                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -266,7 +302,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                         onChange={setPaymentMethod} 
                         disabled={isReadOnly} 
                         options={[{ value: 'BANK_TRANSFER', label: 'Bank Transfer' }, { value: 'CHECK', label: 'Check' }]} 
-                        className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold"
+                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                   </div>
@@ -377,7 +413,44 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                           </div>
                         </div>
                       </div>
-                    ))}
+                        <div className="mt-4 space-y-1.5">
+                          <label htmlFor={`line-account-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account</label>
+                          <select
+                            id={`line-account-${line.id}`}
+                            value={line.accountId || ''}
+                            onChange={(e) => updateLine(line.id, 'accountId', e.target.value)}
+                            disabled={isReadOnly}
+                            className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none disabled:opacity-50"
+                          >
+                            <option value="">Select account</option>
+                            {accounts.map((account) => (
+                              <option key={account.id} value={account.id}>{account.code ? `${account.code} ${account.name}` : account.name ?? account.id}</option>
+                            ))}
+                          </select>
+                        </div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Attachments</h2>
+                </div>
+                <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                  <div className="space-y-4">
+                    <label htmlFor="reimbursementAttachments" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Attachments</label>
+                    <div className="mt-1">
+                      <input
+                        id="reimbursementAttachments"
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf"
+                        onChange={handleFileUpload}
+                        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

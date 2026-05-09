@@ -340,7 +340,7 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button 
@@ -394,17 +394,17 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                     </div>
                     <div className="space-y-1.5">
                       <label htmlFor="priority" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Priority</label>
-                      <HaypSelect id="priority" value={priority} onChange={setPriority} options={PRIORITIES.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                      <HaypSelect id="priority" value={priority} onChange={setPriority} options={PRIORITIES.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                     </div>
                     <div className="space-y-1.5">
                       <label htmlFor="status" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-                      <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                      <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                     </div>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label htmlFor="requesterId" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Requester</label>
-                      <HaypSelect id="requesterId" value={requesterId} onChange={setRequesterId} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} placeholder="Select requester" className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                      <HaypSelect id="requesterId" value={requesterId} onChange={setRequesterId} options={employees.map((e) => ({ value: e.id, label: e.displayName }))} placeholder="Select requester" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                     </div>
                     <div className="space-y-1.5">
                       <CustomerPickerField
@@ -432,11 +432,11 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                   <div className="grid gap-4 sm:grid-cols-2 mt-4">
                     <div className="space-y-1.5">
                       <label htmlFor="departmentId" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Department</label>
-                      <HaypSelect id="departmentId" value={departmentId} onChange={setDepartmentId} options={departments.map((d) => ({ value: d.id, label: d.name }))} placeholder="Select department" className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                      <HaypSelect id="departmentId" value={departmentId} onChange={setDepartmentId} options={departments.map((d) => ({ value: d.id, label: d.name }))} placeholder="Select department" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                     </div>
                     <div className="space-y-1.5">
                       <label htmlFor="locationId" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location</label>
-                      <HaypSelect id="locationId" value={locationId} onChange={setLocationId} options={locations.map((l) => ({ value: l.id, label: l.name }))} placeholder="Select location" className="h-10 rounded-xl bg-slate-50 px-4 py-2 font-bold" />
+                      <HaypSelect id="locationId" value={locationId} onChange={setLocationId} options={locations.map((l) => ({ value: l.id, label: l.name }))} placeholder="Select location" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                     </div>
                   </div>
                 </div>
