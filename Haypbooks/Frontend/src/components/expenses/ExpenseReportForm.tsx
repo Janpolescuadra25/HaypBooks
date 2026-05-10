@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Save, Loader2, Plus, X, Upload, FileText, Send, Trash2 } from 'lucide-react'
+import { Save, Loader2, Upload, Send } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -83,7 +83,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
-  const [advancePayment, setAdvancePayment] = useState(0)
   const [notes, setNotes] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
@@ -163,7 +162,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         setStatus(data.status ?? 'DRAFT')
         setEmployeeId(data.employeeId ?? '')
         setDepartmentId(data.departmentId ?? '')
-        setAdvancePayment(Number(data.advancePayment ?? 0))
         setNotes(data.notes ?? '')
         setInternalNotes(data.internalNotes ?? '')
         if (Array.isArray(data.attachments) && data.attachments.length > 0) {
@@ -197,14 +195,19 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   }, [companyId, expenseId, isEdit, toast])
 
   const totalExpenses = useMemo(() => lines.reduce((sum, line) => sum + Number(line.amount || 0), 0), [lines])
-  const netAmount = useMemo(() => Math.max(0, totalExpenses - Number(advancePayment || 0)), [totalExpenses, advancePayment])
 
   const updateLine = useCallback((id: string, field: keyof ExpenseLine, value: string | number | boolean) => {
     setLines((items) => items.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
   }, [])
 
-  const addLine = useCallback(() => setLines((items) => [...items, defaultLine()]), [])
-  const removeLine = useCallback((id: string) => setLines((items) => items.filter((item) => item.id !== id)), [])
+  const handleAccountSelect = useCallback((rowId: string, accountId: string) => {
+    setLines((items) => items.map((item) => (item.id === rowId ? { ...item, accountId } : item)))
+  }, [])
+
+  const handleAccountCreate = useCallback((rowId: string) => {
+    setNewAccountRowId(rowId)
+    setShowAccountModal(true)
+  }, [])
 
   const validate = () => {
     if (!companyId) { setError('Company not loaded'); return false }
@@ -235,7 +238,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
       receiptName: line.receiptName || null,
       billable: line.billable,
     })),
-    advancePayment: Number(advancePayment || 0),
     notes,
     internalNotes,
     attachments: attachments.map((attachment) => ({
@@ -461,84 +463,28 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
 
             <section>
               <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
-                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Expense Lines</h2>
-                  </div>
-                  {!readOnly && (
-                    <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition-all active:scale-95">
-                      <Plus size={16} /> Add Line
-                    </button>
-                  )}
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                  <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Expense Lines</h2>
                 </div>
                 <div className="px-4 pb-4 sm:px-5 lg:px-6">
-                  <div className="overflow-x-auto custom-scrollbar">
-                    <table className="min-w-full text-left text-sm">
-                      <thead className="bg-slate-50/50 border-b border-slate-100">
-                        <tr>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Category</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Amount</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Receipt</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Billable</th>
-                          {!readOnly && <th className="px-4 py-3" />}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {lines.map((line) => (
-                          <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-2 py-2 min-w-[140px]">
-                              <input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" />
-                            </td>
-                            <td className="px-2 py-2 min-w-[140px]">
-                              <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} className="h-10 text-xs rounded-lg border border-slate-200" />
-                            </td>
-                            <td className="px-2 py-2 min-w-[200px]">
-                              <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" placeholder="Description" />
-                            </td>
-                            <td className="px-2 py-2 min-w-[160px]">
-                              <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Vendor" className="h-10 text-xs rounded-lg border border-slate-200" />
-                            </td>
-                            <td className="px-2 py-2 min-w-[160px]">
-                              <HaypAccountPicker
-                                value={line.accountId}
-                                accounts={accounts}
-                                placeholder="Search accounts…"
-                                onChange={(v) => updateLine(line.id, 'accountId', v)}
-                                onCreateNew={() => {
-                                  setNewAccountRowId(line.id)
-                                  setShowAccountModal(true)
-                                }}
-                                disabled={readOnly}
-                              />
-                            </td>
-                            <td className="px-2 py-2 min-w-[120px]">
-                              <input type="number" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-right focus:bg-white focus:border-emerald-500 outline-none" />
-                            </td>
-                            <td className="px-2 py-2 text-center">
-                              <button type="button" onClick={() => { if (!readOnly) { setUploadingLineId(line.id); uploadInputRef.current?.click() } }} className={`p-2 rounded-lg transition-colors ${line.receiptUrl ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 bg-slate-50 hover:bg-slate-100'}`}>
-                                <Upload size={16} />
-                              </button>
-                            </td>
-                            <td className="px-2 py-2 text-center">
-                              <input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-                            </td>
-                            {!readOnly && (
-                              <td className="px-2 py-2 text-right">
-                                <button type="button" onClick={() => removeLine(line.id)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors">
-                                  <Trash2 size={16} />
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <LineItemTable
+                    columns={[
+                      { key: 'date', label: 'Date', type: 'text', width: 140, minWidth: 120, placeholder: 'YYYY-MM-DD' },
+                      { key: 'description', label: 'Description', type: 'text', width: 300, minWidth: 200, placeholder: 'What was this for?', required: true },
+                      { key: 'accountId', label: 'Account', type: 'account', width: 200, minWidth: 160, required: true, options: accounts.map((account) => ({ value: account.id, label: account.name ?? account.code ?? account.id })) },
+                      { key: 'amount', label: 'Amount', type: 'number', width: 140, minWidth: 100 },
+                    ]}
+                    rows={lines}
+                    onChange={setLines}
+                    onAccountSelect={handleAccountSelect}
+                    onAccountCreate={handleAccountCreate}
+                    onCreateNewAccount={() => setShowAccountModal(true)}
+                    currency={currency ?? 'USD'}
+                    showDragHandle={!readOnly}
+                    showCopyButton={!readOnly}
+                    showDeleteButton={!readOnly}
+                  />
                   {companyId && (
                     <NewAccountModal
                       open={showAccountModal}
@@ -559,21 +505,41 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
             </section>
 
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <div>
-                <label htmlFor="advancePayment" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Advance Payment</label>
-                <div className="relative mt-1">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
-                  <input
-                    id="advancePayment"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={advancePayment || ''}
-                    onChange={(e) => setAdvancePayment(Number(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
-                  />
+              <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Summary</h2>
+              </div>
+              <div className="px-4 pb-4 sm:px-5 lg:px-6">
+                <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
+                  <span>Total Expenses</span>
+                  <span>{formatCurrency(totalExpenses, currency)}</span>
                 </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
+                <div className="w-1 h-6 bg-slate-300 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Receipts &amp; Billable</h2>
+              </div>
+              <div className="px-4 pb-4 sm:px-5 lg:px-6 space-y-4">
+                {lines.map((line) => (
+                  <div key={line.id} className="grid gap-4 sm:grid-cols-2 items-center">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Receipt for {line.description || 'line'}</label>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => { if (!readOnly) { setUploadingLineId(line.id); uploadInputRef.current?.click() } }} className={`inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-100 ${line.receiptUrl ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100' : ''}`}>
+                          <Upload size={14} /> {line.receiptUrl ? 'Change Receipt' : 'Upload Receipt'}
+                        </button>
+                        <span className="text-xs text-slate-500">{line.receiptName || 'No receipt uploaded'}</span>
+                      </div>
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                      <input type="checkbox" checked={line.billable} onChange={(e) => updateLine(line.id, 'billable', e.target.checked)} disabled={readOnly} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                      Billable to Client
+                    </label>
+                  </div>
+                ))}
               </div>
             </section>
 
@@ -592,6 +558,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         onChange={(e) => setNotes(e.target.value)} 
                         disabled={readOnly} 
                         rows={3} 
+                        title="Business Notes (Public)"
+                        placeholder="Enter public business notes"
                         className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
                       />
                     </div>
@@ -602,6 +570,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         onChange={(e) => setInternalNotes(e.target.value)} 
                         disabled={readOnly} 
                         rows={3} 
+                        title="Internal Notes (Private)"
+                        placeholder="Enter internal private notes"
                         className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 focus:ring-2 focus:ring-rose-400/10 transition-all outline-none" 
                       />
                     </div>
@@ -718,6 +688,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         type="file"
         className="hidden"
         accept="image/*,application/pdf"
+        title="Upload line receipt file"
         onChange={handleLineFileSelection}
       />
 
