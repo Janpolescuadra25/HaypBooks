@@ -1,6 +1,7 @@
 'use client'
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -36,7 +37,7 @@ function calcDays(start: string, end: string): number {
 const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
   function PerDiemForm({ mode, perDiemId, onClose, onSaved }, ref) {
     const toast = useToast()
-    const { companyId } = useCompanyId()
+  const router = useRouter()
     const { currency } = useCompanyCurrency()
 
     const [employees, setEmployees] = useState<Employee[]>([])
@@ -156,7 +157,8 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
 
     const handleCancel = useCallback(() => {
       if (onClose) onClose()
-    }, [onClose])
+      else router.push('/expenses/employee-expenses/per-diem')
+    }, [onClose, router])
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 

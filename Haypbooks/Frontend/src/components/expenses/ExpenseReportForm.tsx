@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Save, Loader2, Plus, X, Upload, FileText, Send, ArrowLeft, Trash2 } from 'lucide-react'
+import { Save, Loader2, Plus, X, Upload, FileText, Send, Trash2 } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'

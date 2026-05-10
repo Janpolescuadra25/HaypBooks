@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { FileText, Upload, X, Loader2, Save, Send, ArrowLeft, History, Paperclip } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
@@ -27,6 +28,7 @@ interface ReceiptFormProps {
 
 export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: ReceiptFormProps) {
   const toast = useToast()
+  const router = useRouter()
   const { companyId } = useCompanyId()
   const { currency } = useCompanyCurrency()
 
@@ -156,14 +158,14 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
 
   const handleCancel = useCallback(() => {
     if (onClose) onClose()
-  }, [onClose])
+    else router.push('/expenses/receipts')
+  }, [onClose, router])
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Receipt' : 'Edit Receipt'}</h1>
-          <p className="text-sm text-slate-500 mt-1">Add or update receipt details for expense reporting.</p>
         </div>
       </div>
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
