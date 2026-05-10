@@ -96,8 +96,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         if (!active) return
         const data = res.data ?? []
         const items = Array.isArray(data) ? data : data.data ?? []
-            interface ApiEmployee { id: string; displayName?: string | null; name?: string | null }
-            const mapped = items.map((item: ApiEmployee) => ({ id: item.id, displayName: item.displayName ?? item.name ?? item.id }))
+        const mapped = items.map((item: any) => ({ id: item.id, displayName: item.displayName ?? item.name ?? item.id }))
         setEmployees(mapped)
         if (!employeeId && mapped.length > 0) setEmployeeId(mapped[0].id)
       })
@@ -137,8 +136,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
         setEmployeeId(data.employeeId ?? '')
         setPaymentMethod(data.paymentMethod ?? 'BANK_TRANSFER')
         if (Array.isArray(data.lines) && data.lines.length > 0) {
-          interface ApiReimLine { id?: string; date?: string | null; category?: string | null; description?: string | null; accountId?: string | null; amount?: number | null }
-          setLines(data.lines.map((line: ApiReimLine) => ({
+          setLines(data.lines.map((line: any) => ({
             id: Math.random().toString(36).slice(2, 9),
             date: line.date ?? today,
             category: line.category ?? 'Other',
@@ -239,7 +237,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
   return (
     <div className="flex h-full flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h1 className="text-lg font-bold tracking-tight text-slate-900">{mode === 'new' ? 'New Reimbursement' : 'Edit Reimbursement'}</h1>
@@ -254,7 +252,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button 
@@ -432,7 +430,6 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                   </div>
                 </div>
               </div>
-          </div>
             </section>
 
             <section>
@@ -522,7 +519,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
       </main>
 
       <div className="z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <div className="flex items-center justify-end gap-3">
               <button 
                 type="button" 

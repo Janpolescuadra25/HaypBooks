@@ -452,7 +452,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
         e.preventDefault()
         handleSave('submit')
       }}
-      className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden"
+      className="h-full flex flex-col bg-slate-50 text-slate-900"
     >
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">

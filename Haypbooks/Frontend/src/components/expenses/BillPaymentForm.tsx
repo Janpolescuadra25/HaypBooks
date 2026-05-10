@@ -312,7 +312,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
   return (
     <div className="flex h-full flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl z-30">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h1 className="text-lg font-bold tracking-tight text-slate-900">{pageTitle}</h1>
@@ -327,7 +327,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
       </div>
 
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
           {mode !== 'new' && (
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button 
@@ -590,7 +590,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
       </main>
 
       <div className="z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <div className="flex items-center justify-end gap-3">
               <button 
                 type="button" 

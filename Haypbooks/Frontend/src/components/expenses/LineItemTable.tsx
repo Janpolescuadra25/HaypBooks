@@ -218,7 +218,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div ref={containerRef} className={`rounded-xl border border-slate-200 ${isOverflowing ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+      <div ref={containerRef} className={`rounded-xl border border-slate-200 ${isOverflowing ? 'overflow-x-auto overflow-y-visible' : 'overflow-x-visible overflow-y-visible'}`}>
         {rows.length === 0 ? (
           <div className="min-w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-20 text-center text-sm text-slate-500">
             Add line items to get started

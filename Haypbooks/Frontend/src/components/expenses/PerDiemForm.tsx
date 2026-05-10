@@ -166,12 +166,12 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
     return (
       <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
         <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
             <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Per Diem' : 'Edit Per Diem'}</h1>
           </div>
         </div>
         <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
             <div className="space-y-6">
         <section>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
@@ -354,7 +354,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
           </div>
         </main>
         <div className="sticky bottom-0 z-40 shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgb(15,23,42/0.05)]">
-          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+          <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
             <div className="flex items-center justify-end gap-3">
               <button type="button" onClick={handleCancel} disabled={submitting} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
               <button type="button" onClick={() => { setStatus('DRAFT'); handleSave(); }} disabled={submitting} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Save Draft</button>
