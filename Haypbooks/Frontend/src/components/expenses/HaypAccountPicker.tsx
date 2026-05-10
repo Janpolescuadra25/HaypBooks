@@ -117,7 +117,7 @@ export default function HaypAccountPicker({
   const dropdown = open && !disabled ? createPortal(
     <div
       ref={dropdownRef}
-      style={{ position: 'absolute', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+      style={{ position: 'absolute', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 35 }}
       className="bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
     >
       <div className="max-h-60 overflow-y-auto">

@@ -630,9 +630,9 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       value={creditNumber || 'Auto-generated'} 
 
-                      readOnly 
+                      onChange={(e) => setCreditNumber(e.target.value)}
 
-                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
+                      className="mt-2 w-full h-10 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
 
                     />
 

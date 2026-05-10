@@ -131,8 +131,6 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
     }),
     [accounts],
   )
-  const [discountType, setDiscountType] = useState<'pct' | 'flat'>('pct')
-  const [discountValue, setDiscountValue] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [status, setStatus] = useState<'DRAFT' | 'PENDING' | 'APPROVED' | string>('DRAFT')
   const [error, setError] = useState('')
@@ -307,8 +305,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
 
   const subtotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0), [lineItems])
   const taxTotal = useMemo(() => lineItems.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0) * (Number(line.taxRate || 0) / 100), 0), [lineItems])
-  const discountAmount = useMemo(() => discountType === 'pct' ? subtotal * (discountValue / 100) : discountValue, [discountType, discountValue, subtotal])
-  const total = Math.max(0, subtotal + taxTotal - discountAmount)
+  const total = Math.max(0, subtotal + taxTotal)
 
   const postingRules = useMemo(() => getPostingRulesForTransaction('bill'), [])
   const lineItemAccountOptions = useMemo(() => expenseAccounts.map((a) => ({
@@ -799,19 +796,6 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
               </div>
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Discount</h3>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <select aria-label="Discount type" value={discountType} onChange={(e) => setDiscountType(e.target.value as 'pct' | 'flat')} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none">
-                  <option value="pct">%</option>
-                  <option value="flat">Fixed</option>
-                </select>
-                <div className="relative flex-1">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
-                  <input type="number" min="0" step="0.01" value={discountValue || ''} onChange={(e) => setDiscountValue(Number(e.target.value) || 0)} placeholder="0.00" className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none" />
-                </div>
-              </div>
-            </section>
 
             {postingRules.length > 0 ? (
               <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-slate-700">

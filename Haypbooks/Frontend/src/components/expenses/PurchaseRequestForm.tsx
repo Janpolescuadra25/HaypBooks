@@ -265,7 +265,6 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
     setShowAccountModal(true)
   }, [])
 
-  const addLine = useCallback(() => setLineItems((items) => [...items, defaultLineItem()]), [])
   const removeLine = useCallback((id: string) => setLineItems((items) => items.filter((item) => item.id !== id)), [])
 
   const validate = () => {
@@ -458,9 +457,6 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                     <div className="w-1 h-6 bg-emerald-500 rounded-full" />
                     <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Line Items</h2>
                   </div>
-                  <button type="button" onClick={addLine} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition-all active:scale-95">
-                    <Plus size={16} /> Add Line
-                  </button>
                 </div>
                 <div className="px-4 pb-4 sm:px-5 lg:px-6">
                   <LineItemTable
