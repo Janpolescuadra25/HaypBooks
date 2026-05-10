@@ -109,8 +109,9 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
 
     setUploadingFile(true)
     try {
-      const res = await expensesService.uploadReceipt(companyId, file)
-      setUploadedAttachmentId(res.attachmentId)
+      const res = await expensesService.uploadAttachment(companyId, file, 'Receipt', receiptId ?? 'draft')
+      const data = res.data ?? res
+      setUploadedAttachmentId(data.id ?? data.attachmentId ?? null)
       setReceiptPreviewUrl(URL.createObjectURL(file))
       toast.success('File uploaded successfully')
     } catch (err) {
