@@ -108,7 +108,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
   const [newVendorEmail, setNewVendorEmail] = useState('')
   const [newVendorPhone, setNewVendorPhone] = useState('')
   const [creatingVendor, setCreatingVendor] = useState(false)
-  const [billNumber, setBillNumber] = useState('')
+  const [billNumber, setBillNumber] = useState(mode === 'new' ? `BILL-${Date.now().toString().slice(-6)}` : '')
   const [date, setDate] = useState(today)
   const [dueDate, setDueDate] = useState(defaultDue)
   const [paymentTerms, setPaymentTerms] = useState('Net 30')
@@ -498,7 +498,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                       value={templateName}
                       onChange={(e) => setTemplateName(e.target.value)}
                       placeholder="e.g. Monthly SaaS Subscription"
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -514,7 +514,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         { value: 'QUARTERLY', label: 'Quarterly' },
                         { value: 'YEARLY', label: 'Yearly' },
                       ]}
-                      className="mt-1 h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="mt-1 h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -542,7 +542,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                       value={maxOccurrences === null ? '' : String(maxOccurrences)}
                       onChange={(e) => setMaxOccurrences(e.target.value ? Number(e.target.value) : null)}
                       placeholder="Unlimited"
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -553,7 +553,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                       min="0"
                       value={daysInAdvance}
                       onChange={(e) => setDaysInAdvance(Number(e.target.value))}
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-amber-500/50 transition-all outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -563,7 +563,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                       type="text"
                       readOnly
                       value={startDate || '—'}
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-amber-50/50 px-4 py-2 text-sm font-bold text-amber-700 outline-none cursor-default"
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-amber-50/50 px-4 py-2 text-sm font-bold text-amber-700 outline-none cursor-default"
                     />
                   </div>
                   </div>
@@ -581,9 +581,10 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                   <label htmlFor="billNumber" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill #</label>
                   <input 
                     id="billNumber" 
-                    value={billNumber || 'Auto-generated'} 
-                    readOnly 
-                    className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none shadow-inner" 
+                    value={billNumber} 
+                    onChange={(e) => setBillNumber(e.target.value)} 
+                    placeholder="Auto-generated" 
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" 
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -641,7 +642,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         value={billType}
                         onChange={setBillType}
                         options={['Regular', 'Credit', 'Prepaid', 'Other'].map((t) => ({ value: t, label: t }))}
-                        className="mt-2 h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="mt-2 h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div>
@@ -652,7 +653,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         onChange={setPurchaseOrderId}
                         options={purchaseOrders.map((po) => ({ value: po.id, label: `${po.poNumber || po.id}${po.status ? ` · ${po.status}` : ''}` }))}
                         placeholder="Select purchase order"
-                        className="mt-2 h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="mt-2 h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div>
@@ -661,7 +662,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                         id="paymentTerms"
                         value={paymentTerms} 
                         onChange={e => setPaymentTerms(e.target.value)} 
-                        className="mt-2 w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
+                        className="mt-2 w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none" 
                         placeholder="Net 30" 
                       />
                     </div>
@@ -800,13 +801,13 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
             <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Discount</h3>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <select aria-label="Discount type" value={discountType} onChange={(e) => setDiscountType(e.target.value as 'pct' | 'flat')} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none">
+                <select aria-label="Discount type" value={discountType} onChange={(e) => setDiscountType(e.target.value as 'pct' | 'flat')} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none">
                   <option value="pct">%</option>
                   <option value="flat">Fixed</option>
                 </select>
                 <div className="relative flex-1">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
-                  <input type="number" min="0" step="0.01" value={discountValue || ''} onChange={(e) => setDiscountValue(Number(e.target.value) || 0)} placeholder="0.00" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <input type="number" min="0" step="0.01" value={discountValue || ''} onChange={(e) => setDiscountValue(Number(e.target.value) || 0)} placeholder="0.00" className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
               </div>
             </section>
@@ -861,7 +862,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                       value={internalNotes} 
                       onChange={e => setInternalNotes(e.target.value)} 
                       rows={9} 
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 transition-all outline-none" 
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 transition-all outline-none" 
                     />
                   </div>
                   <div className="space-y-1.5">

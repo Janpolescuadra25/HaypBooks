@@ -215,39 +215,39 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
               <div className="grid gap-4 sm:grid-cols-2 mb-4">
                 <div className="space-y-1.5">
                   <label htmlFor="receiptDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Receipt Date</label>
-                  <input id="receiptDate" type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <input id="receiptDate" type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="status" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</label>
-                  <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <HaypSelect id="status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 mb-4">
                 <div className="space-y-1.5">
                   <label htmlFor="merchant" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Merchant / Vendor</label>
-                  <input id="merchant" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Who did you pay?" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <input id="merchant" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Who did you pay?" className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="receiptAmount" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Amount</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{currency}</span>
-                    <input id="receiptAmount" type="number" min="0" step="0.01" value={amount !== 0 ? amount : ''} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                    <input id="receiptAmount" type="number" min="0" step="0.01" value={amount !== 0 ? amount : ''} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                   </div>
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label htmlFor="expenseDate" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Expense Date</label>
-                  <input id="expenseDate" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <input id="expenseDate" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="paymentMethod" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Payment Method</label>
-                  <HaypSelect id="paymentMethod" value={paymentMethod} onChange={setPaymentMethod} options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <HaypSelect id="paymentMethod" value={paymentMethod} onChange={setPaymentMethod} options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <label htmlFor="referenceNumber" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reference Number</label>
-                <input id="referenceNumber" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Transaction ref #" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                <input id="referenceNumber" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Transaction ref #" className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
               </div>
             </div>
           </div>
@@ -263,11 +263,11 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
               <div className="grid gap-4 sm:grid-cols-2 mb-4">
                 <div className="space-y-1.5">
                   <label htmlFor="receiptCategory" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</label>
-                  <HaypSelect id="receiptCategory" value={category} onChange={setCategory} options={CATEGORIES.map((o) => ({ value: o, label: o }))} className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <HaypSelect id="receiptCategory" value={category} onChange={setCategory} options={CATEGORIES.map((o) => ({ value: o, label: o }))} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="receiptEmployee" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Employee</label>
-                  <select id="receiptEmployee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none mt-1">
+                  <select id="receiptEmployee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none mt-1">
                     <option value="">Select employee</option>
                     {/* TODO: fetch employees from API */}
                     {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.displayName}</option>)}
@@ -275,7 +275,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="receiptDepartment" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</label>
-                  <select id="receiptDepartment" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none mt-1">
+                  <select id="receiptDepartment" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none mt-1">
                     <option value="">Select department</option>
                     {/* TODO: fetch departments from API */}
                     {departments.map((dept) => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
@@ -314,7 +314,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
               {billable && (
                 <div className="space-y-1.5">
                   <label htmlFor="clientProject" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Client / Project</label>
-                  <input id="clientProject" value={clientProject} onChange={(e) => setClientProject(e.target.value)} placeholder="Project name or code" className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
+                  <input id="clientProject" value={clientProject} onChange={(e) => setClientProject(e.target.value)} placeholder="Project name or code" className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" />
                 </div>
               )}
             </div>
@@ -328,7 +328,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Notes</h2>
             </div>
             <div className="px-4 pb-4 sm:px-5 lg:px-6">
-              <textarea id="receiptNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Add justifications or internal comments..." className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none" />
+              <textarea id="receiptNotes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Add justifications or internal comments..." className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none" />
             </div>
           </div>
         </section>

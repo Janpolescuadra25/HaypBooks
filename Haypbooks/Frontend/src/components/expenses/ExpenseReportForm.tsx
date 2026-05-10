@@ -387,7 +387,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                       value={reportName} 
                       onChange={(e) => setReportName(e.target.value)} 
                       disabled={readOnly} 
-                      className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
                       placeholder="e.g. Q4 Sales Trip to Tokyo" 
                     />
                   </div>
@@ -400,7 +400,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         value={fromDate} 
                         onChange={(e) => setFromDate(e.target.value)} 
                         disabled={readOnly} 
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -411,7 +411,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         value={toDate} 
                         onChange={(e) => setToDate(e.target.value)} 
                         disabled={readOnly} 
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -423,7 +423,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         disabled={readOnly} 
                         options={employees.map((e) => ({ value: e.id, label: e.displayName }))} 
                         placeholder="Select employee" 
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -435,7 +435,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         disabled={readOnly} 
                         options={departments.map((d) => ({ value: d.id, label: d.name }))} 
                         placeholder="Select department" 
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                   </div>
@@ -488,22 +488,22 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         {lines.map((line) => (
                           <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-2 py-2 min-w-[140px]">
-                              <input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" />
+                              <input type="date" value={line.date} onChange={(e) => updateLine(line.id, 'date', e.target.value)} disabled={readOnly} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" />
                             </td>
                             <td className="px-2 py-2 min-w-[140px]">
-                              <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} className="h-9 text-xs" />
+                              <HaypSelect value={line.category} onChange={(v) => updateLine(line.id, 'category', v)} disabled={readOnly} options={CATEGORIES.map((c) => ({ value: c, label: c }))} className="h-10 text-xs rounded-lg border border-slate-200" />
                             </td>
                             <td className="px-2 py-2 min-w-[200px]">
-                              <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" placeholder="Description" />
+                              <input value={line.description} onChange={(e) => updateLine(line.id, 'description', e.target.value)} disabled={readOnly} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold focus:bg-white focus:border-emerald-500 outline-none" placeholder="Description" />
                             </td>
                             <td className="px-2 py-2 min-w-[160px]">
-                              <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Vendor" className="h-9 text-xs" />
+                              <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Vendor" className="h-10 text-xs rounded-lg border border-slate-200" />
                             </td>
                             <td className="px-2 py-2 min-w-[160px]">
-                              <HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Account" className="h-9 text-xs" />
+                              <HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Account" className="h-10 text-xs rounded-lg border border-slate-200" />
                             </td>
                             <td className="px-2 py-2 min-w-[120px]">
-                              <input type="number" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-right focus:bg-white focus:border-emerald-500 outline-none" />
+                              <input type="number" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-right focus:bg-white focus:border-emerald-500 outline-none" />
                             </td>
                             <td className="px-2 py-2 text-center">
                               <button type="button" onClick={() => { if (!readOnly) { setUploadingLineId(line.id); uploadInputRef.current?.click() } }} className={`p-2 rounded-lg transition-colors ${line.receiptUrl ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 bg-slate-50 hover:bg-slate-100'}`}>
@@ -542,7 +542,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                     value={advancePayment || ''}
                     onChange={(e) => setAdvancePayment(Number(e.target.value) || 0)}
                     placeholder="0.00"
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-black text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
               </div>
@@ -563,7 +563,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         onChange={(e) => setNotes(e.target.value)} 
                         disabled={readOnly} 
                         rows={3} 
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -573,7 +573,7 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                         onChange={(e) => setInternalNotes(e.target.value)} 
                         disabled={readOnly} 
                         rows={3} 
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 focus:ring-2 focus:ring-rose-400/10 transition-all outline-none" 
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-rose-400/50 focus:ring-2 focus:ring-rose-400/10 transition-all outline-none" 
                       />
                     </div>
                   </div>

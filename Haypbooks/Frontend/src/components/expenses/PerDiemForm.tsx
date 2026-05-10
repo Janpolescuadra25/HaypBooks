@@ -189,7 +189,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     onChange={setEmployeeId}
                     options={employees.map((emp) => ({ value: emp.id, label: emp.displayName }))}
                     placeholder="Select employee"
-                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -198,7 +198,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     id="perDiemDepartment"
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   >
                     <option value="">Select department</option>
                     {/* TODO: fetch departments from API */}
@@ -212,7 +212,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
                     placeholder="City, Country"
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -222,7 +222,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     value={purpose}
                     onChange={(e) => setPurpose(e.target.value)}
                     placeholder="Reason for travel"
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -232,7 +232,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     value={status}
                     onChange={setStatus}
                     options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
-                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
               </div>
@@ -255,7 +255,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -265,7 +265,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -279,7 +279,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                       value={dailyRate !== 0 ? dailyRate : ''}
                       onChange={(e) => setDailyRate(Number(e.target.value) || 0)}
                       placeholder="0.00"
-                      className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-bold text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-bold text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
                     />
                   </div>
                 </div>
@@ -289,7 +289,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                     id="perDiemAccount"
                     value={accountId}
                     onChange={(e) => setAccountId(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   >
                     <option value="">Select account</option>
                     {/* TODO: fetch accounts from API */}
@@ -339,7 +339,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="Enter additional details..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none"
               />
             </div>
           </div>

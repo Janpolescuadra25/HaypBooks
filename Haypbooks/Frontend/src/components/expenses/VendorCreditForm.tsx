@@ -620,7 +620,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       readOnly 
 
-                      className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
 
                     />
 
@@ -656,7 +656,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       options={CREDIT_TYPES.map(o => ({ value: o, label: o }))} 
 
-                      className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                     />
 
@@ -700,7 +700,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       placeholder="Select vendor" 
 
-                      className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                     />
 
@@ -720,7 +720,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       options={[{ value: '', label: 'Standalone credit' }, ...billOptions.map(b => ({ value: b.id, label: b.label }))]} 
 
-                      className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                     />
 
@@ -824,7 +824,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       rows={4} 
 
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
 
                     />
 
@@ -844,7 +844,7 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                       rows={3} 
 
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all outline-none" 
 
                     />
 

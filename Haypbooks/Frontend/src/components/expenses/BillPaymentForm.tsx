@@ -368,7 +368,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                       <input 
                         value={paymentId ? paymentId : 'Auto-generated'} 
                         readOnly 
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -387,7 +387,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                         onChange={setPaymentMethod}
                         options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
                         disabled={mode === 'edit'}
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                   </div>
@@ -400,7 +400,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                         options={bankAccounts.map((a) => ({ value: a.id, label: a.displayName }))}
                         placeholder="Select account"
                         disabled={mode === 'edit'}
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -484,7 +484,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                                 value={bill.paymentAmount} 
                                 disabled={mode === 'edit' || !bill.selected} 
                                 onChange={(e) => updateBill(bill.id, 'paymentAmount', Number(e.target.value))} 
-                                className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none text-right" 
+                                className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none text-right" 
                               />
                             </td>
                             <td className="px-4 py-2">
@@ -492,7 +492,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                                 value={bill.memo} 
                                 disabled={mode === 'edit' || !bill.selected} 
                                 onChange={(e) => updateBill(bill.id, 'memo', e.target.value)} 
-                                className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" 
+                                className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none" 
                                 placeholder="Memo" 
                               />
                             </td>
@@ -519,7 +519,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                         value={referenceNumber} 
                         onChange={(e) => setReferenceNumber(e.target.value)} 
                         disabled={mode === 'edit'} 
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
                         placeholder="Ref #" 
                       />
                     </div>
@@ -530,7 +530,7 @@ export default function BillPaymentForm({ mode, paymentId }: BillPaymentFormProp
                         onChange={(e) => setMemo(e.target.value)} 
                         disabled={mode === 'edit'} 
                         rows={3} 
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
                         placeholder="Add a private note..." 
                       />
                     </div>

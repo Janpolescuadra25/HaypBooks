@@ -211,7 +211,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 value={logNumber}
                 onChange={(e) => setLogNumber(e.target.value)}
                 placeholder="Auto-generated"
-                className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
               />
             </div>
             <div className="space-y-1.5">
@@ -221,7 +221,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 type="date"
                 value={logDate}
                 onChange={(e) => setLogDate(e.target.value)}
-                className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
               />
             </div>
             <div className="space-y-1.5">
@@ -231,7 +231,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 value={status}
                 onChange={setStatus}
                 options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
-                className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
               />
             </div>
             <div className="space-y-1.5">
@@ -240,7 +240,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                 id="mileageEmployee"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
-                className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
               >
                 <option value="">Select employee</option>
                 {/* TODO: fetch employees from API */}
@@ -266,7 +266,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   type="date"
                   value={tripDate}
                   onChange={(e) => setTripDate(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -276,7 +276,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
                   placeholder="Purpose of trip"
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
               </div>
             </div>
@@ -288,7 +288,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   value={startLocation}
                   onChange={(e) => setStartLocation(e.target.value)}
                   placeholder="Start address"
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -298,7 +298,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   value={endLocation}
                   onChange={(e) => setEndLocation(e.target.value)}
                   placeholder="End address"
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
               </div>
             </div>
@@ -312,13 +312,13 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   value={distance !== 0 ? distance : ''}
                   onChange={(e) => setDistance(Number(e.target.value) || 0)}
                   placeholder="0.0"
-                  className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  className="flex-1 h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
                 <HaypSelect
                   value={distanceUnit}
                   onChange={setDistanceUnit}
                   options={DISTANCE_UNITS.map((o) => ({ value: o, label: o }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none min-w-[120px]"
+                  className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none min-w-[120px]"
                 />
               </div>
             </div>
@@ -341,7 +341,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                   value={vehicle}
                   onChange={(e) => setVehicle(e.target.value)}
                   placeholder="Vehicle description"
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                  className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -355,7 +355,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                     value={rate !== 0 ? rate : ''}
                     onChange={(e) => setRate(Number(e.target.value) || 0)}
                     placeholder="0.00"
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-bold text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 py-2 text-sm font-bold text-slate-900 text-right focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
               </div>
@@ -412,7 +412,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
                     value={clientProject || ''}
                     onChange={(e) => setClientProject(e.target.value)}
                     placeholder="Project name or code"
-                    className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                   />
                 </div>
               )}
@@ -458,7 +458,7 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Enter additional details..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none"
             />
           </div>
         </div>

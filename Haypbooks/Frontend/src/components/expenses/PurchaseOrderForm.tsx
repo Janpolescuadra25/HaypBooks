@@ -654,7 +654,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                         readOnly 
 
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500 outline-none" 
 
                       />
 
@@ -710,7 +710,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                         options={STATUS_OPTIONS}
 
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                       />
 
@@ -868,7 +868,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                           disabled={readonlyFields}
 
-                          className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                          className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
 
                         />
 
@@ -886,7 +886,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                           disabled={readonlyFields} 
 
-                          className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
+                          className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" 
 
                           placeholder="Tracking #" 
 
@@ -906,7 +906,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                           disabled={readonlyFields} 
 
-                          className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all mb-2" 
+                          className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all mb-2" 
 
                           placeholder="Street address" 
 
@@ -914,13 +914,13 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 
-                          <input value={shipTo.city} onChange={(e) => setShipTo((prev) => ({ ...prev, city: e.target.value }))} placeholder="City" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                          <input value={shipTo.city} onChange={(e) => setShipTo((prev) => ({ ...prev, city: e.target.value }))} placeholder="City" className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
 
-                          <input value={shipTo.state} onChange={(e) => setShipTo((prev) => ({ ...prev, state: e.target.value }))} placeholder="State" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                          <input value={shipTo.state} onChange={(e) => setShipTo((prev) => ({ ...prev, state: e.target.value }))} placeholder="State" className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
 
-                          <input value={shipTo.zip} onChange={(e) => setShipTo((prev) => ({ ...prev, zip: e.target.value }))} placeholder="Zip" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                          <input value={shipTo.zip} onChange={(e) => setShipTo((prev) => ({ ...prev, zip: e.target.value }))} placeholder="Zip" className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
 
-                          <input value={shipTo.country} onChange={(e) => setShipTo((prev) => ({ ...prev, country: e.target.value }))} placeholder="Country" className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
+                          <input value={shipTo.country} onChange={(e) => setShipTo((prev) => ({ ...prev, country: e.target.value }))} placeholder="Country" className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold" />
 
                         </div>
 
@@ -952,7 +952,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor Notes (Public)</label>
 
-                        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readonlyFields} rows={3} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" />
+                        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readonlyFields} rows={3} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" />
 
                       </div>
 
@@ -960,7 +960,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Internal Notes (Private)</label>
 
-                        <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readonlyFields} rows={3} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" />
+                        <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} disabled={readonlyFields} rows={3} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all" />
 
                       </div>
 
@@ -1020,7 +1020,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                           disabled={readonlyFields} 
 
-                          className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all text-right" 
+                          className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 outline-none transition-all text-right" 
 
                         />
 

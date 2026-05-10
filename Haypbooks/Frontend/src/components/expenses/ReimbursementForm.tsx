@@ -291,7 +291,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                         onChange={setEmployeeId} 
                         disabled={isReadOnly} 
                         options={employees.map((e) => ({ value: e.id, label: e.displayName }))} 
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -302,7 +302,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                         onChange={setPaymentMethod} 
                         disabled={isReadOnly} 
                         options={[{ value: 'BANK_TRANSFER', label: 'Bank Transfer' }, { value: 'CHECK', label: 'Check' }]} 
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                   </div>
@@ -314,7 +314,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
                         disabled={isReadOnly}
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                         placeholder="Brief description of the reimbursement request"
                       />
                     </div>
@@ -325,7 +325,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                         value={businessPurpose} 
                         onChange={(e) => setBusinessPurpose(e.target.value)} 
                         disabled={isReadOnly}
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                         placeholder="Reason for these expenses"
                       />
                     </div>
@@ -351,7 +351,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                   <div className="space-y-3">
                     {lines.map((line) => (
                       <div key={line.id} className="group relative p-4 bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:border-emerald-200 hover:bg-white">
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
                           <div className="space-y-1.5">
                             <HaypDatePicker
                               id={`line-date-${line.id}`}
@@ -372,6 +372,21 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                               options={CATEGORIES.map((c) => ({ value: c, label: c }))} 
                               className="h-9 text-xs disabled:opacity-50"
                             />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label htmlFor={`line-account-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account</label>
+                            <select
+                              id={`line-account-${line.id}`}
+                              value={line.accountId || ''}
+                              onChange={(e) => updateLine(line.id, 'accountId', e.target.value)}
+                              disabled={isReadOnly}
+                              className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none disabled:opacity-50"
+                            >
+                              <option value="">Select account</option>
+                              {accounts.map((account) => (
+                                <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name ?? account.id}` : account.name ?? account.id}</option>
+                              ))}
+                            </select>
                           </div>
                           <div className="space-y-1.5 lg:col-span-1">
                             <label htmlFor={`line-description-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</label>
@@ -412,25 +427,11 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                             )}
                           </div>
                         </div>
-                        <div className="mt-4 space-y-1.5">
-                          <label htmlFor={`line-account-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account</label>
-                          <select
-                            id={`line-account-${line.id}`}
-                            value={line.accountId || ''}
-                            onChange={(e) => updateLine(line.id, 'accountId', e.target.value)}
-                            disabled={isReadOnly}
-                            className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none disabled:opacity-50"
-                          >
-                            <option value="">Select account</option>
-                            {accounts.map((account) => (
-                              <option key={account.id} value={account.id}>{account.code ? account.code : account.name ?? account.id}</option>
-                            ))}
-                          </select>
-                        </div>
                       </div>
-              ))}
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
           </div>
             </section>
 
@@ -472,7 +473,7 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                       onChange={(e) => setNotes(e.target.value)} 
                       disabled={isReadOnly} 
                       rows={4} 
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       placeholder="Additional information or justification..."
                     />
                   </div>

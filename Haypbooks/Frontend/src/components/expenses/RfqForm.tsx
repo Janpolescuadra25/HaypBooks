@@ -250,7 +250,7 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
                       id="rfqSubject"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       placeholder="RFQ subject line"
                     />
                   </div>
@@ -284,7 +284,7 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
                         type="date"
                         value={closingDate}
                         onChange={(e) => setClosingDate(e.target.value)}
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -294,7 +294,7 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
                         value={status}
                         onChange={(v) => setStatus(v as typeof RFQ_STATUSES[number])}
                         options={RFQ_STATUSES.map((s) => ({ value: s, label: s }))}
-                        className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                   </div>
@@ -305,7 +305,7 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={4}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       placeholder="Describe your requirements and expectations in detail..."
                     />
                   </div>
@@ -356,7 +356,7 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       rows={4}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
                       placeholder="Internal notes or special instructions for the vendor..."
                     />
                   </div>
