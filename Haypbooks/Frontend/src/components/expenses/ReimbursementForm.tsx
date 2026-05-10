@@ -12,6 +12,8 @@ import { accountingService } from '@/services/accounting.service'
 import ActivityLog from '@/components/ui/ActivityLog'
 import { useActivityLog } from '@/hooks/useActivityLog'
 import HaypDatePicker from '@/components/shared/HaypDatePicker'
+import HaypAccountPicker from './HaypAccountPicker'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 import HaypSelect from '@/components/shared/HaypSelect'
 
 interface ReimbursementFormProps {
@@ -59,6 +61,8 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
 
   const [employees, setEmployees] = useState<Employee[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<File[]>([])
   const [employeeId, setEmployeeId] = useState('')
   const [description, setDescription] = useState('')
@@ -373,18 +377,17 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
                           </div>
                           <div className="space-y-1.5">
                             <label htmlFor={`line-account-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account</label>
-                            <select
-                              id={`line-account-${line.id}`}
+                            <HaypAccountPicker
                               value={line.accountId || ''}
-                              onChange={(e) => updateLine(line.id, 'accountId', e.target.value)}
+                              accounts={accounts}
+                              placeholder="Search accounts…"
+                              onChange={(value) => updateLine(line.id, 'accountId', value)}
+                              onCreateNew={() => {
+                                setNewAccountRowId(line.id)
+                                setShowAccountModal(true)
+                              }}
                               disabled={isReadOnly}
-                              className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none disabled:opacity-50"
-                            >
-                              <option value="">Select account</option>
-                              {accounts.map((account) => (
-                                <option key={account.id} value={account.id}>{account.code ? `${account.code} — ${account.name ?? account.id}` : account.name ?? account.id}</option>
-                              ))}
-                            </select>
+                            />
                           </div>
                           <div className="space-y-1.5 lg:col-span-1">
                             <label htmlFor={`line-description-${line.id}`} className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</label>
@@ -555,6 +558,21 @@ export default function ReimbursementForm({ mode, reimbursementId }: Reimburseme
             </div>
           </div>
         </div>
+        {companyId && (
+          <NewAccountModal
+            open={showAccountModal}
+            companyId={companyId}
+            onClose={() => setShowAccountModal(false)}
+            onCreated={(account) => {
+              setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name }, ...prev])
+              if (newAccountRowId) {
+                updateLine(newAccountRowId, 'accountId', account.id)
+              }
+              setShowAccountModal(false)
+              setNewAccountRowId(null)
+            }}
+          />
+        )}
 
       {error && (
         <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">

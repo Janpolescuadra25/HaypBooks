@@ -46,7 +46,7 @@ const lineItemColumns = [
 
   { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Description', required: true },
 
-  { key: 'accountId', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: [] },
+  { key: 'accountId', label: 'Account', type: 'account', width: 180, minWidth: 140, required: true, options: [] },
 
   { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
 
@@ -219,6 +219,8 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
 
   const [lineItems, setLineItems] = useState<LineItem[]>([defaultLineItem()])
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -233,6 +235,15 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
 
 
+
+  const handleAccountSelect = useCallback((rowId: string, accountId: string) => {
+    setLineItems((rows) => rows.map((row) => row.id === rowId ? { ...row, accountId } : row))
+  }, [])
+
+  const handleAccountCreate = useCallback((rowId: string) => {
+    setNewAccountRowId(rowId)
+    setShowAccountModal(true)
+  }, [])
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
 
@@ -762,11 +773,36 @@ export default function VendorCreditForm({ mode, creditId }: VendorCreditFormPro
 
                     onChange={setLineItems}
 
+                    onAccountSelect={handleAccountSelect}
+
+                    onAccountCreate={handleAccountCreate}
+
+                    onCreateNewAccount={() => setShowAccountModal(true)}
+
                     currency={currency ?? 'USD'}
 
                     calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
 
                   />
+
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => {
+                        setShowAccountModal(false)
+                        setNewAccountRowId(null)
+                      }}
+                      onCreated={(account) => {
+                        setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name }, ...prev])
+                        if (newAccountRowId) {
+                          setLineItems((rows) => rows.map((row) => row.id === newAccountRowId ? { ...row, accountId: account.id } : row))
+                        }
+                        setShowAccountModal(false)
+                        setNewAccountRowId(null)
+                      }}
+                    />
+                  )}
 
                 </div>
 

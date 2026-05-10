@@ -11,6 +11,8 @@ import { expensesService, ExpenseReportPayload } from '@/services/expenses.servi
 import { accountingService } from '@/services/accounting.service'
 import { getPolicyGuidanceText } from '@/config/expense-policies'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
+import HaypAccountPicker from './HaypAccountPicker'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 import HaypSelect from '@/components/shared/HaypSelect'
 
 interface ExpenseReportFormProps {
@@ -79,6 +81,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const [accounts, setAccounts] = useState<Account[]>([])
   const [vendors, setVendors] = useState<Array<{ id: string; displayName: string }>>([])
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
   const [advancePayment, setAdvancePayment] = useState(0)
   const [notes, setNotes] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
@@ -500,7 +504,17 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                               <HaypSelect value={line.vendor} onChange={(v) => updateLine(line.id, 'vendor', v)} disabled={readOnly} options={vendors.map((v) => ({ value: v.displayName, label: v.displayName }))} placeholder="Vendor" className="h-10 text-xs rounded-lg border border-slate-200" />
                             </td>
                             <td className="px-2 py-2 min-w-[160px]">
-                              <HaypSelect value={line.accountId} onChange={(v) => updateLine(line.id, 'accountId', v)} disabled={readOnly} options={accounts.map((a) => ({ value: a.id, label: a.code ? `${a.code} • ${a.name}` : (a.name ?? '') }))} placeholder="Account" className="h-10 text-xs rounded-lg border border-slate-200" />
+                              <HaypAccountPicker
+                                value={line.accountId}
+                                accounts={accounts}
+                                placeholder="Search accounts…"
+                                onChange={(v) => updateLine(line.id, 'accountId', v)}
+                                onCreateNew={() => {
+                                  setNewAccountRowId(line.id)
+                                  setShowAccountModal(true)
+                                }}
+                                disabled={readOnly}
+                              />
                             </td>
                             <td className="px-2 py-2 min-w-[120px]">
                               <input type="number" value={line.amount} onChange={(e) => updateLine(line.id, 'amount', Number(e.target.value))} disabled={readOnly} className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-right focus:bg-white focus:border-emerald-500 outline-none" />
@@ -525,6 +539,21 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                       </tbody>
                     </table>
                   </div>
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => setShowAccountModal(false)}
+                      onCreated={(account) => {
+                        setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name }, ...prev])
+                        if (newAccountRowId) {
+                          setLines((rows) => rows.map((row) => row.id === newAccountRowId ? { ...row, accountId: account.id } : row))
+                        }
+                        setShowAccountModal(false)
+                        setNewAccountRowId(null)
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </section>

@@ -791,6 +791,7 @@ export default function BillForm({ mode, billId, title, onClose, onSaved, saveBi
                     onChange={handleLineItemsChange}
                     onAccountSelect={handleAccountSelect}
                     onAccountCreate={handleAccountCreate}
+                    onCreateNewAccount={() => setShowAccountModal(true)}
                     currency={currency ?? 'USD'}
                     calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
                   />

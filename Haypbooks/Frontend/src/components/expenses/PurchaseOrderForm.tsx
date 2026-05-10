@@ -29,6 +29,7 @@ import LineItemTable from './LineItemTable'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 
 import { NewVendorModal } from '@/components/shared/NewVendorModal'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 
 import HaypDatePicker from '@/components/shared/HaypDatePicker'
 
@@ -116,7 +117,7 @@ const lineItemColumns = [
 
   { key: 'description', label: 'Item / Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Item description', required: true },
 
-  { key: 'account', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: [] },
+  { key: 'account', label: 'Account', type: 'account', width: 180, minWidth: 140, required: true, options: [] },
 
   { key: 'quantity', label: 'Qty', type: 'number', width: 96, minWidth: 70, required: true },
 
@@ -221,6 +222,8 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
 
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
 
 
 
@@ -417,6 +420,11 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
   }, [])
 
 
+
+  const handleAccountCreate = useCallback((rowId: string) => {
+    setNewAccountRowId(rowId)
+    setShowAccountModal(true)
+  }, [])
 
   const addLine = useCallback(() => setLineItems((items) => [...items, defaultLineItem()]), [])
 
@@ -814,6 +822,10 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
                     onChange={setLineItems}
 
+                    onAccountCreate={handleAccountCreate}
+
+                    onCreateNewAccount={() => setShowAccountModal(true)}
+
                     currency={currency ?? 'USD'}
 
                     calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
@@ -825,6 +837,22 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
                     showDeleteButton={!readonlyFields}
 
                   />
+
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => setShowAccountModal(false)}
+                      onCreated={(account) => {
+                        setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name }, ...prev])
+                        if (newAccountRowId) {
+                          setLineItems((rows) => rows.map((row) => row.id === newAccountRowId ? { ...row, account: account.id } : row))
+                        }
+                        setShowAccountModal(false)
+                        setNewAccountRowId(null)
+                      }}
+                    />
+                  )}
 
                 </div>
 

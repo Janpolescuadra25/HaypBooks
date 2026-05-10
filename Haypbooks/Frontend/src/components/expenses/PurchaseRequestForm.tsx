@@ -17,6 +17,7 @@ import { useActivityLog } from '@/hooks/useActivityLog'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import HaypSelect from '@/components/shared/HaypSelect'
 import { NewVendorModal } from '@/components/shared/NewVendorModal'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 
 const today = new Date().toISOString().slice(0, 10)
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent']
@@ -96,7 +97,7 @@ interface ApiPRLine {
 
 const lineItemColumns = [
   { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Description', required: true },
-  { key: 'accountId', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: [] },
+  { key: 'accountId', label: 'Account', type: 'account', width: 180, minWidth: 140, required: true, options: [] },
   { key: 'quantity', label: 'Quantity', type: 'number', width: 96, minWidth: 70, required: true },
   { key: 'unitPrice', label: 'Rate', type: 'number', width: 120, minWidth: 90, required: true },
   { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
@@ -132,6 +133,8 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'notes' | 'attachments' | 'activity'>('details')
   const [showVendorModal, setShowVendorModal] = useState(false)
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
@@ -255,6 +258,11 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
       }
       return next
     }))
+  }, [])
+
+  const handleAccountCreate = useCallback((rowId: string) => {
+    setNewAccountRowId(rowId)
+    setShowAccountModal(true)
   }, [])
 
   const addLine = useCallback(() => setLineItems((items) => [...items, defaultLineItem()]), [])
@@ -462,9 +470,26 @@ export default function PurchaseRequestForm({ mode, prId }: PurchaseRequestFormP
                     )}
                     rows={lineItems}
                     onChange={setLineItems}
+                    onAccountCreate={handleAccountCreate}
+                    onCreateNewAccount={() => setShowAccountModal(true)}
                     currency={currency ?? 'USD'}
                     calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
                   />
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => setShowAccountModal(false)}
+                      onCreated={(account) => {
+                        setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name }, ...prev])
+                        if (newAccountRowId) {
+                          setLineItems((rows) => rows.map((row) => row.id === newAccountRowId ? { ...row, accountId: account.id } : row))
+                        }
+                        setShowAccountModal(false)
+                        setNewAccountRowId(null)
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </section>

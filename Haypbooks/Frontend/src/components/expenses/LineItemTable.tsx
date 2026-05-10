@@ -31,6 +31,7 @@ export interface LineItemTableProps<Row extends LineItemBase = LineItemBase> {
   calculatedColumns?: Record<string, (row: Row) => number>
   onAccountSelect?: (rowId: string, accountId: string) => void
   onAccountCreate?: (rowId: string) => void
+  onCreateNewAccount?: () => void
   onItemSelect?: (rowId: string, itemId: string) => void
   showDragHandle?: boolean
   showCopyButton?: boolean
@@ -314,9 +315,12 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                                 updateRow(row.id, column.key, selected)
                                 onAccountSelect?.(row.id, selected)
                               }}
-                              options={column.options ?? []}
+                              accounts={(column.options ?? []).map((option) => ({ id: option.value, name: option.label }))}
                               placeholder="Search accounts…"
-                              onCreateNew={() => onAccountCreate?.(row.id)}
+                              onCreateNew={() => {
+                                onAccountCreate?.(row.id)
+                                onCreateNewAccount?.()
+                              }}
                             />
                           )}
                           {column.type === 'calculated' && (

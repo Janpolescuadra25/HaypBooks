@@ -9,7 +9,7 @@ import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
 import HaypSelect from '@/components/shared/HaypSelect'
-import CustomerPickerField from '@/components/sales/CustomerPickerField'
+import HaypAccountPicker from '@/components/expenses/HaypAccountPicker'
 import { NewAccountModal } from '@/components/shared/NewAccountModal'
 
 const today = new Date().toISOString().slice(0, 10)
@@ -282,10 +282,10 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <CustomerPickerField
+                  <HaypAccountPicker
                     label="Account"
                     value={accountId}
-                    customers={accountOptions}
+                    accounts={accounts}
                     placeholder="Search accounts…"
                     createLabel="New Account"
                     onChange={setAccountId}

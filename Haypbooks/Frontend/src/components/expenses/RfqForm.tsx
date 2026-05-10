@@ -11,6 +11,7 @@ import { accountingService } from '@/services/accounting.service'
 import { formatCurrency } from '@/lib/format'
 import CustomerPickerField from '@/components/sales/CustomerPickerField'
 import { NewVendorModal } from '@/components/shared/NewVendorModal'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 import HaypSelect from '@/components/shared/HaypSelect'
 import LineItemTable from './LineItemTable'
 import ActivityLog from '@/components/ui/ActivityLog'
@@ -57,6 +58,8 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
   const [showVendorModal, setShowVendorModal] = useState(false)
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [newAccountRowId, setNewAccountRowId] = useState<string | null>(null)
 
   const { entries: activityEntries, loading: activityLoading } = useActivityLog({
     companyId: activeTab === 'activity' ? companyId : null,
@@ -142,6 +145,10 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
 
   const addLine = useCallback(() => setLineItems((items) => [...items, defaultLine()]), [])
   const removeLine = useCallback((id: string) => setLineItems((items) => items.filter((item) => item.id !== id)), [])
+  const handleAccountCreate = useCallback((rowId: string) => {
+    setNewAccountRowId(rowId)
+    setShowAccountModal(true)
+  }, [])
 
   const validate = useCallback(() => {
     if (!companyId) { setError('Company not loaded'); return false }
@@ -328,7 +335,7 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
                   <LineItemTable
                     columns={[
                       { key: 'description', label: 'Description', type: 'text', width: 320, minWidth: 220, placeholder: 'Description', required: true },
-                      { key: 'accountId', label: 'Account', type: 'select', width: 180, minWidth: 140, required: true, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} — ${account.name}` : account.name ?? '' })) },
+                      { key: 'accountId', label: 'Account', type: 'account', width: 180, minWidth: 140, required: true, options: accounts.map((account) => ({ value: account.id, label: account.code ? `${account.code} — ${account.name}` : account.name ?? '' })) },
                       { key: 'quantity', label: 'Qty', type: 'number', width: 96, minWidth: 70, required: true },
                       { key: 'unitPrice', label: 'Unit Price', type: 'number', width: 120, minWidth: 90, required: true },
                       { key: 'taxRate', label: 'Tax %', type: 'number', width: 110, minWidth: 90 },
@@ -336,9 +343,26 @@ export default function RfqForm({ mode, rfqId }: RfqFormProps) {
                     ]}
                     rows={lineItems}
                     onChange={setLineItems}
+                    onAccountCreate={handleAccountCreate}
+                    onCreateNewAccount={() => setShowAccountModal(true)}
                     currency={currency ?? 'USD'}
                     calculatedColumns={{ amount: (row) => Number(row.quantity || 0) * Number(row.unitPrice || 0) }}
                   />
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => setShowAccountModal(false)}
+                      onCreated={(account) => {
+                        setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name }, ...prev])
+                        if (newAccountRowId) {
+                          setLineItems((rows) => rows.map((row) => row.id === newAccountRowId ? { ...row, accountId: account.id } : row))
+                        }
+                        setShowAccountModal(false)
+                        setNewAccountRowId(null)
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </section>

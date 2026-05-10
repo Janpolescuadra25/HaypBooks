@@ -8,6 +8,8 @@ import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
 import HaypSelect from '@/components/shared/HaypSelect'
+import HaypAccountPicker from './HaypAccountPicker'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 
 const today = new Date().toISOString().slice(0, 10)
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED']
@@ -51,6 +53,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
     const [accountId, setAccountId] = useState('')
     const [departmentId, setDepartmentId] = useState('')
     const [accounts, setAccounts] = useState<Array<{ id: string; code?: string; name?: string }>>([])
+    const [showAccountModal, setShowAccountModal] = useState(false)
     const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
     const [attachments, setAttachments] = useState<File[]>([])
     const [status, setStatus] = useState('DRAFT')
@@ -284,17 +287,26 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="perDiemAccount" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">GL Account</label>
-                  <select
-                    id="perDiemAccount"
+                  <HaypAccountPicker
+                    label="GL Account"
                     value={accountId}
-                    onChange={(e) => setAccountId(e.target.value)}
-                    className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500 transition-all outline-none"
-                  >
-                    <option value="">Select account</option>
-                    {/* TODO: fetch accounts from API */}
-                    {accounts.map((acc) => <option key={acc.id} value={acc.id}>{acc.name ? `${acc.name} (${acc.code ?? ''})` : acc.id}</option>)}
-                  </select>
+                    accounts={accounts}
+                    placeholder="Search accounts…"
+                    createLabel="New Account"
+                    onChange={setAccountId}
+                    onCreateNew={() => setShowAccountModal(true)}
+                  />
+                  {companyId && (
+                    <NewAccountModal
+                      open={showAccountModal}
+                      companyId={companyId}
+                      onClose={() => setShowAccountModal(false)}
+                      onCreated={(account) => {
+                        setAccounts((prev) => [{ id: account.id, code: account.code, name: account.name }, ...prev])
+                        setAccountId(account.id)
+                      }}
+                    />
+                  )}
                 </div>
               </div>
 

@@ -3,37 +3,32 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 
-export interface HaypAccountOption {
-  value: string
-  label: string
+export interface HaypAccount {
+  id: string
+  code?: string
+  name?: string
 }
 
 interface HaypAccountPickerProps {
-  id?: string
   label?: string
   value: string
-  options: HaypAccountOption[]
-  loading?: boolean
-  disabled?: boolean
+  accounts: HaypAccount[]
   placeholder?: string
-  createLabel?: string
-  onChange: (value: string) => void
-  onOpen?: () => void
+  disabled?: boolean
+  onChange: (accountId: string) => void
   onCreateNew?: () => void
+  createLabel?: string
 }
 
 export default function HaypAccountPicker({
-  id,
   label,
   value,
-  options,
-  loading = false,
-  disabled = false,
+  accounts,
   placeholder = 'Search accounts…',
-  createLabel = '+ Create New Account',
+  disabled = false,
   onChange,
-  onOpen,
   onCreateNew,
+  createLabel = '+ New Account',
 }: HaypAccountPickerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
@@ -50,10 +45,6 @@ export default function HaypAccountPicker({
   }, [])
 
   useEffect(() => {
-    if (open) onOpen?.()
-  }, [open, onOpen])
-
-  useEffect(() => {
     if (!open) setQuery('')
   }, [open])
 
@@ -62,31 +53,33 @@ export default function HaypAccountPicker({
   }, [disabled, open])
 
   const selected = useMemo(
-    () => options.find((option) => option.value === value) ?? null,
-    [options, value],
+    () => accounts.find((account) => account.id === value) ?? null,
+    [accounts, value],
   )
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return options
-    return options.filter((option) => option.label.toLowerCase().includes(q))
-  }, [options, query])
+    if (!q) return accounts
+    return accounts.filter((account) => {
+      const label = `${account.code ? `${account.code} ` : ''}${account.name ?? ''}`.toLowerCase()
+      return label.includes(q)
+    })
+  }, [accounts, query])
+
+  const selectedLabel = selected ? `${selected.code ? `${selected.code} ` : ''}${selected.name ?? ''}` : ''
 
   return (
     <div ref={rootRef} className="relative">
       {label ? (
-        <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1">
-          {label}
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
       ) : null}
       <input
-        id={id}
         type="text"
-        value={open ? query : selected?.label ?? query}
+        value={open ? query : selectedLabel ?? query}
         onFocus={() => {
           if (disabled) return
           if (!open && selected && query === '') {
-            setQuery(selected.label)
+            setQuery(selectedLabel)
           }
           setOpen(true)
         }}
@@ -95,33 +88,49 @@ export default function HaypAccountPicker({
           setQuery(e.target.value)
           if (!open) setOpen(true)
         }}
+        onKeyDown={(event) => {
+          if (disabled) return
+          if (event.key === 'Escape') {
+            setOpen(false)
+            return
+          }
+          if (event.key === 'Enter' && open) {
+            event.preventDefault()
+            const first = filtered[0]
+            if (first) {
+              onChange(first.id)
+              setOpen(false)
+            }
+          }
+        }}
         placeholder={placeholder}
         autoComplete="off"
         disabled={disabled}
-        className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-900 focus:bg-white focus:border-emerald-500/50 focus:outline-none transition-all shadow-sm disabled:bg-slate-100 disabled:text-slate-400"
+        className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
       />
 
       {open && !disabled && (
         <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-          <div className="max-h-56 overflow-y-auto">
-            {loading ? (
-              <p className="px-3 py-3 text-xs text-slate-500 text-center">Loading accounts...</p>
-            ) : filtered.length === 0 ? (
+          <div className="max-h-60 overflow-y-auto">
+            {filtered.length === 0 ? (
               <p className="px-3 py-3 text-xs text-slate-500 text-center">No accounts found</p>
             ) : (
-              filtered.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(option.value)
-                    setOpen(false)
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-emerald-50 transition-colors border-b border-slate-100 last:border-b-0"
-                >
-                  <span className="text-sm font-medium text-slate-900">{option.label}</span>
-                </button>
-              ))
+              filtered.map((account) => {
+                const label = `${account.code ? `${account.code} ` : ''}${account.name ?? ''}`
+                return (
+                  <button
+                    key={account.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(account.id)
+                      setOpen(false)
+                    }}
+                    className={`w-full px-3 py-2 text-left transition-colors border-b border-slate-100 last:border-b-0 ${value === account.id ? 'bg-emerald-50' : 'hover:bg-emerald-50'}`}
+                  >
+                    <span className="text-sm font-medium text-slate-900">{label}</span>
+                  </button>
+                )
+              })
             )}
           </div>
 
