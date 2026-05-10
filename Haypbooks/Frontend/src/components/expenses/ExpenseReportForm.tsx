@@ -11,6 +11,7 @@ import { expensesService, ExpenseReportPayload } from '@/services/expenses.servi
 import { accountingService } from '@/services/accounting.service'
 import { getPolicyGuidanceText } from '@/config/expense-policies'
 import HaypFileUpload, { AttachmentMeta } from '@/components/shared/HaypFileUpload'
+import LineItemTable from '@/components/expenses/LineItemTable'
 import HaypAccountPicker from './HaypAccountPicker'
 import { NewAccountModal } from '@/components/shared/NewAccountModal'
 import HaypSelect from '@/components/shared/HaypSelect'
