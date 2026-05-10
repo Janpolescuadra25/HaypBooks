@@ -17,6 +17,7 @@ import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 
 import { accountingService } from '@/services/accounting.service'
+import { NewAccountModal } from '@/components/shared/NewAccountModal'
 
 import { formatCurrency } from '@/lib/format'
 
