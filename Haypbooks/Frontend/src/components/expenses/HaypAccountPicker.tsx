@@ -29,7 +29,7 @@ export default function HaypAccountPicker({
   disabled = false,
   onChange,
   onCreateNew,
-  createLabel = '+ New Account',
+  createLabel = 'New Account',
 }: HaypAccountPickerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLInputElement | null>(null)
@@ -85,6 +85,13 @@ export default function HaypAccountPicker({
 
   useEffect(() => {
     if (!open) setQuery('')
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const handleScroll = () => setOpen(false)
+    window.addEventListener('scroll', handleScroll, true)
+    return () => window.removeEventListener('scroll', handleScroll, true)
   }, [open])
 
   useEffect(() => {
@@ -194,7 +201,7 @@ export default function HaypAccountPicker({
         placeholder={placeholder}
         autoComplete="off"
         disabled={disabled}
-        className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
+        className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
       />
       {dropdown}
     </div>

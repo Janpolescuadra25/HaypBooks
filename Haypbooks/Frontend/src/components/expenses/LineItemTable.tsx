@@ -52,6 +52,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
   calculatedColumns,
   onAccountSelect,
   onAccountCreate,
+  onCreateNewAccount,
   onItemSelect,
   showDragHandle = true,
   showCopyButton = true,
@@ -219,13 +220,13 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div ref={containerRef} className={`rounded-xl border border-slate-200 ${isOverflowing ? 'overflow-x-auto overflow-y-visible' : 'overflow-x-visible overflow-y-visible'}`}>
+      <div ref={containerRef} className="rounded-xl border border-slate-200 overflow-hidden">
         {rows.length === 0 ? (
           <div className="min-w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-20 text-center text-sm text-slate-500">
             Add line items to get started
           </div>
         ) : (
-          <table className="table-fixed w-full text-sm">
+          <table className="table-fixed border-collapse-separate border-spacing-0 w-full text-sm">
             <colgroup>
               <col className="line-col-handle" />
               {columns.map((column) => (
@@ -233,9 +234,9 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
               ))}
               <col className="line-col-actions" />
             </colgroup>
-            <thead className="rounded-t-xl overflow-hidden bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-3 py-2 border-r border-slate-200" />
+                <th className="rounded-tl-xl px-3 py-2 border-r border-slate-200" />
                 {columns.map((column) => (
                   <th key={column.key} className={`relative overflow-hidden px-3 py-2 border-r border-slate-200 ${getAlignmentClass(column)} ${getColumnClassName(column.key)}`}>
                     <div className="flex items-center justify-between gap-2">
@@ -247,7 +248,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
                     </div>
                   </th>
                 ))}
-                <th className="px-3 py-2" />
+                <th className="rounded-tr-xl px-3 py-2" />
               </tr>
             </thead>
             <tbody>

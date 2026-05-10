@@ -38,6 +38,7 @@ export function NewAccountModal({ open, companyId, onClose, onCreated }: NewAcco
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [type, setType] = useState('EXPENSE')
+  const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -45,6 +46,7 @@ export function NewAccountModal({ open, companyId, onClose, onCreated }: NewAcco
     setName('')
     setCode('')
     setType('EXPENSE')
+    setDescription('')
     setError('')
   }
 
@@ -61,6 +63,7 @@ export function NewAccountModal({ open, companyId, onClose, onCreated }: NewAcco
         name: name.trim(),
         code: code.trim() || undefined,
         type,
+        description: description.trim() || undefined,
       })
       const saved = response.data ?? response
       onCreated({ id: saved.id, code: saved.code, name: saved.name ?? name.trim() })
@@ -95,41 +98,52 @@ export function NewAccountModal({ open, companyId, onClose, onCreated }: NewAcco
           <div className="space-y-4 px-6 py-6">
             {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
             <div>
-              <label htmlFor="nam-name" className="block text-sm font-medium text-slate-700 mb-1">Account Name <span className="text-rose-500">*</span></label>
+              <label htmlFor="nam-name" className="block text-xs font-semibold text-slate-700 mb-1.5">Account Name <span className="text-rose-500">*</span></label>
               <input
                 id="nam-name"
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 outline-none"
                 placeholder="e.g. Travel Expenses"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="nam-code" className="block text-sm font-medium text-slate-700 mb-1">Code</label>
+                <label htmlFor="nam-code" className="block text-xs font-semibold text-slate-700 mb-1.5">Account Code</label>
                 <input
                   id="nam-code"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 outline-none"
                   placeholder="e.g. 6100"
                 />
               </div>
               <div>
-                <label htmlFor="nam-type" className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                <label htmlFor="nam-type" className="block text-xs font-semibold text-slate-700 mb-1.5">Account Type</label>
                 <select
                   id="nam-type"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   {ACCOUNT_TYPES.map((t) => (
                     <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
                   ))}
                 </select>
               </div>
+            </div>
+            <div>
+              <label htmlFor="nam-description" className="block text-xs font-semibold text-slate-700 mb-1.5">Description</label>
+              <textarea
+                id="nam-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                placeholder="Optional description…"
+              />
             </div>
           </div>
           <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
