@@ -15,6 +15,8 @@ import LineItemTable from '@/components/expenses/LineItemTable'
 import HaypAccountPicker from './HaypAccountPicker'
 import { NewAccountModal } from '@/components/shared/NewAccountModal'
 import HaypSelect from '@/components/shared/HaypSelect'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 
 interface ExpenseReportFormProps {
   mode: 'new' | 'edit'
@@ -87,7 +89,10 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   const [notes, setNotes] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
-  const [activeTab, setActiveTab] = useState<'notes' | 'policy' | 'attachments'>('notes')
+  const [activeTab, setActiveTab] = useState<'notes' | 'policy' | 'attachments' | 'activity'>('notes')
+  const { activities, loading: activityLoading, refetch: refreshActivity } = useActivityLog({
+    initialFilters: { tableName: 'ExpenseReport', recordId: expenseId },
+  })
   const [uploadingLineId, setUploadingLineId] = useState<string | null>(null)
   const uploadInputRef = useRef<HTMLInputElement | null>(null)
   const attachmentInputRef = useRef<HTMLInputElement | null>(null)
@@ -375,7 +380,8 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
             <div className="inline-flex rounded-xl bg-white p-1 border border-slate-100 mb-4">
               <button type="button" onClick={() => setActiveTab('notes')} className={`px-4 py-2 text-sm font-semibold rounded-l-lg ${activeTab === 'notes' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Notes</button>
               <button type="button" onClick={() => setActiveTab('policy')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'policy' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Policy</button>
-              <button type="button" onClick={() => setActiveTab('attachments')} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'attachments' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Attachments</button>
+              <button type="button" onClick={() => setActiveTab('attachments')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'attachments' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Attachments</button>
+              <button type="button" onClick={() => setActiveTab('activity')} className={`px-4 py-2 text-sm font-semibold rounded-r-lg ${activeTab === 'activity' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>Activity</button>
             </div>
           )}
 
@@ -648,6 +654,14 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                 </div>
               </div>
             </section>
+          </div>
+
+          <div className={activeTab === 'activity' ? 'space-y-4' : 'hidden'}>
+            <ActivityLog
+              activities={activities}
+              loading={activityLoading}
+              onRefresh={refreshActivity}
+            />
           </div>
         </div>
       </main>
