@@ -243,6 +243,7 @@ export default function RecurringBillsPage() {
           }
           globalFilter={search}
           onGlobalFilterChange={setSearch}
+          onActivityLog={() => router.push('/expenses/bills-payments/recurring-bills/activity')}
           filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All' : status }))}
           activeFilter={statusFilter}
           onFilterChange={setStatusFilter}

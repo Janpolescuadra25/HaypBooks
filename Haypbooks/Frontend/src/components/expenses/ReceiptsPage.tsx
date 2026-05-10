@@ -234,6 +234,7 @@ export default function ReceiptsPage() {
         tableId="receipts"
         globalFilter={search}
         onGlobalFilterChange={setSearch}
+        onActivityLog={() => router.push('/expenses/employee-expenses/receipts/activity')}
         filters={STATUSES.map((status) => ({ value: status.toLowerCase(), label: status === 'ALL' ? 'All' : status }))}
         activeFilter={statusFilter.toLowerCase()}
         onFilterChange={(value: any) => setStatusFilter(String(value).toUpperCase() as (typeof STATUSES)[number])}

@@ -218,6 +218,7 @@ export default function ExpensesPage() {
           }
           globalFilter={search}
           onGlobalFilterChange={setSearch}
+          onActivityLog={() => router.push('/expenses/employee-expenses/expenses/activity')}
           filters={STATUSES.map((status) => ({ value: status, label: status === 'ALL' ? 'All Statuses' : status }))}
           activeFilter={statusFilter}
           onFilterChange={setStatusFilter}
