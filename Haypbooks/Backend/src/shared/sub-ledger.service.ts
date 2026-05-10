@@ -1154,4 +1154,183 @@ export class SubLedgerService {
       this.logger.error(`[SubLedger] Failed to reverse revenue recognition ${data.recognitionId}: ${err?.message}`)
     }
   }
+
+  // ─── Expenses: Expense Claim Approved ──────────────────────────────────────
+  //   DR: Expense accounts (per line)
+  //   CR: Accrued Expenses - Employee Payable (2100)
+
+  async postExpenseClaimToGL(params: {
+    companyId: string
+    workspaceId: string
+    expenseClaimId: string
+    lines: Array<{ accountId?: string | null; amount: number }>
+    totalAmount: number
+    employeeId?: string | null
+  }): Promise<void> {
+    try {
+      const { companyId, workspaceId, expenseClaimId, lines, totalAmount, employeeId } = params
+      await this.prisma.$transaction(async (tx) => {
+        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+        const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
+
+        const debitLines: Array<{ accountId: string; debit: number; credit: number; description?: string }> = []
+        for (const line of lines) {
+          const lineAmount = this.roundMoney(Number(line.amount ?? 0))
+          if (lineAmount <= 0.005) continue
+          let expAccountId: string | null = null
+          if (line.accountId) expAccountId = await this.findAccountById(companyId, line.accountId, tx)
+          expAccountId = expAccountId ?? expenseFallback.id
+          debitLines.push({ accountId: expAccountId, debit: lineAmount, credit: 0, description: 'Expense claim line' })
+        }
+
+        if (debitLines.length === 0) {
+          debitLines.push({ accountId: expenseFallback.id, debit: this.roundMoney(totalAmount), credit: 0, description: 'Expense claim' })
+        }
+
+        const totalDebit = this.roundMoney(debitLines.reduce((s, l) => s + l.debit, 0))
+        const entryNumber = await this.nextEntryNumber(companyId, 'EXP')
+        await createAndPostJE(tx, {
+          workspaceId,
+          companyId,
+          date: new Date(),
+          description: employeeId ? `Expense Claim ${expenseClaimId} (Employee ${employeeId})` : `Expense Claim ${expenseClaimId}`,
+          entryNumber,
+          transactionSource: 'Expense Report',
+          sourceReferenceId: expenseClaimId,
+          lines: [
+            ...debitLines,
+            { accountId: accruedAccount.id, debit: 0, credit: totalDebit, description: 'Accrued Expenses - Employee Payable' },
+          ],
+        })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post expense claim ${params.expenseClaimId} to GL: ${err?.message}`)
+    }
+  }
+
+  // ─── Expenses: Expense Reimbursement Paid ──────────────────────────────────
+  //   DR: Accrued Expenses - Employee Payable (2100)
+  //   CR: Cash / Bank
+
+  async postExpenseReimbursementToGL(params: {
+    companyId: string
+    workspaceId: string
+    expenseClaimId: string
+    amount: number
+    bankAccountId?: string | null
+    description?: string
+  }): Promise<void> {
+    try {
+      const { companyId, workspaceId, expenseClaimId, amount, bankAccountId } = params
+      await this.prisma.$transaction(async (tx) => {
+        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+        const cashAccountRaw = bankAccountId
+          ? await this.findAccountById(companyId, bankAccountId, tx)
+          : null
+        const cashAccountId = cashAccountRaw ?? (await resolveAccount(tx, companyId, SYSTEM_ACCOUNTS.CASH)).id
+
+        const amt = this.roundMoney(amount)
+        const entryNumber = await this.nextEntryNumber(companyId, 'EXR')
+        await createAndPostJE(tx, {
+          workspaceId,
+          companyId,
+          date: new Date(),
+          description: params.description ?? `Expense Reimbursement ${expenseClaimId}`,
+          entryNumber,
+          transactionSource: 'Expense Reimbursement',
+          sourceReferenceId: expenseClaimId,
+          lines: [
+            { accountId: accruedAccount.id, debit: amt, credit: 0, description: 'Accrued Expenses - Employee Payable' },
+            { accountId: cashAccountId, debit: 0, credit: amt, description: 'Cash disbursed' },
+          ],
+        })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post expense reimbursement ${params.expenseClaimId} to GL: ${err?.message}`)
+    }
+  }
+
+  // ─── Expenses: Mileage Log Approved ────────────────────────────────────────
+  //   DR: Expense account (accountId or default 5010)
+  //   CR: Accrued Expenses - Employee Payable (2100)
+
+  async postMileageToGL(params: {
+    companyId: string
+    workspaceId: string
+    mileageLogId: string
+    amount: number
+    accountId?: string | null
+    employeeId?: string | null
+  }): Promise<void> {
+    try {
+      const { companyId, workspaceId, mileageLogId, amount, accountId } = params
+      await this.prisma.$transaction(async (tx) => {
+        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+        const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
+        let expAccountId: string | null = null
+        if (accountId) expAccountId = await this.findAccountById(companyId, accountId, tx)
+        expAccountId = expAccountId ?? expenseFallback.id
+
+        const amt = this.roundMoney(amount)
+        const entryNumber = await this.nextEntryNumber(companyId, 'MIL')
+        await createAndPostJE(tx, {
+          workspaceId,
+          companyId,
+          date: new Date(),
+          description: `Mileage Log ${mileageLogId}`,
+          entryNumber,
+          transactionSource: 'Mileage',
+          sourceReferenceId: mileageLogId,
+          lines: [
+            { accountId: expAccountId, debit: amt, credit: 0, description: 'Mileage expense' },
+            { accountId: accruedAccount.id, debit: 0, credit: amt, description: 'Accrued Expenses - Employee Payable' },
+          ],
+        })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post mileage log ${params.mileageLogId} to GL: ${err?.message}`)
+    }
+  }
+
+  // ─── Expenses: Per Diem Claim Approved ─────────────────────────────────────
+  //   DR: Expense account (accountId or default 5010)
+  //   CR: Accrued Expenses - Employee Payable (2100)
+
+  async postPerDiemToGL(params: {
+    companyId: string
+    workspaceId: string
+    perDiemId: string
+    amount: number
+    accountId?: string | null
+    employeeId?: string | null
+  }): Promise<void> {
+    try {
+      const { companyId, workspaceId, perDiemId, amount, accountId } = params
+      await this.prisma.$transaction(async (tx) => {
+        const accruedAccount = await resolveAccount(tx, companyId, { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 })
+        const expenseFallback = await resolveAccount(tx, companyId, { code: '5010', name: 'Operating Expenses', typeId: 2 })
+        let expAccountId: string | null = null
+        if (accountId) expAccountId = await this.findAccountById(companyId, accountId, tx)
+        expAccountId = expAccountId ?? expenseFallback.id
+
+        const amt = this.roundMoney(amount)
+        const entryNumber = await this.nextEntryNumber(companyId, 'PER')
+        await createAndPostJE(tx, {
+          workspaceId,
+          companyId,
+          date: new Date(),
+          description: `Per Diem ${perDiemId}`,
+          entryNumber,
+          transactionSource: 'Per Diem',
+          sourceReferenceId: perDiemId,
+          lines: [
+            { accountId: expAccountId, debit: amt, credit: 0, description: 'Per diem expense' },
+            { accountId: accruedAccount.id, debit: 0, credit: amt, description: 'Accrued Expenses - Employee Payable' },
+          ],
+        })
+      })
+    } catch (err: any) {
+      this.logger.error(`[SubLedger] Failed to post per diem ${params.perDiemId} to GL: ${err?.message}`)
+    }
+  }
 }

@@ -46,6 +46,7 @@ export const SYSTEM_ACCOUNTS = {
     RETAINED_EARNINGS:    { code: '3100', name: 'Retained Earnings',   typeId: 5 },
     INCOME_SUMMARY:       { code: '3200', name: 'Income Summary',      typeId: 5 },
     OPENING_BALANCE_EQUITY: { code: '3050', name: 'Opening Balance Equity', typeId: 5 },
+    ACCRUED_EXPENSES:        { code: '2100', name: 'Accrued Expenses - Employee Payable', typeId: 4 },
 } as const
 
 /**
