@@ -349,14 +349,6 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
-                type="button"
-                onClick={() => router.push(expensesReturnPath)} 
-                className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
-              <div className="w-px h-6 bg-slate-200" />
               <h1 className="text-lg font-bold tracking-tight text-slate-900">
                 {mode === 'new' ? 'New Expense Report' : 'Edit Expense Report'}
               </h1>

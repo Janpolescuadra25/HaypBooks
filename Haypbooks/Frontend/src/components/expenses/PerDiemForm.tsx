@@ -37,7 +37,8 @@ function calcDays(start: string, end: string): number {
 const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
   function PerDiemForm({ mode, perDiemId, onClose, onSaved }, ref) {
     const toast = useToast()
-  const router = useRouter()
+    const router = useRouter()
+    const { companyId } = useCompanyId()
     const { currency } = useCompanyCurrency()
 
     const [employees, setEmployees] = useState<Employee[]>([])
@@ -157,7 +158,7 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
 
     const handleCancel = useCallback(() => {
       if (onClose) onClose()
-      else router.push('/expenses/employee-expenses/per-diem')
+      else router.back()
     }, [onClose, router])
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])

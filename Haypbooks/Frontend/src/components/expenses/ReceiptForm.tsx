@@ -158,7 +158,7 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
 
   const handleCancel = useCallback(() => {
     if (onClose) onClose()
-    else router.push('/expenses/receipts')
+    else router.back()
   }, [onClose, router])
 
   return (
