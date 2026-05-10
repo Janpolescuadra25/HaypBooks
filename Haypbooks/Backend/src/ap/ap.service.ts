@@ -876,6 +876,17 @@ export class ApService {
         await this.prisma.auditLog.create({
             data: { workspaceId, companyId, userId, action: 'UPDATE', tableName: 'MileageLog', recordId: logId, changes: payload },
         }).catch(() => { /* non-critical */ })
+        // Post to GL when status transitions to APPROVED
+        if (data.status && String(data.status).toUpperCase() === 'APPROVED' && String(existingAny.status ?? '').toUpperCase() !== 'APPROVED') {
+            this.subLedger.postMileageToGL({
+                companyId,
+                workspaceId,
+                mileageLogId: logId,
+                amount: Number(payload.amount ?? 0),
+                accountId: payload.accountId ?? null,
+                employeeId: payload.employeeId ?? null,
+            }).catch(() => { /* non-critical — GL failure must not block mileage update */ })
+        }
         return result
     }
 
@@ -967,7 +978,20 @@ export class ApService {
             approvedAt: data.status === 'APPROVED' ? new Date() : existing.approvedAt,
             reimbursedAt: data.status === 'PAID' ? new Date() : existing.reimbursedAt,
         }
-        return this.repo.updatePerDiemClaim(companyId, perDiemId, payload)
+        const result = await this.repo.updatePerDiemClaim(companyId, perDiemId, payload)
+        // Post to GL when status transitions to APPROVED
+        if (data.status === 'APPROVED' && existing.status !== 'APPROVED') {
+            const workspaceId = await this.getWorkspaceId(companyId)
+            this.subLedger.postPerDiemToGL({
+                companyId,
+                workspaceId,
+                perDiemId,
+                amount: Number(payload.totalAmount ?? 0),
+                accountId: payload.accountId ?? null,
+                employeeId: payload.employeeId ?? null,
+            }).catch(() => { /* non-critical — GL failure must not block per diem update */ })
+        }
+        return result
     }
 
     async deleteMileageLog(userId: string, companyId: string, logId: string) {

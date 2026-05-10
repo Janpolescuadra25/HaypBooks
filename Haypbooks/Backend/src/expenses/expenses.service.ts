@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { ApService } from '../ap/ap.service'
 import { AttachmentsService } from '../attachments/attachments.service'
 import { PrismaService } from '../repositories/prisma/prisma.service'
+import { SubLedgerService } from '../shared/sub-ledger.service'
 
 @Injectable()
 export class ExpensesService {
@@ -9,6 +10,7 @@ export class ExpensesService {
     private readonly apService: ApService,
     private readonly prisma: PrismaService,
     private readonly attachmentsService: AttachmentsService,
+    private readonly subLedgerService: SubLedgerService,
   ) {}
 
   private async getWorkspaceId(companyId: string) {
@@ -176,15 +178,27 @@ export class ExpensesService {
 
   async approveExpenseReport(userId: string, companyId: string, expenseId: string) {
     await this.assertAccess(userId, companyId)
-    const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId } })
+    const record = await this.prisma.expenseClaim.findFirst({ where: { id: expenseId, companyId }, include: { lines: true } })
     if (!record) throw new NotFoundException('Expense report not found')
     if (record.status !== 'SUBMITTED') {
       throw new BadRequestException('Only submitted reports can be approved')
     }
-    return this.prisma.expenseClaim.update({
+    const updated = await this.prisma.expenseClaim.update({
       where: { id: expenseId },
       data: { status: 'APPROVED', approvedAt: new Date() },
     })
+    const workspaceId = (record as any).workspaceId
+    if (workspaceId) {
+      this.subLedgerService.postExpenseClaimToGL({
+        companyId,
+        workspaceId,
+        expenseClaimId: expenseId,
+        lines: (record.lines as any[]).map(l => ({ accountId: l.accountId ?? null, amount: Number(l.amount ?? 0) })),
+        totalAmount: Number(record.totalAmount ?? 0),
+        employeeId: record.employeeId ?? null,
+      }).catch(() => { /* non-critical — GL failure must not block approval */ })
+    }
+    return updated
   }
 
   async reimburseExpenseReport(userId: string, companyId: string, expenseId: string, data: any) {
@@ -194,7 +208,7 @@ export class ExpensesService {
     if (record.status !== 'APPROVED') {
       throw new BadRequestException('Only approved reports can be reimbursed')
     }
-    return this.prisma.expenseClaim.update({
+    const updated = await this.prisma.expenseClaim.update({
       where: { id: expenseId },
       data: {
         status: 'PAID',
@@ -202,6 +216,17 @@ export class ExpensesService {
         reimbursementMethod: data?.method ?? record.reimbursementMethod,
       },
     })
+    const workspaceId = (record as any).workspaceId
+    if (workspaceId) {
+      this.subLedgerService.postExpenseReimbursementToGL({
+        companyId,
+        workspaceId,
+        expenseClaimId: expenseId,
+        amount: Number(record.totalAmount ?? 0),
+        bankAccountId: data?.bankAccountId ?? null,
+      }).catch(() => { /* non-critical — GL failure must not block reimbursement */ })
+    }
+    return updated
   }
 
   async listExpenseReports(userId: string, companyId: string, query: any) {
