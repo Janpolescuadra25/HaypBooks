@@ -1162,9 +1162,7 @@ export default function PurchaseOrderForm({ mode, poId }: PurchaseOrderFormProps
 
         </div>
 
-      )}
-
-    </div>
+      </div>
 
   )
 
