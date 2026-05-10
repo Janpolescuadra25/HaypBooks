@@ -233,7 +233,7 @@ export default function LineItemTable<Row extends LineItemBase = LineItemBase>({
               ))}
               <col className="line-col-actions" />
             </colgroup>
-            <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
+            <thead className="rounded-t-xl overflow-hidden bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
               <tr>
                 <th className="px-3 py-2 border-r border-slate-200" />
                 {columns.map((column) => (
