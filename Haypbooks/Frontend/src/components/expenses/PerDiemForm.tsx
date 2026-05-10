@@ -7,6 +7,8 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { formatCurrency } from '@/lib/format'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 import HaypSelect from '@/components/shared/HaypSelect'
 import HaypAccountPicker from './HaypAccountPicker'
 import { NewAccountModal } from '@/components/shared/NewAccountModal'
@@ -54,6 +56,15 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
     const [departmentId, setDepartmentId] = useState('')
     const [accounts, setAccounts] = useState<Array<{ id: string; code?: string; name?: string }>>([])
     const [showAccountModal, setShowAccountModal] = useState(false)
+    const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+    const { entries: activities, loading: activityLoading } = useActivityLog({
+      companyId: activeTab === 'activity' ? companyId : null,
+      pageSize: 30,
+      initialFilters: {
+        tableName: 'PerDiem',
+        recordId: perDiemId,
+      },
+    })
     const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
     const [attachments, setAttachments] = useState<File[]>([])
     const [status, setStatus] = useState('DRAFT')
@@ -167,15 +178,41 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
     return (
-      <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
         <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
           <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
             <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Per Diem' : 'Edit Per Diem'}</h1>
           </div>
         </div>
-        <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-          <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
-            <div className="space-y-6">
+        <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+          <div className="flex border-b border-slate-200">
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'details' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              onClick={() => setActiveTab('details')}
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              onClick={() => setActiveTab('activity')}
+            >
+              Activity
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'details' && (
+          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="flex flex-col">
+            <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+              <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+                <h1 className="sr-only">{mode === 'new' ? 'New Per Diem' : 'Edit Per Diem'}</h1>
+              </div>
+            </div>
+            <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+              <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+                <div className="space-y-6">
         <section>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-5 lg:px-6">
@@ -375,6 +412,14 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
           </div>
         </div>
       </form>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+            <ActivityLog entries={activities} loading={activityLoading} />
+          </div>
+        )}
+      </div>
     )
   }
 )
