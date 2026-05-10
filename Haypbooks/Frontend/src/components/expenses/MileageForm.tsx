@@ -2,6 +2,7 @@
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CheckCircle } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -192,6 +193,24 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
   useImperativeHandle(ref, () => ({
     save: handleSave,
   }), [handleSave])
+
+  const handleApprove = useCallback(async () => {
+    if (!companyId || !logId) return
+    if (!validate()) return
+    setSubmitting(true)
+    try {
+      await expensesService.updateMileageLog(companyId, logId, { ...payload, status: 'APPROVED' })
+      setStatus('APPROVED')
+      toast.success('Mileage log approved')
+      if (onSaved) onSaved()
+      else router.push('/expenses/employee-expenses/mileage')
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Unable to approve mileage log')
+      toast.error('Unable to approve mileage log')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [companyId, logId, validate, payload, toast, onSaved, router])
 
   const handleCancel = useCallback(() => {
     if (onClose) onClose()
@@ -509,6 +528,17 @@ function MileageFormInner({ mode, logId, onClose, onSaved }: MileageFormProps, r
         <div className="max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <div className="flex items-center justify-end gap-3">
             <button type="button" onClick={handleCancel} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
+            {mode === 'edit' && (status === 'DRAFT' || status === 'SUBMITTED') && (
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={submitting}
+                className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20 flex items-center gap-2 disabled:opacity-50"
+              >
+                <CheckCircle size={16} />
+                {submitting ? 'Approving...' : 'Approve'}
+              </button>
+            )}
             <button type="submit" disabled={submitting} className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20">{submitting ? 'Saving...' : mode === 'new' ? 'Save Mileage' : 'Update Mileage'}</button>
           </div>
         </div>

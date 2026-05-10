@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Save, Loader2, Upload, Send } from 'lucide-react'
+import { Save, Loader2, Upload, Send, CheckCircle, DollarSign } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -297,6 +297,36 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
   }
 
   const handleSubmitFromEdit = handleSubmitForApproval
+
+  const handleApprove = async () => {
+    if (!companyId || !expenseId) return
+    setSubmitting(true)
+    try {
+      await expensesService.approveExpenseReport(companyId, expenseId)
+      toast.success('Expense report approved')
+      router.push(expensesReturnPath)
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Unable to approve expense report')
+      toast.error('Unable to approve expense report')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleReimburse = async () => {
+    if (!companyId || !expenseId) return
+    setSubmitting(true)
+    try {
+      await expensesService.reimburseExpenseReport(companyId, expenseId, { method: 'MANUAL' })
+      toast.success('Expense report marked as reimbursed')
+      router.push(expensesReturnPath)
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Unable to reimburse expense report')
+      toast.error('Unable to reimburse expense report')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const handleUploadLineReceipt = async (lineId: string, file: File) => {
     if (!companyId) return
@@ -694,6 +724,28 @@ export default function ExpenseReportForm({ mode, expenseId }: ExpenseReportForm
                 {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 Submit for Approval
               </button>
+              {mode === 'edit' && (status === 'DRAFT' || status === 'SUBMITTED') && (
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={submitting}
+                  className="h-10 px-8 rounded-xl bg-emerald-600 text-sm font-black uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  {submitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                  Approve
+                </button>
+              )}
+              {mode === 'edit' && status === 'APPROVED' && (
+                <button
+                  type="button"
+                  onClick={handleReimburse}
+                  disabled={submitting}
+                  className="h-10 px-8 rounded-xl bg-blue-600 text-sm font-black uppercase tracking-widest text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  {submitting ? <Loader2 size={18} className="animate-spin" /> : <DollarSign size={18} />}
+                  Reimburse
+                </button>
+              )}
             </div>
           </div>
       </div>

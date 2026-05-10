@@ -150,7 +150,33 @@ export default function ExpensesPage() {
       label: 'Edit expense',
       onClick: (id) => router.push(`/expenses/${id}/edit`),
     },
-  ], [router])
+    {
+      label: 'Approve',
+      show: (row) => row.status === 'DRAFT' || row.status === 'SUBMITTED',
+      onClick: async (id) => {
+        try {
+          await expensesService.approveExpenseReport(companyId ?? '', id)
+          toast.success('Expense report approved')
+          fetchReports()
+        } catch {
+          toast.error('Failed to approve expense report')
+        }
+      },
+    },
+    {
+      label: 'Reimburse',
+      show: (row) => row.status === 'APPROVED',
+      onClick: async (id) => {
+        try {
+          await expensesService.reimburseExpenseReport(companyId ?? '', id, { method: 'MANUAL' })
+          toast.success('Expense report marked as reimbursed')
+          fetchReports()
+        } catch {
+          toast.error('Failed to reimburse expense report')
+        }
+      },
+    },
+  ], [router, companyId, toast, fetchReports])
 
   const bulkActions = useMemo<HaypBulkAction[]>(() => [
     {

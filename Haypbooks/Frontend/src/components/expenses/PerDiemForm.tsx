@@ -2,6 +2,7 @@
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CheckCircle } from 'lucide-react'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
@@ -176,6 +177,32 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
     }, [onClose, router])
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
+
+    const handleApprove = useCallback(async () => {
+      if (!companyId || !perDiemId) return
+      if (!validate()) return
+      setSubmitting(true)
+      try {
+        const approvePayload = {
+          employeeId, destination, purpose, startDate, endDate, days, dailyRate, totalAmount, currency,
+          accountId: accountId || null, departmentId: departmentId || null,
+          attachments: attachments.map((file) => ({ name: file.name })),
+          status: 'APPROVED',
+          notes,
+        }
+        await expensesService.updatePerDiem(companyId, perDiemId, approvePayload)
+        setStatus('APPROVED')
+        toast.success('Per diem claim approved')
+        if (onSaved) onSaved()
+        else if (onClose) onClose()
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Unable to approve per diem claim'
+        setError(msg)
+        toast.error(msg)
+      } finally {
+        setSubmitting(false)
+      }
+    }, [companyId, perDiemId, validate, employeeId, destination, purpose, startDate, endDate, days, dailyRate, totalAmount, currency, accountId, departmentId, attachments, notes, toast, onSaved, onClose])
 
     return (
       <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
@@ -410,6 +437,17 @@ const PerDiemForm = forwardRef<PerDiemFormHandle, PerDiemFormProps>(
               <button type="button" onClick={handleCancel} disabled={submitting} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
               <button type="button" onClick={() => { setStatus('DRAFT'); handleSave(); }} disabled={submitting} className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Save Draft</button>
               <button type="button" onClick={() => { setStatus('SUBMITTED'); handleSave(); }} disabled={submitting} className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20">Submit for Approval</button>
+              {mode === 'edit' && (status === 'DRAFT' || status === 'SUBMITTED') && (
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={submitting}
+                  className="h-10 px-6 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20 flex items-center gap-2 disabled:opacity-50"
+                >
+                  <CheckCircle size={16} />
+                  {submitting ? 'Approving...' : 'Approve'}
+                </button>
+              )}
             </div>
           </div>
         </div>
