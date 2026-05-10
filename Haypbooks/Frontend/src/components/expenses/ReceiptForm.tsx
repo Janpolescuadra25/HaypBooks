@@ -8,6 +8,8 @@ import { useCompanyId } from '@/hooks/useCompanyId'
 import { useToast } from '@/components/ToastProvider'
 import { expensesService } from '@/services/expenses.service'
 import { accountingService } from '@/services/accounting.service'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 import HaypSelect from '@/components/shared/HaypSelect'
 import HaypAccountPicker from '@/components/expenses/HaypAccountPicker'
 import { NewAccountModal } from '@/components/shared/NewAccountModal'
@@ -51,6 +53,15 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [showAccountModal, setShowAccountModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const { entries: activities, loading: activityLoading } = useActivityLog({
+    companyId: activeTab === 'activity' ? companyId : null,
+    pageSize: 30,
+    initialFilters: {
+      tableName: 'Receipt',
+      recordId: receiptId,
+    },
+  })
   const [uploadingFile, setUploadingFile] = useState(false)
   const [uploadedAttachmentId, setUploadedAttachmentId] = useState<string | null>(null)
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null)
@@ -162,15 +173,41 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
   }, [onClose, router])
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+    <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
       <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
           <h1 className="text-xl font-semibold text-slate-900">{mode === 'new' ? 'New Receipt' : 'Edit Receipt'}</h1>
         </div>
       </div>
-      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
-          <div className="space-y-6">
+      <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+        <div className="flex border-b border-slate-200">
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'details' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('details')}
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('activity')}
+          >
+            Activity
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'details' && (
+        <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="flex flex-col">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4">
+              <h1 className="sr-only">{mode === 'new' ? 'New Receipt' : 'Edit Receipt'}</h1>
+            </div>
+          </div>
+          <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+              <div className="space-y-6">
             {/* Upload */}
       <div className="relative group rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center transition-all hover:border-emerald-300 hover:bg-emerald-50/30">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
@@ -351,5 +388,13 @@ export default function ReceiptForm({ mode, receiptId, onClose, onSaved }: Recei
         </div>
       </div>
     </form>
+      )}
+
+      {activeTab === 'activity' && (
+        <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+          <ActivityLog entries={activities} loading={activityLoading} />
+        </div>
+      )}
+    </div>
   )
 }
