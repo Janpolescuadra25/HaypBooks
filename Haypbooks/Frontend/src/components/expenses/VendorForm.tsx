@@ -5,6 +5,8 @@ import { useToast } from '@/components/ToastProvider'
 import { useCompanyCurrency } from '@/hooks/useCompanyCurrency'
 import { useCompanyId } from '@/hooks/useCompanyId'
 import { expensesService } from '@/services/expenses.service'
+import ActivityLog from '@/components/ui/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
 import HaypSelect from '@/components/shared/HaypSelect'
 
 export type VendorFormHandle = {
@@ -57,6 +59,11 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
 
   const [internalNotes, setInternalNotes] = useState('')
   const [publicNotes, setPublicNotes] = useState('')
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const { activities, loading: activityLoading, refetch: refreshActivity } = useActivityLog({
+    companyId: activeTab === 'activity' ? companyId : null,
+    initialFilters: { tableName: 'Vendor', recordId: vendorId },
+  })
 
   useEffect(() => {
     if (mode !== 'edit' || !vendorId || !companyId) return
@@ -159,7 +166,28 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
   useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
 
   return (
-    <div className="space-y-4 text-slate-900 pb-8">
+    <div className="h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+        <div className="flex border-b border-slate-200">
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'details' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('details')}
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('activity')}
+          >
+            Activity
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'details' && (
+        <div className="space-y-4 text-slate-900 pb-8">
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
           {error}
@@ -449,6 +477,18 @@ const VendorForm = forwardRef<VendorFormHandle, VendorFormProps>(function Vendor
           </div>
         </div>
       </section>
+    </div>
+  )}
+
+      {activeTab === 'activity' && (
+        <div className="max-w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6">
+          <ActivityLog
+            activities={activities}
+            loading={activityLoading}
+            onRefresh={refreshActivity}
+          />
+        </div>
+      )}
     </div>
   )
 })
